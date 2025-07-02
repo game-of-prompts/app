@@ -4,8 +4,8 @@ import { blake2b256, sha256 } from "@fleet-sdk/crypto";
 import { uint8ArrayToHex } from "./utils";
 import { network_id } from "./envs"; 
 
-import GOP_GAME_BOX_SCRIPT_SOURCE from '../../../../contracts/game.es?raw';
-import GOP_PARTICIPATION_BOX_SCRIPT_SOURCE from '../../../../contracts/participation.es?raw';
+import GOP_GAME_BOX_SCRIPT_SOURCE from '../../../contracts/game.es?raw';
+import GOP_PARTICIPATION_BOX_SCRIPT_SOURCE from '../../../contracts/participation.es?raw';
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1; 
