@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base principal: Blanco y slate muy oscuro para texto, evocando claridad y seriedad tecnológica. */
+    --background: 0 0% 100%; /* Blanco puro */
+    --foreground: 222 47% 11%; /* slate-900 */
+
+    /* Tarjetas y Popovers: Blancos para mantener la limpieza en modo claro. */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Primario: Un azul vibrante y moderno, asociado con tecnología y confianza. */
+    --primary: 217 91% 60%; /* Azul brillante */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secundario: Un gris azulado claro, usando slate. */
+    --secondary: 210 40% 96.1%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%; /* slate-900 */
+
+    /* Muted: Colores para texto menos prominente. */
+    --muted: 210 40% 94%; /* slate-200 aprox */
+    --muted-foreground: 215 20% 45%; /* slate-500 aprox */
+
+    /* Acento: Naranja/ámbar energético. */
+    --accent: 30 96% 54%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructivo: Rojo estándar. */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordes e Inputs: Grises claros neutros. */
+    --border: 215 20% 86.5%; /* slate-200 */
+    --input: 215 20% 86.5%;
+    --ring: 217 91% 55%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Base Oscura: slate muy oscuro para fondo, y texto claro. */
+    --background: 222 47% 11%; /* slate-900 */
+    --foreground: 210 40% 98%; /* slate-100 */
+
+    --card: 222 47% 14%; /* slate-800 */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 65%;
+    --primary-foreground: 222 47% 11%; /* slate-900 */
+
+    --secondary: 217 33% 17%; /* slate-800 */
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%; /* slate-800 */
+    --muted-foreground: 215 20% 65%; /* slate-400 */
+
+    --accent: 30 96% 64%;
+    --accent-foreground: 35 100% 7%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217 33% 22%; /* slate-700 */
+    --input: 217 33% 25%; /* slate-600 */
+    --ring: 217 91% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
