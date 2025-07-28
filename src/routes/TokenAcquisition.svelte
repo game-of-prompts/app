@@ -2,5 +2,5 @@
     import GameList from "./GameList.svelte";
 </script>
 <GameList>
-    Open Games
+    Games
 </GameList>
