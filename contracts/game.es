@@ -1,7 +1,13 @@
 {
+  // === Constants ===
+  val STAKE_DENOMINATOR = 5L
+  val COOLDOWN_IN_BLOCKS = 3000L
+
   // === Register Definitions (GameBox) ===
   // R4: Coll[Byte] - gameCreatorPK: Raw bytes of the game creator's public key.
-  // R5: Coll[Byte] - hashS: Blake2b256 hash of the game's secret 'S'.
+  // R5: (Long, Coll[Byte]) - StateTuple: (unlockHeight, secretOrHash)
+  //     - If unlockHeight == 0, secretOrHash is hashS.
+  //     - If unlockHeight > 0, secretOrHash is the revealed S, and unlockHeight is the next claim block.
   // R6: Coll[Byte] - expectedParticipationScriptHash: Blake2b256 hash of the expected ErgoTree script for ParticipationBoxes.
   // R7: Coll[Long] - numericalParameters: Collection [deadline, creatorStake, participationFee]
   //                   - numericalParameters(0) (deadline): Block height limit for participation/resolution.
@@ -14,8 +20,21 @@
   // SELF.tokens(0): (gameNftId: Coll[Byte], amount: Long) - Unique game NFT, amount 1L.
 
   // === Value Extraction ===
+
   val gameCreatorPK = SELF.R4[Coll[Byte]].get
-  val hashS_in_self = SELF.R5[Coll[Byte]].get
+
+  val stateTuple_R5 = SELF.R5[(Long, Coll[Byte])].get
+  val unlockHeight_in_self = stateTuple_R5._1 // unlockHeight is now the first element
+  val secretOrHash_in_self = stateTuple_R5._2 // secretOrHash is now the second element
+
+  val hashS_in_self = if (unlockHeight_in_self == 0L) {
+    secretOrHash_in_self // If unlockHeight is 0, this is the hashS
+  } else {
+    blake2b256(secretOrHash_in_self) // If unlockHeight > 0, this is the revealed S
+  }
+
+  val action2_not_initialized = unlockHeight_in_self == 0L
+
   val expectedParticipationScriptHash = SELF.R6[Coll[Byte]].get
   
   val numericalParams = SELF.R7[Coll[Long]].get
@@ -34,7 +53,7 @@
 
   // === ACTION 1: Game Resolution (On-Chain Winner Determination) ===
   val action1_isValidResolution = {
-    if (isAfterDeadline && OUTPUTS.size > 1) {
+    if (isAfterDeadline && OUTPUTS.size > 1 && action2_not_initialized) {
       val winnerOutput = OUTPUTS(0)
       val creatorOutput = OUTPUTS(1)
       val revealedS_fromOutput = creatorOutput.R4[Coll[Byte]].get 
@@ -164,100 +183,66 @@
     } else { false } 
   }
 
-  // === ACTION 2: Cancellation due to Early Secret Revelation (FULL DESIGN - COMMENTED OUT) ===
-  /* // Uncomment to activate Action 2. Requires exhaustive testing and possible refactor of 'var'.
-  val action2_isValidCancellation = sigmaProp({
+  // === ACTION 2: Partial Penalty for Early Secret Revelation (NEW IMPLEMENTATION) ===
+  val action2_isValidCancellation = {
     if (isBeforeDeadline) {
-        // INPUTS(0) is SELF (GameBox)
-        // INPUTS(1) is the box that reveals S (can be ANY box, not necessarily the creator's)
-        val revealedSBox = INPUTS(1) 
-        val revealedS_fromInput = revealedSBox.R4[Coll[Byte]].get
-        val sIsCorrect = blake2b256(revealedS_fromInput) == hashS_in_self
+      if (OUTPUTS.size == 2) {
+        val recreatedGameBox = OUTPUTS(0)
+        val claimerOutput = OUTPUTS(1)
+        val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
+        val remainingStake = creatorStake - stakePortionToClaim
+        
+        // --- Shared validation for the claimer's output ---
+        val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim &&
+                                 claimerOutput.tokens.size == 0
 
-        if (sIsCorrect) {
-            val numPlayerRefundOutputs = OUTPUTS.size - 1 
-            
-            val c1_hasCreatorOutput = numPlayerRefundOutputs >= 0
+        // --- Case A: First withdrawal (revealing the secret) ---
+        val caseA = if (unlockHeight_in_self == 0L) {
+          val newR5Tuple = recreatedGameBox.R5[(Long, Coll[Byte])].get
+          val newUnlockHeight = newR5Tuple._1
+          val revealedS = newR5Tuple._2
+          
+          // 1. Check if the revealed S in the new box matches the original hash
+          val sIsCorrect = blake2b256(revealedS) == hashS_in_self
+          // 2. Check if the new unlock height is correctly set
+          val unlockHeightIsCorrect = newUnlockHeight == HEIGHT + COOLDOWN_IN_BLOCKS
 
-            // Assume candidate PBoxes to be refunded are INPUTS(2) to INPUTS(1 + numPlayerRefundOutputs)
-            val expectedPBoxInputs = if (numPlayerRefundOutputs > 0) INPUTS.slice(2, 2 + numPlayerRefundOutputs) else Coll[Box]()
-            val c2_inputOutputCountMatch = expectedPBoxInputs.size == numPlayerRefundOutputs
+          sIsCorrect && unlockHeightIsCorrect
+        } else { false }
 
-            // Validate all input PBoxes
-            val c3_allExpectedPBoxesAreValid = if (numPlayerRefundOutputs > 0) {
-                 expectedPBoxInputs.forall({ (pBox: Box) =>
-                    pBox.R6[Coll[Byte]].get == gameNftId && // Belongs to this game
-                    blake2b256(pBox.propositionBytes) == expectedParticipationScriptHash && // Is a correct PBox script
-                    pBox.value >= participationFee // Paid at least the fee
-                })
-            } else { 
-                true // No players to refund, so this condition passes
-            }
+        // --- Case B: Subsequent withdrawals (draining the stake) ---
+        val caseB = if (unlockHeight_in_self > 0L) {
+          // 1. Check if the cooldown period has passed
+          val cooldownIsOver = HEIGHT >= unlockHeight_in_self
+          val newR5Tuple = recreatedGameBox.R5[(Long, Coll[Byte])].get
+          // 2. Check that S hasn't changed and the new unlock height is correct
+          val r5StateIsCorrect = newR5Tuple._2 == secretOrHash_in_self && // S is the same
+                                 newR5Tuple._1 == HEIGHT + COOLDOWN_IN_BLOCKS // Cooldown is reset
 
-            // Calculate prize distribution and validate player outputs
-            val initialPlayerOutputsFoldState = (true, 0L) // (allPlayerOutputsValid, totalStakeClaimedByPlayers)
-            
-            val playerOutputsProcessingResult = if (c1_hasCreatorOutput && c2_inputOutputCountMatch && c3_allExpectedPBoxesAreValid && numPlayerRefundOutputs > 0) {
-                val maxPlayerClaimFromStakePercentage = 20 // Ex: 20% of creator's stake is distributed
-                
-                // Use the same expectedPBoxInputs already validated with c3
-                OUTPUTS.slice(0, numPlayerRefundOutputs).zip(expectedPBoxInputs).fold(initialPlayerOutputsFoldState, {
-                    (acc: (Boolean, Long), pair: ((Box, Box))) =>
-                        val previousAllCorrect = acc._1
-                        val previousTotalStakeClaimed = acc._2
-                        
-                        val playerRefundOutput = pair._1
-                        val pBox = pair._2 // Corresponding pBox from input
-                        val playerPKToRefund = pBox.R4[Coll[Byte]].get
-                        val playerOriginalFee = pBox.value // The original value of the PBox (its fee)
-                        
-                        // The portion of the creator's stake that this player claims
-                        // Distributed equally among the number of valid PBoxes processed
-                        val stakePortionForThisPlayer = (creatorStake / numPlayerRefundOutputs) * maxPlayerClaimFromStakePercentage / 100
-                        
-                        val outputIsCurrentlyCorrect = playerRefundOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ playerPKToRefund) && // Workaround for PK
-                                                      playerRefundOutput.value >= playerOriginalFee + stakePortionForThisPlayer && 
-                                                      playerRefundOutput.tokens.size == 0 
-                        
-                        val nextTotalStakeClaimed = if (outputIsCurrentlyCorrect) {
-                            previousTotalStakeClaimed + stakePortionForThisPlayer
-                        } else {
-                            previousTotalStakeClaimed
-                        }
-                        (previousAllCorrect && outputIsCurrentlyCorrect, nextTotalStakeClaimed)
-                })
-            } else if (numPlayerRefundOutputs == 0 && c1_hasCreatorOutput && c2_inputOutputCountMatch && c3_allExpectedPBoxesAreValid) { 
-                initialPlayerOutputsFoldState // (true, 0L) -> No players, player outputs are valid, no stake claimed
-            } else { 
-                (false, 0L) // Some previous condition (c1, c2, c3) failed
-            }
-            
-            val c4_allPlayerOutputsValid = playerOutputsProcessingResult._1
-            val totalStakeClaimedByPlayers = playerOutputsProcessingResult._2
+          cooldownIsOver && r5StateIsCorrect
+        } else { false }
 
-            // Validate creator's output
-            val c5_creatorOutputValid = if (c1_hasCreatorOutput && c4_allPlayerOutputsValid) { 
-                val creatorOutput = OUTPUTS(numPlayerRefundOutputs) 
-                val remainingStakeForCreator = creatorStake - totalStakeClaimedByPlayers
-                
-                val creatorGetsNftBack = creatorOutput.tokens.size == 1 && 
-                                         creatorOutput.tokens(0)._1 == gameNftId && 
-                                         creatorOutput.tokens(0)._2 == 1L
-
-                creatorOutput.propositionBytes == gameCreatorP2PKPropBytes && // Uses the workaround
-                creatorOutput.value >= remainingStakeForCreator && 
-                creatorGetsNftBack
-            } else {
-                false
-            }
-            
-            c1_hasCreatorOutput && c2_inputOutputCountMatch && c3_allExpectedPBoxesAreValid && c4_allPlayerOutputsValid && c5_creatorOutputValid
-        } else { false } // sIsNotCorrect
-    } else { false } // isNotBeforeDeadline
-  })
-  */
+        // --- Shared validation for the recreated GameBox's integrity ---
+        val gameBoxIntegrityPreserved = {
+          recreatedGameBox.propositionBytes == SELF.propositionBytes &&
+          recreatedGameBox.value >= remainingStake &&
+          recreatedGameBox.tokens == SELF.tokens &&
+          // Check that only the stake value in R7 is modified
+          recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&
+          recreatedGameBox.R7[Coll[Long]].get(1) == remainingStake &&
+          recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
+          // Check that other registers are untouched
+          recreatedGameBox.R4[Coll[Byte]].get == gameCreatorPK &&
+          recreatedGameBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
+          recreatedGameBox.R8[Int].get == SELF.R8[Int].get &&
+          recreatedGameBox.R9[Coll[Byte]].get == SELF.R9[Coll[Byte]].get
+        }
+        
+        (caseA || caseB) && claimerGetsPortion && gameBoxIntegrityPreserved
+      } else { false } // Incorrect number of outputs
+    } else { false } // Action only valid before the deadline
+  }
   
   // The script allows spending the GameBox if it's a valid resolution.
-  // When Action 2 is active and tested, it will be: sigmaProp(action1_isValidResolution || action2_isValidCancellation)
-  sigmaProp(action1_isValidResolution)
+  sigmaProp(action1_isValidResolution || action2_isValidCancellation)
 }

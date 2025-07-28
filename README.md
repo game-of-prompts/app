@@ -402,12 +402,11 @@ This section groups elements that, although part of the complete vision of Game 
 
 These are improvements focused on strengthening the robustness and fairness of the main gameplay flow.
 
-  * **10.1.1. Action 2 of the `game.es` Contract: Cancellation for Early Secret Revelation**
-
-      * This action (variable `action2_isValidCancellation` in the `game.es` code, currently commented out) is designed to be activated if the secret `S` is revealed *before* the `deadline`.
-      * It would allow any party (not just a player) who detects the revelation of `S` (for example, in an input box of the cancellation transaction) to initiate the cancellation. Participating players could then claim their `participationFee` and, potentially, a portion of the `creatorStake` as a penalty to the creator (according to the detailed design in `contracts/game.es` for this action).
-      * The creator would recover the remaining `creatorStake` (if any after distribution to players) and the `gameNftId`.
-      * **Related Incentives:** This action strongly disincentivizes the creator from revealing `S` prematurely or abandoning the game, as they would lose part or all of their `creatorStake`.
+* **10.1.1. Action 2 of the `game.es` Contract: Cancellation for Early Secret Revelation**
+    * This action (variable `action2_isValidCancellation` in the `game.es` code, currently commented out) is designed to be activated if the secret **`S`** is revealed *before* the **`deadline`**.
+    * It would allow any party (not just a player) who detects the revelation of **`S`** (for example, in an input box of the cancellation transaction) to initiate the cancellation. Participating players could then claim their `participationFee` and, potentially, a portion of the **`creatorStake`** as a penalty to the creator (according to the detailed design in `contracts/game.es` for this action).
+    * The creator would recover the remaining **`creatorStake`** (if any after distribution to players) and the `gameNftId`.
+    * **Related Incentives:** This action strongly disincentivizes the creator from revealing **`S`** prematurely or abandoning the game, as they would lose part or all of their **`creatorStake`**.
 
   * **10.1.2. Proof of Omitted Participation (to counteract Creator Censorship)**
 

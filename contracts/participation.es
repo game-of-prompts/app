@@ -12,9 +12,11 @@
   // === Value Extraction from SELF ===
   val playerPKBytes = SELF.R4[Coll[Byte]].get
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
-  // gameDeadline is no longer in SELF.R9. It must be obtained from the GameBox (INPUTS(0).R7(0)) during spending.
 
-  // === Action 1: Spent as part of a Valid Game Resolution (Action 3 of GameBox) ===
+  // === Helper for P2PK Addresses ===
+  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
+
+  // === Action 1: Spent as part of a Valid Game Resolution (Action 1 of GameBox) ===
   val spentInValidGameResolution = {
     val gameBoxCandidate = INPUTS(0) // Assume GameBox is INPUTS(0) in the resolution tx
 
@@ -28,50 +30,67 @@
     if (gameBoxIsPlausible) {
         val gameDeadlineFromGameBox = gameBoxCandidate.R7[Coll[Long]].get(0)
         val c1_isAfterDeadline = HEIGHT >= gameDeadlineFromGameBox
-
-        // Markers of a GameBox Action 3:
-        // - At least 1 INPUT (the GameBox itself, SELF is another input).
-        // - At least 2 OUTPUTS (Winner, Creator)
-        // - OUTPUT(1) (creator's output) has R4 defined (where S is revealed).
-        val c2_txStructureLooksLikeResolution = INPUTS.size >= 1 && // SELF is an input, GameBox is another.
+        val c2_txStructureLooksLikeResolution = INPUTS.size >= 1 &&
                                                 OUTPUTS.size >= 2 &&
                                                 OUTPUTS(1).R4[Coll[Byte]].isDefined
-
         c1_isAfterDeadline && c2_txStructureLooksLikeResolution
     } else {
         false
     }
   }
 
-  // === Action 2: Spent in Valid Game Cancellation (Action 4 of GameBox) (FULL DESIGN - COMMENTED OUT) ===
-  /* // Uncomment and develop when Action 4 in game.es is active.
-  val spentInValidGameCancellation = sigmaProp({
-    val gameBoxCandidate = INPUTS(0) // Assume GameBox is INPUTS(0)
-    // Similar to spentInValidGameResolution, but check HEIGHT < gameDeadlineFromGameBox
-    // and markers of Action 4 (e.g., INPUTS(1) revealing S if Action 4 is designed that way).
-    // Action 4 in game.es also needs to be refactored to avoid 'var' if it causes issues.
-    // For now, a placeholder.
-    false
-  })
-  */
+  // === Action 2: Spent in Valid Game Cancellation (UPDATED LOGIC) ===
+  val spentInValidGameCancellation = {
+    // This action allows a player to get a refund if the game's secret 'S' is revealed
+    // before the deadline.
+    // 1. The GameBox must be provided as a dataInput to verify its parameters.
+    // 2. An input must reveal the secret 'S'.
+    // 3. The transaction must refund the fee to the player (address in R4).
+    if (CONTEXT.dataInputs.size > 0 && INPUTS.size > 0) {
+      val gameBoxInData = CONTEXT.dataInputs(0)
+      val revealerBox = INPUTS(0) // Assume the box revealing S is the first input
 
-  // === Action 3: Player reclaims their funds after a grace period (FULL DESIGN - COMMENTED OUT) ===
-  /* // Uncomment and develop. This condition is independent of INPUTS(0) if it's a direct claim.
-  val N_GRACE_PERIOD_BLOCKS = 1000L
-  val playerReclaimsAfterGracePeriod = sigmaProp({
-    // To get gameDeadline, this claim transaction would need the GameBox as a DataInput
-    // or assume a deadline if the original GameBox cannot be accessed.
-    // If it's assumed that the GameBox is in CONTEXT.dataInputs(0) for this specific action:
-    // val gameBoxInData = CONTEXT.dataInputs(0)
-    // val originalGameDeadline = gameBoxInData.R7[Coll[Long]].get(0)
-    // val isAfterGrace = HEIGHT >= originalGameDeadline + N_GRACE_PERIOD_BLOCKS
-    // isAfterGrace && PK(playerPKBytes) // WARNING: PK(playerPKBytes) will fail with the current compiler
-    false // Placeholder
-  })
-  */
+      // Verify that the dataInput is the correct GameBox for this participation
+      val gameBoxIsPlausible = gameBoxInData.tokens.size > 0 &&
+                               gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
+                               gameBoxInData.R5[Coll[Byte]].isDefined && // hashS
+                               gameBoxInData.R7[Coll[Long]].get.size == 3   // numericalParams
 
-  // For now, only spending under Action 1 (Game Resolution) is allowed
-  sigmaProp(spentInValidGameResolution)
-  // When the others are ready:
-  // sigmaProp(spentInValidGameResolution || spentInValidGameCancellation || playerReclaimsAfterGracePeriod)
+      if (gameBoxIsPlausible) {
+        val gameDeadline = gameBoxInData.R7[Coll[Long]].get(0)
+        val hashS_fromGameBox = gameBoxInData.R5[Coll[Byte]].get
+
+        // Condition 1: Must happen before the deadline
+        val isBeforeDeadline = HEIGHT < gameDeadline
+
+        // Condition 2: The secret 'S' must be correctly revealed in an input
+        val sIsRevealedCorrectly = if (revealerBox.R4[Coll[Byte]].isDefined) {
+          val revealedS = revealerBox.R4[Coll[Byte]].get
+          blake2b256(revealedS) == hashS_fromGameBox
+        } else {
+          false
+        }
+
+        // Condition 3: The player must get their funds back.
+        // The transaction must have an output that pays at least SELF.value
+        // to the player's PK (from R4).
+        val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
+          val playerP2PKAddress = P2PK_ERGOTREE_PREFIX ++ playerPKBytes
+          outBox.propositionBytes == playerP2PKAddress && outBox.value >= SELF.value
+        }
+        
+        isBeforeDeadline && sIsRevealedCorrectly && playerGetsRefund
+      } else {
+        false // The provided dataInput is not the correct GameBox
+      }
+    } else {
+      false // Not enough inputs or dataInputs for this action
+    }
+  }
+
+  // === Action 3: Player reclaims their funds after a grace period (COMMENTED OUT) ===
+  val playerReclaimsAfterGracePeriod = false // Placeholder
+
+  // Allow spending if it's a valid resolution OR a valid cancellation.
+  sigmaProp(spentInValidGameResolution || spentInValidGameCancellation)
 }
