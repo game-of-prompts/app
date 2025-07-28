@@ -129,7 +129,7 @@
                     </div>
                 </div>
                 <button class="wallet-button" on:click={() => showWalletInfo = true} aria-label="Wallet info">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2-2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
                 </button>
             {/if}
             <div class="theme-toggle">
@@ -169,7 +169,7 @@
     </Dialog.Root>
 {/if}
 
-<main>
+<main class="pb-16">
     {#if $game_detail === null}
         {#if activeTab === 'participateGame'}
             <TokenAcquisition />
@@ -182,15 +182,17 @@
     {/if}
 </main>
 
-
-<div class="bottom-left">
-    <Kya />
-</div>
-<div class="bottom-right">
-    <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.502 2.999L6 0L11.495 3.03L6.0025 5.96L0.502 2.999V2.999ZM6.5 6.8365V12L11.5 9.319V4.156L6.5 6.8365V6.8365ZM5.5 6.8365L0.5 4.131V9.319L5.5 12V6.8365Z" fill="currentColor"></path></svg>
-    {current_height}
-</div>
-
+<footer class="page-footer">
+    <div class="footer-left">
+        <Kya />
+    </div>
+    <div class="footer-right">
+        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.502 2.999L6 0L11.495 3.03L6.0025 5.96L0.502 2.999V2.999ZM6.5 6.8365V12L11.5 9.319V4.156L6.5 6.8365V6.8365ZM5.5 6.8365L0.5 4.131V9.319L5.5 12V6.8365Z" fill="currentColor"></path></svg>
+        {#if current_height}
+            <span>{current_height}</span>
+        {/if}
+    </div>
+</footer>
 
 <style lang="postcss">
     :global(body) {
@@ -271,5 +273,29 @@
         @apply md:hidden; /* Only show on screens where desktop-nav is hidden */
     }
     
-    /* (All other styles like hamburger, mobile menu, bottom elements are unchanged) */
+    /* (All other styles like hamburger, mobile menu are unchanged) */
+
+    main {
+        /* REASONING: To prevent the fixed footer from obscuring the last piece of content
+        in the main section, we add padding to the bottom of the main element
+        equal to the footer's height plus some extra space. */
+        @apply pb-16;
+    }
+
+    .page-footer {
+        /* REASONING: This creates a dedicated footer bar pinned to the bottom of the viewport,
+        ensuring a clean separation from the main content instead of overlapping it. */
+        @apply fixed bottom-0 left-0 right-0 z-40; /* Pinned to bottom, below header (z-50) */
+        @apply flex items-center justify-between;
+        @apply h-12 px-6; /* Consistent height and horizontal padding */
+        @apply border-t text-sm text-muted-foreground;
+        background-color: hsl(var(--background) / 0.8);
+        border-top-color: hsl(var(--border));
+        backdrop-filter: blur(4px);
+    }
+
+    .footer-left,
+    .footer-right {
+        @apply flex items-center gap-2;
+    }
 </style>
