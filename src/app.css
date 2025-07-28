@@ -4,71 +4,80 @@
 
 @layer base {
   :root {
-    /* Base principal: Blanco y slate muy oscuro para texto, evocando claridad y seriedad tecnológica. */
-    --background: 0 0% 100%; /* Blanco puro */
-    --foreground: 222 47% 11%; /* slate-900 */
+    /* Variables de fuente basadas en tu tema */
+    --font-heading: 'Montserrat', sans-serif;
+    --font-body: 'Inconsolata', monospace;
 
-    /* Tarjetas y Popovers: Blancos para mantener la limpieza en modo claro. */
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Tema de colores basado en las imágenes */
+    /* Colores principales: Un fondo crema claro y un texto casi negro para un contraste alto y elegante. */
+    --background: 33 60% 98%; /* Crema claro, aprox #FDFBF8 */
+    --foreground: 210 4% 9%;   /* Negro suave, #151617 */
 
-    /* Primario: Un azul vibrante y moderno, asociado con tecnología y confianza. */
-    --primary: 217 91% 60%; /* Azul brillante */
-    --primary-foreground: 0 0% 100%;
+    /* Tarjetas: Un tono melocotón pálido para los recuadros. */
+    --card: 28 55% 91%;         /* #F2DED0 */
+    --card-foreground: 210 4% 9%; /* #151617 */
 
-    /* Secundario: Un gris azulado claro, usando slate. */
-    --secondary: 210 40% 96.1%; /* slate-100 */
-    --secondary-foreground: 222 47% 11%; /* slate-900 */
+    --popover: 33 60% 98%;
+    --popover-foreground: 210 4% 9%;
 
-    /* Muted: Colores para texto menos prominente. */
-    --muted: 210 40% 94%; /* slate-200 aprox */
-    --muted-foreground: 215 20% 45%; /* slate-500 aprox */
+    /* Primario: Se usa el color del texto como acento principal para botones y enlaces. */
+    --primary: 210 4% 9%;         /* #151617 */
+    --primary-foreground: 0 0% 100%; /* Blanco, para el texto sobre el botón primario */
 
-    /* Acento: Naranja/ámbar energético. */
-    --accent: 30 96% 54%;
+    /* Secundario: El fondo de la tarjeta puede funcionar como fondo secundario. */
+    --secondary: 28 55% 91%;        /* #F2DED0 */
+    --secondary-foreground: 210 4% 9%; /* #151617 */
+
+    /* Muted: El segundo color de acento opcional para elementos discretos. */
+    --muted: 40 9% 72%;           /* #BAB6AA */
+    --muted-foreground: 210 4% 15%; /* Un poco más claro que el texto principal */
+
+    /* Acento: Se alinea con el color primario, ya que el tema es minimalista. */
+    --accent: 210 4% 9%;          /* #151617 */
     --accent-foreground: 0 0% 100%;
 
-    /* Destructivo: Rojo estándar. */
+    /* Destructivo: Un rojo estándar que no desentona. */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Bordes e Inputs: Grises claros neutros. */
-    --border: 215 20% 86.5%; /* slate-200 */
-    --input: 215 20% 86.5%;
-    --ring: 217 91% 55%;
+    /* Bordes e Inputs: El color de texto se usa para los bordes, creando un look definido. */
+    --border: 210 4% 9%;         /* #151617 */
+    --input: 28 55% 91%;          /* #F2DED0 - para el fondo del input */
+    --ring: 40 9% 72%;            /* #BAB6AA - para el anillo de foco */
 
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Base Oscura: slate muy oscuro para fondo, y texto claro. */
-    --background: 222 47% 11%; /* slate-900 */
-    --foreground: 210 40% 98%; /* slate-100 */
+    /* Propuesta para el modo oscuro, invirtiendo la paleta de colores */
+    --background: 210 4% 9%;         /* #151617 */
+    --foreground: 33 60% 98%;         /* #FDFBF8 */
 
-    --card: 222 47% 14%; /* slate-800 */
-    --card-foreground: 210 40% 98%;
+    --card: 210 4% 12%;           /* Un gris ligeramente más claro que el fondo */
+    --card-foreground: 33 60% 98%;
 
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 210 4% 9%;
+    --popover-foreground: 33 60% 98%;
 
-    --primary: 217 91% 65%;
-    --primary-foreground: 222 47% 11%; /* slate-900 */
+    /* En modo oscuro, el primario es el color claro del texto. */
+    --primary: 33 60% 98%;
+    --primary-foreground: 210 4% 9%;
 
-    --secondary: 217 33% 17%; /* slate-800 */
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 4% 12%;
+    --secondary-foreground: 33 60% 98%;
 
-    --muted: 217 33% 17%; /* slate-800 */
-    --muted-foreground: 215 20% 65%; /* slate-400 */
+    --muted: 40 9% 25%;
+    --muted-foreground: 40 9% 72%;
 
-    --accent: 30 96% 64%;
-    --accent-foreground: 35 100% 7%;
+    --accent: 33 60% 98%;
+    --accent-foreground: 210 4% 9%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 217 33% 22%; /* slate-700 */
-    --input: 217 33% 25%; /* slate-600 */
-    --ring: 217 91% 65%;
+    --border: 33 60% 98%;
+    --input: 210 4% 12%;
+    --ring: 40 9% 72%;
   }
 }
 
@@ -78,6 +87,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 900; /* Corresponde a la variante "Negro" de Montserrat */
+    @apply text-foreground;
   }
 }
