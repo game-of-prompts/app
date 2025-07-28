@@ -1,13 +1,10 @@
 <script lang="ts">
-	// ... (toda la lógica del script permanece exactamente igual que en la versión anterior) ...
     import { block_to_time_remaining, block_height_to_timestamp } from "$lib/common/countdown";
     import { game_detail } from "$lib/common/store";
     import { Button } from "$lib/components/ui/button";
-    import { mode } from "mode-watcher";
     import { onMount, onDestroy } from "svelte";
     import { isGameParticipationEnded, type Game } from "$lib/common/game";
     import { Badge } from "$lib/components/ui/badge/index.js";
-    import { fade } from 'svelte/transition';
 
     export let game: Game;
     export let index: number;
@@ -33,7 +30,6 @@
         }
     }
 
-    // --- El resto de la lógica de inicialización y timers va aquí (sin cambios) ---
     let timerInterval: ReturnType<typeof setInterval> | null = null;
     let _initializedGameId: string | null = null;
     let _isCurrentlyInitializing = false;
@@ -129,10 +125,10 @@
 </script>
 
 <div
-    class="game-row flex flex-col md:flex-row items-center gap-8 md:gap-12"
+    class="game-row flex flex-col md:flex-row items-start gap-8 md:gap-24"
     class:md:flex-row-reverse={!isEven}
 >
-    <div class="image-wrapper w-full md:w-5/12 flex-shrink-0">
+    <div class="image-wrapper w-full md:w-6/12 flex-shrink-0">
         {#if game?.content?.imageURL}
             <img
                 src={game.content.imageURL}
@@ -143,7 +139,9 @@
         {/if}
     </div>
 
-    <div class="content-wrapper w-full md:w-7/12 text-center md:text-left">
+    <div 
+        class="content-wrapper w-full md:w-6/12 text-center md:text-left"
+    >
         <Badge variant="secondary" class="mb-3">
             {game.participations?.length || 0} Participants
         </Badge>
@@ -175,14 +173,14 @@
             {#if game?.content?.description && game.content.description.length > 200}...{/if}
         </p>
 
-        <div class="status-info flex flex-col sm:flex-row gap-4 items-center md:items-start justify-center md:justify-start mb-6">
-            <div class="text-center">
+        <div class="status-info flex flex-col sm:flex-row gap-4 items-center mb-6 justify-center md:justify-start">
+            <div class="text-center md:text-left">
                 <div class="text-xs uppercase text-slate-500 dark:text-slate-400 tracking-wider">Status</div>
                 <div class="{statusColor} px-3 py-1 rounded-full text-sm font-semibold mt-1">
                     {statusMessage}
                 </div>
             </div>
-            <div class="text-center">
+            <div class="text-center md:text-left">
                 <div class="text-xs uppercase text-slate-500 dark:text-slate-400 tracking-wider">Time Remaining</div>
                 <div class="text-lg font-semibold text-slate-700 dark:text-slate-200 mt-1">
                     {remainingTimeCountdown}

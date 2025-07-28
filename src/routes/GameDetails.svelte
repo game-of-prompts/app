@@ -236,7 +236,7 @@
             </div>
         </section>
 
-        <section class="status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
+        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
                 {#if game.ended}
@@ -357,10 +357,15 @@
 </div>
 {/if}
 
-<style lang="postcss">
+<style>
     /* General styles for the detail page */
     .game-detail-page {
-        @apply py-8;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .game-status {
+        background-color: var(--card);
     }
 
     /* Hero Section Styles */
@@ -370,46 +375,93 @@
         align-items: center;
     }
     .prose :global(a) {
-        @apply text-slate-300 underline hover:text-white;
+        color: rgb(203 213 225);
+        text-decoration-line: underline;
+    }
+    .prose :global(a:hover) {
+        color: rgb(255 255 255);
     }
     .dark .prose :global(a) {
-        @apply text-slate-400 hover:text-slate-300;
+        color: rgb(148 163 184);
+    }
+    .dark .prose :global(a:hover) {
+        color: rgb(203 213 225);
     }
 
     /* Stat Blocks Styles */
     .stat-block {
-        @apply bg-white/10 backdrop-blur-sm p-4 rounded-lg text-center flex flex-col items-center justify-center gap-1;
+        background-color: rgba(255, 255, 255, 0.1);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
     }
     .stat-icon {
-        @apply w-6 h-6 text-white/70 mb-1;
+        width: 1.5rem;
+        height: 1.5rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.25rem;
     }
     .stat-block span {
-        @apply text-lg font-bold;
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+        font-weight: 700;
     }
     .stat-label {
-        @apply text-xs uppercase tracking-wider text-white/60 font-normal;
+        font-size: 0.75rem;
+        line-height: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.6);
+        font-weight: 400;
     }
 
     /* Info box for status messages */
     .info-box {
-        @apply text-sm text-center p-3 rounded-md;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        text-align: center;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
         background-color: hsl(var(--muted));
         color: hsl(var(--muted-foreground));
     }
 
-    /* --- NEW STYLES FOR PARTICIPATION CARD --- */
+    /* --- STYLES FOR PARTICIPATION CARD --- */
     .info-block {
-        @apply flex flex-col;
+        display: flex;
+        flex-direction: column;
     }
     .info-label {
-        @apply text-xs uppercase text-slate-500 dark:text-slate-400 mb-1 tracking-wider;
+        font-size: 0.75rem;
+        line-height: 1rem;
+        text-transform: uppercase;
+        color: rgb(100 115 135);
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.05em;
     }
+    .dark .info-label {
+        color: rgb(148 163 184);
+    }
+
     .info-value {
-        @apply text-sm font-semibold text-slate-700 dark:text-slate-200;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        font-weight: 600;
+        color: rgb(51 65 85);
+    }
+    .dark .info-value {
+        color: rgb(226 232 240);
     }
 
     .winner-card {
-        @apply border-2;
+        border-width: 2px;
         background-image: linear-gradient(to top right,
             rgba(4, 120, 87, 0.1),
             rgba(5, 150, 105, 0)
@@ -423,7 +475,20 @@
     }
 
     .winner-badge {
-        @apply absolute top-0 right-0 flex items-center px-4 py-1 text-sm font-bold text-white rounded-bl-lg;
+        position: absolute;
+        top: 0px;
+        right: 0px;
+        display: flex;
+        align-items: center;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        font-weight: 700;
+        color: rgb(255 255 255);
+        border-bottom-left-radius: 0.5rem;
         background: linear-gradient(135deg, #10B981, #059669);
     }
 </style>

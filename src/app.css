@@ -54,8 +54,7 @@
     --background: 210 4% 9%;         /* #151617 */
     --foreground: 33 60% 98%;         /* #FDFBF8 */
 
-    /* Antes: 210 4% 12% - Apenas se distinguía del fondo. */
-    --card: 210 4% 15%;           /* #252628 - Gris más claro para mejor visibilidad. */
+    --card: #252628;
     --card-foreground: 33 60% 98%;
 
     --popover: 210 4% 9%;
