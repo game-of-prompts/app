@@ -49,11 +49,13 @@
   }
 
   .dark {
-    /* Propuesta para el modo oscuro, invirtiendo la paleta de colores */
+    /* --- CORRECCIÓN --- */
+    /* Se aumentó la luminosidad de la tarjeta para mayor contraste. */
     --background: 210 4% 9%;         /* #151617 */
     --foreground: 33 60% 98%;         /* #FDFBF8 */
 
-    --card: 210 4% 12%;           /* Un gris ligeramente más claro que el fondo */
+    /* Antes: 210 4% 12% - Apenas se distinguía del fondo. */
+    --card: 210 4% 15%;           /* #252628 - Gris más claro para mejor visibilidad. */
     --card-foreground: 33 60% 98%;
 
     --popover: 210 4% 9%;
@@ -63,7 +65,8 @@
     --primary: 33 60% 98%;
     --primary-foreground: 210 4% 9%;
 
-    --secondary: 210 4% 12%;
+    /* Actualizado para coincidir con el color de la tarjeta. */
+    --secondary: 210 4% 15%;
     --secondary-foreground: 33 60% 98%;
 
     --muted: 40 9% 25%;
@@ -76,7 +79,8 @@
     --destructive-foreground: 0 0% 98%;
 
     --border: 33 60% 98%;
-    --input: 210 4% 12%;
+    /* Actualizado para coincidir con el color de la tarjeta. */
+    --input: 210 4% 15%;
     --ring: 40 9% 72%;
   }
 }

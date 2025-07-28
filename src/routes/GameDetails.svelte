@@ -205,7 +205,7 @@
 </script>
 
 {#if game}
-<div class="game-detail-page {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'} min-h-screen">
+<div class="game-detail-page min-h-screen">
     <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
@@ -236,7 +236,7 @@
             </div>
         </section>
 
-        <section class="status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
+        <section class="status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
                 {#if game.ended}

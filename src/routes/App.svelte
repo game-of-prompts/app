@@ -3,7 +3,7 @@
     import { address, connected, balance, game_detail, timer } from "$lib/common/store";
     import CreateGame from './CreateGame.svelte';
     import TokenAcquisition from './TokenAcquisition.svelte';
-    import CardDetails from './CardDetails.svelte';
+    import GameDetails from './GameDetails.svelte';
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { loadGameById } from '$lib/common/load_by_id';
     import { browser } from '$app/environment';
@@ -178,7 +178,7 @@
             <CreateGame />
         {/if}
     {:else}
-        <CardDetails />
+        <GameDetails />
     {/if}
 </main>
 
