@@ -145,7 +145,7 @@
 <div class="create-game-container">
     <div class="hero-section text-center">
         <h2 class="project-title">Create a New Game</h2>
-        <p class="subtitle">Fill in the details to launch your game on the Ergo blockchain.</p>
+        <p class="subtitle">Fill in the details to launch your game.</p>
     </div>
 
     <div class="space-y-8">

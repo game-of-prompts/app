@@ -97,7 +97,7 @@
 <div class="items-container">
     <div class="hero-section">
         <h2 class="items-title"><slot>Explore Games</slot></h2>
-        <p class="subtitle">Compete, demonstrate your skill, and win prizes on the Ergo blockchain.</p>
+        <p class="subtitle">Compete, demonstrate your skill, and win prizes.</p>
     </div>
 
     <div class="search-container mb-12">

@@ -189,7 +189,7 @@
 
     <div class="footer-center">
         <div class="scrolling-text-wrapper">
-            A decentralized application with no central servers. Powered by Ergo Blockchain.
+            A peer-to-peer application with no central servers. Powered by Ergo Blockchain.
         </div>
     </div>
 
