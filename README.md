@@ -89,7 +89,7 @@ For a player to participate in a GoP game, they follow these steps:
 1.  **Game Selection**
 
       * The player browses the GoP Web to find a game that interests them. To make their decision, they can consider the game description, rules, `participationFee`, `deadline`, the creator's `commissionPercentage`, and, if available, information about the CDE (previously mentioned) or the creator's reputation.
-      * Once chosen, they download the Game Service (`<juego_id>.celaut.bee`) and run it on their own Celaut node or a trusted peer of their node. This local execution allows them to understand the game mechanics (even if the internal logic is obfuscated) and test different strategies (they can try as many times as they want, because the fee is only paid for participation).
+      * Once chosen, they download the Game Service (`<game_id>.celaut.bee`) and run it on their own Celaut node or a trusted peer of their node. This local execution allows them to understand the game mechanics (even if the internal logic is obfuscated) and test different strategies (they can try as many times as they want, because the fee is only paid for participation).
 
 2.  **Solver Design**
 
@@ -99,7 +99,7 @@ For a player to participate in a GoP game, they follow these steps:
 
 3.  **Game Execution (to obtain participation data)**
 
-      * The Game Service (`<juego_id>.celaut.bee`) is run on the player's Celaut node (or a trusted one), and the newly created Solver Service (`<solver_id>.celaut.bee`) is provided as input.
+      * The Game Service (`<game_id>.celaut.bee`) is run on the player's Celaut node (or a trusted one), and the newly created Solver Service (`<solver_id>.celaut.bee`) is provided as input.
       * The Game Service processes the interaction with the solver, evaluates its performance, and generates a set of crucial data. This information is what the player will need if they decide to compete formally:
           * **For the `ParticipationBox` (data to be registered on-chain):**
               * **Solver ID (`solverId`):** A unique identifier for the player's solver service (i.e., the hash of the Celaut service). It will be stored in `R7` of the `ParticipationBox`.
@@ -147,7 +147,7 @@ Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the foll
 
   * **Obfuscated Game Logic:**
 
-      * Game services (`<juego_id>.celaut.bee`) should be protected to hinder reverse engineering and premature discovery of their internal logic or the secret `S`.
+      * Game services (`<game_id>.celaut.bee`) should be protected to hinder reverse engineering and premature discovery of their internal logic or the secret `S`.
 
   * **Cryptographic Commitments and Secret `S`:**
 
