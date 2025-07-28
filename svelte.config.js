@@ -17,7 +17,7 @@ const config = {
 			fallback: null
 		}),
 		paths: {
-            base: '/contract-web'
+            base: '/'
         }
 	}
 };
