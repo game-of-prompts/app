@@ -186,6 +186,13 @@
     <div class="footer-left">
         <Kya />
     </div>
+
+    <div class="footer-center">
+        <div class="scrolling-text-wrapper">
+            A decentralized application with no central servers. Powered by Ergo Blockchain.
+        </div>
+    </div>
+
     <div class="footer-right">
         <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.502 2.999L6 0L11.495 3.03L6.0025 5.96L0.502 2.999V2.999ZM6.5 6.8365V12L11.5 9.319V4.156L6.5 6.8365V6.8365ZM5.5 6.8365L0.5 4.131V9.319L5.5 12V6.8365Z" fill="currentColor"></path></svg>
         {#if current_height}
@@ -196,21 +203,17 @@
 
 <style lang="postcss">
     :global(body) {
-        /* REASONING: Ensure body background uses theme variables for a cohesive look. */
         background-color: hsl(var(--background));
     }
     
     .navbar-container {
         @apply sticky top-0 z-50 w-full border-b backdrop-blur-lg;
-        /* REASONING: Simplified to a clean, standard sticky header with a bottom border for separation. */
         background-color: hsl(var(--background) / 0.8);
         border-bottom-color: hsl(var(--border));
     }
 
     .navbar-content {
         @apply container flex h-16 items-center;
-        /* REASONING: Removed card styles. It's now a simple flex container to align items.
-           Using a standard height `h-16` provides consistent vertical spacing. */
     }
 
     .logo-container {
@@ -231,18 +234,14 @@
 
     .nav-links li a {
         @apply transition-colors text-muted-foreground;
-        /* REASONING: A more subtle default state for nav links. */
     }
 
     .nav-links li a:hover {
         @apply text-foreground;
-        /* REASONING: Simple text color change on hover is cleaner. */
     }
 
     .nav-links li.active a {
         @apply text-foreground font-semibold;
-        /* REASONING: The active state is now just bolded text in the primary foreground color.
-           This is a modern, minimalist way to indicate the current page. */
     }
 
     .user-section {
@@ -250,14 +249,13 @@
     }
 
     .user-info {
-        @apply hidden sm:flex; /* Hide on extra small screens */
+        @apply hidden sm:flex;
     }
 
     .badge-container {
         @apply flex items-center gap-2;
     }
 
-    /* REASONING: Created a specific class for the address badge to style it like a button. */
     .address-badge {
         @apply inline-flex select-none items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold;
         @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 border-transparent;
@@ -265,29 +263,21 @@
     }
 
     .wallet-button {
-        @apply sm:hidden; /* Only show on small screens where user-info is hidden */
-        /* (styles for the button itself are unchanged) */
+        @apply sm:hidden;
     }
 
     .mobile-menu-button {
-        @apply md:hidden; /* Only show on screens where desktop-nav is hidden */
+        @apply md:hidden;
     }
     
-    /* (All other styles like hamburger, mobile menu are unchanged) */
-
     main {
-        /* REASONING: To prevent the fixed footer from obscuring the last piece of content
-        in the main section, we add padding to the bottom of the main element
-        equal to the footer's height plus some extra space. */
         @apply pb-16;
     }
 
     .page-footer {
-        /* REASONING: This creates a dedicated footer bar pinned to the bottom of the viewport,
-        ensuring a clean separation from the main content instead of overlapping it. */
-        @apply fixed bottom-0 left-0 right-0 z-40; /* Pinned to bottom, below header (z-50) */
-        @apply flex items-center justify-between;
-        @apply h-12 px-6; /* Consistent height and horizontal padding */
+        @apply fixed bottom-0 left-0 right-0 z-40;
+        @apply flex items-center;
+        @apply h-12 px-6 gap-6;
         @apply border-t text-sm text-muted-foreground;
         background-color: hsl(var(--background) / 0.8);
         border-top-color: hsl(var(--border));
@@ -296,6 +286,36 @@
 
     .footer-left,
     .footer-right {
-        @apply flex items-center gap-2;
+        @apply flex items-center gap-2 flex-shrink-0;
     }
+
+    .footer-center {
+        @apply flex-1 overflow-hidden;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+
+    .scrolling-text-wrapper {
+        @apply inline-block whitespace-nowrap;
+        animation: scroll-left 40s linear infinite;
+        transition: animation-duration 0.5s ease;
+    }
+
+    /*.page-footer:hover .scrolling-text-wrapper {
+        animation-duration: 8s;
+    }*/
+
+    /* START: Animación corregida */
+    @keyframes scroll-left {
+        from {
+            /* Comienza fuera de la pantalla (a la derecha) */
+            transform: translateX(100vw);
+        }
+        to {
+            /* Termina fuera de la pantalla (a la izquierda) */
+            transform: translateX(-100%);
+        }
+    }
+    /* END: Animación corregida */
+
 </style>
