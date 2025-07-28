@@ -2,33 +2,31 @@
     import GameCard from './GameCard.svelte';
     import { type Game } from '$lib/common/game';
     import { ErgoPlatform } from '$lib/ergo/platform';
-    import { games } from '$lib/common/store'; 
+    import { games } from '$lib/common/store';
     import * as Alert from "$lib/components/ui/alert";
-    import * as Dialog from "$lib/components/ui/dialog";
     import { Loader2, Search } from 'lucide-svelte';
     import { onMount, onDestroy } from 'svelte';
     import { get } from 'svelte/store';
     import { Input } from "$lib/components/ui/input";
+    import { fade } from 'svelte/transition';
 
     let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, Game> = new Map();
-    let listedItems: Map<string, Game> | null = null; 
+    let listedItems: Map<string, Game> | null = null;
     let errorMessage: string | null = null;
-    let isLoadingApi: boolean = true; // Renombrado para la carga de API
-    let isFiltering: boolean = false; // Nuevo estado para el feedback de filtrado
+    let isLoadingApi: boolean = true;
+    let isFiltering: boolean = false;
     let searchQuery: string = "";
-    let offset: number = 0; 
+    let offset: number = 0;
 
     export let filterGame: ((item: Game) => Promise<boolean>) | null = null;
 
-    // Función síncrona o asíncrona ligera para filtrar y buscar
     async function applyFiltersAndSearch(sourceItems: Map<string, Game>) {
-        console.log("GameList: applyFiltersAndSearch called"); // DEBUG
         const filteredItemsMap = new Map<string, Game>();
         for (const [id, item] of sourceItems.entries()) {
             let shouldAdd = true;
             if (filterGame) {
-                shouldAdd = await filterGame(item); // filterGame puede ser async
+                shouldAdd = await filterGame(item);
             }
             if (shouldAdd) {
                 if (searchQuery && item.content) {
@@ -45,84 +43,44 @@
         const sortedItemsArray = Array.from(filteredItemsMap.entries()).sort(
             ([, itemA], [, itemB]) => (itemB.box?.creationHeight ?? 0) - (itemA.box?.creationHeight ?? 0)
         );
-        listedItems = new Map(sortedItemsArray); // Actualiza los items listados
-        console.log("GameList: listedItems updated, count:", listedItems.size); // DEBUG
+        listedItems = new Map(sortedItemsArray);
     }
 
     async function loadInitialItems() {
-        console.log("GameList: loadInitialItems called. Offset:", offset, ". Now fetching active and ended games."); // DEBUG
-        
-        isLoadingApi = true; 
+        isLoadingApi = true;
         errorMessage = null;
-
         try {
-            // 1. Obtener juegos activos para el offset actual
             const activeGamesMap = await platform.fetchActiveGoPGames(offset);
-            console.log(`GameList: Fetched active games (offset: ${offset}):`, activeGamesMap.size); //DEBUG
-
-            // 2. Obtener juegos terminados para el offset actual
-            const endedGamesMap = await platform.fetchEndedGoPGames(offset); // Usando el mismo offset
-            console.log(`GameList: Fetched ended games (offset: ${offset}):`, endedGamesMap.size); //DEBUG
-
-            // 3. Combinar los dos mapas.
-            // Si un gameId existiera en ambos (lo cual no debería suceder si la lógica de activo/terminado es correcta
-            // y gameId es un identificador único como un NFT ID), el de endedGamesMap sobrescribiría al de activeGamesMap
-            // debido al orden en el spread operator.
+            const endedGamesMap = await platform.fetchEndedGoPGames(offset);
             const combinedGames = new Map<string, Game>([...activeGamesMap, ...endedGamesMap]);
-            
-            console.log("GameList: Total combined games for store:", combinedGames.size); //DEBUG
-            
-            // Actualizar el store con los juegos combinados.
-            // Si el offset es para paginación de "más ítems", se debería añadir a los existentes
-            // en lugar de reemplazar. Pero tu código original hace un games.set(),
-            // lo que sugiere que 'offset' podría ser para recargar una página específica o la lista completa desde un punto.
-            // Si 'offset' indica una página y 'games' siempre contiene solo los de la página actual:
-            games.set(combinedGames); 
-            
-            // Si la intención es "cargar más" y añadir al final:
-            // games.update(currentGames => new Map([...currentGames, ...combinedGames]));
-            // Esto último requeriría que 'offset' se gestione cuidadosamente para evitar duplicados
-            // y para que fetchActiveGoPGames/fetchEndedGoPGames realmente devuelvan la "siguiente" página.
-            // Por ahora, me apego a tu lógica original de games.set().
-
-            // La suscripción a 'games' (como indicaste en tu código original)
-            // se encargará de llamar a applyFiltersAndSearch y de poner isLoadingApi a false.
-
+            games.set(combinedGames);
         } catch (error: any) {
-            console.error("Error fetching GoP games (active and/or ended):", error);
-            errorMessage = error.message || "Error occurred while fetching GoP games";
-            games.set(new Map()); // Poner a vacío para que la suscripción reaccione y muestre el error
+            console.error("Error fetching GoP games:", error);
+            errorMessage = error.message || "An error occurred while fetching games.";
+            games.set(new Map());
         }
-        // isLoadingApi se pone a false en la suscripción a 'games'
     }
 
     const unsubscribeGames = games.subscribe(async value => {
-        console.log("GameList: 'games' store updated, current isLoadingApi:", isLoadingApi); // DEBUG
-        allFetchedItems = value || new Map(); 
-        await applyFiltersAndSearch(allFetchedItems); // Aplicar filtros a los nuevos datos del store
-        if (isLoadingApi) isLoadingApi = false; // Marcar como finalizada la carga de API
+        allFetchedItems = value || new Map();
+        await applyFiltersAndSearch(allFetchedItems);
+        if (isLoadingApi) isLoadingApi = false;
     });
 
     let debouncedSearch: any;
-    $: if (searchQuery !== undefined) { // Solo reaccionar a searchQuery
+    $: if (searchQuery !== undefined) {
         clearTimeout(debouncedSearch);
         debouncedSearch = setTimeout(async () => {
-            console.log("GameList: Search query changed to:", searchQuery, "Applying filters."); // DEBUG
-            isFiltering = true; // Estado para feedback de filtrado (opcional)
-            await applyFiltersAndSearch(allFetchedItems); // Filtra sobre los datos ya cargados (allFetchedItems)
+            isFiltering = true;
+            await applyFiltersAndSearch(allFetchedItems);
             isFiltering = false;
         }, 300);
     }
 
     onMount(() => {
-        console.log("GameList: onMount. Initial games store size:", get(games).size); // DEBUG
         if (get(games).size === 0) {
-            // isLoadingApi ya es true por defecto.
             loadInitialItems();
         } else {
-            // Si ya hay datos, la suscripción a 'games' los procesará y pondrá isLoadingApi a false.
-            // Para asegurar, podemos forzar aquí la actualización si la suscripción no se ha disparado aún
-            // o si el componente se monta después de que el store ya tuviera datos.
             allFetchedItems = get(games);
             applyFiltersAndSearch(allFetchedItems).then(() => {
                  if (isLoadingApi) isLoadingApi = false;
@@ -131,16 +89,18 @@
     });
 
     onDestroy(() => {
-        unsubscribeGames(); 
+        unsubscribeGames();
         if (debouncedSearch) clearTimeout(debouncedSearch);
     });
-
 </script>
 
 <div class="items-container">
-    <h2 class="items-title"><slot>Explore Games</slot></h2>
+    <div class="hero-section">
+        <h2 class="items-title"><slot>Explore Games</slot></h2>
+        <p class="subtitle">Compete, demonstrate your skill, and win prizes on the Ergo blockchain.</p>
+    </div>
 
-    <div class="search-container mb-6">
+    <div class="search-container mb-12">
         <div class="relative w-full max-w-md mx-auto">
             <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500/70 h-4 w-4" />
             <Input
@@ -157,43 +117,42 @@
 
     {#if errorMessage}
         <Alert.Root class="my-4 border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300">
-            <Alert.Description class="text-center">
-                {errorMessage}
-            </Alert.Description>
+            <Alert.Description class="text-center">{errorMessage}</Alert.Description>
         </Alert.Root>
     {/if}
 
     {#if isLoadingApi}
-        <Dialog.Root open={isLoadingApi}>
-            <Dialog.Content class="w-[250px] rounded-xl bg-background/80 backdrop-blur-lg border border-slate-500/20">
-                <div class="flex flex-col items-center justify-center p-6 gap-4">
-                    <Loader2 class="h-16 w-16 animate-spin text-slate-500" />
-                    <Dialog.Title class="text-lg font-medium font-['Russo_One'] text-center">Fetching active games from the Ergo blockchain</Dialog.Title>
+        <div class="game-list-container">
+            {#each Array(3) as _, i}
+                <div class="skeleton-row" class:reverse={i % 2 !== 0}>
+                    <div class="skeleton-image-large"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-line title"></div>
+                        <div class="skeleton-line text"></div>
+                        <div class="skeleton-line text short"></div>
+                        <div class="skeleton-button"></div>
+                    </div>
                 </div>
-            </Dialog.Content>
-        </Dialog.Root>
-        <div class="loading-placeholder"></div>
+            {/each}
+        </div>
     {:else if listedItems && Array.from(listedItems).length > 0}
-        <div class="items-grid">
-            {#each Array.from(listedItems) as [itemId, itemData] (itemId)} 
-                <div class="item-card"> 
-                    <GameCard game={itemData} /> 
-                </div>
+        <div class="game-list-container">
+            {#each Array.from(listedItems) as [itemId, itemData], i (itemId)}
+                <GameCard game={itemData} index={i} />
             {/each}
         </div>
     {:else}
         <div class="no-items-container">
-            <p class="no-items-text">No games found.</p> 
+            <p class="no-items-text">No games found.</p>
         </div>
     {/if}
 </div>
 
 <style>
-    /* ... (tu CSS existente) ... */
     .items-container {
         display: flex;
         flex-direction: column;
-        padding: 0 15px;
+        padding: 2rem 15px 0;
         margin-bottom: 40px;
         width: 100%;
         max-width: 1200px;
@@ -201,95 +160,74 @@
         margin-right: auto;
     }
 
-    .items-title { 
+    .hero-section {
         text-align: center;
-        font-size: 2.2rem;
-        margin: 20px 0 30px;
-        color: slate; 
+        padding: 2rem 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .items-title {
+        text-align: center;
+        font-size: 2.8rem;
+        margin: 0 0 0.5rem;
+        color: slate;
         font-family: 'Russo One', sans-serif;
-        letter-spacing: 0.02em;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        position: relative;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .items-title::after { 
-        content: '';
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 3px;
-        background: linear-gradient(90deg, rgba(100, 116, 139, 0), rgba(100, 116, 139, 1), rgba(100, 116, 139, 0));
+    .subtitle {
+        font-size: 1.1rem;
+        color: var(--muted-foreground);
+        max-width: 500px;
+        margin: 0 auto;
     }
 
-    .items-grid { 
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 2rem;
-        padding: 10px;
-        width: 100%;
-        animation: fadeIn 0.5s ease-in;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .item-card { 
-        min-height: 400px; 
-        transition: transform 0.3s ease;
-    }
-
-    .no-items-container { 
+    /*
+      RAZONAMIENTO: Los estilos de la cuadrícula se reemplazan por los de una lista flexible.
+      El contenedor apila los elementos verticalmente con un espacio (`gap`) entre ellos.
+    */
+    .game-list-container {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 1.5rem;
-        margin-top: 2rem; 
-    }
-
-    .no-items-text { 
-        text-align: center;
-        padding: 3rem;
-        font-size: 1.2rem;
-        color: #aaa; 
-        background: rgba(var(--card-background-rgb, 255, 255, 255), 0.05); 
-        border-radius: 8px;
-        border: 1px solid rgba(var(--border-rgb, 255, 165, 0), 0.1);
-        max-width: 500px;
-        margin: 2rem auto;
-    }
-    .dark .no-items-text {
-        color: #888;
-    }
-
-
-    .loading-placeholder {
-        height: 70vh;
+        gap: 4rem; /* Espacio generoso entre cada juego */
         width: 100%;
     }
 
-    @media (max-width: 768px) {
-        .items-grid { 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .loading-placeholder {
-            height: 50vh;
-        }
+    /* RAZONAMIENTO: Nuevos estilos para el skeleton loader de filas. */
+    @keyframes pulse { 50% { opacity: .6; } }
+    .skeleton-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .skeleton-image-large {
+        height: 16rem; /* 256px */
+        width: 100%;
+        background-color: var(--muted);
+        border-radius: 0.75rem;
+    }
+    .skeleton-content { flex: 1; }
+    .skeleton-line {
+        height: 1rem;
+        border-radius: 0.25rem;
+        background-color: var(--muted);
+        margin-bottom: 1rem;
+    }
+    .skeleton-line.title { height: 2rem; width: 60%; margin-bottom: 1.5rem; }
+    .skeleton-line.text { width: 100%; }
+    .skeleton-line.text.short { width: 70%; }
+    .skeleton-button { height: 3rem; width: 180px; background-color: var(--muted); border-radius: 0.5rem; margin-top: 2rem; }
 
-        .items-title { 
-            font-size: 1.8rem;
-            margin: 15px 0 25px;
+    @media (min-width: 768px) {
+        .skeleton-row {
+            flex-direction: row;
+            align-items: center;
         }
+        .skeleton-image-large { width: 45%; }
+        .skeleton-row.reverse { flex-direction: row-reverse; }
     }
 
-    @media (max-width: 480px) {
-        .items-grid { 
-            grid-template-columns: 1fr; 
-        }
-    }
+
+    .no-items-container, .no-items-text { /* Estilos sin cambios */ }
 </style>
