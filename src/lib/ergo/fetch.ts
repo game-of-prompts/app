@@ -1,135 +1,186 @@
-// En fetch.ts
+// src/lib/ergo/fetch.ts
+
+import { type Box, ErgoAddress, SParse } from "@fleet-sdk/core";
+import { SBool, SByte, SColl, SPair, SLong } from "@fleet-sdk/serializer";
+import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 
 import {
-    type Box
-    // SAFE_MIN_BOX_VALUE ya no se usa aquí directamente
-} from "@fleet-sdk/core";
-import { SColl, SByte } from "@fleet-sdk/serializer";
-import { 
-    type Game, 
+    type Game,
     type Participation,
     type GameContent,
-    type WinnerInfo
+    type WinnerInfo,
+    GameState, // Assuming GameState enum/object is in game.ts
+    type GameStatus
 } from "../common/game";
-import { ErgoPlatform } from "./platform";
 import { explorer_uri } from "./envs";
-import { getGopGameBoxTemplateHash, getGopParticipationBoxTemplateHash } from "./contract"; 
-
-import { ErgoAddress } from "@fleet-sdk/core";
-import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { 
-    parseIntFromHex,
+import { getGopGameBoxTemplateHash, getGopParticipationBoxTemplateHash } from "./contract";
+import {
     hexToUtf8,
-    hexToBytes, 
-    uint8ArrayToHex, 
-    parseCollByteToHex, 
+    hexToBytes,
+    uint8ArrayToHex,
+    parseCollByteToHex,
     parseLongColl,
-    bigintToLongByteArray 
-} from "./utils";
+    bigintToLongByteArray
+} from "./utils"; // Using your provided utility functions
 
+// --- Core Logic for New Contract Version ---
 
-// --- Definición de SigmaType esperados para GoP gameBox (CON R9) ---
-const gopGameBoxExpectedSigmaTypes = {
-    R4: 'Coll[SByte]', 
-    R5: 'Coll[SByte]', 
-    R6: 'Coll[SByte]', 
-    R7: 'Coll[SLong]', 
-    R8: 'SInt',        
-    R9: 'Coll[SByte]'
-};
+/**
+ * Determines the status of a game based on the new contract logic.
+ * It uses the box's register data and the current blockchain height.
+ * @param box - The GameBox object from the explorer.
+ * @param currentHeight - The current height of the Ergo blockchain.
+ * @returns The status of the game (GameStatus).
+ */
+function getGameStatus(box: Box, currentHeight: number): GameStatus {
+    // R5 and R7 are critical for determining the game state.
+    const r5Value = box.additionalRegisters.R5?.serializedValue;
+    const r7Value = box.additionalRegisters.R7?.serializedValue;
 
-function hasValidGopSigmaTypes(additionalRegisters: any): boolean {
-    if (!additionalRegisters) { 
-        console.warn("hasValidGopSigmaTypes: additionalRegisters es null o undefined.");
-        return false; 
+    if (!r5Value || !r7Value) {
+        console.warn(`getGameStatus: R5 or R7 not found for box ${box.boxId}.`);
+        return GameState.Unknown; // Cannot determine status without these registers.
     }
-    for (const [key, expectedType] of Object.entries(gopGameBoxExpectedSigmaTypes)) {
-        const register = additionalRegisters[key];
-        if (!register) {
-            console.warn(`hasValidGopSigmaTypes: Falta el registro esperado ${key} en la caja.`);
-            return false; 
+
+    try {
+        // R5 is a tuple: (unlockHeight: Long, secretOrHash: Coll[Byte])
+        const stateTuple = SParse(r5Value) as STuple<[SLong, SColl<SByte>]>;
+        const unlockHeight = stateTuple.items[0].toBigInt();
+
+        // R7 is a collection: [deadline: Long, creatorStake: Long, participationFee: Long]
+        const numericalParams = SParse(r7Value) as SColl<SLong>;
+        const deadline = numericalParams.items[0].toBigInt();
+
+        const height = BigInt(currentHeight);
+
+        // This logic directly implements the state matrix from the contract's README.
+        if (unlockHeight === 0n) {
+            // Game is in 'Active' state tree
+            return height < deadline ? GameState.Active : GameState.Resolution;
+        } else {
+            // Game is in 'Canceled' state tree
+            return height < deadline ? GameState.Cancelled_Draining : GameState.Cancelled_Finalized;
         }
-        if (register.sigmaType !== expectedType) { 
-            console.warn(`hasValidGopSigmaTypes: Discrepancia en sigmaType para ${key}. Esperado: '${expectedType}', Obtenido: '${register.sigmaType}'`);
-            return false; 
-        }
+    } catch (e) {
+        console.error(`Error parsing game status for box ${box.boxId}:`, e);
+        return GameState.Unknown;
     }
-    return true;
 }
 
-// TODO fetch only if was created before deadline.
-async function fetchParticipationsForGame(
-    gameNftIdHex: string
-): Promise<Participation[]> {
-    const participationsList: Participation[] = [];
-    // Necesitamos el hash del template del script de participationBox
-    const participationScriptTemplateHash = getGopParticipationBoxTemplateHash(); // De contract.ts
+/**
+ * Parses a raw Box from the explorer into a structured Game object.
+ * This function understands the new contract's data layout.
+ * @param box - The raw box to parse.
+ * @param currentHeight - The current blockchain height.
+ * @returns A structured Game object, or null if parsing fails.
+ */
+function parseBoxToGame(box: Box, currentHeight: number): Game | null {
+    try {
+        const gameStatus = getGameStatus(box, currentHeight);
+        if (gameStatus === GameState.Unknown) {
+            return null; // Don't process boxes with indeterminate status.
+        }
 
-    let currentOffset = 0;
-    const limit = 50; 
-    let moreParticipationsAvailable = true;
-    // console.log(`Workspaceing participations for game NFT ID (R6 value to search): ${r6ValueToSearch}`);
+        const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
 
-    while (moreParticipationsAvailable) {
-        const searchUrl = `${explorer_uri}/api/v1/boxes/unspent/search`;
-        const queryParams = new URLSearchParams({
-            offset: currentOffset.toString(),
-            limit: limit.toString(),
-        });
+        // Parse R5 tuple to get unlock height and the secret/hash
+        const r5Tuple = SParse(box.additionalRegisters.R5!.serializedValue) as SPair<[SLong, SColl<SByte>]>;
+        const unlockHeight = r5Tuple.items[0].toBigInt();
+        const secretOrHashBytesHex = r5Tuple.items[1].toHex();
+
+        // Parse R7 to get numerical parameters, including the dynamic creator stake
+        const r7Params = SParse(box.additionalRegisters.R7!.serializedValue) as SColl<SLong>;
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = r7Params.items.map(v => v.toBigInt());
+
+        const commissionPercentage = Number(box.additionalRegisters.R8!.value);
+        const gameNftId = box.assets[0].tokenId;
+        
+        // Parse R9 for game details
+        const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "");
+        let gameContent: GameContent = { title: `Game ${gameNftId.slice(0, 8)}`, description: "", serviceId: "" };
         try {
-            const response = await fetch(`${searchUrl}?${queryParams.toString()}`, {
+            const parsedJson = JSON.parse(gameDetailsJsonString || "{}");
+            gameContent = {
+                title: parsedJson.title || `Game ${gameNftId.slice(0, 8)}`,
+                description: parsedJson.description || "No description provided.",
+                serviceId: parsedJson.serviceId || "",
+                // other fields like imageURL, webLink, etc., can be added here
+            };
+        } catch (e) { 
+            console.warn(`Could not parse R9 JSON for game ${gameNftId}.`);
+        }
+
+        return {
+            boxId: box.boxId,
+            box: box,
+            status: gameStatus,
+            deadlineBlock: Number(deadlineBlock),
+            participationFeeNanoErg: participationFeeNanoErg,
+            creatorStakeNanoErg: creatorStakeNanoErg, // Always reads the current stake
+            commissionPercentage: commissionPercentage,
+            gameCreatorPK_Hex: creatorPkBytesHex,
+            gameId: gameNftId,
+            content: gameContent,
+            value: BigInt(box.value),
+            participations: [], // To be filled later
+            // Conditionally populate hashS or revealedS based on game state
+            hashS: unlockHeight === 0n ? secretOrHashBytesHex : undefined,
+            revealedS_Hex: unlockHeight > 0n ? secretOrHashBytesHex : undefined,
+            unlockHeight: Number(unlockHeight)
+        };
+    } catch (e) {
+        console.error(`Failed to parse box ${box.boxId} into a Game object:`, e);
+        return null;
+    }
+}
+
+
+// --- Data Fetching Functions ---
+
+/**
+ * Fetches all participations (spent or unspent) for a specific game NFT.
+ * This is crucial for resolving winners of ended games.
+ * @param gameNftIdHex - The Token ID of the game's NFT.
+ * @returns A promise that resolves to an array of Participation objects.
+ */
+export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<Participation[]> {
+    const participationsList: Participation[] = [];
+    const participationScriptTemplateHash = getGopParticipationBoxTemplateHash();
+    let currentOffset = 0;
+    const limit = 50;
+    let moreAvailable = true;
+
+    while (moreAvailable) {
+        // We use the '/search' endpoint to get both spent and unspent boxes.
+        const url = `${explorer_uri}/api/v1/boxes/search?offset=${currentOffset}&limit=${limit}`;
+        try {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ergoTreeTemplateHash: participationScriptTemplateHash,
-                    registers: { "R6": gameNftIdHex }, 
-                    constants: {}, assets: [] 
+                    registers: { "R6": `0e${gameNftIdHex.length}${gameNftIdHex}` }, // Use serialized value for register search
                 }),
             });
 
             if (!response.ok) {
-                console.error(`Error fetching participation boxes for game ${gameNftIdHex}: ${response.status} ${await response.text()}`);
-                moreParticipationsAvailable = false; break;
+                console.error(`Error fetching participation boxes: ${response.status} ${await response.text()}`);
+                moreAvailable = false;
+                continue;
             }
-            const json_data = await response.json();
-            const items: Box[] = json_data.items || [];
 
-            if (items.length === 0) { moreParticipationsAvailable = false; break; }
+            const data = await response.json();
+            const items: Box[] = data.items || [];
 
             for (const pBox of items) {
-                if (!pBox.additionalRegisters || !pBox.additionalRegisters.R4 || !pBox.additionalRegisters.R5 || 
-                    !pBox.additionalRegisters.R6 || !pBox.additionalRegisters.R7 || !pBox.additionalRegisters.R8 ||
-                    !pBox.additionalRegisters.R9) {
-                    console.warn("Skipping PBox due to missing registers:", pBox.boxId);
-                    continue;
-                }
-
-                const playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4.renderedValue);
-                const commitmentC_Hex = parseCollByteToHex(pBox.additionalRegisters.R5.renderedValue);
-                const solverId_RawBytesHex = parseCollByteToHex(pBox.additionalRegisters.R7.renderedValue);
-                let solverId_String: string | undefined = undefined;
-                if (solverId_RawBytesHex) {
-                    solverId_String = hexToUtf8(solverId_RawBytesHex) ?? undefined; 
-                }
-                const hashLogs_Hex = parseCollByteToHex(pBox.additionalRegisters.R8.renderedValue);
-                
-                const r9RenderedValue = pBox.additionalRegisters.R9.renderedValue;
-                let scoreList_parsed: bigint[] = [];
-                let r9JsonParsedArray: any[] | null = null;
-
-                if (typeof r9RenderedValue === 'string') {
-                    try {
-                        r9JsonParsedArray = JSON.parse(r9RenderedValue); // El renderedValue de Coll[Long] es un string como "[123, 456]"
-                    } catch (e) {
-                        console.warn(`Could not JSON.parse R9.renderedValue for PBox: ${pBox.boxId}`, "Value:", r9RenderedValue, "Error:", e);
-                    }
-                } else if (Array.isArray(r9RenderedValue)) { 
-                    r9JsonParsedArray = r9RenderedValue;
-                } else {
-                     console.warn(`DEBUG: R9 renderedValue for PBox ${pBox.boxId} is neither string nor array:`, r9RenderedValue);
-                }
-                
-                scoreList_parsed = r9JsonParsedArray ? parseLongColl(r9JsonParsedArray) ?? [] : [];
+                // This is your original, robust parsing logic for a participation box.
+                const playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4?.renderedValue);
+                const commitmentC_Hex = parseCollByteToHex(pBox.additionalRegisters.R5?.renderedValue);
+                const solverId_RawBytesHex = parseCollByteToHex(pBox.additionalRegisters.R7?.renderedValue);
+                const solverId_String = solverId_RawBytesHex ? hexToUtf8(solverId_RawBytesHex) : undefined;
+                const hashLogs_Hex = parseCollByteToHex(pBox.additionalRegisters.R8?.renderedValue);
+                const r9RenderedValue = pBox.additionalRegisters.R9?.renderedValue;
+                const scoreList_parsed = Array.isArray(r9RenderedValue) ? parseLongColl(r9RenderedValue) : [];
                 
                 if (playerPK_Hex && commitmentC_Hex && solverId_RawBytesHex && hashLogs_Hex && scoreList_parsed.length > 0) {
                     participationsList.push({
@@ -138,578 +189,165 @@ async function fetchParticipationsForGame(
                         value: BigInt(pBox.value), playerPK_Hex, commitmentC_Hex, solverId_RawBytesHex,
                         solverId_String, hashLogs_Hex, scoreList: scoreList_parsed,
                     });
-                } else { console.warn("Skipping PBox due to parsing error ...") }
-            }
-            currentOffset += items.length;
-            if (items.length < limit) moreParticipationsAvailable = false;
-
-        } catch (error) { /* ... error handling ... */ moreParticipationsAvailable = false; break; }
-    }
-    // console.log(`Workspaceed ${participationsList.length} participations for game NFT ID: ${gameNftIdHex}`);
-    return participationsList;
-}
-
-
-export async function fetchActiveGoPGames(
-    offset: number = 0,
-    limit: number = 10 
-): Promise<Map<string, Game>> {
-    const platformInstance = new ErgoPlatform(); // Instanciada aquí para este ejemplo
-    const activeGames = new Map<string, Game>();
-    
-    const gopGameContractTemplateHash = getGopGameBoxTemplateHash();
-    if (!gopGameContractTemplateHash) {
-        console.error("GoP Game Contract Template Hash not available. Cannot fetch games.");
-        return activeGames;
-    }
-    // console.log("fetchActiveGoPGames: Using GameBox Template Hash:", gopGameContractTemplateHash);
-
-
-    let currentOffset = offset;
-    let moreDataAvailable = true;
-
-    while (moreDataAvailable) {
-        const searchUrl = `${explorer_uri}/api/v1/boxes/unspent/search`;
-        const params = new URLSearchParams({
-            offset: currentOffset.toString(),
-            limit: limit.toString(),
-        });
-
-        try {
-            const response = await fetch(`${searchUrl}?${params.toString()}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: gopGameContractTemplateHash,
-                    registers: {}, constants: {}, assets: [], 
-                }),
-            });
-
-            if (!response.ok) {
-                console.error(`Error fetching GoP game boxes: ${response.status} ${await response.text()}`);
-                moreDataAvailable = false; break;
-            }
-            const json_data = await response.json();
-            const items: Box[] = json_data.items || [];
-            const totalItemsReported = json_data.total || 0; 
-            // console.log(`Workspaceed ${items.length} game boxes. Total reported: ${totalItemsReported}. Current offset: ${currentOffset}`);
-            if (items.length === 0) { moreDataAvailable = false; break; }
-
-            for (const box of items) {
-                if (hasValidGopSigmaTypes(box.additionalRegisters)) {
-                    try {
-                        const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
-                        
-                        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
-                        let parsedR7Array: any[] | null = null;
-                        if (typeof r7RenderedValue === 'string') {
-                            try { parsedR7Array = JSON.parse(r7RenderedValue); } 
-                            catch (e) { console.warn(`Could not JSON.parse R7 for ${box.boxId}: ${r7RenderedValue}`); }
-                        } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
-                        
-                        const numericalParams = parseLongColl(parsedR7Array);
-
-                        if (!creatorPkBytesHex || !numericalParams || numericalParams.length < 3) {
-                            console.warn(`Skipping gameBox ${box.boxId} due to missing R4/R7.`); continue;
-                        }
-                        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
-                        
-                        const commissionPercentage = parseIntFromHex(box.additionalRegisters.R8?.renderedValue);
-                        if (commissionPercentage === null) { console.warn(`Skipping gameBox ${box.boxId} due to missing R8.`); continue; }
-
-                        if (!box.assets || box.assets.length === 0) { console.warn(`GameBox ${box.boxId} has no assets (GameNFT).`); continue; }
-                        const gameNftId = box.assets[0].tokenId;
-                        
-                        let gameContent: GameContent;
-                        const r9HexRenderedValue = box.additionalRegisters.R9?.renderedValue; // R9 es Coll[SByte] -> renderedValue es hex del contenido
-                        const gameDetailsJsonString = r9HexRenderedValue ? (hexToUtf8(r9HexRenderedValue) ?? "") : "";
-
-                        if (gameDetailsJsonString) {
-                            try {
-                                const parsedJson = JSON.parse(gameDetailsJsonString);
-                                gameContent = {
-                                    title: parsedJson.title || `Game ${gameNftId.slice(0,8)}`,
-                                    description: parsedJson.description || "No description provided.",
-                                    serviceId: parsedJson.serviceId || `unknown_service_${gameNftId.slice(0,6)}`,
-                                    imageURL: parsedJson.imageURL || parsedJson.image || undefined,
-                                    webLink: parsedJson.webLink || parsedJson.link || undefined,
-                                    mirrorUrls: parsedJson.mirrorUrls || undefined,
-                                    rawJsonString: gameDetailsJsonString 
-                                };
-                            } catch (e) {
-                                console.warn(`Failed to parse JSON from R9 for game ${gameNftId}. Raw R9 hex: '${r9HexRenderedValue}', Decoded string: '${gameDetailsJsonString}'. Error: ${e}`);
-                                gameContent = {
-                                    title: `Game ${gameNftId.slice(0,8)} (Details Parse Error)`,
-                                    description: `Could not parse R9. Raw (first 100 chars): ${gameDetailsJsonString.substring(0,100)}`,
-                                    serviceId: `error_parsing_R9_${gameNftId.slice(0,6)}`,
-                                    rawJsonString: gameDetailsJsonString
-                                };
-                            }
-                        } else {
-                            console.warn(`No R9 data for gameDetails on game ${gameNftId}. R9 renderedValue was: ${r9HexRenderedValue}`);
-                            gameContent = {
-                                title: `Game ${gameNftId.slice(0,8)} (No R9 Details)`,
-                                description: "No game details provided in R9 register.",
-                                serviceId: `no_R9_service_${gameNftId.slice(0,6)}`
-                            };
-                        }
-
-                        const participations = await fetchParticipationsForGame(gameNftId);
-                        console.log(participations)
-
-                        const gameData: Game = {
-                            boxId: box.boxId, 
-                            box: box,      
-                            platform: platformInstance,
-                            deadlineBlock: Number(deadlineBlock), 
-                            participationFeeNanoErg: participationFeeNanoErg,
-                            creatorStakeNanoErg: creatorStakeNanoErg, 
-                            commissionPercentage: commissionPercentage,
-                            gameCreatorPK_Hex: creatorPkBytesHex, 
-                            gameId: gameNftId,
-                            content: gameContent,
-                            value: BigInt(box.value), 
-                            participations: participations,
-                            ended: false
-                        };
-                        activeGames.set(gameNftId, gameData);
-                    } catch (parseError) {
-                        console.error("Error processing a valid gameBox data for boxId:", box.boxId, parseError);
-                    }
-                } else { 
-                    console.warn("Box found with template hash but has invalid Sigma Types for its registers:", box.boxId, JSON.stringify(box.additionalRegisters));
                 }
             }
-            currentOffset += items.length;
-            if (totalItemsReported > 0 && currentOffset >= totalItemsReported) { moreDataAvailable = false; }
-            if (items.length < limit) { moreDataAvailable = false; }
-        } catch (error) { 
-            console.error('Error during API request or top-level processing in fetchActiveGoPGames:', error);
-            moreDataAvailable = false; // Detener en caso de error mayor
-            break; // Salir del while
-        }
-    }
-    console.log(`Finished fetching. Found ${activeGames.size} games in total.`);
-    return activeGames;
-}
 
-
-/**
- * Busca participaciones históricas (gastadas o no gastadas) para un ID de juego específico.
- * Es útil para juegos finalizados donde las participaciones podrían haber sido gastadas.
- */
-async function fetchHistoricParticipationsForGame(
-    gameNftIdHex: string
-): Promise<Participation[]> {
-    const participationsList: Participation[] = [];
-    const participationScriptTemplateHash = getGopParticipationBoxTemplateHash();
-
-    if (!participationScriptTemplateHash) {
-        console.error("fetchHistoricParticipationsForGame: Participation Box Template Hash not available.");
-        return participationsList;
-    }
-
-    let currentOffset = 0;
-    const limit = 50; // Puedes ajustar el límite según sea necesario
-    let moreParticipationsAvailable = true;
-
-    while (moreParticipationsAvailable) {
-        const searchUrl = `${explorer_uri}/api/v1/boxes/search`; // Usamos /search para incluir gastadas
-        const queryParams = new URLSearchParams({
-            offset: currentOffset.toString(),
-            limit: limit.toString(),
-        });
-
-        try {
-            const response = await fetch(`${searchUrl}?${queryParams.toString()}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: participationScriptTemplateHash,
-                    registers: { "R6": gameNftIdHex }, // Filtra por el gameNftId en R6
-                    constants: {}, 
-                    assets: [] 
-                }),
-            });
-
-            if (!response.ok) {
-                console.error(`Error fetching historic participation boxes for game ${gameNftIdHex}: ${response.status} ${await response.text()}`);
-                moreParticipationsAvailable = false; 
-                break;
-            }
-            const json_data = await response.json();
-            // Asumimos que tu tipo Box incluye spentTransactionId?: string
-            const items: Box[] = json_data.items || [];
-
-            if (items.length === 0) {
-                moreParticipationsAvailable = false;
-                break;
-            }
-
-            for (const pBox of items) {
-                // Validación básica de registros (igual que en tu fetchParticipationsForGame original)
-                if (!pBox.additionalRegisters || !pBox.additionalRegisters.R4 || !pBox.additionalRegisters.R5 || 
-                    !pBox.additionalRegisters.R6 || !pBox.additionalRegisters.R7 || !pBox.additionalRegisters.R8 ||
-                    !pBox.additionalRegisters.R9) { // Asumimos R9 en PBox según tu código original
-                    console.warn(`fetchHistoricParticipationsForGame: Skipping PBox ${pBox.boxId} due to missing registers.`);
-                    continue;
-                }
-
-                const playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4.renderedValue);
-                const commitmentC_Hex = parseCollByteToHex(pBox.additionalRegisters.R5.renderedValue);
-                const solverId_RawBytesHex = parseCollByteToHex(pBox.additionalRegisters.R7.renderedValue);
-                let solverId_String: string | undefined = undefined;
-                if (solverId_RawBytesHex) {
-                    solverId_String = hexToUtf8(solverId_RawBytesHex) ?? undefined; 
-                }
-                const hashLogs_Hex = parseCollByteToHex(pBox.additionalRegisters.R8.renderedValue);
-                
-                const r9RenderedValue = pBox.additionalRegisters.R9.renderedValue;
-                let scoreList_parsed: bigint[] = [];
-                let r9JsonParsedArray: any[] | null = null;
-
-                if (typeof r9RenderedValue === 'string') {
-                    try {
-                        r9JsonParsedArray = JSON.parse(r9RenderedValue);
-                    } catch (e) {
-                        console.warn(`fetchHistoricParticipationsForGame: Could not JSON.parse R9.renderedValue for PBox: ${pBox.boxId}`, "Value:", r9RenderedValue, "Error:", e);
-                    }
-                } else if (Array.isArray(r9RenderedValue)) { 
-                    r9JsonParsedArray = r9RenderedValue;
-                }
-                
-                scoreList_parsed = r9JsonParsedArray ? parseLongColl(r9JsonParsedArray) ?? [] : [];
-                
-                // Añade la participación si los datos esenciales están presentes
-                if (playerPK_Hex && commitmentC_Hex && solverId_RawBytesHex && hashLogs_Hex && scoreList_parsed.length > 0) { // Ajusta esta validación si es necesario
-                    const participationData: Participation = {
-                        boxId: pBox.boxId, 
-                        box: pBox, // Incluye la caja completa para referencia
-                        transactionId: pBox.transactionId, 
-                        creationHeight: pBox.creationHeight,
-                        value: BigInt(pBox.value), 
-                        playerPK_Hex, 
-                        commitmentC_Hex, 
-                        solverId_RawBytesHex,
-                        solverId_String, 
-                        hashLogs_Hex, 
-                        scoreList: scoreList_parsed,
-                        // Opcional: añade spentTransactionId a tu tipo Participation si quieres guardarlo
-                        // spentTransactionId: pBox.spentTransactionId 
-                    };
-                    participationsList.push(participationData);
-                } else { 
-                    console.warn(`fetchHistoricParticipationsForGame: Skipping PBox ${pBox.boxId} due to parsing error or missing essential data.`);
-                }
-            }
             currentOffset += items.length;
             if (items.length < limit) {
-                moreParticipationsAvailable = false;
+                moreAvailable = false;
             }
-
         } catch (error) {
-            console.error(`Error in fetchHistoricParticipationsForGame for game NFT ID ${gameNftIdHex}:`, error);
-            moreParticipationsAvailable = false; // Detener en caso de error
-            break;
+            console.error("Exception while fetching participations:", error);
+            moreAvailable = false;
         }
     }
-    console.log(`Fetched ${participationsList.length} historic participations for game NFT ID: ${gameNftIdHex}`);
     return participationsList;
 }
 
-async function fetch_tx_and_get_secret(game: Game): Promise<Uint8Array| undefined> {
-    if (!game.box || !game.box.spentTransactionId) {
-        console.warn(`resolve_winner: Game box or spentTransactionId missing for gameId ${game.gameId}.`);
-        return undefined;
-    }
+/**
+ * A unified function to fetch GoP games from the blockchain.
+ * It can fetch active, ended, or all games based on the status filter.
+ * @param currentHeight - The current blockchain height, needed to determine game status.
+ * @param filter - A filter to get 'active', 'ended', or 'all' games. Defaults to 'all'.
+ * @returns A promise that resolves to a Map of Game objects, keyed by their Game NFT ID.
+ */
+export async function fetchGoPGames(
+    currentHeight: number,
+    filter: 'active' | 'ended' | 'all' = 'all'
+): Promise<Map<string, Game>> {
+    const games = new Map<string, Game>();
+    const gopGameContractTemplateHash = getGopGameBoxTemplateHash();
+    let currentOffset = 0;
+    const limit = 50;
+    let moreAvailable = true;
 
-    const spentTxId = game.box.spentTransactionId;
-    let revealedSecretS_bytes: Uint8Array | undefined;
+    // Use '/unspent/search' for active games to be more efficient, otherwise '/search' for all.
+    const searchEndpoint = filter === 'active' ? 'unspent/search' : 'search';
 
-    try {
-        const txResponse = await fetch(`${explorer_uri}/api/v1/transactions/${spentTxId}`);
-        if (!txResponse.ok) {
-            console.error(`resolve_winner: Failed to fetch tx ${spentTxId}. Status: ${txResponse.status}`);
-            return undefined;
-        }
-        const txData = await txResponse.json();
-        console.log(txData)
-        if (txData.outputs && txData.outputs.length > 1) {
-            const targetOutputBox = txData.outputs[1];
-            if (targetOutputBox && 
-                targetOutputBox.additionalRegisters && 
-                targetOutputBox.additionalRegisters.R4?.sigmaType === 'Coll[SByte]') {
-                
-                const secretHex = targetOutputBox.additionalRegisters.R4.renderedValue;
-                revealedSecretS_bytes = hexToBytes(secretHex) ?? undefined;
+    while (moreAvailable) {
+        const url = `${explorer_uri}/api/v1/boxes/${searchEndpoint}?offset=${currentOffset}&limit=${limit}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ergoTreeTemplateHash: gopGameContractTemplateHash }),
+            });
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                const game = parseBoxToGame(box, currentHeight);
+                if (game) {
+                    // Apply filtering based on the desired status
+                    const isEnded = game.status === GameState.Resolution || game.status === GameState.Cancelled_Finalized;
+                    if (filter === 'ended' && !isEnded) continue;
+                    if (filter === 'active' && isEnded) continue;
+
+                    // Fetch related data for the game
+                    game.participations = await fetchParticipationsForGame(game.gameId);
+
+                    // If the game has ended, try to find the secret and resolve the winner
+                    if (isEnded) {
+                        game.secret = await fetch_tx_and_get_secret(game);
+                        game.winnerInfo = resolve_winner(game);
+                    }
+                    games.set(game.gameId, game);
+                }
             }
+
+            currentOffset += items.length;
+            if (items.length < limit) {
+                moreAvailable = false;
+            }
+        } catch (error) {
+            console.error("Exception while fetching GoP games:", error);
+            moreAvailable = false;
         }
-    } catch (error) {
-        console.error(`resolve_winner: Error fetching/processing tx ${spentTxId}:`, error);
-        return undefined;
     }
-
-    if (!revealedSecretS_bytes) {
-        console.warn(`resolve_winner: Could not find revealed secret S for game ${game.gameId}.`);
-        return undefined;
-    }
-
-    return revealedSecretS_bytes;
+    return games;
 }
 
-function resolve_winner(game: Game): WinnerInfo | undefined {
-    let maxScore = -1n;
-    let winnerPK_Hex: string | null = null;
-    let winningParticipationBoxId: string | null = null;
 
-    if (!game.participations || game.participations.length === 0 || !game.secret) {
-        return undefined;
+// --- Client-Side Business Logic ---
+
+/**
+ * Fetches the secret 'S' for a completed game.
+ * For successfully resolved games, it fetches the spending transaction.
+ * For cancelled games, it simply decodes the secret from R5.
+ * @param game - The Game object, which must have its status determined.
+ * @returns A promise resolving to the secret as a Uint8Array, or undefined.
+ */
+export async function fetch_tx_and_get_secret(game: Game): Promise<Uint8Array | undefined> {
+    // If the game was cancelled, the secret is already in the game box's R5.
+    if (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) {
+        return game.revealedS_Hex ? hexToBytes(game.revealedS_Hex) : undefined;
     }
 
-    for (const p of game.participations) {
-        const pBox = p.box;
-        if (!pBox || !pBox.additionalRegisters) continue;
-
-        const pBox_R4_playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4?.renderedValue);
-        const pBox_R5_commitmentHex = parseCollByteToHex(pBox.additionalRegisters.R5?.renderedValue);
-        const pBox_R7_solverIdHex_raw = parseCollByteToHex(pBox.additionalRegisters.R7?.renderedValue);
-        const pBox_R8_hashLogsHex_raw = parseCollByteToHex(pBox.additionalRegisters.R8?.renderedValue);
-        
-        let r9ParsedArray: any[] | null = null;
-        const r9ScoreListRaw = pBox.additionalRegisters.R9?.renderedValue;
-        if (typeof r9ScoreListRaw === 'string') {
-            try { r9ParsedArray = JSON.parse(r9ScoreListRaw); } catch (e) { /* el silencio es oro */ }
-        } else if (Array.isArray(r9ScoreListRaw)) { r9ParsedArray = r9ScoreListRaw; }
-        const pBox_scoreList = parseLongColl(r9ParsedArray);
-
-        if (!pBox_R4_playerPK_Hex || !pBox_R5_commitmentHex || !pBox_R7_solverIdHex_raw || !pBox_R8_hashLogsHex_raw || !pBox_scoreList || pBox_scoreList.length === 0) {
-            continue;
-        }
-
-        const pBoxSolverId_directBytes = hexToBytes(pBox_R7_solverIdHex_raw);
-        const pBoxHashLogs_directBytes = hexToBytes(pBox_R8_hashLogsHex_raw);
-        
-        if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) {
-             continue;
-        }
-        
-        let actualScoreForThisPBox = -1n;
-        let scoreValidated = false;
-
-        for (const scoreAttempt of pBox_scoreList) {
-            const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
-            const dataToHash = new Uint8Array([
-                ...pBoxSolverId_directBytes, 
-                ...scoreAttempt_bytes, 
-                ...pBoxHashLogs_directBytes, 
-                ...game.secret
-            ]);
-            const testCommitmentBytes = fleetBlake2b256(dataToHash);
-
-            if (uint8ArrayToHex(testCommitmentBytes) === pBox_R5_commitmentHex) {
-                actualScoreForThisPBox = scoreAttempt;
-                scoreValidated = true;
-                break; 
-            }
-        }
-
-        if (scoreValidated) {
-            if (actualScoreForThisPBox > maxScore) {
-                maxScore = actualScoreForThisPBox;
-                winnerPK_Hex = pBox_R4_playerPK_Hex;
-                winningParticipationBoxId = pBox.boxId;
-            }
-        }
-    }
-
-    if (winnerPK_Hex && winningParticipationBoxId !== null) {
-        const winnerP2PKAddressBytes = hexToBytes(winnerPK_Hex);
-        if (!winnerP2PKAddressBytes) return undefined;
-        
-        let winnerAddressString = "";
+    // If the game was resolved normally, find the secret in the spending transaction.
+    if (game.status === GameState.Resolution && game.box.spentTransactionId) {
         try {
-            winnerAddressString = ErgoAddress.fromPublicKey(winnerP2PKAddressBytes).toString();
-        } catch(e) {
-            console.error("resolve_winner: Could not derive address from winner PK_Hex", winnerPK_Hex);
-            return undefined;
+            const txResponse = await fetch(`${explorer_uri}/api/v1/transactions/${game.box.spentTransactionId}`);
+            const txData = await txResponse.json();
+            // The secret is revealed in R4 of the creator's output (usually OUTPUTS(1)).
+            const creatorOutput = txData.outputs[1];
+            if (creatorOutput && creatorOutput.additionalRegisters.R4) {
+                return hexToBytes(creatorOutput.additionalRegisters.R4.renderedValue) ?? undefined;
+            }
+        } catch (error) {
+            console.error(`Error fetching secret from transaction ${game.box.spentTransactionId}:`, error);
         }
-
-        return {
-            playerAddress: winnerAddressString,
-            playerPK_Hex: winnerPK_Hex,
-            score: maxScore,
-            participationBoxId: winningParticipationBoxId,
-        };
     }
+    
+    console.warn(`Could not retrieve secret for game ${game.gameId}.`);
     return undefined;
 }
 
 
 /**
- * Busca juegos GoP que ya han finalizado (cajas de juego gastadas).
+ * Client-side logic to determine the winner of a game.
+ * It iterates through participations and validates their scores against the revealed secret.
+ * NOTE: This function requires `game.secret` and `game.participations` to be populated first.
+ * @param game - The fully populated Game object.
+ * @returns A WinnerInfo object if a winner is found, otherwise undefined.
  */
-export async function fetchEndedGoPGames(
-    offset: number = 0,
-    limit: number = 10 
-): Promise<Map<string, Game>> {
-    const platformInstance = new ErgoPlatform(); // Instanciada aquí para este ejemplo
-    const endedGames = new Map<string, Game>();
-    
-    const gopGameContractTemplateHash = getGopGameBoxTemplateHash();
-    if (!gopGameContractTemplateHash) {
-        console.error("fetchEndedGoPGames: GoP Game Contract Template Hash not available. Cannot fetch games.");
-        return endedGames;
+export function resolve_winner(game: Game): WinnerInfo | undefined {
+    if (!game.participations || game.participations.length === 0 || !game.secret) {
+        return undefined; // Cannot resolve without participations and the secret.
     }
-    console.log("fetchEndedGoPGames: Using GameBox Template Hash:", gopGameContractTemplateHash);
 
-    let currentOffset = offset;
-    let moreDataAvailable = true;
+    let maxScore = -1n;
+    let winner: WinnerInfo | undefined = undefined;
 
-    while (moreDataAvailable) {
-        const searchUrl = `${explorer_uri}/api/v1/boxes/search`;
-        const params = new URLSearchParams({
-            offset: currentOffset.toString(),
-            limit: limit.toString(),
-        });
+    for (const p of game.participations) {
+        const pBoxSolverIdBytes = hexToBytes(p.solverId_RawBytesHex);
+        const pBoxHashLogsBytes = hexToBytes(p.hashLogs_Hex);
 
-        try {
-            const response = await fetch(`${searchUrl}?${params.toString()}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: gopGameContractTemplateHash,
-                    registers: {}, // Puedes añadir filtros de registros si son relevantes para cajas gastadas
-                    constants: {}, 
-                    assets: [], 
-                }),
-            });
+        if (!pBoxSolverIdBytes || !pBoxHashLogsBytes) continue;
 
-            if (!response.ok) {
-                console.error(`Error fetching GoP game boxes (ended search): ${response.status} ${await response.text()}`);
-                moreDataAvailable = false; 
-                break;
+        for (const scoreAttempt of p.scoreList) {
+            // Recreate the commitment hash: blake2b256(solverId ++ score ++ hashLogs ++ secret)
+            const dataToHash = new Uint8Array([
+                ...pBoxSolverIdBytes,
+                ...bigintToLongByteArray(scoreAttempt),
+                ...pBoxHashLogsBytes,
+                ...game.secret
+            ]);
+            const testCommitmentBytes = fleetBlake2b256(dataToHash);
+
+            if (uint8ArrayToHex(testCommitmentBytes) === p.commitmentC_Hex) {
+                // A valid score was found for this participant.
+                if (scoreAttempt > maxScore) {
+                    maxScore = scoreAttempt;
+                    winner = {
+                        playerAddress: ErgoAddress.fromPublicKey(hexToBytes(p.playerPK_Hex)!).toString(),
+                        playerPK_Hex: p.playerPK_Hex,
+                        score: maxScore,
+                        participationBoxId: p.boxId,
+                    };
+                }
+                break; // Found the correct score, move to the next participant.
             }
-            const json_data = await response.json();
-            const items: Box[] = json_data.items || [];
-            const totalItemsReported = json_data.total || 0; 
-            console.log(`Fetched ${items.length} potential game boxes. Total reported: ${totalItemsReported}. Current offset: ${currentOffset}`);
-            
-            if (items.length === 0) {
-                moreDataAvailable = false;
-                break;
-            }
-
-            for (const box of items) {
-                // --- CAMBIO CLAVE: Filtrar por cajas gastadas ---
-                if (box.spentTransactionId && box.spentTransactionId !== null) {
-                    // Esta caja está gastada, procede a procesarla como un juego finalizado.
-                    if (hasValidGopSigmaTypes(box.additionalRegisters)) {
-                        try {
-                            const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
-                            
-                            const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
-                            let parsedR7Array: any[] | null = null;
-                            if (typeof r7RenderedValue === 'string') {
-                                try { parsedR7Array = JSON.parse(r7RenderedValue); } 
-                                catch (e) { console.warn(`Could not JSON.parse R7 for ended gameBox ${box.boxId}: ${r7RenderedValue}`); }
-                            } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
-                            
-                            const numericalParams = parseLongColl(parsedR7Array);
-
-                            if (!creatorPkBytesHex || !numericalParams || numericalParams.length < 3) {
-                                console.warn(`Skipping ended gameBox ${box.boxId} due to missing R4/R7.`); 
-                                continue;
-                            }
-                            const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
-                            
-                            const commissionPercentage = parseIntFromHex(box.additionalRegisters.R8?.renderedValue);
-                            if (commissionPercentage === null) { 
-                                console.warn(`Skipping ended gameBox ${box.boxId} due to missing R8.`); 
-                                continue; 
-                            }
-
-                            if (!box.assets || box.assets.length === 0) { 
-                                console.warn(`Ended GameBox ${box.boxId} has no assets (GameNFT).`); 
-                                continue; 
-                            }
-                            const gameNftId = box.assets[0].tokenId;
-                            
-                            let gameContent: GameContent;
-                            const r9HexRenderedValue = box.additionalRegisters.R9?.renderedValue;
-                            const gameDetailsJsonString = r9HexRenderedValue ? (hexToUtf8(r9HexRenderedValue) ?? "") : "";
-
-                            if (gameDetailsJsonString) {
-                                try {
-                                    const parsedJson = JSON.parse(gameDetailsJsonString);
-                                    gameContent = {
-                                        title: parsedJson.title || `Game ${gameNftId.slice(0,8)} (Ended)`,
-                                        description: parsedJson.description || "No description provided.",
-                                        serviceId: parsedJson.serviceId || `unknown_service_${gameNftId.slice(0,6)}`,
-                                        imageURL: parsedJson.imageURL || parsedJson.image || undefined,
-                                        webLink: parsedJson.webLink || parsedJson.link || undefined,
-                                        mirrorUrls: parsedJson.mirrorUrls || undefined,
-                                        rawJsonString: gameDetailsJsonString 
-                                    };
-                                } catch (e) {
-                                    console.warn(`Failed to parse JSON from R9 for ended game ${gameNftId}. Raw R9 hex: '${r9HexRenderedValue}', Decoded string: '${gameDetailsJsonString}'. Error: ${e}`);
-                                    gameContent = {
-                                        title: `Game ${gameNftId.slice(0,8)} (Ended, Details Parse Error)`,
-                                        description: `Could not parse R9. Raw (first 100 chars): ${gameDetailsJsonString.substring(0,100)}`,
-                                        serviceId: `error_parsing_R9_${gameNftId.slice(0,6)}`,
-                                        rawJsonString: gameDetailsJsonString
-                                    };
-                                }
-                            } else {
-                                console.warn(`No R9 data for gameDetails on ended game ${gameNftId}. R9 renderedValue was: ${r9HexRenderedValue}`);
-                                gameContent = {
-                                    title: `Game ${gameNftId.slice(0,8)} (Ended, No R9 Details)`,
-                                    description: "No game details provided in R9 register.",
-                                    serviceId: `no_R9_service_${gameNftId.slice(0,6)}`
-                                };
-                            }
-
-                            const historicParticipations = await fetchHistoricParticipationsForGame(gameNftId);
-                            console.log(`Fetched ${historicParticipations.length} historic participations for ended game ${gameNftId}`);
-
-                            let gameData: Game = {
-                                boxId: box.boxId, 
-                                box: box,      
-                                platform: platformInstance,
-                                deadlineBlock: Number(deadlineBlock), 
-                                participationFeeNanoErg: participationFeeNanoErg,
-                                creatorStakeNanoErg: creatorStakeNanoErg, 
-                                commissionPercentage: commissionPercentage,
-                                gameCreatorPK_Hex: creatorPkBytesHex, 
-                                gameId: gameNftId,
-                                content: gameContent,
-                                value: BigInt(box.value), 
-                                participations: historicParticipations, // Usar participaciones históricas
-                                ended: true
-                            };
-                            gameData.secret = await fetch_tx_and_get_secret(gameData);
-                            gameData.winnerInfo = resolve_winner(gameData);
-                            endedGames.set(gameNftId, gameData);
-                        } catch (parseError) {
-                            console.error("Error processing a valid ended gameBox data for boxId:", box.boxId, parseError);
-                        }
-                    } else { 
-                        console.warn("Spent box found with template hash but has invalid Sigma Types for its registers:", box.boxId, JSON.stringify(box.additionalRegisters));
-                    }
-                } // Fin del if (box.spentTransactionId)
-            }
-            currentOffset += items.length;
-            if (totalItemsReported > 0 && currentOffset >= totalItemsReported) { 
-                moreDataAvailable = false; 
-            }
-            if (items.length < limit) { 
-                moreDataAvailable = false; 
-            }
-        } catch (error) { 
-            console.error('Error during API request or top-level processing in fetchEndedGoPGames:', error);
-            moreDataAvailable = false; // Detener en caso de error mayor
-            break; 
         }
     }
-    console.log(`Finished fetching. Found ${endedGames.size} ended games in total.`);
-    return endedGames;
+    return winner;
 }

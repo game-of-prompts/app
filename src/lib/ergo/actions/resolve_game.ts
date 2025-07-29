@@ -81,7 +81,7 @@ export async function resolve_game(
 
     for (const pBox of participationBoxInputs) {
         // Validaciones básicas de la PBox (NFT, fee, script hash - esta última no la podemos hacer aquí fácilmente sin el R6 de GameBox)
-        // Asumimos que fetchActiveGoPGames ya hizo un filtrado básico o que el script on-chain lo hará.
+        // Asumimos que fetchGoPGames ya hizo un filtrado básico o que el script on-chain lo hará.
         // La validación crucial aquí es encontrar la puntuación verdadera.
 
         if (pBox.creationHeight < gameBoxToSpend.creationHeight) {

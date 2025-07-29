@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { type Game, isGameParticipationEnded, type Participation } from "$lib/common/game";
+    import { type Game, isGameEnded, type Participation } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
@@ -98,7 +98,7 @@
 
         try {
             // Determine participation status
-            participationIsEnded = game.ended ? true : await isGameParticipationEnded(game);
+            participationIsEnded = game.ended ? true : await isGameEnded(game);
 
             // Format deadline for display
             const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
@@ -142,7 +142,7 @@
 
         try {
             timeRemainingDisplay = await block_to_time_remaining(game.deadlineBlock, game.platform);
-            const newParticipationStatus = await isGameParticipationEnded(game);
+            const newParticipationStatus = await isGameEnded(game);
             if (newParticipationStatus && !participationIsEnded) {
                 participationIsEnded = true;
                 timeRemainingDisplay = "Awaiting Resolution";

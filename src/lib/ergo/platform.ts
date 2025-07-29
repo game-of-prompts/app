@@ -1,6 +1,6 @@
 // src/ergo/platform.ts
 import type { Game } from '../common/game';
-import { fetchActiveGoPGames, fetchEndedGoPGames } from './fetch';
+import { fetchGoPGames } from './fetch';
 import { create_game } from './actions/create_game';
 import { explorer_uri, network_id } from './envs';
 import { address, connected, network, balance } from "../common/store";
@@ -176,11 +176,7 @@ export class ErgoPlatform implements Platform{
         );
     }
 
-    async fetchActiveGoPGames(offset: number = 0): Promise<Map<string, Game>> {
-        return await fetchActiveGoPGames(offset);
-    }
-
-    async fetchEndedGoPGames(offset: number = 0): Promise<Map<string, Game>> {
-        return await fetchEndedGoPGames(offset);
+    async fetchGoPGames(offset: number = 0): Promise<Map<string, Game>> {
+        return await fetchGoPGames(offset, 'all');
     }
 }

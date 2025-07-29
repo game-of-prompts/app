@@ -62,12 +62,6 @@ export interface Platform {
      * @param offset - Opcional, para paginación.
      * @returns Un Map con los juegos activos, donde la clave es el ID del juego.
      */
-    fetchActiveGoPGames(offset?: number): Promise<Map<string, Game>>;
+    fetchGoPGames(offset?: number): Promise<Map<string, Game>>;
 
-        /**
-     * Obtiene los juegos "Game of Prompts" terminados.
-     * @param offset - Opcional, para paginación.
-     * @returns Un Map con los juegos terminados, donde la clave es el ID del juego.
-     */
-    fetchEndedGoPGames(offset?: number): Promise<Map<string, Game>>;
 }

@@ -3,7 +3,7 @@
     import { game_detail } from "$lib/common/store";
     import { Button } from "$lib/components/ui/button";
     import { onMount, onDestroy } from "svelte";
-    import { isGameParticipationEnded, type Game } from "$lib/common/game";
+    import { isGameEnded, type Game } from "$lib/common/game";
     import { Badge } from "$lib/components/ui/badge/index.js";
 
     export let game: Game;
@@ -59,7 +59,7 @@
         }
         try {
             remainingTimeCountdown = await block_to_time_remaining(game.deadlineBlock, game.platform);
-            const currentParticipationStatus = await isGameParticipationEnded(game);
+            const currentParticipationStatus = await isGameEnded(game);
 
             if (currentParticipationStatus && !participationEnded) {
                 participationEnded = true;
@@ -87,7 +87,7 @@
         cleanupTimer();
 
         try {
-            participationEnded = currentGame.ended ? true : await isGameParticipationEnded(currentGame);
+            participationEnded = currentGame.ended ? true : await isGameEnded(currentGame);
             const deadlineTimestamp = await block_height_to_timestamp(currentGame.deadlineBlock, currentGame.platform);
             const deadlineDateObj = new Date(deadlineTimestamp);
             deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });

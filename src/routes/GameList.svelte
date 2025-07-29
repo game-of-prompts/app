@@ -50,9 +50,8 @@
         isLoadingApi = true;
         errorMessage = null;
         try {
-            const activeGamesMap = await platform.fetchActiveGoPGames(offset);
-            const endedGamesMap = await platform.fetchEndedGoPGames(offset);
-            const combinedGames = new Map<string, Game>([...activeGamesMap, ...endedGamesMap]);
+            const gamesMap = await platform.fetchGoPGames(offset);
+            const combinedGames = new Map<string, Game>([...gamesMap]);
             games.set(combinedGames);
         } catch (error: any) {
             console.error("Error fetching GoP games:", error);
