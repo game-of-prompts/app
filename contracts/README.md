@@ -1,190 +1,127 @@
-# Game of Prompts - Ergo Smart Contracts
+# **Game of Prompts \- Ergo Smart Contracts**
 
-This document describes the ErgoScript smart contracts for the Game of Prompts (GoP) platform, focusing on `game.es` for the game box and `participation.es` for player participation boxes.
+This document describes the ErgoScript smart contracts for the Game of Prompts (GoP) platform. It covers the updated game.es (governing the GameBox) and participation.es (governing player ParticipationBoxes). This new version introduces a more robust state management system for the GameBox, enabling game cancellation and creator stake penalties.
 
-## 0\. Key Definitions and Contract Variables
+## **1\. The GameBox State Model**
 
-This section defines crucial terms and variables used in the `game.es` and `participation.es` contracts.
+The behavior of the GameBox is determined by a combination of its on-chain state and the current block height relative to the game's deadline. This creates four primary states, each with a distinct set of allowed actions.
 
-### 0.1. `game.es` (GameBox) Contract Variables and Registers
+* **Internal State Indicator:** R5 of the GameBox stores a tuple (Long, Coll\[Byte\]).  
+  * R5.\_1 \== 0L: The game is **Active**. The secret S has not been revealed.  
+  * R5.\_1 \> 0L: The game is **Canceled**. The secret S has been revealed on-chain. R5.\_1 holds the unlockHeight for the next penalty withdrawal.  
+* **Time Indicator:** The current block height (HEIGHT) relative to numericalParameters(0) (deadline).
 
-  * **`GameBox`**: Conceptual name for the box protected by the `game.es` script. It is the main box managing a game.
-  * **`gameCreatorPK` (`R4: Coll[Byte]`):** The raw bytes of the game creator's public key.
-  * **`hashS` (`R5: Coll[Byte]`):** The Blake2b256 hash of the game's secret `S`. This hash is stored in the GameBox to verify `S` when revealed.
-  * **`expectedParticipationScriptHash` (`R6: Coll[Byte]`):** The Blake2b256 hash of the expected `participation.es` script. Used to validate that incoming participation boxes use the correct contract.
-  * **`numericalParameters` (`R7: Coll[Long]`):** A collection of numerical game parameters:
-      * **`deadline` (`numericalParameters(0)`):** The block height marking the end of the participation period and the start of the game resolution window.
-      * **`creatorStake` (`numericalParameters(1)`):** The amount of ERG the game creator has staked as a guarantee or incentive.
-      * **`participationFee` (`numericalParameters(2)`):** The ERG fee players must pay for their participation to be considered.
-  * **`commissionPercentage` (`R8: Int`):** The percentage of the total prize pool the game creator receives as a commission if the game is resolved correctly.
-  * **`gameDetailsJsonHex` (`R9: Coll[Byte]`):** A JSON string (converted from UTF-8 to hexadecimal) containing descriptive game details (title, description, rules, etc.).
-  * **`gameNftId` (`SELF.tokens(0)._1`):** The ID of the unique token identifying this specific game. The GameBox is expected to contain 1 unit of this token.
-  * **`S` (conceptual):** The game's secret, initially known only by the creator (or the game-service). It is revealed during "Action 1: Game Resolution" to validate scores.
-  * **`gameCreatorP2PKPropBytes`**: The complete P2PK proposition script of the game creator, constructed using `P2PK_ERGOTREE_PREFIX ++ gameCreatorPK`.
-  * **`action1_isValidResolution` (variable in `game.es` code):** The boolean logic in the `game.es` script defining the validity of "Action 1: Game Resolution" described in this README.
-  * **`action2_isValidCancellation` (variable in `game.es` code):** The boolean logic (currently commented out in `game.es`) defining the validity of "Action 2: Cancellation for Early Secret Revelation" described in this README.
-  * **`revealedS_fromOutput`**: Variable containing the secret `S` extracted from register `R4` of the creator's output box during "Action 1: Game Resolution".
-  * **`participationInputs`**: Variable containing a slice of the transaction's `INPUTS`, representing the boxes expected to be ParticipationBoxes.
-  * **`pBox` (in the `game.es` fold):** Variable representing an individual box from `participationInputs` being processed during "Action 1: Game Resolution".
-  * **`pBoxPlayerPK`, `pBoxCommitment`, `pBoxSolverId`, `pBoxHashLogs`, `pBoxScoreList` (in `game.es`):** Variables that extract data from the corresponding registers of a `pBox` during its validation in "Action 1: Game Resolution".
-  * **`testCommitment`**: Variable storing the result of the commitment calculation during score validation in "Action 1: Game Resolution".
-  * **`actualScoreForThisPBox`**: The score of a `pBox` that has been successfully validated against its `pBoxCommitment` and the `revealedS_fromOutput` during "Action 1: Game Resolution".
-  * **`prizePool` (conceptual, calculated in `game.es`):** The total sum of the values (`pBox.value`) of all validated ParticipationBoxes during "Action 1: Game Resolution".
-  * **`winnerPK` (conceptual, determined in `game.es`):** The public key of the player whose ParticipationBox had the highest valid score during "Action 1: Game Resolution".
+### **GameBox State Matrix**
 
-### 0.2. `participation.es` (ParticipationBox) Contract Variables and Registers
+|  | Before deadline (HEIGHT \< deadline) | After deadline (HEIGHT \>= deadline) |
+| :---- | :---- | :---- |
+| **State 1: Active**\<br\>(R5.\_1 \== 0L) | **1A: Normal Operation**\<br\>- Players can create ParticipationBoxes.\<br\>- **GameBox Action:** Can be spent via action2\_isValidCancellation to transition to State 2A (Cancel Game). | **1B: Resolution Period**\<br\>- No new participations.\<br\>- **GameBox Action:** Can be spent via action1\_isValidResolution to resolve the game and pay the winner. |
+| **State 2: Canceled**\<br\>(R5.\_1 \> 0L) | **2A: Canceled & Draining**\<br\>- **GameBox Action:** Can be spent via action2\_isValidCancellation to continue draining the creatorStake (if HEIGHT \>= unlockHeight).\<br\>- **ParticipationBox Action:** Players can spend their box via spentInValidGameCancellation to get a refund. | **2B: Canceled & Finalized**\<br\>- **GameBox Action:** No further actions possible. The action2 path is blocked by the deadline. The remaining creatorStake is locked.\<br\>- **ParticipationBox Action:** Players can still spend their box via spentInValidGameCancellation to get a refund. |
 
-  * **`ParticipationBox`**: Conceptual name for the box protected by the `participation.es` script. It represents a player's participation in a game.
-  * **`playerPKBytes` (`R4: Coll[Byte]`):** The raw bytes of the public key of the player creating the ParticipationBox.
-  * **`commitmentC` (`R5: Coll[Byte]`):** The cryptographic commitment `blake2b256(solverId ++ longToByteArray(TRUE_SCORE) ++ hashLogs ++ S_game)`. This commitment is crucial for score validation.
-  * **`gameNftId` (`R6: Coll[Byte]`):** The ID of the `gameNftId` of the game to which this participation belongs. It must match the `gameNftId` of the GameBox.
-  * **`solverId` (`R7: Coll[Byte]`):** An identifier for the player's solver, in bytes (e.g., UTF-8).
-  * **`hashLogs` (`R8: Coll[Byte]`):** A hash representing the player's game logs.
-  * **`scoreList` (`R9: Coll[Long]`):** A collection of scores (`Long`). One of these scores must be the `TRUE_SCORE` used to generate `commitmentC`.
-  * **`spentInValidGameResolution` (variable in `participation.es` code):** The boolean logic defining "Condition 1: Spent in a Valid Game Resolution".
-  * **`spentInValidGameCancellation` (variable in `participation.es` code):** The boolean logic (currently commented out) defining "Condition 2: Spent in a Valid Game Cancellation".
-  * **`playerReclaimsAfterGracePeriod` (variable in `participation.es` code):** The boolean logic (currently commented out) defining "Condition 3: Player Reclaims Funds After a Grace Period".
-  * **`gameBoxCandidate`**: In `participation.es`, a variable representing an `INPUTS` box (usually `INPUTS(0)`) presumed to be the GameBox of the corresponding game.
+## **2\. game.es \- The Game Box Contract**
 
------
+This contract governs the main game box, holding the prize pool, creator's stake, and the logic for all state transitions.
 
-## 1\. `game.es` - Game Box Contract (GameBox)
+### **2.1. Purpose**
 
-This contract governs the main box of a game on the GoP platform. It holds the prize funds, the creator's stake, and the logic for game resolution and reward distribution.
+* To represent a unique game on the blockchain.  
+* To manage the game's state (Active vs. Canceled) and enforce time-based rules (deadline).  
+* To handle the standard game resolution logic to determine a winner.  
+* To implement a penalty mechanism for early secret revelation, allowing the creator's stake to be progressively drained.
 
-### 1.1. Purpose
+### **2.2. Box Structure (GameBox)**
 
-  * Represent a unique game on the blockchain.
-  * Store game parameters, including `hashS`, `participationFee`, `deadline`, and `commissionPercentage`.
-  * Handle the resolution logic to determine a winner based on submitted participations.
-  * Distribute prizes to the winner and the commission and `creatorStake` to the creator.
-  * (Optionally, if activated) Handle game cancellation if `S` is revealed prematurely.
+* **R4: Coll\[Byte\] \- gameCreatorPK:** The game creator's public key.  
+* **R5: (Long, Coll\[Byte\]) \- StateTuple:** The core state register.  
+  * If StateTuple.\_1 \== 0 (Active): StateTuple.\_2 holds hashS, the hash of the game's secret.  
+  * If StateTuple.\_1 \> 0 (Canceled): StateTuple.\_2 holds the revealed secret S, and StateTuple.\_1 is the unlockHeight for the next stake withdrawal.  
+* **R6: Coll\[Byte\] \- expectedParticipationScriptHash:** The script hash of participation.es.  
+* **R7: Coll\[Long\] \- numericalParameters:** A collection \[deadline, creatorStake, participationFee\]. The creatorStake value is reduced if the game is canceled.  
+* **R8: Int \- commissionPercentage:** The creator's commission percentage.  
+* **R9: Coll\[Byte\] \- gameDetailsJsonHex:** Game details in JSON/Hex format.  
+* **tokens(0):** The unique gameNftId.
 
-### 1.2. Box Structure (GameBox)
+### **2.3. Spending Logic (Actions)**
 
-(See Section 0.1 for register and token details)
+#### **Action 1: Game Resolution (action1\_isValidResolution)**
 
-### 1.3. Actions (Spending Logic)
+This is the standard action to finalize the game.
 
-#### Action 1: Game Resolution (defined by the `action1_isValidResolution` variable in the `game.es` code)
+* **Conditions:**  
+  * Must be executed **after** the deadline.  
+  * The GameBox must be in the **Active** state (unlockHeight\_in\_self \== 0L).  
+* **Process:**  
+  1. **Secret Revelation:** The creator reveals S in their output box. The script verifies that blake2b256(S) matches the stored hashS.  
+  2. **Participation Processing:** The script iterates through valid ParticipationBox inputs, validates them, and calculates their true score by checking their commitmentC against the revealed S.  
+  3. **Winner Determination:** The participant with the highest valid score is identified.  
+  4. **Output Validation:**  
+     * **Winner's Output (OUTPUTS(0)):** Receives the prize pool (less commission) and the gameNftId.  
+     * **Creator's Output (OUTPUTS(1)):** Receives the original creatorStake plus the commission.
 
-This is the main action to finalize the game and distribute prizes.
+#### **Action 2: Game Cancellation & Stake Draining (action2\_isValidCancellation)**
 
-  * **Pre-conditions:**
-      * Must be executed after the `deadline` (`HEIGHT >= deadline`).
-      * The transaction must have at least two `OUTPUTS` (one for the winner and one for the creator).
-  * **Secret Revelation:**
-      * The creator's output (`OUTPUTS(1)`) must contain `S` in its `R4`.
-      * It is verified that `blake2b256` of the revealed `S` matches `hashS` (from `R5` of the GameBox).
-      * The creator's output must be protected by `gameCreatorP2PKPropBytes`.
-  * **Processing of Participation Boxes (`INPUTS`):**
-      * The script iterates over `participationInputs`.
-      * **Structural Validation of each `pBox`:**
-          * Registers R4-R9 defined.
-          * Correct `gameNftId`.
-          * `pBox.value >= participationFee`.
-          * Hash of `pBox` script matches `expectedParticipationScriptHash`.
-      * **Score Validation (Inner Fold):**
-          * For each valid `pBox`, it iterates over `pBoxScoreList`.
-          * For each `scoreAttempt`, `testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(scoreAttempt) ++ pBoxHashLogs ++ revealedS_fromOutput)` is calculated.
-          * If `testCommitment == pBoxCommitment`, `scoreAttempt` is the `actualScoreForThisPBox`.
-  * **Winner Determination (Outer Fold):**
-      * `maxScore` and `winnerPK` are tracked.
-      * `prizePool` is accumulated from the valid `pBox.value`.
-      * **Tie-breaking:** The first processed (in the transaction's input fold) with the `maxScore` wins.
-  * **Transaction Output Validation:**
-      * If there is a winner:
-          * `creatorCommissionAmount` is calculated.
-          * `finalWinnerPrize = prizePool - creatorCommissionAmount`.
-          * **Winner's Output (`OUTPUTS(0)`):** Receives `>= finalWinnerPrize`, protected by `winnerPK`, and the `gameNftId`.
-          * **Creator's Output (`OUTPUTS(1)`):** Receives `>= creatorCommissionAmount + creatorStake`, protected by `gameCreatorP2PKPropBytes`, and without `gameNftId`.
+This action penalizes the creator for revealing the secret S prematurely.
 
-#### Action 2: Cancellation for Early Secret Revelation (defined by the `action2_isValidCancellation` variable in the `game.es` code)
+* **Condition:** Must be executed **before** the deadline.  
+* **Phase A: Initial Cancellation (State Transition)**  
+  * **Trigger:** Executed when the GameBox is in the **Active** state (unlockHeight\_in\_self \== 0L).  
+  * **Logic:**  
+    1. Anyone can initiate a transaction that spends the GameBox.  
+    2. The transaction **re-creates the GameBox** (OUTPUTS(0)) but transitions it to the **Canceled** state:  
+       * The secret S is revealed and stored in the new R5.  
+       * An unlockHeight is set for the next withdrawal (HEIGHT \+ COOLDOWN\_IN\_BLOCKS).  
+       * The creatorStake in R7 is reduced by a fixed portion.  
+    3. A second output (claimerOutput) is given to the transaction initiator, containing the portion of the stake that was removed.  
+* **Phase B: Subsequent Withdrawals (Draining)**  
+  * **Trigger:** Executed when the GameBox is in the **Canceled** state (unlockHeight\_in\_self \> 0L) and the cooldown period has passed (HEIGHT \>= unlockHeight\_in\_self).  
+  * **Logic:** Similar to Phase A. The transaction re-creates the GameBox with an even smaller creatorStake and resets the unlockHeight for a new cooldown period, allowing the stake to be drained over time.
 
-  * **Current Status:** **COMMENTED OUT** in `game.es`; not active.
-  * **Intended Logic:**
-      * If `S` is revealed in `INPUTS(1).R4` *before* the `deadline`.
-      * Participating players would receive their `participationFee` + portion of the `creatorStake`.
-      * Creator would recover the remaining `creatorStake` and `gameNftId`.
+## **3\. participation.es \- The Participation Box Contract**
 
-### 1.4. Current Spending Condition
+This contract protects the box each player creates to enter a game.
 
-The GameBox can only be spent if the boolean logic of `action1_isValidResolution` (defining "Action 1: Game Resolution") is true.
+### **3.1. Purpose**
 
------
+* To represent a player's entry into a game.  
+* To hold the player's commitmentC (commitment to their true score).  
+* To define the conditions under which the player's funds can be spent.
 
-## 2\. `participation.es` - Participation Box Contract (ParticipationBox)
+### **3.2. Box Structure (ParticipationBox)**
 
-This contract governs the boxes created by players.
+* **R4: Coll\[Byte\] \- playerPKBytes:** The player's public key.  
+* **R5: Coll\[Byte\] \- commitmentC:** The cryptographic commitment to the true score.  
+* **R6: Coll\[Byte\] \- gameNftId:** The NFT ID of the game being played.  
+* **R7: Coll\[Byte\] \- solverId:** The player's solver ID.  
+* **R8: Coll\[Byte\] \- hashLogs:** A hash of the player's game logs.  
+* **R9: Coll\[Long\] \- scoreList:** A list of scores, one of which is genuine.
 
-### 2.1. Purpose
+### **3.3. Spending Conditions**
 
-  * Represent a player's participation.
-  * Store `commitmentC`, `solverId`, `hashLogs`, and `scoreList`.
-  * Ensure payment of `participationFee`.
-  * Define spending conditions.
+#### **Condition 1: Spent in a Valid Game Resolution (spentInValidGameResolution)**
 
-### 2.2. Box Structure (ParticipationBox)
+* **Status:** Active.  
+* **Logic:** Allows the box to be spent as an input to a valid **Game Resolution** transaction (Action 1 of game.es). This is the normal path for a game that finishes correctly.
 
-(See Section 0.2 for register details)
+#### **Condition 2: Spent in a Valid Game Cancellation (spentInValidGameCancellation)**
 
-### 2.3. Spending Conditions (Spending Logic)
+* **Status:** Active.  
+* **Logic:** Allows a player to **reclaim their participationFee** if the game has been canceled.  
+* **Verification:**  
+  1. The transaction must include the corresponding GameBox as a dataInput.  
+  2. The script verifies that the GameBox in the dataInput is in the **Canceled** state (i.e., gameBoxInData.R5.\_1 \> 0L).  
+  3. The script ensures that one of the transaction's outputs returns the participationFee to the player's address.
 
-#### Condition 1: Spent in a Valid Game Resolution (variable `spentInValidGameResolution` in `participation.es` code)
+## **4\. Interaction Flow Summary**
 
-  * **Current Status:** Active.
-  * Allows spending if it's part of "Action 1: Game Resolution" (whose validity is defined by the `action1_isValidResolution` variable in `game.es`) of the GameBox.
-  * **Verifications:**
-      * `gameBoxCandidate` (`INPUTS(0)`) is plausible (NFT, registers).
-      * `HEIGHT >= gameDeadlineFromGameBox`.
-      * Transaction structure looks like resolution (`OUTPUTS.size >= 2`, `OUTPUTS(1).R4` defined).
-
-#### Condition 2: Spent in a Valid Game Cancellation (variable `spentInValidGameCancellation` in `participation.es` code)
-
-  * **Current Status:** **COMMENTED OUT** in `participation.es`.
-  * **Intended Logic:** Would allow spending if it's part of "Action 2: Cancellation for Early Secret Revelation" (whose validity is defined by the `action2_isValidCancellation` variable in `game.es`) of the GameBox.
-
-#### Condition 3: Player Reclaims Funds After a Grace Period (variable `playerReclaimsAfterGracePeriod` in `participation.es` code)
-
-  * **Current Status:** **COMMENTED OUT** in `participation.es`.
-  * **Intended Logic:** Would allow the player to reclaim `participationFee` if the game is not resolved `N_GRACE_PERIOD_BLOCKS` after `deadline`.
-
-### 2.4. Current Spending Condition
-
-A ParticipationBox can only be spent if the boolean logic of `spentInValidGameResolution` (Condition 1) is true.
-
------
-
-## 3\. Score Commitment Scheme
-
-The player receives `commitmentC` (pre-calculated by the game-service off-chain using `S`) and stores it in `R5` of their ParticipationBox. The format is:
-`commitmentC = blake2b256(solverId ++ longToByteArray(TRUE_SCORE) ++ hashLogs ++ S_game)`
-
-During "Action 1: Game Resolution" (in `game.es`), after `S` is revealed, the script verifies `commitmentC` for each `scoreAttempt` from `pBoxScoreList`:
-`testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(scoreAttempt) ++ pBoxHashLogs ++ revealedS_fromOutput)`
-If `testCommitment == pBoxCommitment`, `scoreAttempt` is valid.
-
------
-
-## 4\. Workaround for P2PK Addresses
-
-Both contracts use `P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")` concatenated with public key bytes to form P2PK addresses. Example: `gameCreatorP2PKPropBytes = P2PK_ERGOTREE_PREFIX ++ gameCreatorPK`.
-
------
-
-## 5\. Interaction Flow (Simplified)
-
-1.  **Game Creation:** Creator deploys `game.es`, creating the GameBox with `gameNftId`, `hashS`, `deadline`, etc.
-2.  **Player Participation:**
-      * Player interacts with game-service off-chain.
-      * Receives `solverId`, `hashLogs`, `scoreList`, and `commitmentC` (pre-calculated by game-service with `S`).
-      * Player creates ParticipationBox (according to `participation.es`), paying `participationFee`.
-3.  **Game Resolution:**
-      * Post-`deadline`, creator initiates a transaction to spend GameBox (executing "Action 1: Game Resolution").
-      * Inputs: GameBox, ParticipationBoxes.
-      * Creator reveals `S`.
-      * `game.es` validates participations, `commitmentC`, determines winner, and creates outputs for winner (prize + NFT) and creator (commission + stake).
-
------
-
-To test the contract without running the game, the following [script](../games/snake/game/generate_commitment.py) can be executed to obtain data from a game.
+1. **Game Creation:** The creator deploys game.es, creating a GameBox in the **Active** state (State 1A).  
+2. **Player Participation:** Before the deadline, players create ParticipationBoxes.  
+3. **Outcome Scenarios:**  
+   * **Scenario A: Normal Game Resolution**  
+     1. The deadline passes. The game remains in the **Active** state (now State 1B).  
+     2. The creator initiates **Action 1**, spending the GameBox and all valid ParticipationBoxes.  
+     3. game.es validates scores and distributes the prize pool, commission, and stake.  
+   * **Scenario B: Game Cancellation**  
+     1. **Before** the deadline, someone initiates **Action 2** on the GameBox.  
+     2. The GameBox transitions to the **Canceled** state (State 2A), revealing S and losing a portion of its stake.  
+     3. Players can now use **Condition 2** (spentInValidGameCancellation) on their ParticipationBox to get a full refund at any time (both before and after the deadline, in states 2A and 2B).  
+     4. Meanwhile, the remaining creatorStake in the GameBox can be further drained via **Action 2** as long as it is still before the deadline.
