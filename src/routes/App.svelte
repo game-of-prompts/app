@@ -108,7 +108,17 @@
 <header class="navbar-container">
     <div class="navbar-content">
         <a href="#" on:click|preventDefault={() => changeTab('participateGame')} class="logo-container">
-            <img src="logo-large.svg" alt="Game of Prompts Logo" class="logo-image" />
+            <img 
+                src="logo-large.svg" 
+                alt="Game of Prompts Logo" 
+                class="block dark:hidden logo-image" 
+            />
+
+            <img 
+                src="logo-large-dark.svg" 
+                alt="Game of Prompts Logo" 
+                class="hidden dark:block logo-image" 
+            />
         </a>
 
         <nav class="desktop-nav">
