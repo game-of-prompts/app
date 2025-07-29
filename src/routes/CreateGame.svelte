@@ -289,7 +289,7 @@
     }
 
     .form-section {
-        @apply p-6 bg-background/50 backdrop-blur-lg rounded-xl shadow-lg border border-white/10;
+        @apply p-6 bg-background/50 backdrop-blur-lg rounded-xl shadow border border-white/10;
         animation: fadeIn 0.5s ease-out;
     }
 

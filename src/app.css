@@ -14,7 +14,7 @@
     --foreground: 210 4% 9%;   /* Negro suave, #151617 */
 
     /* Tarjetas: Un tono melocotón pálido para los recuadros. */
-    --card: 28 55% 91%;         /* #F2DED0 */
+    --card: #fdfaf780;         /* #F2DED0 */
     --card-foreground: 210 4% 9%; /* #151617 */
 
     --popover: 33 60% 98%;

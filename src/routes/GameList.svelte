@@ -171,7 +171,6 @@
         margin: 0 0 0.5rem;
         color: slate;
         font-family: 'Russo One', sans-serif;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .subtitle {
@@ -181,18 +180,14 @@
         margin: 0 auto;
     }
 
-    /*
-      RAZONAMIENTO: Los estilos de la cuadrícula se reemplazan por los de una lista flexible.
-      El contenedor apila los elementos verticalmente con un espacio (`gap`) entre ellos.
-    */
+
     .game-list-container {
         display: flex;
         flex-direction: column;
-        gap: 4rem; /* Espacio generoso entre cada juego */
+        gap: 4rem;
         width: 100%;
     }
 
-    /* RAZONAMIENTO: Nuevos estilos para el skeleton loader de filas. */
     @keyframes pulse { 50% { opacity: .6; } }
     .skeleton-row {
         display: flex;
@@ -226,7 +221,4 @@
         .skeleton-image-large { width: 45%; }
         .skeleton-row.reverse { flex-direction: row-reverse; }
     }
-
-
-    .no-items-container, .no-items-text { /* Estilos sin cambios */ }
 </style>

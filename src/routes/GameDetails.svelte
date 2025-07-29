@@ -378,7 +378,38 @@
             </div>
         </section>
 
-        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
+        <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
+            <h2 class="text-2xl font-semibold mb-6">Game Details</h2>
+            {#if game}
+                {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                    <div class="info-block">
+                        <span class="info-label">Game ID (NFT)</span>
+                        <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
+                            {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
+                        </a>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Service ID</span>
+                        <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Creator Address</span>
+                        <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
+                            {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
+                        </a>
+                    </div>
+                    {#if game.hashS}
+                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                        <span class="info-label">Hashed Secret (S)</span>
+                        <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
+                    </div>
+                    {/if}
+                </div>
+            {/if}
+        </section>
+
+        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
                 {#if game.ended}
@@ -395,12 +426,12 @@
                          <p class="mt-2 text-sm text-gray-400">Winner information is not available.</p>
                     {/if}
                 {:else}
-                    <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-400' : 'text-green-400'}">
+                    <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-600' : 'text-green-600'}">
                         {participationIsEnded ? 'Participation Closed' : 'Open for Participation'}
                     </p>
                     <p class="text-lg font-semibold text-slate-400 mt-1">{timeRemainingDisplay}</p>
                 {/if}
-                 <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-2">Game Status: {game.status}</p>
+                 <p class="text-xs {$mode === 'dark' ? 'text-slate-600' : 'text-gray-500'} mt-2">Game Status: {game.status}</p>
                  {#if transactionId && !isSubmitting && !showActionModal}
                     <div class="my-4 p-3 rounded-md text-sm bg-green-600/30 text-green-300 border border-green-500/50">
                         <strong>Success! Transaction ID:</strong><br/>
@@ -437,34 +468,6 @@
                         <p class="info-box">Connect your wallet to interact with the game.</p>
                     {/if}
                 </div>
-            </div>
-        </section>
-
-        <section class="game-info-section mb-12 p-6 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
-            <h2 class="text-2xl font-semibold mb-4">Game Details</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                <div class="info-block">
-                    <span class="info-label">Game ID (NFT)</span>
-                    <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
-                        {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
-                    </a>
-                </div>
-                 <div class="info-block">
-                    <span class="info-label">Service ID</span>
-                    <span class="info-value font-mono text-xs">{game.content.serviceId}</span>
-                </div>
-                <div class="info-block">
-                    <span class="info-label">Creator Address</span>
-                     <a href="{web_explorer_uri_addr + pkHexToBase58Address(game.gameCreatorPK_Hex)}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={pkHexToBase58Address(game.gameCreatorPK_Hex)}>
-                        {pkHexToBase58Address(game.gameCreatorPK_Hex)}
-                    </a>
-                </div>
-                {#if game.hashS}
-                <div class="info-block md:col-span-2 lg:col-span-3">
-                    <span class="info-label">Hashed Secret (S)</span>
-                    <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
-                </div>
-                {/if}
             </div>
         </section>
 
@@ -636,6 +639,10 @@
         padding-bottom: 2rem;
     }
 
+    .section {
+        background-color: var(--card);
+    }
+
     .game-status, .game-info-section {
         background-color: var(--card);
     }
@@ -716,10 +723,7 @@
         font-size: 0.875rem;
         line-height: 1.25rem;
         font-weight: 600;
-        @apply text-slate-200;
-    }
-    :global(.light) .info-value {
-       @apply text-slate-700;
+        @apply text-slate-600;
     }
 
     .winner-card {

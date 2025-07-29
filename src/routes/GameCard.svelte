@@ -139,7 +139,7 @@
             <img
                 src={game.content.imageURL}
                 alt="{game.content.title} banner"
-                class="w-full h-auto object-cover rounded-lg shadow-xl aspect-video"
+                class="w-full h-auto object-cover rounded-lg  aspect-video"
                 loading="lazy"
             />
         {/if}
