@@ -1,9 +1,8 @@
 // src/lib/ergo/fetch.ts
 
-import { type Box, ErgoAddress, SParse } from "@fleet-sdk/core";
-import { SBool, SByte, SColl, SPair, SLong } from "@fleet-sdk/serializer";
+import { type Box, ErgoAddress } from "@fleet-sdk/core";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-
+import { ErgoPlatform } from "./platform";
 import {
     type Game,
     type Participation,
@@ -163,6 +162,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
 
         // 5. Construct the final Game object.
         return {
+            platform: new ErgoPlatform(),
             boxId: box.boxId,
             box: box,
             status: gameStatus,
