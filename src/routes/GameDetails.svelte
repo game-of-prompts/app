@@ -372,7 +372,7 @@
                         <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay.split(' at ')[0]}</span><span class="stat-label">Deadline</span></div>
                     </div>
 
-                    {#if true}
+                    {#if !participationIsEnded && targetDate}
                         <div class="countdown-container">
                             <div class="timeleft {participationIsEnded ? 'ended' : ''}">
                                 <span class="timeleft-label">
@@ -381,6 +381,7 @@
                                         <small class="secondary-text">Awaiting resolution...</small>
                                     {:else}
                                         TIME LEFT
+                                        <small class="secondary-text">until participation ends</small>
                                     {/if}
                                 </span>
                                 <div class="countdown-items">
@@ -823,7 +824,7 @@
     .timeleft {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: left;
         gap: 1rem;
         color: #fff;
     }
@@ -831,7 +832,7 @@
     .timeleft-label {
         font-size: 1.25rem;
         font-weight: 600;
-        text-align: center;
+        text-align: left;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -848,7 +849,7 @@
 
     .countdown-items {
         display: flex;
-        justify-content: center;
+        justify-content: left;
         flex-wrap: wrap;
         gap: 1rem;
     }
