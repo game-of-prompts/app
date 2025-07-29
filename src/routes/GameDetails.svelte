@@ -48,7 +48,7 @@
     let deadlineDateDisplay = "N/A";
     let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
-    $: isCurrentUserWinner = !!(await isGameEnded(game) && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
+    $: isCurrentUserWinner = !!(isGameEnded(game) && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
 
     // --- Countdown Clock State ---
     let daysValue = 0, hoursValue = 0, minutesValue = 0, secondsValue = 0;
