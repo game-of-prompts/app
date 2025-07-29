@@ -402,11 +402,12 @@ This section groups elements that, although part of the complete vision of Game 
 
 These are improvements focused on strengthening the robustness and fairness of the main gameplay flow.
 
-* **10.1.1. Action 2 of the `game.es` Contract: Cancellation for Early Secret Revelation**
-    * This action (variable `action2_isValidCancellation` in the `game.es` code, currently commented out) is designed to be activated if the secret **`S`** is revealed *before* the **`deadline`**.
-    * It would allow any party (not just a player) who detects the revelation of **`S`** (for example, in an input box of the cancellation transaction) to initiate the cancellation. Participating players could then claim their `participationFee` and, potentially, a portion of the **`creatorStake`** as a penalty to the creator (according to the detailed design in `contracts/game.es` for this action).
-    * The creator would recover the remaining **`creatorStake`** (if any after distribution to players) and the `gameNftId`.
-    * **Related Incentives:** This action strongly disincentivizes the creator from revealing **`S`** prematurely or abandoning the game, as they would lose part or all of their **`creatorStake`**.
+  * **10.1.1. Action 2 of the `game.es` Contract: Penalty for Early Secret Revelation**
+      * This action (defined in the `action2_isValidCancellation` variable) is designed to be activated if the secret **`S`** is publicly revealed *before* the game's **`deadline`** expires.
+      * It allows any party, not just players, to initiate the penalty process. The executor can claim a fraction of the creator's stake (`1/STAKE_DENOMINATOR`) every set number of blocks (`COOLDOWN_IN_BLOCKS`).
+      * Once **`S`** is revealed in the first claim, it becomes public on-chain. This prevents the creator from using this action as a controlled withdrawal method, as anyone can then compete to claim the subsequent portions of the stake.
+      * In turn, participating players can claim a refund of their `participationFee`. To do so, they execute the `spentInValidGameCancellation` action in the `participation.es` contract, which verifies that the secret has already been revealed in the main game contract (by providing it as a `dataInput`).
+      * **Primary Incentive:** This mechanism strongly discourages the creator from prematurely revealing **`S`** or abandoning the game, as they risk losing a significant portion or all of their **`creatorStake`**.
 
   * **10.1.2. Proof of Omitted Participation (to counteract Creator Censorship)**
 

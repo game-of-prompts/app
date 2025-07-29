@@ -39,52 +39,43 @@
     }
   }
 
-  // === Action 2: Spent in Valid Game Cancellation (UPDATED LOGIC) ===
+  // === Action 2: Spent in Valid Game Cancellation ===
   val spentInValidGameCancellation = {
-    // This action allows a player to get a refund if the game's secret 'S' is revealed
-    // before the deadline.
-    // 1. The GameBox must be provided as a dataInput to verify its parameters.
-    // 2. An input must reveal the secret 'S'.
-    // 3. The transaction must refund the fee to the player (address in R4).
-    if (CONTEXT.dataInputs.size > 0 && INPUTS.size > 0) {
+    // This action allows a player to get a refund if the game's secret 'S' 
+    // is revealed on-chain in the GameBox before the deadline.
+    // The GameBox MUST be provided as the first dataInput.
+    
+    if (CONTEXT.dataInputs.size > 0) {
       val gameBoxInData = CONTEXT.dataInputs(0)
-      val revealerBox = INPUTS(0) // Assume the box revealing S is the first input
 
       // Verify that the dataInput is the correct GameBox for this participation
       val gameBoxIsPlausible = gameBoxInData.tokens.size > 0 &&
                                gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
-                               gameBoxInData.R5[Coll[Byte]].isDefined && // hashS
-                               gameBoxInData.R7[Coll[Long]].get.size == 3   // numericalParams
+                               // Check that R5 has the expected (Long, Coll[Byte]) structure
+                               gameBoxInData.R5[(Long, Coll[Byte])].isDefined && 
+                               gameBoxInData.R7[Coll[Long]].get.size == 3
 
       if (gameBoxIsPlausible) {
         val gameDeadline = gameBoxInData.R7[Coll[Long]].get(0)
-        val hashS_fromGameBox = gameBoxInData.R5[Coll[Byte]].get
+        val stateTuple_R5 = gameBoxInData.R5[(Long, Coll[Byte])].get
 
-        // Condition 1: Must happen before the deadline
-        val isBeforeDeadline = HEIGHT < gameDeadline
+        // Condition 1: The secret 'S' must be revealed within the GameBox itself.
+        // This is true if the unlockHeight (the first element of the R5 tuple) is > 0.
+        // The GameBox contract itself ensures the revealed S was valid, so we can trust its state.
+        val secretIsRevealedInGameBox = stateTuple_R5._1 > 0L
 
-        // Condition 2: The secret 'S' must be correctly revealed in an input
-        val sIsRevealedCorrectly = if (revealerBox.R4[Coll[Byte]].isDefined) {
-          val revealedS = revealerBox.R4[Coll[Byte]].get
-          blake2b256(revealedS) == hashS_fromGameBox
-        } else {
-          false
-        }
-
-        // Condition 3: The player must get their funds back.
-        // The transaction must have an output that pays at least SELF.value
-        // to the player's PK (from R4).
+        // Condition 2: The player must get their funds back.
         val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
           val playerP2PKAddress = P2PK_ERGOTREE_PREFIX ++ playerPKBytes
           outBox.propositionBytes == playerP2PKAddress && outBox.value >= SELF.value
         }
         
-        isBeforeDeadline && sIsRevealedCorrectly && playerGetsRefund
+        secretIsRevealedInGameBox && playerGetsRefund
       } else {
         false // The provided dataInput is not the correct GameBox
       }
     } else {
-      false // Not enough inputs or dataInputs for this action
+      false // A dataInput for the GameBox is required
     }
   }
 
