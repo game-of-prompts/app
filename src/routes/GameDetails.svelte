@@ -16,7 +16,7 @@
     import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
 
     // UTILITIES
-    import { block_height_to_timestamp, block_to_time_remaining } from "$lib/common/countdown";
+    import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, hexToBytes, parseCollByteToHex, parseLongColl, bigintToLongByteArray } from "$lib/ergo/utils";
@@ -46,15 +46,20 @@
     // Game Status State
     let participationIsEnded = true;
     let deadlineDateDisplay = "N/A";
-    let timeRemainingDisplay = "Loading...";
-    let countdownInterval: ReturnType<typeof setInterval> | null = null;
+    let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
-    $: isCurrentUserWinner = !!(game?.ended && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
+    $: isCurrentUserWinner = !!(await isGameEnded(game) && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
+
+    // --- Countdown Clock State ---
+    let daysValue = 0, hoursValue = 0, minutesValue = 0, secondsValue = 0;
+    let targetDate: number;
+    let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
+
 
     // Subscribes to the global store to get game details
     const unsubscribeGameDetail = game_detail.subscribe(value => {
         const typedValue = value as Game & { winnerInfo?: WinnerInfo; secret?: string } | null;
-        if (typedValue && (!game || typedValue.boxId !== game.boxId || typedValue.ended !== game.ended || typedValue.secret !== game.secret)) {
+        if (typedValue && (!game || typedValue.boxId !== game.boxId || typedValue.secret !== game.secret)) {
             game = typedValue;
             loadGameDetailsAndTimers();
         } else if (!typedValue && game) {
@@ -95,7 +100,6 @@
         if (!game) {
             participationIsEnded = true;
             deadlineDateDisplay = "N/A";
-            timeRemainingDisplay = "N/A";
             isOwner = false;
             isCurrentUserWinner = false;
             cleanupTimers();
@@ -110,17 +114,18 @@
 
             // Format deadline for display
             const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
+            targetDate = deadlineTimestamp; // Set target for clock
             const date = new Date(deadlineTimestamp);
             deadlineDateDisplay = `${date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric'})} at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
 
-            await updateCountdownDisplayLogic();
+            await updateStatusLogic();
 
-            // Set up a countdown timer only if the game is active
-            if (!game.ended && !participationIsEnded) {
-                cleanupTimers();
-                countdownInterval = setInterval(updateCountdownDisplayLogic, 30000);
-            } else {
-                cleanupTimers();
+            // Set up timers only if the game is active
+            cleanupTimers(); // Clear any existing timers before setting new ones
+            if (!participationIsEnded) {
+                statusCheckInterval = setInterval(updateStatusLogic, 30000);
+                clockCountdownInterval = setInterval(updateClockCountdown, 1000); // New clock timer
+                updateClockCountdown(); // Initial call
             }
 
             // Check if the connected user is the owner of the game
@@ -132,39 +137,48 @@
                     const currentPKS = pkBytes ? uint8ArrayToHex(pkBytes).toLowerCase() : null;
                     isOwner = !!(currentPKS && game.gameCreatorPK_Hex.toLowerCase() === currentPKS);
                 } catch (e) { console.warn(e); isOwner = false; }
-            } else {
-                isOwner = false;
-            }
+            } else { isOwner = false; }
 
         } catch (error: any) {
             errorMessage = "Could not load game details: " + (error.message || "Unknown error");
-            timeRemainingDisplay = "Error";
         }
     }
 
-    // Updates the countdown display string periodically.
-    async function updateCountdownDisplayLogic() {
-        if (!game) { timeRemainingDisplay = "N/A"; cleanupTimers(); return; }
-        if (game.ended) { timeRemainingDisplay = "Resolved"; participationIsEnded = true; cleanupTimers(); return; }
-        if (participationIsEnded) { timeRemainingDisplay = "Awaiting Resolution"; cleanupTimers(); return; }
+    // Checks game status periodically.
+    async function updateStatusLogic() {
+        if (!game) { cleanupTimers(); return; }
 
-        try {
-            timeRemainingDisplay = await block_to_time_remaining(game.deadlineBlock, game.platform);
-            const newParticipationStatus = await isGameEnded(game);
-            if (newParticipationStatus && !participationIsEnded) {
-                participationIsEnded = true;
-                timeRemainingDisplay = "Awaiting Resolution";
-                cleanupTimers();
-            }
-        } catch (error) {
-            timeRemainingDisplay = "Error updating time";
+        const newParticipationStatus = await isGameEnded(game);
+        if (newParticipationStatus && !participationIsEnded) {
+            participationIsEnded = true;
+            cleanupTimers();
+        }
+    }
+
+    function updateClockCountdown() {
+        if (!targetDate) return;
+        const currentDate = new Date().getTime();
+        const diff = targetDate - currentDate;
+
+        if (diff > 0) {
+            daysValue = Math.floor(diff / (1000 * 60 * 60 * 24));
+            hoursValue = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            minutesValue = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            secondsValue = Math.floor((diff % (1000 * 60)) / 1000);
+        } else {
+            daysValue = 0; hoursValue = 0; minutesValue = 0; secondsValue = 0;
+            if (!participationIsEnded) updateStatusLogic();
         }
     }
 
     function cleanupTimers() {
-        if (countdownInterval) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
+        if (clockCountdownInterval) { // Clean up new clock timer
+            clearInterval(clockCountdownInterval);
+            clockCountdownInterval = null;
         }
     }
 
@@ -357,6 +371,40 @@
                         <div class="stat-block"><Users class="stat-icon"/><span>{game.commissionPercentage}%</span><span class="stat-label">Creator Commission</span></div>
                         <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay.split(' at ')[0]}</span><span class="stat-label">Deadline</span></div>
                     </div>
+
+                    {#if true}
+                        <div class="countdown-container">
+                            <div class="timeleft {participationIsEnded ? 'ended' : ''}">
+                                <span class="timeleft-label">
+                                    {#if participationIsEnded}
+                                        TIME'S UP!
+                                        <small class="secondary-text">Awaiting resolution...</small>
+                                    {:else}
+                                        TIME LEFT
+                                    {/if}
+                                </span>
+                                <div class="countdown-items">
+                                    <div class="item">
+                                        <div>{daysValue}</div>
+                                        <div><h3>Days</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{hoursValue}</div>
+                                        <div><h3>Hours</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{minutesValue}</div>
+                                        <div><h3>Minutes</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{secondsValue}</div>
+                                        <div><h3>Seconds</h3></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
+
                      <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
                         {#if game.content.webLink}
                         <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
@@ -429,9 +477,8 @@
                     <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-600' : 'text-green-600'}">
                         {participationIsEnded ? 'Participation Closed' : 'Open for Participation'}
                     </p>
-                    <p class="text-lg font-semibold text-slate-400 mt-1">Time: {timeRemainingDisplay}</p>
-                {/if}
-                 <p class="text-xs {$mode === 'dark' ? 'text-slate-600' : 'text-gray-500'} mt-2">Game Status: {game.status}</p>
+                    {/if}
+                 <p class="text-xs {$mode === 'dark' ? 'text-slate-600' : 'text-gray-500'} mt-2">Contract Status: {game.status}</p>
                  {#if transactionId && !isSubmitting && !showActionModal}
                     <div class="my-4 p-3 rounded-md text-sm bg-green-600/30 text-green-300 border border-green-500/50">
                         <strong>Success! Transaction ID:</strong><br/>
@@ -766,5 +813,77 @@
     @keyframes fadeInScale {
         from { opacity: 0.7; transform: scale(0.98) translateY(10px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* --- NEW: Styles for Countdown Clock --- */
+    .countdown-container {
+        padding-top: 1.5rem;
+    }
+
+    .timeleft {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        color: #fff;
+    }
+
+    .timeleft-label {
+        font-size: 1.25rem;
+        font-weight: 600;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .secondary-text {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: normal;
+        opacity: 0.8;
+        margin-top: 0.25rem;
+    }
+
+    .countdown-items {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .item {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(2px);
+    }
+
+    .item > div:first-child {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .item > div:last-child > h3 {
+        font-size: 0.75rem;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.5rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .timeleft.ended {
+        opacity: 0.7;
     }
 </style>
