@@ -23,47 +23,63 @@ import {
     bigintToLongByteArray
 } from "./utils"; // Using your provided utility functions
 
-// --- Core Logic for New Contract Version ---
 
 /**
- * Determines the status of a game based on the new contract logic.
- * It uses the box's register data and the current blockchain height.
- * @param box - The GameBox object from the explorer.
- * @param currentHeight - The current height of the Ergo blockchain.
- * @returns The status of the game (GameStatus).
+ * Parsea el `renderedValue` del registro R5 (una tupla string) para extraer
+ * el unlockHeight y el secret/hash.
+ * @param r5RenderedValue - El string de R5, ej: "(0L, 7b1...)" o "(1586208L, 8c2...)"
+ * @returns Un objeto con unlockHeight y secretOrHashBytesHex, o null si el parseo falla.
  */
-function getGameStatus(box: Box, currentHeight: number): GameStatus {
-    // R5 and R7 are critical for determining the game state.
-    const r5Value = box.additionalRegisters.R5?.serializedValue;
-    const r7Value = box.additionalRegisters.R7?.serializedValue;
-
-    if (!r5Value || !r7Value) {
-        console.warn(`getGameStatus: R5 or R7 not found for box ${box.boxId}.`);
-        return GameState.Unknown; // Cannot determine status without these registers.
+function parseR5FromString(r5RenderedValue?: string): { unlockHeight: bigint, secretOrHashBytesHex: string } | null {
+    if (!r5RenderedValue) {
+        return null;
     }
 
     try {
-        // R5 is a tuple: (unlockHeight: Long, secretOrHash: Coll[Byte])
-        const stateTuple = SParse(r5Value) as STuple<[SLong, SColl<SByte>]>;
-        const unlockHeight = stateTuple.items[0].toBigInt();
-
-        // R7 is a collection: [deadline: Long, creatorStake: Long, participationFee: Long]
-        const numericalParams = SParse(r7Value) as SColl<SLong>;
-        const deadline = numericalParams.items[0].toBigInt();
-
-        const height = BigInt(currentHeight);
-
-        // This logic directly implements the state matrix from the contract's README.
-        if (unlockHeight === 0n) {
-            // Game is in 'Active' state tree
-            return height < deadline ? GameState.Active : GameState.Resolution;
-        } else {
-            // Game is in 'Canceled' state tree
-            return height < deadline ? GameState.Cancelled_Draining : GameState.Cancelled_Finalized;
+        // Elimina los paréntesis exteriores. Ej: "(0L, ...)" -> "0L, ..."
+        const cleanedString = r5RenderedValue.slice(1, -1);
+        
+        // Busca la posición de la primera coma para separar los dos elementos de la tupla.
+        const commaIndex = cleanedString.indexOf(',');
+        if (commaIndex === -1) {
+            throw new Error("Formato de tupla inválido: no se encontró la coma.");
         }
+
+        // Extrae el primer elemento (el Long) y el segundo (el Coll[Byte] en hex).
+        const longStr = cleanedString.substring(0, commaIndex).trim();
+        const hexStr = cleanedString.substring(commaIndex + 1).trim();
+
+        // Convierte el string del Long a BigInt (quitando la 'L' del final).
+        const unlockHeight = BigInt(longStr.replace('L', ''));
+
+        return {
+            unlockHeight: unlockHeight,
+            secretOrHashBytesHex: hexStr
+        };
     } catch (e) {
-        console.error(`Error parsing game status for box ${box.boxId}:`, e);
-        return GameState.Unknown;
+        console.warn("No se pudo parsear la tupla R5 desde el string, retornando null:", r5RenderedValue, e);
+        return null;
+    }
+}
+
+
+/**
+ * Determines the status of a game based on pre-parsed contract parameters.
+ * @param currentHeight - The current height of the Ergo blockchain.
+ * @param unlockHeight - The unlock height from the game box's R5 register.
+ * @param deadline - The deadline height from the game box's R7 register.
+ * @returns The status of the game (GameStatus).
+ */
+function getGameStatus(currentHeight: number, unlockHeight: bigint, deadline: bigint): GameStatus {
+    const height = BigInt(currentHeight);
+
+    // This logic directly implements the state matrix from the contract's README.
+    if (unlockHeight === 0n) {
+        // Game is in 'Active' state tree
+        return height < deadline ? GameState.Active : GameState.Resolution;
+    } else {
+        // Game is in 'Canceled' state tree
+        return height < deadline ? GameState.Cancelled_Draining : GameState.Cancelled_Finalized;
     }
 }
 
@@ -76,26 +92,50 @@ function getGameStatus(box: Box, currentHeight: number): GameStatus {
  */
 function parseBoxToGame(box: Box, currentHeight: number): Game | null {
     try {
-        const gameStatus = getGameStatus(box, currentHeight);
-        if (gameStatus === GameState.Unknown) {
-            return null; // Don't process boxes with indeterminate status.
+        // 1. Parse R5 to get state info using the serialized value for robustness.
+        const r5Value = box.additionalRegisters.R5?.renderedValue;
+        if (!r5Value) {
+            console.error(`Box ${box.boxId} has no R5 register.`);
+            return null;
+        }
+        const parsedR5Tuple = parseR5FromString(r5Value);
+        if (!parsedR5Tuple) {
+            console.error(`Box ${box.boxId} has an invalid R5 register format: ${r5Value}`);
+            return null;
+        }
+        const [unlockHeight, secretOrHashBytesHex] = [parsedR5Tuple.unlockHeight, parsedR5Tuple.secretOrHashBytesHex];
+
+        // 2. Parse R7 using the renderedValue and helper function as requested.
+        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
+        if (!r7RenderedValue) {
+            console.error(`Box ${box.boxId} has no R7 register.`);
+            return null;
+        }
+        
+        let parsedR7Array: any[] | null = null;
+        if (typeof r7RenderedValue === 'string') {
+            try { parsedR7Array = JSON.parse(r7RenderedValue); }
+            catch (e) { 
+                console.warn(`Could not JSON.parse R7 for gameBox ${box.boxId}: ${r7RenderedValue}`);
+                return null;
+            }
+        } else if (Array.isArray(r7RenderedValue)) {
+            parsedR7Array = r7RenderedValue;
         }
 
+        const numericalParams = parseLongColl(parsedR7Array);
+        if (!numericalParams || numericalParams.length < 3) {
+            throw new Error(`Invalid R7 format for box ${box.boxId}: ${r7RenderedValue}`);
+        }
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
+
+        // 3. Get game status using all pre-parsed values.
+        const gameStatus = getGameStatus(currentHeight, unlockHeight, deadlineBlock);
+
+        // 4. Extract remaining data.
         const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
-
-        // Parse R5 tuple to get unlock height and the secret/hash
-        const r5Tuple = SParse(box.additionalRegisters.R5!.serializedValue) as SPair<[SLong, SColl<SByte>]>;
-        const unlockHeight = r5Tuple.items[0].toBigInt();
-        const secretOrHashBytesHex = r5Tuple.items[1].toHex();
-
-        // Parse R7 to get numerical parameters, including the dynamic creator stake
-        const r7Params = SParse(box.additionalRegisters.R7!.serializedValue) as SColl<SLong>;
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = r7Params.items.map(v => v.toBigInt());
-
         const commissionPercentage = Number(box.additionalRegisters.R8!.value);
         const gameNftId = box.assets[0].tokenId;
-        
-        // Parse R9 for game details
         const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "");
         let gameContent: GameContent = { title: `Game ${gameNftId.slice(0, 8)}`, description: "", serviceId: "" };
         try {
@@ -104,32 +144,44 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
                 title: parsedJson.title || `Game ${gameNftId.slice(0, 8)}`,
                 description: parsedJson.description || "No description provided.",
                 serviceId: parsedJson.serviceId || "",
-                // other fields like imageURL, webLink, etc., can be added here
             };
         } catch (e) { 
             console.warn(`Could not parse R9 JSON for game ${gameNftId}.`);
         }
 
+        console.log("Game content:", gameContent);
+        console.log("Game creator PK (hex):", creatorPkBytesHex);
+        console.log("Game status:", gameStatus);
+        console.log("Deadline block:", deadlineBlock);
+        console.log("Creator stake (nanoErg):", creatorStakeNanoErg);
+        console.log("Participation fee (nanoErg):", participationFeeNanoErg);
+        console.log("Commission percentage:", commissionPercentage);
+        console.log("Game NFT ID (hex):", gameNftId);
+        console.log("Unlock height:", unlockHeight);
+        console.log("Secret (hex):", secretOrHashBytesHex);
+
+
+        // 5. Construct the final Game object.
         return {
             boxId: box.boxId,
             box: box,
             status: gameStatus,
             deadlineBlock: Number(deadlineBlock),
             participationFeeNanoErg: participationFeeNanoErg,
-            creatorStakeNanoErg: creatorStakeNanoErg, // Always reads the current stake
+            creatorStakeNanoErg: creatorStakeNanoErg,
             commissionPercentage: commissionPercentage,
-            gameCreatorPK_Hex: creatorPkBytesHex,
+            gameCreatorPK_Hex: creatorPkBytesHex ?? "",
             gameId: gameNftId,
             content: gameContent,
             value: BigInt(box.value),
-            participations: [], // To be filled later
-            // Conditionally populate hashS or revealedS based on game state
+            participations: [],
             hashS: unlockHeight === 0n ? secretOrHashBytesHex : undefined,
             revealedS_Hex: unlockHeight > 0n ? secretOrHashBytesHex : undefined,
             unlockHeight: Number(unlockHeight)
         };
     } catch (e) {
-        console.error(`Failed to parse box ${box.boxId} into a Game object:`, e);
+        console.error(`Failed to parse box ${box.boxId} into a Game object: `, e);
+        console.log(box)
         return null;
     }
 }
