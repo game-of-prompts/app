@@ -13,7 +13,7 @@
     import { Textarea } from "$lib/components/ui/textarea";
 
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle } from 'lucide-svelte';
 
     // UTILITIES
     import { block_height_to_timestamp, block_to_time_remaining } from "$lib/common/countdown";
@@ -92,7 +92,15 @@
 
     // Main function to load and process all game details when the component receives a new game.
     async function loadGameDetailsAndTimers() {
-        if (!game) { /* Reset state if no game */ return; }
+        if (!game) {
+            participationIsEnded = true;
+            deadlineDateDisplay = "N/A";
+            timeRemainingDisplay = "N/A";
+            isOwner = false;
+            isCurrentUserWinner = false;
+            cleanupTimers();
+            return;
+        }
         // Reset dynamic state
         isSubmitting = false; transactionId = null; errorMessage = null; jsonUploadError = null;
 
@@ -192,20 +200,137 @@
         return null;
     }
 
-    // --- (Event Handlers & Action Functions are unchanged) ---
-    function setupSubmitScore() { /* ... */ }
-    function setupResolveGame() { /* ... */ }
-    async function handleSubmitScore() { /* ... */ }
-    async function handleResolveGame() { /* ... */ }
-    function closeModal() { /* ... */ }
+    // --- Event Handlers & Action Functions ---
+    function setupSubmitScore() {
+        if (!game || game.ended) return;
+        currentActionType = "submit_score";
+        modalTitle = `Submit Score: ${game.content.title}`;
+        commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
+        transactionId = null; errorMessage = null; jsonUploadError = null; isSubmitting = false;
+        showActionModal = true;
+    }
+
+    function setupResolveGame() {
+        if (!game || !isOwner || game.ended) return;
+        currentActionType = "resolve_game";
+        modalTitle = `Resolve Game: ${game.content.title}`;
+        secret_S_input_resolve = "";
+        transactionId = null; errorMessage = null; isSubmitting = false;
+        showActionModal = true;
+    }
+
+    function setupCancelGame() {
+        if (!game || !isOwner || game.ended) return;
+        currentActionType = "cancel_game";
+        modalTitle = `Cancel Game: ${game.content.title}`;
+        secret_S_input_cancel = "";
+        transactionId = null; errorMessage = null; isSubmitting = false;
+        showActionModal = true;
+    }
+
+    async function handleSubmitScore() {
+        errorMessage = null;
+        if (!game || !commitmentC_input.trim() || !solverId_input.trim() || !hashLogs_input.trim() || !scores_input.trim()) {
+            errorMessage = "All fields (Commitment, Solver ID, Hash Logs, Scores) are required."; return;
+        }
+        let parsedScores: bigint[];
+        try {
+            parsedScores = scores_input.split(',').map(s => BigInt(s.trim()));
+        } catch (error) {
+            errorMessage = "Scores must be a comma-separated list of valid numbers."; isSubmitting = false; return;
+        }
+        isSubmitting = true; transactionId = null;
+        try {
+            const result = await platform.submitScoreToGopGame(game, parsedScores, commitmentC_input, solverId_input, hashLogs_input);
+            transactionId = result; jsonUploadError = null;
+        } catch (e: any) { errorMessage = e.message || "Error submitting score.";
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleResolveGame() {
+        errorMessage = null;
+        if (!game || !secret_S_input_resolve.trim()) {
+            errorMessage = "Game Secret is required."; return;
+        }
+        isSubmitting = true; transactionId = null;
+        try {
+            const result = await platform.resolveGame(game, secret_S_input_resolve);
+            transactionId = result;
+        } catch (e: any) { errorMessage = e.message || "Error resolving game.";
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleCancelGame() {
+        errorMessage = null;
+        if (!game || !secret_S_input_cancel.trim()) {
+            errorMessage = "Game Secret is required to cancel."; return;
+        }
+        isSubmitting = true; transactionId = null;
+        try {
+            const result = await platform.cancelGame(game, secret_S_input_cancel);
+            transactionId = result;
+        } catch (e: any) { errorMessage = e.message || "Error cancelling game.";
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleJsonFileUpload(event: Event) {
+        const target = event.target as HTMLInputElement;
+        jsonUploadError = null; errorMessage = null;
+        if (target.files && target.files[0]) {
+            const file = target.files[0];
+            if (file.type === "application/json") {
+                try {
+                    const fileContent = await file.text();
+                    const jsonData = JSON.parse(fileContent);
+                    if (jsonData.solver_id && typeof jsonData.solver_id === 'string') solverId_input = jsonData.solver_id; else throw new Error("Missing 'solver_id'");
+                    if (jsonData.hash_logs_hex && typeof jsonData.hash_logs_hex === 'string') hashLogs_input = jsonData.hash_logs_hex; else throw new Error("Missing 'hash_logs_hex'");
+                    if (jsonData.commitment_c_hex && typeof jsonData.commitment_c_hex === 'string') commitmentC_input = jsonData.commitment_c_hex; else throw new Error("Missing 'commitment_c_hex'");
+                    if (jsonData.score_list && Array.isArray(jsonData.score_list) && jsonData.score_list.every((item: any) => typeof item === 'number' || typeof item === 'string')) {
+                        scores_input = jsonData.score_list.map((s: number | string) => s.toString()).join(', ');
+                    } else throw new Error("Missing or invalid 'score_list'");
+                } catch (e: any) {
+                    jsonUploadError = `Error reading JSON: ${e.message}`;
+                    commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
+                }
+            } else jsonUploadError = "Invalid file type. Please upload a .json file.";
+            target.value = '';
+        }
+    }
+    
+    function closeModal() {
+        showActionModal = false; currentActionType = null; jsonUploadError = null; errorMessage = null;
+    }
+
+    function shareGame() {
+        if (!game) return;
+        const urlToCopy = `${window.location.origin}/web/?game=${game.gameId}`;
+        navigator.clipboard.writeText(urlToCopy).then(() => {
+            showCopyMessage = true; setTimeout(() => { showCopyMessage = false; }, 2500);
+        }).catch(err => console.error('Failed to copy game URL: ', err));
+    }
+
     function formatErg(nanoErg: bigint | number | undefined): string {
         if (nanoErg === undefined || nanoErg === null) return "N/A";
         return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 9 });
     }
+    
+    $: if (game && $connected !== undefined && $address !== undefined) {
+        const connectedAddressString = $address;
+        if (connectedAddressString && game.gameCreatorPK_Hex) {
+            try {
+                const ergoAddressInstance = ErgoAddress.fromBase58(connectedAddressString);
+                const pkBytes = ergoAddressInstance.getPublicKeys()?.[0];
+                const currentPKS = pkBytes ? uint8ArrayToHex(pkBytes).toLowerCase() : null;
+                isOwner = !!($connected && currentPKS && game.gameCreatorPK_Hex.toLowerCase() === currentPKS);
+            } catch (e) { isOwner = false; }
+        } else {
+            isOwner = false;
+        }
+    }
 </script>
 
 {#if game}
-<div class="game-detail-page min-h-screen">
+<div class="game-detail-page min-h-screen {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'}">
     <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
@@ -218,62 +343,89 @@
             <div class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
                 {#if game.content.imageURL}
                 <div class="md:w-1/3 flex-shrink-0">
-                    <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto object-contain rounded-lg shadow-lg">
+                    <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg">
                 </div>
                 {/if}
                 <div class="flex-1 text-center md:text-left">
                     <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
-                    <p class="prose prose-sm text-slate-300 max-w-none mb-6">
+                    <div class="prose prose-sm text-slate-300 max-w-none mb-6">
                         {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
-                    </p>
+                    </div>
                     <div class="stat-blocks-grid grid grid-cols-2 lg:grid-cols-4 gap-4 text-white">
                         <div class="stat-block"><Trophy class="stat-icon"/><span>{formatErg(game.participationFeeNanoErg)} ERG</span><span class="stat-label">Participation Fee</span></div>
                         <div class="stat-block"><ShieldCheck class="stat-icon"/><span>{formatErg(game.creatorStakeNanoErg)} ERG</span><span class="stat-label">Creator Stake</span></div>
                         <div class="stat-block"><Users class="stat-icon"/><span>{game.commissionPercentage}%</span><span class="stat-label">Creator Commission</span></div>
-                        <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay}</span><span class="stat-label">Deadline</span></div>
+                        <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay.split(' at ')[0]}</span><span class="stat-label">Deadline</span></div>
+                    </div>
+                     <div class="mt-6">
+                        <Button variant="outline" on:click={shareGame} class="text-sm border-slate-600 hover:bg-slate-700/50 text-white bg-slate-800/50">
+                            <Share2 class="mr-2 h-4 w-4"/>
+                            Share Game
+                        </Button>
+                        {#if showCopyMessage}
+                            <span class="text-xs text-green-400 ml-2 transition-opacity duration-300">Link Copied!</span>
+                        {/if}
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
+        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
                 {#if game.ended}
-                    <p class="text-xl font-medium {$mode === 'dark' ? 'text-blue-400' : 'text-blue-600'}">Game Ended & Resolved</p>
+                    <p class="text-xl font-medium text-blue-400">Game Ended & Resolved</p>
                     {#if isCurrentUserWinner}
-                        <p class="mt-2 text-lg font-semibold {$mode === 'dark' ? 'text-green-300' : 'text-green-600'}">🎉 Congratulations, You are the Winner! 🎉</p>
+                        <p class="mt-2 text-lg font-semibold text-green-300">🎉 Congratulations, You are the Winner! 🎉</p>
                     {/if}
                     {#if game.winnerInfo}
-                        <div class="mt-2 space-y-1 text-sm {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">
-                            <p><strong>Winner:</strong> <a href="{web_explorer_uri_addr + game.winnerInfo.playerAddress}" target="_blank" class="font-mono underline">...{game.winnerInfo.playerAddress.slice(-10)}</a></p>
+                        <div class="mt-2 space-y-1 text-sm text-gray-300">
+                            <p><strong>Winner:</strong> <a href="{web_explorer_uri_addr + game.winnerInfo.playerAddress}" target="_blank" class="font-mono underline text-slate-400 hover:text-slate-300" title={game.winnerInfo.playerAddress}>...{game.winnerInfo.playerAddress.slice(-10)}</a></p>
                             <p><strong>Winning Score:</strong> {game.winnerInfo.score.toString()}</p>
                         </div>
+                    {:else if !isCurrentUserWinner}
+                         <p class="mt-2 text-sm text-gray-400">Winner information is not available.</p>
                     {/if}
                 {:else}
-                    <p class="text-xl font-medium {participationIsEnded ? ($mode === 'dark' ? 'text-yellow-400' : 'text-yellow-600') : ($mode === 'dark' ? 'text-green-400' : 'text-green-600')}">
+                    <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-400' : 'text-green-400'}">
                         {participationIsEnded ? 'Participation Closed' : 'Open for Participation'}
                     </p>
-                    <p class="text-lg font-semibold {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'} mt-1">{timeRemainingDisplay}</p>
+                    <p class="text-lg font-semibold text-slate-400 mt-1">{timeRemainingDisplay}</p>
+                {/if}
+                 {#if transactionId && !isSubmitting && !showActionModal}
+                    <div class="my-4 p-3 rounded-md text-sm bg-green-600/30 text-green-300 border border-green-500/50">
+                        <strong>Success! Transaction ID:</strong><br/>
+                        <a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
+                    </div>
+                {/if}
+                {#if errorMessage && !isSubmitting && !showActionModal}
+                    <div class="my-4 p-3 rounded-md text-sm bg-red-600/30 text-red-300 border border-red-500/50">
+                        <strong>Error:</strong> {errorMessage}
+                    </div>
                 {/if}
             </div>
             <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
                 <div class="space-y-3">
                     {#if game.ended}
-                        <p class="info-box">This game has been resolved.</p>
+                        <p class="info-box">This game has been resolved. No further actions are available.</p>
                     {:else if $connected}
                         {#if !participationIsEnded}
-                            <Button on:click={setupSubmitScore} class="w-full py-3 text-base">Submit My Score</Button>
+                            <Button on:click={setupSubmitScore} class="w-full py-3 text-base bg-slate-500 hover:bg-slate-600"><Edit class="mr-2 h-4 w-4"/>Submit My Score</Button>
                         {/if}
-                        {#if isOwner && participationIsEnded}
-                            <Button on:click={setupResolveGame} class="w-full py-3 text-base">Resolve Game</Button>
+                        {#if isOwner}
+                             {#if participationIsEnded && !transactionId}
+                                <Button on:click={setupResolveGame} class="w-full py-3 text-base bg-slate-600 hover:bg-slate-700"><CheckSquare class="mr-2 h-4 w-4"/>Resolve Game</Button>
+                             {/if}
+                             {#if !participationIsEnded && false}
+                                <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700"><XCircle class="mr-2 h-4 w-4"/>Cancel Game</Button>
+                             {/if}
                         {/if}
-                        {#if participationIsEnded && !isOwner}
-                             <p class="info-box">Waiting for the creator to resolve.</p>
+                        {#if participationIsEnded && !isOwner && !transactionId}
+                             <p class="info-box">The participation period has ended. Waiting for the creator to resolve the game.</p>
                         {/if}
                     {:else}
-                        <p class="info-box">Connect your wallet to interact.</p>
+                        <p class="info-box">Connect your wallet to interact with the game.</p>
                     {/if}
                 </div>
             </div>
@@ -282,7 +434,7 @@
         {#if game.participations && game.participations.length > 0}
             <section class="participations-section">
                 <h2 class="text-3xl font-semibold mb-8 text-center">
-                    Participations <span class="text-lg font-normal text-slate-500">({game.participations.length})</span>
+                    Participations <span class="text-lg font-normal {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'}">({game.participations.length})</span>
                 </h2>
                 <div class="flex flex-col gap-6">
                     {#each game.participations as p (p.boxId)}
@@ -323,7 +475,7 @@
                                 <div class="info-block lg:col-span-2">
                                     <span class="info-label">Solver ID</span>
                                     <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
-                                        {p.solverId_String || p.solverId_RawBytesHex.slice(0, 20) + '...'}
+                                        {p.solverId_String ? (p.solverId_String.length > 25 ? p.solverId_String.slice(0,25)+'...' : p.solverId_String) : (p.solverId_RawBytesHex.slice(0,20) + '...')}
                                     </span>
                                 </div>
                                 <div class="info-block sm:col-span-2 lg:col-span-3">
@@ -352,14 +504,91 @@
         {/if}
     </div>
 
-    {#if showActionModal}
-        {/if}
+    {#if showActionModal && game && !game.ended}
+    <div class="modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" on:click|self={closeModal} role="presentation">
+        <div class="modal-content {$mode === 'dark' ? 'bg-slate-800 text-gray-200 border border-slate-700' : 'bg-white text-gray-800 border border-gray-200'} p-6 rounded-xl shadow-2xl w-full max-w-lg lg:max-w-4xl transform transition-all" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-title" class="text-2xl font-semibold {$mode === 'dark' ? 'text-slate-400' : 'text-slate-600'}">{modalTitle}</h3>
+                <Button variant="ghost" size="icon" on:click={closeModal} aria-label="Close modal" class="{$mode === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'} -mr-2 -mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </Button>
+            </div>
+
+            <div class="modal-form-body">
+                {#if currentActionType === 'submit_score'}
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+                             <div class="lg:col-span-2">
+                                <Label for="jsonFile" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Load Data from JSON File (Optional)</Label>
+                                <Input id="jsonFile" type="file" accept=".json" on:change={handleJsonFileUpload} class="w-full text-sm rounded-md shadow-sm border {$mode === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-300 placeholder-slate-400' : 'bg-gray-50 border-gray-300 text-gray-700 placeholder-gray-400'} file:mr-3 file:py-1.5 file:px-3 file:border-0 file:text-xs file:font-medium {$mode === 'dark' ? 'file:bg-slate-500 file:text-slate-900 hover:file:bg-slate-400 file:rounded-l-sm' : 'file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300 file:rounded-l-sm'} cursor-pointer focus-visible:outline-none focus-visible:ring-2 {$mode === 'dark' ? 'focus-visible:ring-slate-500' : 'focus-visible:ring-slate-400'} focus-visible:ring-offset-2 {$mode === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'}" />
+                                <p class="text-xs {$mode === 'dark' ? 'text-gray-500' : 'text-gray-600'} mt-1.5">Expected fields: `solver_id`, `hash_logs_hex`, `commitment_c_hex`, `score_list` (array of numbers).</p>
+                                {#if jsonUploadError} <p class="text-xs mt-1 {$mode === 'dark' ? 'text-red-400' : 'text-red-600'}">{jsonUploadError}</p> {/if}
+                            </div>
+                            
+                            <div class="lg:col-span-2 flex items-center my-1"><span class="flex-grow border-t {$mode === 'dark' ? 'border-slate-700' : 'border-gray-300'}"></span><span class="mx-3 text-xs uppercase {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'}">Or Fill Manually</span><span class="flex-grow border-t {$mode === 'dark' ? 'border-slate-700' : 'border-gray-300'}"></span></div>
+                            
+                            <div class="lg:col-span-2">
+                                <Label for="commitmentC" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Commitment Code (from game service)</Label>
+                                <Textarea id="commitmentC" bind:value={commitmentC_input} rows={3} placeholder="Enter the long hexadecimal commitment code provided by the game service after playing." class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" />
+                            </div>
+
+                            <div>
+                                <Label for="solverId" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Solver ID / Name</Label>
+                                <Input id="solverId" type="text" bind:value={solverId_input} placeholder="e.g., my_solver.celaut.bee or YourPlayerName" class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" />
+                            </div>
+
+                            <div>
+                                <Label for="hashLogs" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Hash of Logs (Hex)</Label>
+                                <Input id="hashLogs" type="text" bind:value={hashLogs_input} placeholder="Enter the Blake2b-256 hash of your game logs." class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" />
+                            </div>
+                            
+                            <div class="lg:col-span-2">
+                                <Label for="scores" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Scores (comma-separated)</Label>
+                                <Input id="scores" type="text" bind:value={scores_input} placeholder="e.g., 100, 25, -10, 0" class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" />
+                                <p class="text-xs {$mode === 'dark' ? 'text-gray-500' : 'text-gray-600'} mt-1">Enter a comma-separated list of numerical scores.</p>
+                            </div>
+                        </div>
+                        <p class="text-sm {$mode === 'dark' ? 'text-gray-400' : 'text-gray-600'} pt-2">A participation fee of <strong>{formatErg(game.participationFeeNanoErg)} ERG</strong> will be paid.</p>
+                        <Button on:click={handleSubmitScore} disabled={isSubmitting || !commitmentC_input.trim() || !solverId_input.trim() || !hashLogs_input.trim() || !scores_input.trim()} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-slate-500 hover:bg-slate-600 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold">{isSubmitting ? 'Processing...' : 'Confirm & Submit Score'}</Button>
+                    </div>
+                {:else if currentActionType === 'resolve_game'}
+                    <div class="space-y-4">
+                        <div><Label for="secret_S_resolve" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Game Secret (S)</Label><Textarea id="secret_S_resolve" bind:value={secret_S_input_resolve} rows={3} placeholder="Enter the original game secret to decrypt scores and resolve." class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" /></div>
+                        <Button on:click={handleResolveGame} disabled={isSubmitting || !secret_S_input_resolve.trim()} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold">{isSubmitting ? 'Processing...' : 'Resolve Game'}</Button>
+                    </div>
+                {:else if currentActionType === 'cancel_game'}
+                    <div class="space-y-4">
+                         <div><Label for="secret_S_cancel" class="block text-sm font-medium mb-1 {$mode === 'dark' ? 'text-gray-300' : 'text-gray-700'}">Game Secret (S)</Label><Textarea id="secret_S_cancel" bind:value={secret_S_input_cancel} rows={3} placeholder="Enter the original game secret to initiate cancellation." class="w-full text-sm {$mode === 'dark' ? 'bg-slate-700 border-slate-600 placeholder-slate-500' : 'bg-gray-50 border-gray-300 placeholder-gray-400'}" /></div>
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"><strong>Warning:</strong> Cancelling the game may incur penalties and return funds to participants.</p>
+                        <Button on:click={handleCancelGame} disabled={isSubmitting || !secret_S_input_cancel.trim()} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500 hover:bg-red-600 text-white'} font-semibold">{isSubmitting ? 'Processing...' : 'Confirm Game Cancellation'}</Button>
+                    </div>
+                {/if}
+                {#if transactionId && !isSubmitting && showActionModal}
+                    <div class="mt-6 p-3 rounded-md text-sm {$mode === 'dark' ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-700 border border-green-200'}">
+                        <strong>Success! Transaction ID:</strong><br/><a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
+                        <p class="mt-2 text-xs">You can close this modal. Data will update after block confirmation.</p>
+                    </div>
+                {/if}
+                {#if errorMessage && !isSubmitting && showActionModal}
+                    <div class="mt-6 p-3 rounded-md text-sm {$mode === 'dark' ? 'bg-red-600/30 text-red-300 border border-red-500/50' : 'bg-red-100 text-red-700 border border-red-200'}"><strong>Error:</strong> {errorMessage}</div>
+                {/if}
+            </div>
+        </div>
+    </div>
+    {/if}
 </div>
+{:else}
+    <div class="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] {$mode === 'dark' ? 'text-gray-500' : 'text-gray-500'} p-8 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-4 opacity-50"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="16" x2="8" y2="16"></line><line x1="8" y1="12" x2="8" y2="12"></line><line x1="8" y1="8" x2="8" y2="8"></line><line x1="12" y1="16" x2="12" y2="16"></line><line x1="12" y1="12" x2="12" y2="12"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+        <p class="text-xl font-medium">No game selected.</p>
+        <p class="text-sm">Please choose a game from the list to see its details, or check if it's still loading.</p>
+    </div>
 {/if}
 
-<style>
+<style lang="postcss">
     /* General styles for the detail page */
     .game-detail-page {
+        background-color: var(--background);
         padding-top: 2rem;
         padding-bottom: 2rem;
     }
@@ -370,22 +599,15 @@
 
     /* Hero Section Styles */
     .hero-section {
-        min-height: 400px;
+        min-height: 350px;
         display: flex;
         align-items: center;
     }
     .prose :global(a) {
-        color: rgb(203 213 225);
-        text-decoration-line: underline;
+        @apply text-slate-300 underline hover:text-white;
     }
-    .prose :global(a:hover) {
-        color: rgb(255 255 255);
-    }
-    .dark .prose :global(a) {
-        color: rgb(148 163 184);
-    }
-    .dark .prose :global(a:hover) {
-        color: rgb(203 213 225);
+    .prose :global(p) {
+        margin-bottom: 0.75em;
     }
 
     /* Stat Blocks Styles */
@@ -409,9 +631,9 @@
         margin-bottom: 0.25rem;
     }
     .stat-block span {
-        font-size: 1.125rem;
-        line-height: 1.75rem;
-        font-weight: 700;
+        font-size: 1rem;
+        line-height: 1.5rem;
+        font-weight: 600;
     }
     .stat-label {
         font-size: 0.75rem;
@@ -424,14 +646,12 @@
 
     /* Info box for status messages */
     .info-box {
-        font-size: 0.875rem;
-        line-height: 1.25rem;
-        text-align: center;
-        padding: 0.75rem;
-        border-radius: 0.375rem;
-        background-color: hsl(var(--muted));
-        color: hsl(var(--muted-foreground));
+        @apply text-sm text-center p-3 rounded-md bg-slate-700/50 text-slate-400;
     }
+    :global(.light) .info-box {
+        @apply bg-gray-100 text-gray-600;
+    }
+
 
     /* --- STYLES FOR PARTICIPATION CARD --- */
     .info-block {
@@ -442,35 +662,36 @@
         font-size: 0.75rem;
         line-height: 1rem;
         text-transform: uppercase;
-        color: rgb(100 115 135);
-        margin-bottom: 0.25rem;
         letter-spacing: 0.05em;
+        @apply text-slate-400 mb-1;
     }
-    .dark .info-label {
-        color: rgb(148 163 184);
+    :global(.light) .info-label {
+        @apply text-gray-500;
     }
 
     .info-value {
         font-size: 0.875rem;
         line-height: 1.25rem;
         font-weight: 600;
-        color: rgb(51 65 85);
+        @apply text-slate-200;
     }
-    .dark .info-value {
-        color: rgb(226 232 240);
+    :global(.light) .info-value {
+       @apply text-slate-700;
     }
 
     .winner-card {
-        border-width: 2px;
-        background-image: linear-gradient(to top right,
-            rgba(4, 120, 87, 0.1),
-            rgba(5, 150, 105, 0)
-        );
+        border-width: 1px;
     }
-    .dark .winner-card {
+     :global(.dark) .winner-card {
         background-image: linear-gradient(to top right,
             rgba(16, 185, 129, 0.15),
             rgba(16, 185, 129, 0)
+        );
+    }
+    :global(.light) .winner-card {
+        background-image: linear-gradient(to top right,
+            rgba(4, 120, 87, 0.1),
+            rgba(5, 150, 105, 0)
         );
     }
 
@@ -490,5 +711,13 @@
         color: rgb(255 255 255);
         border-bottom-left-radius: 0.5rem;
         background: linear-gradient(135deg, #10B981, #059669);
+    }
+    
+    .modal-content {
+        animation: fadeInScale 0.2s ease-out forwards;
+    }
+    @keyframes fadeInScale {
+        from { opacity: 0.7; transform: scale(0.98) translateY(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 </style>
