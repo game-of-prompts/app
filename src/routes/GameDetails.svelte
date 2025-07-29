@@ -34,18 +34,6 @@
 
     let game: Game & { winnerInfo?: WinnerInfo; secret?: string } | null = null;
 
-    // Subscribes to the global store to get game details
-    const unsubscribeGameDetail = game_detail.subscribe(value => {
-        const typedValue = value as Game & { winnerInfo?: WinnerInfo; secret?: string } | null;
-        if (typedValue && (!game || typedValue.boxId !== game.boxId || typedValue.ended !== game.ended || typedValue.secret !== game.secret)) {
-            game = typedValue;
-            loadGameDetailsAndTimers();
-        } else if (!typedValue && game) {
-            game = null;
-            cleanupTimers();
-        }
-    });
-
     let platform = new ErgoPlatform();
 
     // UI State
@@ -62,6 +50,18 @@
     let countdownInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
     $: isCurrentUserWinner = !!(game?.ended && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
+
+    // Subscribes to the global store to get game details
+    const unsubscribeGameDetail = game_detail.subscribe(value => {
+        const typedValue = value as Game & { winnerInfo?: WinnerInfo; secret?: string } | null;
+        if (typedValue && (!game || typedValue.boxId !== game.boxId || typedValue.ended !== game.ended || typedValue.secret !== game.secret)) {
+            game = typedValue;
+            loadGameDetailsAndTimers();
+        } else if (!typedValue && game) {
+            game = null;
+            cleanupTimers();
+        }
+    });
 
     // Modal State
     let showActionModal = false;
@@ -131,7 +131,7 @@
                     const pkBytes = ergoAddressInstance.getPublicKeys()?.[0];
                     const currentPKS = pkBytes ? uint8ArrayToHex(pkBytes).toLowerCase() : null;
                     isOwner = !!(currentPKS && game.gameCreatorPK_Hex.toLowerCase() === currentPKS);
-                } catch (e) { isOwner = false; }
+                } catch (e) { console.warn(e); isOwner = false; }
             } else {
                 isOwner = false;
             }
