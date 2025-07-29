@@ -19,7 +19,8 @@ import {
     uint8ArrayToHex,
     parseCollByteToHex,
     parseLongColl,
-    bigintToLongByteArray
+    bigintToLongByteArray,
+    parseIntFromHex
 } from "./utils"; // Using your provided utility functions
 
 
@@ -133,7 +134,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
 
         // 4. Extract remaining data.
         const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
-        const commissionPercentage = Number(box.additionalRegisters.R8!.value);
+        const commissionPercentage = parseIntFromHex(box.additionalRegisters.R8?.renderedValue);
         const gameNftId = box.assets[0].tokenId;
         const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "");
         let gameContent: GameContent = { title: `Game ${gameNftId.slice(0, 8)}`, description: "", serviceId: "" };

@@ -106,7 +106,7 @@
 
         try {
             // Determine participation status
-            participationIsEnded = game.ended ? true : await isGameEnded(game);
+            participationIsEnded = await isGameEnded(game);
 
             // Format deadline for display
             const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
@@ -394,7 +394,7 @@
                         <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
                     </div>
                     <div class="info-block">
-                        <span class="info-label">Creator Address</span>
+                        <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
                         <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
                             {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
                         </a>
@@ -429,7 +429,7 @@
                     <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-600' : 'text-green-600'}">
                         {participationIsEnded ? 'Participation Closed' : 'Open for Participation'}
                     </p>
-                    <p class="text-lg font-semibold text-slate-400 mt-1">{timeRemainingDisplay}</p>
+                    <p class="text-lg font-semibold text-slate-400 mt-1">Time: {timeRemainingDisplay}</p>
                 {/if}
                  <p class="text-xs {$mode === 'dark' ? 'text-slate-600' : 'text-gray-500'} mt-2">Game Status: {game.status}</p>
                  {#if transactionId && !isSubmitting && !showActionModal}
