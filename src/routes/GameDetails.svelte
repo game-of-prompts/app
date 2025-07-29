@@ -13,7 +13,7 @@
     import { Textarea } from "$lib/components/ui/textarea";
 
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
 
     // UTILITIES
     import { block_height_to_timestamp, block_to_time_remaining } from "$lib/common/countdown";
@@ -357,7 +357,15 @@
                         <div class="stat-block"><Users class="stat-icon"/><span>{game.commissionPercentage}%</span><span class="stat-label">Creator Commission</span></div>
                         <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay.split(' at ')[0]}</span><span class="stat-label">Deadline</span></div>
                     </div>
-                     <div class="mt-6">
+                     <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
+                        {#if game.content.webLink}
+                        <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
+                            <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                <ExternalLink class="mr-2 h-4 w-4"/>
+                                Visit Game Site
+                            </Button>
+                        </a>
+                        {/if}
                         <Button variant="outline" on:click={shareGame} class="text-sm border-slate-600 hover:bg-slate-700/50 text-white bg-slate-800/50">
                             <Share2 class="mr-2 h-4 w-4"/>
                             Share Game
@@ -392,6 +400,7 @@
                     </p>
                     <p class="text-lg font-semibold text-slate-400 mt-1">{timeRemainingDisplay}</p>
                 {/if}
+                 <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-2">Game Status: {game.status}</p>
                  {#if transactionId && !isSubmitting && !showActionModal}
                     <div class="my-4 p-3 rounded-md text-sm bg-green-600/30 text-green-300 border border-green-500/50">
                         <strong>Success! Transaction ID:</strong><br/>
@@ -428,6 +437,34 @@
                         <p class="info-box">Connect your wallet to interact with the game.</p>
                     {/if}
                 </div>
+            </div>
+        </section>
+
+        <section class="game-info-section mb-12 p-6 rounded-xl shadow-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
+            <h2 class="text-2xl font-semibold mb-4">Game Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                <div class="info-block">
+                    <span class="info-label">Game ID (NFT)</span>
+                    <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
+                        {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
+                    </a>
+                </div>
+                 <div class="info-block">
+                    <span class="info-label">Service ID</span>
+                    <span class="info-value font-mono text-xs">{game.content.serviceId}</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">Creator Address</span>
+                     <a href="{web_explorer_uri_addr + pkHexToBase58Address(game.gameCreatorPK_Hex)}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={pkHexToBase58Address(game.gameCreatorPK_Hex)}>
+                        {pkHexToBase58Address(game.gameCreatorPK_Hex)}
+                    </a>
+                </div>
+                {#if game.hashS}
+                <div class="info-block md:col-span-2 lg:col-span-3">
+                    <span class="info-label">Hashed Secret (S)</span>
+                    <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
+                </div>
+                {/if}
             </div>
         </section>
 
@@ -472,11 +509,17 @@
                                     <span class="info-label">Fee Paid</span>
                                     <span class="info-value">{formatErg(p.value)} ERG</span>
                                 </div>
-                                <div class="info-block lg:col-span-2">
+                                <div class="info-block">
                                     <span class="info-label">Solver ID</span>
                                     <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
                                         {p.solverId_String ? (p.solverId_String.length > 25 ? p.solverId_String.slice(0,25)+'...' : p.solverId_String) : (p.solverId_RawBytesHex.slice(0,20) + '...')}
                                     </span>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Transaction ID</span>
+                                     <a href="{web_explorer_uri_tx + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
+                                        {p.transactionId.slice(0, 10)}...{p.transactionId.slice(-4)}
+                                    </a>
                                 </div>
                                 <div class="info-block sm:col-span-2 lg:col-span-3">
                                     <span class="info-label">Score List</span>
@@ -593,7 +636,7 @@
         padding-bottom: 2rem;
     }
 
-    .game-status {
+    .game-status, .game-info-section {
         background-color: var(--card);
     }
 
@@ -653,7 +696,7 @@
     }
 
 
-    /* --- STYLES FOR PARTICIPATION CARD --- */
+    /* --- STYLES FOR PARTICIPATION CARD & INFO SECTIONS --- */
     .info-block {
         display: flex;
         flex-direction: column;
