@@ -5,23 +5,22 @@ import {
     TransactionBuilder,
     ErgoAddress,
     type InputBox,
-    type Amount // Asegúrate de tener Amount si Box es Box<Amount>
+    type Amount
 } from '@fleet-sdk/core';
-import { SColl, SLong, SInt, SByte } from '@fleet-sdk/serializer';
-// Asumimos que SString de utils.ts serializa un string a formato constante "0e..." para registros
-import { hexToBytes, SString, uint8ArrayToHex } from '$lib/ergo/utils'; 
-import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../contract'; // Ajusta la ruta
+import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
+import { hexToBytes, SString } from '$lib/ergo/utils'; 
+import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../contract';
 
-// declare var ergo: any; // Si 'ergo' es global y no se pasa a través de platformInstance
+declare var ergo: any;
 
 export async function create_game(
     gameServiceId: string,
-    hashedSecret: string,     // Hex de blake2b256(S) para R5
-    deadlineBlock: number,    // Para R7
-    creatorStakeNanoErg: bigint, // Para R7 y valor de la caja
-    participationFeeNanoErg: bigint, // Para R7
-    commissionPercentage: number,    // Para R8
-    gameDetailsJson: string,  // Para R9
+    hashedSecret: string,
+    deadlineBlock: number,
+    creatorStakeNanoErg: bigint,
+    participationFeeNanoErg: bigint,
+    commissionPercentage: number,
+    gameDetailsJson: string,
 ): Promise<string | null> {
 
     console.log("Attempting to create GoP game with params:", { 
@@ -41,7 +40,6 @@ export async function create_game(
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
     const pkBytesArrayFromAddress = creatorP2PKAddress.getPublicKeys();
     if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
-        // Considera no usar alert() en funciones de librería, mejor lanzar error.
         const msg = `Could not extract public key from creator address (${creatorAddressString}) for R4.`;
         console.error(msg);
         throw new Error(msg);
@@ -67,7 +65,6 @@ export async function create_game(
     const expectedParticipationScriptHashBytes = hexToBytes(getGopParticipationBoxScriptHash());
     if (!expectedParticipationScriptHashBytes) throw new Error("Failed to convert expected participation script hash hex to bytes.");
 
-    // Como indicaste, no se necesita name/description para mintToken si se manejan vía registros de la caja que contiene el NFT (o no se usan)
     const gameBoxOutput = new OutputBuilder(
         outputBoxValue,
         gopGameContractErgoTree
@@ -78,17 +75,17 @@ export async function create_game(
     })
     .setAdditionalRegisters({
         R4: SColl(SByte, creatorPkBytes_for_R4).toHex(),
-        R5: SColl(SByte, hashedSecretBytes).toHex(),
+        R5: SPair(SLong(0n), SColl(SByte, hashedSecretBytes)).toHex(),
         R6: SColl(SByte, expectedParticipationScriptHashBytes).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
         R8: SInt(commissionPercentage).toHex(),
-        R9: SString(gameDetailsJson) // SString de utils.ts debe devolver el hex de la constante serializada
+        R9: SString(gameDetailsJson)
     });
 
     const creationHeight = await ergo.get_current_height();
     const unsignedTransactionBuilder = new TransactionBuilder(creationHeight)
-        .from(inputs) // Fleet SDK seleccionará las UTXOs necesarias de este pool
-        .to(gameBoxOutput) // No llamar a .build() en gameBoxOutput aquí
+        .from(inputs)
+        .to(gameBoxOutput)
         .sendChangeTo(creatorAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE);
     
