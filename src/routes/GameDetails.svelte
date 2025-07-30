@@ -749,10 +749,10 @@
 
     /* Info box for status messages */
     .info-box {
-        @apply text-sm text-center p-3 rounded-md bg-slate-700/50 text-slate-400;
+        @apply text-sm text-center p-3 rounded-md bg-slate-500/50;
     }
     :global(.light) .info-box {
-        @apply bg-gray-100 text-gray-600;
+        @apply bg-gray-100 text-black;
     }
 
 
