@@ -345,8 +345,8 @@
 
 {#if game}
 <div class="game-detail-page min-h-screen {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'}">
-    <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+    <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">    
         <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
             <div class="hero-bg-image">
                 {#if game.content.imageURL}
@@ -453,6 +453,9 @@
                 </div>
             </div>
         </section>
+    </div>
+
+    <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
             <h2 class="text-2xl font-semibold mb-6">Game Details</h2>
