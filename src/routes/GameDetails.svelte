@@ -365,11 +365,38 @@
                     <div class="prose prose-sm text-slate-300 max-w-none mb-6">
                         {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
                     </div>
-                    <div class="stat-blocks-grid grid grid-cols-2 lg:grid-cols-4 gap-4 text-white">
-                        <div class="stat-block"><Trophy class="stat-icon"/><span>{formatErg(game.participationFeeNanoErg)} ERG</span><span class="stat-label">Participation Fee</span></div>
-                        <div class="stat-block"><ShieldCheck class="stat-icon"/><span>{formatErg(game.creatorStakeNanoErg)} ERG</span><span class="stat-label">Creator Stake</span></div>
-                        <div class="stat-block"><Users class="stat-icon"/><span>{game.commissionPercentage}%</span><span class="stat-label">Creator Commission</span></div>
-                        <div class="stat-block"><Calendar class="stat-icon"/><span>{deadlineDateDisplay.split(' at ')[0]}</span><span class="stat-label">Deadline</span></div>
+
+                    <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
+                        <div class="stat-block">
+                            <Edit class="stat-icon"/>
+                            <span>{formatErg(game.participationFeeNanoErg)} ERG</span>
+                            <span class="stat-label">Fee per Player</span>
+                        </div>
+                        <div class="stat-block">
+                            <Users class="stat-icon"/>
+                            <span>{game.participations.length}</span>
+                            <span class="stat-label">Participants</span>
+                        </div>
+                        <div class="stat-block">
+                            <Trophy class="stat-icon"/>
+                            <span>{formatErg(game.participationFeeNanoErg * BigInt(game.participations.length))} ERG</span>
+                            <span class="stat-label">Total Fee Pool</span>
+                        </div>
+                        <div class="stat-block">
+                            <ShieldCheck class="stat-icon"/>
+                            <span>{formatErg(game.creatorStakeNanoErg)} ERG</span>
+                            <span class="stat-label">Creator Stake</span>
+                        </div>
+                        <div class="stat-block">
+                            <CheckSquare class="stat-icon"/>
+                            <span>{game.commissionPercentage}%</span>
+                            <span class="stat-label">Creator Commission</span>
+                        </div>
+                        <div class="stat-block">
+                            <Calendar class="stat-icon"/>
+                            <span>{deadlineDateDisplay.split(' at ')[0]}</span>
+                            <span class="stat-label">Deadline</span>
+                        </div>
                     </div>
 
                     {#if !participationIsEnded && targetDate}
