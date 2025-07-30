@@ -435,20 +435,23 @@
 
                      <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
                         {#if game.content.webLink}
-                        <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
-                            <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                                <ExternalLink class="mr-2 h-4 w-4"/>
-                                Visit Game Site
-                            </Button>
-                        </a>
+                            <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
+                                <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                    <ExternalLink class="mr-2 h-4 w-4"/>
+                                    Visit Game Site
+                                </Button>
+                            </a>
                         {/if}
-                        <Button variant="outline" on:click={shareGame} class="text-sm border-slate-600 hover:bg-slate-700/50 text-white bg-slate-800/50">
+
+                        <!-- Share Game Button -->
+                        <Button on:click={shareGame} class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg">
                             <Share2 class="mr-2 h-4 w-4"/>
                             Share Game
                         </Button>
                         {#if showCopyMessage}
                             <span class="text-xs text-green-400 ml-2 transition-opacity duration-300">Link Copied!</span>
                         {/if}
+
                     </div>
                 </div>
             </div>
@@ -851,16 +854,17 @@
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    /* --- NEW: Styles for Countdown Clock --- */
+    /* --- Styles for Countdown Clock --- */
     .countdown-container {
         padding-top: 1.5rem;
     }
 
     .timeleft {
         display: flex;
-        flex-direction: column;
-        align-items: left;
-        gap: 1rem;
+        flex-direction: row;
+        flex-wrap: wrap;  
+        align-items: center; 
+        gap: 2rem; 
         color: #fff;
     }
 
@@ -896,12 +900,12 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background-color: rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
+        background-color: rgba(255, 255, 255, 0.1);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        border-radius: 0.5rem; 
+        border: none; 
         transition: all 0.3s ease;
-        -webkit-backdrop-filter: blur(2px);
-        backdrop-filter: blur(2px);
     }
 
     .item > div:first-child {
