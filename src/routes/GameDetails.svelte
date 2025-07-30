@@ -44,6 +44,7 @@
     let showCopyMessage = false;
 
     // Game Status State
+    let gameEnded = true;
     let participationIsEnded = true;
     let deadlineDateDisplay = "N/A";
     let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -98,6 +99,7 @@
     // Main function to load and process all game details when the component receives a new game.
     async function loadGameDetailsAndTimers() {
         if (!game) {
+            gameEnded = true;
             participationIsEnded = true;
             deadlineDateDisplay = "N/A";
             isOwner = false;
@@ -109,8 +111,11 @@
         isSubmitting = false; transactionId = null; errorMessage = null; jsonUploadError = null;
 
         try {
+            // Determine if the game has ended
+            gameEnded = isGameEnded(game);
+
             // Determine participation status
-            participationIsEnded = await isGameParticipationEnded(game);
+            participationIsEnded = isGameParticipationEnded(game);
 
             // Format deadline for display
             const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
@@ -148,9 +153,17 @@
     async function updateStatusLogic() {
         if (!game) { cleanupTimers(); return; }
 
-        const newParticipationStatus = await isGameEnded(game);
+        // Check if the game has ended or participation is closed
+        
+        const newParticipationStatus = isGameParticipationEnded(game);
         if (newParticipationStatus && !participationIsEnded) {
             participationIsEnded = true;
+            cleanupTimers();
+        }
+
+        const newGameEnded = isGameEnded(game);
+        if (newGameEnded && !gameEnded) {
+            gameEnded = true;
             cleanupTimers();
         }
     }
@@ -216,7 +229,7 @@
 
     // --- Event Handlers & Action Functions ---
     function setupSubmitScore() {
-        if (!game || game.ended) return;
+        if (!game || gameEnded) return;
         currentActionType = "submit_score";
         modalTitle = `Submit Score: ${game.content.title}`;
         commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
@@ -225,7 +238,7 @@
     }
 
     function setupResolveGame() {
-        if (!game || !isOwner || game.ended) return;
+        if (!game || !isOwner || gameEnded) return;
         currentActionType = "resolve_game";
         modalTitle = `Resolve Game: ${game.content.title}`;
         secret_S_input_resolve = "";
@@ -234,7 +247,7 @@
     }
 
     function setupCancelGame() {
-        if (!game || !isOwner || game.ended) return;
+        if (!game || !isOwner || gameEnded) return;
         currentActionType = "cancel_game";
         modalTitle = `Cancel Game: ${game.content.title}`;
         secret_S_input_cancel = "";
@@ -494,7 +507,7 @@
         <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
-                {#if game.ended}
+                {#if gameEnded}
                     <p class="text-xl font-medium text-blue-400">Game Ended & Resolved</p>
                     {#if isCurrentUserWinner}
                         <p class="mt-2 text-lg font-semibold text-green-300">🎉 Congratulations, You are the Winner! 🎉</p>
@@ -564,8 +577,8 @@
                 </h2>
                 <div class="flex flex-col gap-6">
                     {#each game.participations as p (p.boxId)}
-                        {@const isCurrentParticipationWinner = game.ended && game.winnerInfo && (p.boxId === game.winnerInfo.participationBoxId || (game.winnerInfo.playerPK_Hex && p.playerPK_Hex === game.winnerInfo.playerPK_Hex) || pkHexToBase58Address(p.playerPK_Hex) === game.winnerInfo.playerAddress)}
-                        {@const actualScoreForThisParticipation = game.ended && game.secret ? getActualScore(p, game.secret) : null}
+                        {@const isCurrentParticipationWinner = gameEnded && game.winnerInfo && (p.boxId === game.winnerInfo.participationBoxId || (game.winnerInfo.playerPK_Hex && p.playerPK_Hex === game.winnerInfo.playerPK_Hex) || pkHexToBase58Address(p.playerPK_Hex) === game.winnerInfo.playerAddress)}
+                        {@const actualScoreForThisParticipation = gameEnded && game.secret ? getActualScore(p, game.secret) : null}
 
                         <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
                             {isCurrentParticipationWinner
