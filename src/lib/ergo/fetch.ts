@@ -344,7 +344,12 @@ export async function fetchGoPGames(
                     if (filter === 'active' && isEnded) continue;
 
                     // Fetch related data for the game
-                    game.participations = await fetchParticipationsForGame(game.gameId);
+                    const participations = await fetchParticipationsForGame(game.gameId);
+                    console.log(`Participations for game ${game.gameId}:`);
+                    console.log(participations);
+                    console.log("....");
+
+                    game.participations = participations;
 
                     // If the game has ended, try to find the secret and resolve the winner
                     if (isEnded) {
