@@ -79,8 +79,7 @@ if __name__ == '__main__':
     ex_score = 22800
     # hash_logs_hex and secret_s_hex must be 64-character hexadecimal strings
     ex_hash_logs_hex = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" # Example
-    # ex_secret_s_hex = "0be6921715cb94ff814f45b43ca459fb07c311d83c51b2dc78c94421c0745075" # Example
-    ex_secret_s_hex = "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21"
+    ex_secret_s_hex = "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21" # Example
 
     print(f"Inputs for the commitment:")
     print(f"  Solver ID (string): {ex_solver_id}")
