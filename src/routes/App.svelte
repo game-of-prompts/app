@@ -199,7 +199,7 @@
 
     <div class="footer-center">
         <div class="scrolling-text-wrapper">
-            A peer-to-peer application with no central servers. Powered by Ergo Blockchain.
+            Direct P2P to the Ergo node. No central servers. Powered by Ergo Blockchain.
         </div>
     </div>
 
