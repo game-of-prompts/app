@@ -97,7 +97,7 @@ export interface Game {
  * @returns boolean True if the game is in a final state.
  */
 export function isGameEnded(game: Game): boolean {
-    return game.status === GameState.Unknown || game.status === GameState.Cancelled_Finalized;
+    return game.status === GameState.Unknown || game.status === GameState.Cancelled_Finalized || game.status === GameState.Finalized;
 }
 
 export function isGameParticipationEnded(game: Game): boolean {
