@@ -23,7 +23,7 @@
     val gameBoxIsPlausible = gameBoxCandidate.tokens.size > 0 &&
                              gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
                              gameBoxCandidate.R4[Coll[Byte]].isDefined && // creatorPK
-                             gameBoxCandidate.R5[Coll[Byte]].isDefined && // hashS
+                             gameBoxCandidate.R5[(Long, Coll[Byte])].isDefined && // hashS
                              gameBoxCandidate.R7[Coll[Long]].isDefined &&
                              gameBoxCandidate.R7[Coll[Long]].get.size == 3 // numericalParams
 
