@@ -70,21 +70,29 @@ function parseR5FromString(r5RenderedValue?: string): { unlockHeight: bigint, se
  * @param deadline - The deadline height from the game box's R7 register.
  * @returns The status of the game (GameStatus).
  */
-function getGameStatus(currentHeight: number, unlockHeight: bigint, deadline: bigint): GameStatus {
+function getGameStatus(currentHeight: number, unlockHeight: bigint, deadline: bigint, box: Box): GameStatus {
     console.log("----------")
+    console.log("Spent tx:", box.spentTransactionId);
     console.log("Current height:", currentHeight);
     console.log("Unlock height:", unlockHeight);
     console.log("Deadline:", deadline);
+    console.log("Box value:", box.value);
     console.log("----------")
     const height = BigInt(currentHeight);
 
     // This logic directly implements the state matrix from the contract's README.
-    if (unlockHeight === 0n) {
+
+    if (box.spentTransactionId && box.spentTransactionId !== null) {
+        // Game is in 'Resolved' state tree
+        return GameState.Finalized;
+    } 
+    else if (unlockHeight === 0n) {
         // Game is in 'Active' state tree
         return height < deadline ? GameState.Active : GameState.Resolution;
-    } else {
+    } 
+    else {
         // Game is in 'Canceled' state tree
-        return height < deadline ? GameState.Cancelled_Draining : GameState.Cancelled_Finalized;
+        return box.value > 0n ? GameState.Cancelled_Draining : GameState.Cancelled_Finalized;  // TODO Should check the staking, not the deadline
     }
 }
 
@@ -135,7 +143,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
         // 3. Get game status using all pre-parsed values.
-        const gameStatus = getGameStatus(currentHeight, unlockHeight, deadlineBlock);
+        const gameStatus = getGameStatus(currentHeight, unlockHeight, deadlineBlock, box);
 
         // 4. Extract remaining data.
         const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);

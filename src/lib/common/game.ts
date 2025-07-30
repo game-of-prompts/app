@@ -10,6 +10,7 @@ export const GameState = {
     Unknown: 'Unknown',
     Active: 'Active',                   // State 1A: Normal operation before deadline
     Resolution: 'Resolution',           // State 1B: After deadline, waiting for winner resolution
+    Finalized: 'Finalized',             // State 1C: Game ended, winner resolved (game-box spent)
     Cancelled_Draining: 'Cancelled_Draining', // State 2A: Cancelled before deadline, stake can be drained
     Cancelled_Finalized: 'Cancelled_Finalized' // State 2B: Cancelled after deadline, stake is locked
 } as const;
