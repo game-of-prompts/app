@@ -209,6 +209,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
  * @returns A promise that resolves to an array of Participation objects.
  */
 export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<Participation[]> {
+    console.log("Fetching participations for game NFT ID:", gameNftIdHex);
     const participationsList: Participation[] = [];
     const participationScriptTemplateHash = getGopParticipationBoxTemplateHash();
     let currentOffset = 0;
@@ -224,7 +225,8 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ergoTreeTemplateHash: participationScriptTemplateHash,
-                    registers: { "R6": `0e${gameNftIdHex.length}${gameNftIdHex}` }, // Use serialized value for register search
+                    registers: { "R6": gameNftIdHex },
+                    constants: {}, assets: [] 
                 }),
             });
 
@@ -237,15 +239,36 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
             const data = await response.json();
             const items: Box[] = data.items || [];
 
+            console.log(`Fetched ${items.length} participation boxes for game NFT ID ${gameNftIdHex}.`);
+
             for (const pBox of items) {
-                // This is your original, robust parsing logic for a participation box.
+
+                // Parse participation data.
                 const playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4?.renderedValue);
                 const commitmentC_Hex = parseCollByteToHex(pBox.additionalRegisters.R5?.renderedValue);
                 const solverId_RawBytesHex = parseCollByteToHex(pBox.additionalRegisters.R7?.renderedValue);
-                const solverId_String = solverId_RawBytesHex ? hexToUtf8(solverId_RawBytesHex) : undefined;
+                const solverId_String = solverId_RawBytesHex ? hexToUtf8(solverId_RawBytesHex) ?? "N/A" : "N/A";
                 const hashLogs_Hex = parseCollByteToHex(pBox.additionalRegisters.R8?.renderedValue);
-                const r9RenderedValue = pBox.additionalRegisters.R9?.renderedValue;
-                const scoreList_parsed = Array.isArray(r9RenderedValue) ? parseLongColl(r9RenderedValue) : [];
+
+
+                // Parse the R9 register which contains a Coll[Long] of scores.
+                const r9RenderedValue = pBox.additionalRegisters.R9.renderedValue;
+                let scoreList_parsed: bigint[] = [];
+                let r9JsonParsedArray: any[] | null = null;
+
+                if (typeof r9RenderedValue === 'string') {
+                    try {
+                        r9JsonParsedArray = JSON.parse(r9RenderedValue); // El renderedValue de Coll[Long] es un string como "[123, 456]"
+                    } catch (e) {
+                        console.warn(`Could not JSON.parse R9.renderedValue for PBox: ${pBox.boxId}`, "Value:", r9RenderedValue, "Error:", e);
+                    }
+                } else if (Array.isArray(r9RenderedValue)) { 
+                    r9JsonParsedArray = r9RenderedValue;
+                } else {
+                     console.warn(`DEBUG: R9 renderedValue for PBox ${pBox.boxId} is neither string nor array:`, r9RenderedValue);
+                }
+                
+                scoreList_parsed = r9JsonParsedArray ? parseLongColl(r9JsonParsedArray) ?? [] : [];
                 
                 if (playerPK_Hex && commitmentC_Hex && solverId_RawBytesHex && hashLogs_Hex && scoreList_parsed.length > 0) {
                     participationsList.push({
@@ -254,6 +277,16 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
                         value: BigInt(pBox.value), playerPK_Hex, commitmentC_Hex, solverId_RawBytesHex,
                         solverId_String, hashLogs_Hex, scoreList: scoreList_parsed,
                     });
+                }
+                else {
+                    console.warn(`Skipping participation box ${pBox.boxId} due to missing or invalid data.`);
+                    console.log("Player PK:", playerPK_Hex);
+                    console.log("Commitment C:", commitmentC_Hex);
+                    console.log("Solver ID (Raw Bytes):", solverId_RawBytesHex);
+                    console.log("Solver ID (String):", solverId_String);
+                    console.log("Hash Logs:", hashLogs_Hex);
+                    console.log("Score List:", scoreList_parsed);
+                    console.log("...");
                 }
             }
 
@@ -266,6 +299,8 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
             moreAvailable = false;
         }
     }
+
+    console.log(`Total participations fetched for game NFT ID ${gameNftIdHex}:`, participationsList.length);
     return participationsList;
 }
 
