@@ -137,16 +137,28 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
         const commissionPercentage = parseIntFromHex(box.additionalRegisters.R8?.renderedValue);
         const gameNftId = box.assets[0].tokenId;
         const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "");
-        let gameContent: GameContent = { title: `Game ${gameNftId.slice(0, 8)}`, description: "", serviceId: "" };
+
+        // Define default image URL
+        const defaultImageUrl = "https://images5.alphacoders.com/136/thumb-1920-1364878.png";
+
+        let gameContent: GameContent = { 
+            title: `Game ${gameNftId.slice(0, 8)}`, 
+            description: "No description provided.",
+            serviceId: "",
+            imageURL: defaultImageUrl
+        };
+
         try {
             const parsedJson = JSON.parse(gameDetailsJsonString || "{}");
             gameContent = {
                 title: parsedJson.title || `Game ${gameNftId.slice(0, 8)}`,
                 description: parsedJson.description || "No description provided.",
                 serviceId: parsedJson.serviceId || "",
+                // Use image from JSON if available, otherwise fall back to the default.
+                imageURL: parsedJson.imageURL || defaultImageUrl,
             };
         } catch (e) { 
-            console.warn(`Could not parse R9 JSON for game ${gameNftId}.`);
+            console.warn(`Could not parse R9 JSON for game ${gameNftId}. Using default content.`);
         }
 
         console.log("Game content:", gameContent);
