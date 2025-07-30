@@ -154,7 +154,7 @@
         if (!game) { cleanupTimers(); return; }
 
         // Check if the game has ended or participation is closed
-        
+
         const newParticipationStatus = isGameParticipationEnded(game);
         if (newParticipationStatus && !participationIsEnded) {
             participationIsEnded = true;
@@ -517,7 +517,7 @@
                             <p><strong>Winner:</strong> <a href="{web_explorer_uri_addr + game.winnerInfo.playerAddress}" target="_blank" class="font-mono underline text-slate-400 hover:text-slate-300" title={game.winnerInfo.playerAddress}>...{game.winnerInfo.playerAddress.slice(-10)}</a></p>
                             <p><strong>Winning Score:</strong> {game.winnerInfo.score.toString()}</p>
                         </div>
-                    {:else if !isCurrentUserWinner}
+                    {:else}
                          <p class="mt-2 text-sm text-gray-400">Winner information is not available.</p>
                     {/if}
                 {:else}

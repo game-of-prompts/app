@@ -9,7 +9,8 @@ import {
     type GameContent,
     type WinnerInfo,
     GameState, // Assuming GameState enum/object is in game.ts
-    type GameStatus
+    type GameStatus,
+    isGameEnded
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { getGopGameBoxTemplateHash, getGopParticipationBoxTemplateHash } from "./contract";
@@ -350,9 +351,11 @@ export async function fetchGoPGames(
                 const game = parseBoxToGame(box, await (new ErgoPlatform()).get_current_height());
                 if (game) {
                     // Apply filtering based on the desired status
-                    const isEnded = game.status === GameState.Resolution || game.status === GameState.Cancelled_Finalized;
-                    if (filter === 'ended' && !isEnded) continue;
-                    if (filter === 'active' && isEnded) continue;
+                    const isEnded = isGameEnded(game);
+                    if (filter === 'ended' && !isEnded || filter === 'active' && isEnded) {
+                        console.warn(`Skipping game ${game.gameId} due to filter: ${filter} - ended: ${isEnded} `);
+                        continue;
+                    };
 
                     // Fetch related data for the game
                     const participations = await fetchParticipationsForGame(game.gameId);
@@ -364,6 +367,7 @@ export async function fetchGoPGames(
 
                     // If the game has ended, try to find the secret and resolve the winner
                     if (isEnded) {
+                        console.warn(`Game ${game.gameId} has ended. Fetching secret and resolving winner...`);
                         game.secret = await fetch_tx_and_get_secret(game);
                         game.winnerInfo = resolve_winner(game);
                     }
@@ -388,34 +392,48 @@ export async function fetchGoPGames(
 
 /**
  * Fetches the secret 'S' for a completed game.
- * For successfully resolved games, it fetches the spending transaction.
- * For cancelled games, it simply decodes the secret from R5.
+ * It fetches the spending transaction.
  * @param game - The Game object, which must have its status determined.
  * @returns A promise resolving to the secret as a Uint8Array, or undefined.
  */
-export async function fetch_tx_and_get_secret(game: Game): Promise<Uint8Array | undefined> {
-    // If the game was cancelled, the secret is already in the game box's R5.
-    if (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) {
-        return game.revealedS_Hex ? hexToBytes(game.revealedS_Hex) : undefined;
+async function fetch_tx_and_get_secret(game: Game): Promise<Uint8Array| undefined> {
+    if (!game.box || !game.box.spentTransactionId) {
+        console.warn(`resolve_winner: Game box or spentTransactionId missing for gameId ${game.gameId}.`);
+        return undefined;
     }
 
-    // If the game was resolved normally, find the secret in the spending transaction.
-    if (game.status === GameState.Resolution && game.box.spentTransactionId) {
-        try {
-            const txResponse = await fetch(`${explorer_uri}/api/v1/transactions/${game.box.spentTransactionId}`);
-            const txData = await txResponse.json();
-            // The secret is revealed in R4 of the creator's output (usually OUTPUTS(1)).
-            const creatorOutput = txData.outputs[1];
-            if (creatorOutput && creatorOutput.additionalRegisters.R4) {
-                return hexToBytes(creatorOutput.additionalRegisters.R4.renderedValue) ?? undefined;
-            }
-        } catch (error) {
-            console.error(`Error fetching secret from transaction ${game.box.spentTransactionId}:`, error);
+    const spentTxId = game.box.spentTransactionId;
+    let revealedSecretS_bytes: Uint8Array | undefined;
+
+    try {
+        const txResponse = await fetch(`${explorer_uri}/api/v1/transactions/${spentTxId}`);
+        if (!txResponse.ok) {
+            console.error(`resolve_winner: Failed to fetch tx ${spentTxId}. Status: ${txResponse.status}`);
+            return undefined;
         }
+        const txData = await txResponse.json();
+        console.log(txData)
+        if (txData.outputs && txData.outputs.length > 1) {
+            const targetOutputBox = txData.outputs[1];
+            if (targetOutputBox && 
+                targetOutputBox.additionalRegisters && 
+                targetOutputBox.additionalRegisters.R4?.sigmaType === 'Coll[SByte]') {
+                
+                const secretHex = targetOutputBox.additionalRegisters.R4.renderedValue;
+                revealedSecretS_bytes = hexToBytes(secretHex) ?? undefined;
+            }
+        }
+    } catch (error) {
+        console.error(`resolve_winner: Error fetching/processing tx ${spentTxId}:`, error);
+        return undefined;
     }
-    
-    console.warn(`Could not retrieve secret for game ${game.gameId}.`);
-    return undefined;
+
+    if (!revealedSecretS_bytes) {
+        console.warn(`resolve_winner: Could not find revealed secret S for game ${game.gameId}.`);
+        return undefined;
+    }
+
+    return revealedSecretS_bytes;
 }
 
 
@@ -465,5 +483,6 @@ export function resolve_winner(game: Game): WinnerInfo | undefined {
             }
         }
     }
+    console.log("Winner:", winner);
     return winner;
 }
