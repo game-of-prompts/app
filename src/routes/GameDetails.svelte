@@ -510,7 +510,7 @@
                 {#if gameEnded}
                     <p class="text-xl font-medium text-blue-400">Game Ended & Resolved</p>
                     {#if isCurrentUserWinner}
-                        <p class="mt-2 text-lg font-semibold text-green-300">🎉 Congratulations, You are the Winner! 🎉</p>
+                        <p class="mt-2 text-lg font-semibold text-green-500">🎉 Congratulations, You are the Winner! 🎉</p>
                     {/if}
                     {#if game.winnerInfo}
                         <div class="mt-2 space-y-1 text-sm text-gray-300">
@@ -601,7 +601,13 @@
                                         </a>
                                     </div>
                                     {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                                        <span class="text-xs font-semibold ml-4 px-2 py-1 rounded-full {$mode === 'dark' ? 'bg-blue-500 text-white' : 'bg-blue-200 text-blue-800'}">You</span>
+                                        <span class="
+                                            text-xs font-semibold ml-4 px-2 py-1 rounded-full
+                                            {$mode === 'dark' ? 'bg-blue-500 text-white' : 'bg-blue-200 text-blue-800'}
+                                            {isCurrentParticipationWinner ? 'inline-block mt-6' : ''}
+                                            ">
+                                            You
+                                        </span>
                                     {/if}
                                 </div>
                             </div>
