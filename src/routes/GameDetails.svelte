@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { type Game, isGameEnded, type Participation } from "$lib/common/game";
+    import { type Game, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
@@ -110,7 +110,7 @@
 
         try {
             // Determine participation status
-            participationIsEnded = await isGameEnded(game);
+            participationIsEnded = await isGameParticipationEnded(game);
 
             // Format deadline for display
             const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
@@ -498,20 +498,25 @@
                     {#if isGameEnded(game)}
                         <p class="info-box">This game has been resolved. No further actions are available.</p>
                     {:else if $connected}
+                        <!-- Anyone Actions -->
                         {#if !participationIsEnded}
                             <Button on:click={setupSubmitScore} class="w-full py-3 text-base bg-slate-500 hover:bg-slate-600"><Edit class="mr-2 h-4 w-4"/>Submit My Score</Button>
+
+                            <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700"><XCircle class="mr-2 h-4 w-4"/>Cancel Game</Button>
                         {/if}
+
+                        <!-- Owner Actions -->
                         {#if isOwner}
-                             {#if participationIsEnded && !transactionId}
+                             {#if participationIsEnded}
                                 <Button on:click={setupResolveGame} class="w-full py-3 text-base bg-slate-600 hover:bg-slate-700"><CheckSquare class="mr-2 h-4 w-4"/>Resolve Game</Button>
                              {/if}
-                             {#if !participationIsEnded && false}
-                                <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700"><XCircle class="mr-2 h-4 w-4"/>Cancel Game</Button>
-                             {/if}
                         {/if}
+
+                        <!-- General Messages -->
                         {#if participationIsEnded && !isOwner && !transactionId}
                              <p class="info-box">The participation period has ended. Waiting for the creator to resolve the game.</p>
                         {/if}
+
                     {:else}
                         <p class="info-box">Connect your wallet to interact with the game.</p>
                     {/if}
