@@ -71,6 +71,11 @@ function parseR5FromString(r5RenderedValue?: string): { unlockHeight: bigint, se
  * @returns The status of the game (GameStatus).
  */
 function getGameStatus(currentHeight: number, unlockHeight: bigint, deadline: bigint): GameStatus {
+    console.log("----------")
+    console.log("Current height:", currentHeight);
+    console.log("Unlock height:", unlockHeight);
+    console.log("Deadline:", deadline);
+    console.log("----------")
     const height = BigInt(currentHeight);
 
     // This logic directly implements the state matrix from the contract's README.
@@ -307,12 +312,10 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
 /**
  * A unified function to fetch GoP games from the blockchain.
  * It can fetch active, ended, or all games based on the status filter.
- * @param currentHeight - The current blockchain height, needed to determine game status.
  * @param filter - A filter to get 'active', 'ended', or 'all' games. Defaults to 'all'.
  * @returns A promise that resolves to a Map of Game objects, keyed by their Game NFT ID.
  */
 export async function fetchGoPGames(
-    currentHeight: number,
     filter: 'active' | 'ended' | 'all' = 'all'
 ): Promise<Map<string, Game>> {
     const games = new Map<string, Game>();
@@ -336,7 +339,7 @@ export async function fetchGoPGames(
             const items: Box[] = data.items || [];
 
             for (const box of items) {
-                const game = parseBoxToGame(box, currentHeight);
+                const game = parseBoxToGame(box, await (new ErgoPlatform()).get_current_height());
                 if (game) {
                     // Apply filtering based on the desired status
                     const isEnded = game.status === GameState.Resolution || game.status === GameState.Cancelled_Finalized;

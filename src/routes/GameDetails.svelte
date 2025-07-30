@@ -495,7 +495,7 @@
             <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
                 <div class="space-y-3">
-                    {#if game.ended}
+                    {#if isGameEnded(game)}
                         <p class="info-box">This game has been resolved. No further actions are available.</p>
                     {:else if $connected}
                         {#if !participationIsEnded}
@@ -598,7 +598,7 @@
         {/if}
     </div>
 
-    {#if showActionModal && game && !game.ended}
+    {#if showActionModal && game}
     <div class="modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" on:click|self={closeModal} role="presentation">
         <div class="modal-content {$mode === 'dark' ? 'bg-slate-800 text-gray-200 border border-slate-700' : 'bg-white text-gray-800 border border-gray-200'} p-6 rounded-xl shadow-2xl w-full max-w-lg lg:max-w-4xl transform transition-all" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-6">
