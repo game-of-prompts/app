@@ -150,7 +150,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
         const creatorPkBytesHex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
         const commissionPercentage = parseIntFromHex(box.additionalRegisters.R8?.renderedValue);
         const gameNftId = box.assets[0].tokenId;
-        const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "");
+        const gameDetailsJsonString = hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9!.renderedValue) || "") ?? "";
 
         // Define default image URL
         const defaultImageUrl = "https://images5.alphacoders.com/136/thumb-1920-1364878.png";
@@ -159,7 +159,8 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
             title: `Game ${gameNftId.slice(0, 8)}`, 
             description: "No description provided.",
             serviceId: "",
-            imageURL: defaultImageUrl
+            imageURL: defaultImageUrl,
+            rawJsonString: gameDetailsJsonString
         };
 
         try {
@@ -170,6 +171,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
                 serviceId: parsedJson.serviceId || "",
                 // Use image from JSON if available, otherwise fall back to the default.
                 imageURL: parsedJson.imageURL || defaultImageUrl,
+                rawJsonString: gameDetailsJsonString
             };
         } catch (e) { 
             console.warn(`Could not parse R9 JSON for game ${gameNftId}. Using default content.`);

@@ -5,12 +5,15 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     SAFE_MIN_BOX_VALUE,
     type InputBox,
-    type Amount
+    type Amount,
+    ErgoAddress
 } from '@fleet-sdk/core';
-import { SColl, SByte, SPair, SLong } from '@fleet-sdk/serializer';
-import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
+import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
+import { hexToBytes, parseBox, SString, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type Game } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
+import { json } from '@sveltejs/kit';
+import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../contract';
 
 // --- Constants defined based on the contract's logic ---
 
@@ -67,7 +70,6 @@ export async function cancel_game_before_deadline(
     const unlockHeight_in_self = BigInt(game.unlockHeight);
     const hashOrSecret_in_self_hex = game.hashS || game.revealedS_Hex!;
 
-    const deadline = BigInt(game.deadlineBlock);
     const creatorStakeNanoErg = game.creatorStakeNanoErg;
     const participationFeeNanoErg = game.participationFeeNanoErg;
 
@@ -95,34 +97,48 @@ export async function cancel_game_before_deadline(
     }
 
     // --- 4. Calculate new values for the re-created GameBox ---
-    const claimedNanoErg = creatorStakeNanoErg / STAKE_DENOMINATOR;
-    console.log(`Claimed NanoERG for this cancellation: ${claimedNanoErg}`);
-    const newCreatorStake = creatorStakeNanoErg - claimedNanoErg;
+    const stakePortionToClaim = creatorStakeNanoErg / STAKE_DENOMINATOR;
+    console.log(`Claimed NanoERG for this cancellation: ${stakePortionToClaim}`);
+    const newCreatorStake = creatorStakeNanoErg - stakePortionToClaim;
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
         throw new Error(`Cannot drain further. Remaining stake (${newCreatorStake}) is less than SAFE_MIN_BOX_VALUE.`);
     }
     const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
 
     // --- 5. Build Transaction Outputs ---
+
+    const gopGameContractErgoTree = getGopGameBoxErgoTreeHex();
+
+    const creatorP2PKAddress = ErgoAddress.fromBase58(game.gameCreatorPK_Hex);
+    const pkBytesArrayFromAddress = creatorP2PKAddress.getPublicKeys();
+    if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
+        const msg = `Could not extract public key from creator address (${game.gameCreatorPK_Hex}) for R4.`;
+        console.error(msg);
+        throw new Error(msg);
+    }
+    const creatorPkBytes_for_R4 = pkBytesArrayFromAddress[0];
     
+    const expectedParticipationScriptHashBytes = hexToBytes(getGopParticipationBoxScriptHash());
+    if (!expectedParticipationScriptHashBytes) throw new Error("Failed to convert expected participation script hash hex to bytes.");
+
     // OUTPUT(0): The re-created GameBox with updated state
     const recreatedGameBoxOutput = new OutputBuilder(
         newCreatorStake,
-        gameBoxToSpend.ergoTree
+        gopGameContractErgoTree
     )
     .addTokens(gameBoxToSpend.assets) // Preserve all tokens, including the Game NFT
     .setAdditionalRegisters({
-        R4: gameBoxToSpend.additionalRegisters.R4.serializedValue, // gameCreatorPK
-        R5: SPair(SLong(newUnlockHeight), SColl(SByte, secretS_bytes)).toHex(), // (newUnlockHeight, revealed_S)
-        R6: gameBoxToSpend.additionalRegisters.R6.serializedValue, // expectedParticipationScriptHash
-        R7: SColl(SLong, [deadline, newCreatorStake, participationFeeNanoErg]).toHex(), // [deadline, new_stake, fee]
-        R8: gameBoxToSpend.additionalRegisters.R8.serializedValue, // commissionPercentage
-        R9: gameBoxToSpend.additionalRegisters.R9.serializedValue  // gameDetailsJsonHex
+        R4: SColl(SByte, creatorPkBytes_for_R4).toHex(),
+        R5:  SPair(SLong(newUnlockHeight), SColl(SByte, secretS_bytes)).toHex(),
+        R6: SColl(SByte, expectedParticipationScriptHashBytes).toHex(),
+        R7: SColl(SLong, [BigInt(game.deadlineBlock), newCreatorStake, participationFeeNanoErg]).toHex(),
+        R8: SInt(game.commissionPercentage).toHex(),
+        R9: SString(game.content.rawJsonString)
     });
 
     // OUTPUT(1): The output for the claimer, containing the drained stake
     const claimerOutput = new OutputBuilder(
-        claimedNanoErg,
+        stakePortionToClaim,
         claimerAddressString
     );
 
@@ -137,6 +153,9 @@ export async function cancel_game_before_deadline(
         .sendChangeTo(claimerAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
+
+    // ¿División entera?
+    // Claimer output tokens must be 0!
     
     const eip12UnsignedTransaction = await unsignedTransaction.toEIP12Object();
 

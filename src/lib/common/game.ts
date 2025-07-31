@@ -31,7 +31,7 @@ export interface WinnerInfo {
  * Describes the detailed content of a GoP game, typically parsed from R9.
  */
 export interface GameContent {
-    rawJsonString?: string;
+    rawJsonString: string;
     title: string;
     description: string;
     serviceId: string;
