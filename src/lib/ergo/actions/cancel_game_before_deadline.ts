@@ -13,12 +13,11 @@ import { type Game } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 
 // --- Constants defined based on the contract's logic ---
-// The fixed amount of nanoERGs to penalize/drain from the creator's stake in each cancellation step.
-// This must be greater than SAFE_MIN_BOX_VALUE to be a valid output.
-const PENALTY_NANOERG = SAFE_MIN_BOX_VALUE; 
+
+const STAKE_DENOMINATOR = BigInt(5); // The creator's stake is divided by this value to determine the penalty amount.
 
 // The cooldown period in blocks before the next stake drain can occur.
-const COOLDOWN_IN_BLOCKS = 20; 
+const COOLDOWN_IN_BLOCKS = 3000; 
 
 
 /**
@@ -96,7 +95,9 @@ export async function cancel_game_before_deadline(
     }
 
     // --- 4. Calculate new values for the re-created GameBox ---
-    const newCreatorStake = creatorStakeNanoErg - PENALTY_NANOERG;
+    const claimedNanoErg = creatorStakeNanoErg / STAKE_DENOMINATOR;
+    console.log(`Claimed NanoERG for this cancellation: ${claimedNanoErg}`);
+    const newCreatorStake = creatorStakeNanoErg - claimedNanoErg;
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
         throw new Error(`Cannot drain further. Remaining stake (${newCreatorStake}) is less than SAFE_MIN_BOX_VALUE.`);
     }
@@ -121,7 +122,7 @@ export async function cancel_game_before_deadline(
 
     // OUTPUT(1): The output for the claimer, containing the drained stake
     const claimerOutput = new OutputBuilder(
-        PENALTY_NANOERG,
+        claimedNanoErg,
         claimerAddressString
     );
 
