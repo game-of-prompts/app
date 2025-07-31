@@ -51,15 +51,26 @@ export async function cancel_game_before_deadline(
     const secretS_bytes = hexToBytes(secretS_hex);
     if (!secretS_bytes) throw new Error("Invalid secretS_hex format.");
 
-    // --- 2. Parse existing GameBox registers ---
-    const stateTupleRaw = game.box.additionalRegisters.R5!.renderedValue;
-    const parsedStateTuple = Array.isArray(stateTupleRaw) ? stateTupleRaw : JSON.parse(stateTupleRaw);
-    const unlockHeight_in_self = BigInt(parsedStateTuple[0]);
-    const hashOrSecret_in_self_hex = parsedStateTuple[1];
+    // --- 2. Get state from the pre-parsed Game object ---
 
-    const numericalParams = parseLongColl(game.box.additionalRegisters.R7!.renderedValue);
-    if (!numericalParams || numericalParams.length < 3) throw new Error("Could not parse R7 from GameBox.");
-    const [deadline, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
+    // Validate that all required, pre-parsed fields exist on the game object.
+    if (
+        game.unlockHeight === undefined ||
+        (!game.hashS && !game.revealedS_Hex) ||
+        game.deadlineBlock === undefined ||
+        game.creatorStakeNanoErg === undefined ||
+        game.participationFeeNanoErg === undefined
+    ) {
+        throw new Error("Game object is missing required, pre-parsed state information.");
+    }
+
+    // Directly use the pre-parsed values from the game object.
+    const unlockHeight_in_self = BigInt(game.unlockHeight);
+    const hashOrSecret_in_self_hex = game.hashS || game.revealedS_Hex!;
+
+    const deadline = BigInt(game.deadlineBlock);
+    const creatorStakeNanoErg = game.creatorStakeNanoErg;
+    const participationFeeNanoErg = game.participationFeeNanoErg;
 
     // --- 3. Determine if this is an initial cancellation or a subsequent drain ---
     if (unlockHeight_in_self === 0n) {
