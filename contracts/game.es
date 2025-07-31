@@ -193,8 +193,7 @@
         val remainingStake = creatorStake - stakePortionToClaim
         
         // --- Shared validation for the claimer's output ---
-        val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim &&
-                                 claimerOutput.tokens.size == 0
+        val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
 
         // --- Case A: First withdrawal (revealing the secret) ---
         val caseA = if (unlockHeight_in_self == 0L) {
