@@ -102,10 +102,10 @@ export async function cancel_game_before_deadline(
     const newCreatorStake = creatorStakeNanoErg - stakePortionToClaim;
     console.log(`New creator stake after claiming: ${newCreatorStake}. `);
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
-        throw new Error(`Cannot drain further. Remaining stake (${newCreatorStake}) is less than SAFE_MIN_BOX_VALUE.`);
+        throw new Error(`Cannot drain further. Remaining stake (${newCreatorStake}) is less than ${SAFE_MIN_BOX_VALUE}.`);
     }
     if (stakePortionToClaim <= SAFE_MIN_BOX_VALUE) {
-        console.warn(`Warning: Claimed stake portion (${stakePortionToClaim}) is less than SAFE_MIN_BOX_VALUE. This may lead to an invalid box state.`);
+        console.warn(`Warning: Claimed stake portion (${stakePortionToClaim}) is less than ${SAFE_MIN_BOX_VALUE}. This may lead to an invalid box state.`);
     }
 
     const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
