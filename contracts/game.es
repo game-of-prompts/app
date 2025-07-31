@@ -186,7 +186,7 @@
   // === ACTION 2: Partial Penalty for Early Secret Revelation (NEW IMPLEMENTATION) ===
   val action2_isValidCancellation = {
     if (isBeforeDeadline) {
-      if (OUTPUTS.size == 2) {
+      if (OUTPUTS.size >= 2) {
         val recreatedGameBox = OUTPUTS(0)
         val claimerOutput = OUTPUTS(1)
         val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
@@ -204,7 +204,8 @@
           // 1. Check if the revealed S in the new box matches the original hash
           val sIsCorrect = blake2b256(revealedS) == hashS_in_self
           // 2. Check if the new unlock height is correctly set
-          val unlockHeightIsCorrect = newUnlockHeight == HEIGHT + COOLDOWN_IN_BLOCKS
+          // val unlockHeightIsCorrect = newUnlockHeight == HEIGHT + COOLDOWN_IN_BLOCKS
+          val unlockHeightIsCorrect = newUnlockHeight >= HEIGHT + COOLDOWN_IN_BLOCKS
 
           sIsCorrect && unlockHeightIsCorrect
         } else { false }
