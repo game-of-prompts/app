@@ -58,6 +58,19 @@ export interface Platform {
     ): Promise<string | null>;
 
     /**
+     * Cancela un juego "Game of Prompts" antes de la fecha límite.
+     * @param game - El objeto Game que se va a cancelar.
+     * @param secretS_hex - El secreto S en formato hexadecimal.
+     * @param claimerAddressString - La dirección Ergo del usuario que inicia la cancelación.
+     * @returns Una promesa que se resuelve con el ID de la transacción si tiene éxito, o null en caso contrario.
+    */
+    cancel_game_before_deadline(
+        game: Game,
+        secretS_hex: string,
+        claimerAddressString: string
+    ): Promise<string | null>;
+
+    /**
      * Obtiene los juegos "Game of Prompts" activos.
      * @param offset - Opcional, para paginación.
      * @returns Un Map con los juegos activos, donde la clave es el ID del juego.

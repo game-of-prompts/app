@@ -294,7 +294,7 @@
         }
         isSubmitting = true; transactionId = null;
         try {
-            const result = await platform.cancelGame(game, secret_S_input_cancel);
+            const result = await platform.cancel_game_before_deadline(game, secret_S_input_cancel, get(address) ?? "");
             transactionId = result;
         } catch (e: any) { errorMessage = e.message || "Error cancelling game.";
         } finally { isSubmitting = false; }

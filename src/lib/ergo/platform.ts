@@ -7,6 +7,7 @@ import { address, connected, network, balance } from "../common/store";
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
+import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -175,6 +176,24 @@ export class ErgoPlatform implements Platform{
             secretS_hex
         );
     }
+
+    async cancel_game_before_deadline(
+        game: Game,
+        secretS_hex: string,
+        claimerAddressString: string
+    ): Promise<string | null> {
+        if (!ergo) {
+            throw new Error("Wallet not connected or Ergo connector not available.");
+        }
+        
+        console.log("ErgoPlatform: Calling cancel_game_before_deadline_transaction.");
+        return await cancel_game_before_deadline(
+            game,
+            secretS_hex,
+            claimerAddressString
+        );
+    }
+
 
     async fetchGoPGames(offset: number = 0): Promise<Map<string, Game>> {
         return await fetchGoPGames(offset, 'all');
