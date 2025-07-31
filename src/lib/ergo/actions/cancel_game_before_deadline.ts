@@ -12,7 +12,6 @@ import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, SString, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type Game } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { json } from '@sveltejs/kit';
 import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../contract';
 
 // --- Constants defined based on the contract's logic ---
