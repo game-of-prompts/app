@@ -38,7 +38,8 @@ export async function cancel_game_before_deadline(
     claimerAddressString: string
 ): Promise<string | null> {
 
-    console.log("Attempting to cancel/drain game:", game.boxId);
+    console.log("\n\n\n\n");
+    console.warn("Attempting to cancel/drain game:", game.boxId);
     
     // --- 1. Get necessary data and perform pre-checks ---
     const currentHeight = await ergo.get_current_height();
@@ -97,18 +98,24 @@ export async function cancel_game_before_deadline(
 
     // --- 4. Calculate new values for the re-created GameBox ---
     const stakePortionToClaim = creatorStakeNanoErg / STAKE_DENOMINATOR;
-    console.log(`Claimed NanoERG for this cancellation: ${stakePortionToClaim}`);
+    console.log(`Claimed NanoERG for this cancellation: ${stakePortionToClaim}. Is integer: ${Number.isInteger(Number(stakePortionToClaim))}.`);
     const newCreatorStake = creatorStakeNanoErg - stakePortionToClaim;
+    console.log(`New creator stake after claiming: ${newCreatorStake}. `);
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
         throw new Error(`Cannot drain further. Remaining stake (${newCreatorStake}) is less than SAFE_MIN_BOX_VALUE.`);
     }
+    if (stakePortionToClaim <= SAFE_MIN_BOX_VALUE) {
+        console.warn(`Warning: Claimed stake portion (${stakePortionToClaim}) is less than SAFE_MIN_BOX_VALUE. This may lead to an invalid box state.`);
+    }
+
     const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
 
     // --- 5. Build Transaction Outputs ---
 
     const gopGameContractErgoTree = getGopGameBoxErgoTreeHex();
 
-    const creatorP2PKAddress = ErgoAddress.fromBase58(game.gameCreatorPK_Hex);
+    // TODO How to get the change address with the hex public key?   026f371ad9887acfd802fcdcda422e706fc2aa8b9a1ea943741e2bd7477031dec3 => 9fN3MoJQyckgWuRwY7DNi72vJmN8zWBwe2wAw9mhk9wAaMcmHBb
+    const creatorP2PKAddress = ErgoAddress.fromBase58(await ergo.get_change_address());  // game.gameCreatorPK_Hex);
     const pkBytesArrayFromAddress = creatorP2PKAddress.getPublicKeys();
     if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
         const msg = `Could not extract public key from creator address (${game.gameCreatorPK_Hex}) for R4.`;
@@ -152,9 +159,6 @@ export async function cancel_game_before_deadline(
         .sendChangeTo(claimerAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
-
-    // ¿División entera?
-    // Claimer output tokens must be 0!
     
     const eip12UnsignedTransaction = await unsignedTransaction.toEIP12Object();
 
