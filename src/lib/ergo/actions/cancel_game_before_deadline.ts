@@ -8,9 +8,9 @@ import {
     type Amount
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong } from '@fleet-sdk/serializer';
-import { hexToBytes, parseBox, parseLongColl } from '$lib/ergo/utils';
+import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type Game } from '$lib/common/game';
-import { blake2b256 } from "@fleet-sdk/crypto";
+import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 
 // --- Constants defined based on the contract's logic ---
 // The fixed amount of nanoERGs to penalize/drain from the creator's stake in each cancellation step.
@@ -77,9 +77,9 @@ export async function cancel_game_before_deadline(
         // Phase A: Initial Cancellation
         console.log("Executing initial cancellation (Phase A).");
         const hashS_from_box = hashOrSecret_in_self_hex;
-        const hash_of_provided_secret = blake2b256(secretS_bytes);
+        const hash_of_provided_secret = fleetBlake2b256(secretS_bytes);
         
-        if (Buffer.from(hash_of_provided_secret).toString('hex') !== hashS_from_box) {
+        if (uint8ArrayToHex(hash_of_provided_secret) !== hashS_from_box) {
             throw new Error("Provided secret does not match the hash in the GameBox.");
         }
 
