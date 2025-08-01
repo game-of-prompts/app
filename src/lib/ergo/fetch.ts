@@ -344,7 +344,7 @@ export async function fetchGoPGames(
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ergoTreeTemplateHash: gopGameContractTemplateHash }),
+                body: JSON.stringify({ ergoTreeTemplateHash: gopGameContractTemplateHash }),  // TODO check COOLDOWN_IN_BLOCKS and STAKE_DENOMINATOR
             });
             const data = await response.json();
             const items: Box[] = data.items || [];
