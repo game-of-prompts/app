@@ -16,6 +16,8 @@
     import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
 
     // UTILITIES
+    import { format, formatDistanceToNow } from 'date-fns';
+    import { enUS } from 'date-fns/locale/en-US';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
@@ -42,7 +44,6 @@
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
     let showCopyMessage = false;
-    let drainCooldownTimeDisplay = "";
 
     // Game Status State
     let gameEnded = true;
@@ -374,6 +375,17 @@
             isOwner = false;
         }
     }
+
+    $: drainInfoPromise = (async () => {
+        if (!game) return { isAllowed: false, timestamp: null };
+        const isAllowed = await isGameDrainingAllowed(game);
+        let timestamp = null;
+        // Solo calculamos el timestamp si es necesario
+        if (!isAllowed && game.unlockHeight > 0) {
+            timestamp = await block_height_to_timestamp(game.unlockHeight, game.platform);
+        }
+        return { isAllowed, timestamp };
+    })();
 </script>
 
 {#if game}
@@ -589,16 +601,33 @@
                                 <p class="text-xs mt-1 {$mode === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}">
                                     A portion of the creator's stake can now be claimed periodically.
                                 </p>
-                                <Button on:click={setupDrainingStake} disabled={!isGameDrainingAllowed(game)} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
-                                    <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
-                                </Button>
-                                {#if !isGameDrainingAllowed(game) && game.unlockHeight > 0}
-                                    <div class="text-center mt-2 text-xs p-2 rounded {$mode === 'dark' ? 'bg-slate-900/50' : 'bg-slate-200'}">
-                                        Next drain available in: <br>
-                                        <span class="font-semibold text-base block my-1">{@html drainCooldownTimeDisplay}</span>
-                                        <span>({game.unlockHeight} blocks)</span>
+                                {#await drainInfoPromise}
+                                    <Button disabled class="w-full mt-3 py-2.5 text-base bg-slate-700 opacity-60 cursor-not-allowed">
+                                        <Trophy class="mr-2 h-4 w-4"/>
+                                        Checking availability...
+                                    </Button>
+                                {:then data}
+                                    <Button on:click={setupDrainingStake} disabled={!data.isAllowed} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
+                                    </Button>
+
+                                    {#if !data.isAllowed && game.unlockHeight > 0}
+                                        <div class="text-center mt-2 text-xs p-2 rounded {$mode === 'dark' ? 'bg-slate-900/50' : 'bg-slate-200'}">
+                                            Next drain available in: <br>
+                                            <span class="font-semibold text-base block my-1">
+                                                {formatDistanceToNow(new Date(data.timestamp ?? 0), { addSuffix: true, locale: enUS })}
+                                            </span>
+                                            <span class="font-semibold text-base block my-1">
+                                                {format(new Date(data.timestamp ?? 0), "MMMM d, yyyy, HH:mm", { locale: enUS })}
+                                            </span>
+                                            <span>(Block {game.unlockHeight})</span>
+                                        </div>
+                                    {/if}
+                                {:catch error}
+                                    <div class="text-center mt-2 text-xs p-2 rounded bg-red-900/50 text-red-300">
+                                        Could not get drain info: {error.message}
                                     </div>
-                                {/if}
+                                {/await}
                             </div>
                         {/if}
 

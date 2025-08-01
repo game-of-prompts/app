@@ -109,7 +109,7 @@ export function iGameDrainingStaking(game: Game): boolean {
 }
 
 export async function isGameDrainingAllowed(game: Game): Promise<boolean> {
-    return iGameDrainingStaking(game) && (game.unlockHeight ?? 0) <= (await game.platform.get_current_height());
+    return iGameDrainingStaking(game) && (game.unlockHeight) <= (await game.platform.get_current_height());
 }
 
 /**
