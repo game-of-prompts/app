@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { type Game, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
+    import { type Game, iGameDrainingStaking, isGameDrainingAllowed, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
@@ -42,6 +42,7 @@
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
     let showCopyMessage = false;
+    let drainCooldownTimeDisplay = "";
 
     // Game Status State
     let gameEnded = true;
@@ -544,22 +545,53 @@
                     {#if isGameEnded(game)}
                         <p class="info-box">This game has been resolved. No further actions are available.</p>
                     {:else if $connected}
-                        <!-- Anyone Actions -->
                         {#if !participationIsEnded}
-                            <Button on:click={setupSubmitScore} class="w-full py-3 text-base bg-slate-500 hover:bg-slate-600"><Edit class="mr-2 h-4 w-4"/>Submit My Score</Button>
-
-                            <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700"><XCircle class="mr-2 h-4 w-4"/>Cancel Game</Button>
+                            <Button on:click={setupSubmitScore} class="w-full py-3 text-base bg-slate-500 hover:bg-slate-600">
+                                <Edit class="mr-2 h-4 w-4"/>Submit My Score
+                            </Button>
                         {/if}
 
-                        <!-- Owner Actions -->
+                        {#if !participationIsEnded}
+                            <div>
+                                <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700">
+                                    <XCircle class="mr-2 h-4 w-4"/>Cancel Game
+                                </Button>
+                                <p class="text-xs text-center px-2 mt-2 {$mode === 'dark' ? 'text-slate-400' : 'text-slate-600'}">
+                                    This will penalize the creator and allow participants to get a refund.
+                                </p>
+                            </div>
+                        {/if}
+
+                        {#if iGameDrainingStaking(game)}
+                            <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
+                                <p class="font-semibold {$mode === 'dark' ? 'text-yellow-300' : 'text-yellow-800'}">
+                                    Game Cancelled: Draining Stake
+                                </p>
+                                <p class="text-xs mt-1 {$mode === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}">
+                                    A portion of the creator's stake can now be claimed periodically.
+                                </p>
+                                <Button on:click={setupCancelGame} disabled={!isGameDrainingAllowed(game)} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                    <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
+                                </Button>
+                                {#if !isGameDrainingAllowed(game) && game.unlockHeight > 0}
+                                    <div class="text-center mt-2 text-xs p-2 rounded {$mode === 'dark' ? 'bg-slate-900/50' : 'bg-slate-200'}">
+                                        Next drain available in: <br>
+                                        <span class="font-semibold text-base block my-1">{@html drainCooldownTimeDisplay}</span>
+                                        <span>({game.unlockHeight} blocks)</span>
+                                    </div>
+                                {/if}
+                            </div>
+                        {/if}
+
                         {#if isOwner}
-                             {#if participationIsEnded}
-                                <Button on:click={setupResolveGame} class="w-full py-3 text-base bg-slate-600 hover:bg-slate-700"><CheckSquare class="mr-2 h-4 w-4"/>Resolve Game</Button>
+                             {#if participationIsEnded && !iGameDrainingStaking(game)}
+                                <Button on:click={setupResolveGame} class="w-full py-3 text-base bg-slate-600 hover:bg-slate-700">
+                                    <CheckSquare class="mr-2 h-4 w-4"/>Resolve Game
+                                </Button>
                              {/if}
                         {/if}
 
-                        <!-- General Messages -->
-                        {#if participationIsEnded && !isOwner && !transactionId}
+                        {#if participationIsEnded && !isOwner && !iGameDrainingStaking(game) && !transactionId}
                              <p class="info-box">The participation period has ended. Waiting for the creator to resolve the game.</p>
                         {/if}
 

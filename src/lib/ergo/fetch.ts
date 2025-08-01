@@ -198,7 +198,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
             deadlineBlock: Number(deadlineBlock),
             participationFeeNanoErg: participationFeeNanoErg,
             creatorStakeNanoErg: creatorStakeNanoErg,
-            commissionPercentage: commissionPercentage,
+            commissionPercentage: commissionPercentage ?? 0,
             gameCreatorPK_Hex: creatorPkBytesHex ?? "",
             gameId: gameNftId,
             content: gameContent,
@@ -206,7 +206,7 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
             participations: [],
             hashS: unlockHeight === 0n ? secretOrHashBytesHex : undefined,
             revealedS_Hex: unlockHeight > 0n ? secretOrHashBytesHex : undefined,
-            unlockHeight: Number(unlockHeight)
+            unlockHeight: Number(unlockHeight) ?? 0
         };
     } catch (e) {
         console.error(`Failed to parse box ${box.boxId} into a Game object: `, e);

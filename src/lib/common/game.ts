@@ -68,7 +68,7 @@ export interface Game {
     platform: ErgoPlatform;
 
     status: GameStatus; // Replaces the old 'ended' boolean with a more descriptive state
-    unlockHeight?: number; // From R5._1, relevant for cancelled games
+    unlockHeight: number; // From R5._1, relevant for cancelled games
     hashS?: string; // From R5._2 when game is active (unlockHeight == 0)
     revealedS_Hex?: string; // From R5._2 when game is cancelled (unlockHeight > 0)
     
@@ -102,6 +102,14 @@ export function isGameEnded(game: Game): boolean {
 
 export function isGameParticipationEnded(game: Game): boolean {
     return game.status !== GameState.Active;
+}
+
+export function iGameDrainingStaking(game: Game): boolean {
+    return game.status === GameState.Cancelled_Draining
+}
+
+export async function isGameDrainingAllowed(game: Game): Promise<boolean> {
+    return iGameDrainingStaking(game) && (game.unlockHeight ?? 0) <= (await game.platform.get_current_height());
 }
 
 /**
