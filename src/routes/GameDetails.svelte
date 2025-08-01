@@ -248,10 +248,18 @@
     }
 
     function setupCancelGame() {
-        if (!game || !isOwner || gameEnded) return;
+        if (!game || gameEnded) return;
         currentActionType = "cancel_game";
         modalTitle = `Cancel Game: ${game.content.title}`;
         secret_S_input_cancel = "";
+        transactionId = null; errorMessage = null; isSubmitting = false;
+        showActionModal = true;
+    }
+
+    function setupDrainingStake() {
+        if (!game || gameEnded) return;
+        currentActionType = "drain_stake";
+        modalTitle = `Drain Stake: ${game.content.title}`;
         transactionId = null; errorMessage = null; isSubmitting = false;
         showActionModal = true;
     }
@@ -298,6 +306,17 @@
             const result = await platform.cancel_game_before_deadline(game, secret_S_input_cancel, get(address) ?? "");
             transactionId = result;
         } catch (e: any) { errorMessage = e.message || "Error cancelling game.";
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleDrainStake() {
+        errorMessage = null;
+        if (!game) { errorMessage = "No game to drain stake from."; return; }
+        isSubmitting = true; transactionId = null;
+        try {
+            const result = await platform.cancel_game_before_deadline(game, game.revealedS_Hex ?? "", get(address) ?? "");
+            transactionId = result;
+        } catch (e: any) { errorMessage = e.message || "Error draining stake.";
         } finally { isSubmitting = false; }
     }
 
@@ -570,7 +589,7 @@
                                 <p class="text-xs mt-1 {$mode === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}">
                                     A portion of the creator's stake can now be claimed periodically.
                                 </p>
-                                <Button on:click={setupCancelGame} disabled={!isGameDrainingAllowed(game)} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                <Button on:click={setupDrainingStake} disabled={!isGameDrainingAllowed(game)} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
                                     <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
                                 </Button>
                                 {#if !isGameDrainingAllowed(game) && game.unlockHeight > 0}
@@ -745,6 +764,19 @@
                         <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"><strong>Warning:</strong> Cancelling the game may incur penalties and return funds to participants.</p>
                         <Button on:click={handleCancelGame} disabled={isSubmitting || !secret_S_input_cancel.trim()} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500 hover:bg-red-600 text-white'} font-semibold">{isSubmitting ? 'Processing...' : 'Confirm Game Cancellation'}</Button>
                     </div>
+                {:else if currentActionType === 'drain_stake'}
+                <div class="space-y-4">
+                    <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-orange-600/20 text-orange-300 border border-orange-500/30' : 'bg-orange-100 text-orange-700 border border-orange-200'}">
+                        <strong>Action: Drain Stake</strong><br>
+                        You are about to claim a portion of the creator's stake from this cancelled game. This action is available periodically as a penalty for the game creator revealing the secret before the deadline.
+                    </p>
+                    <p class="text-sm {$mode === 'dark' ? 'text-gray-400' : 'text-gray-600'}">
+                        This will submit a transaction to the blockchain. No further input is needed.
+                    </p>
+                    <Button on:click={handleDrainStake} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold">
+                        {isSubmitting ? 'Processing...' : 'Confirm & Drain Stake'}
+                    </Button>
+                </div>
                 {/if}
                 {#if transactionId && !isSubmitting && showActionModal}
                     <div class="mt-6 p-3 rounded-md text-sm {$mode === 'dark' ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-700 border border-green-200'}">
