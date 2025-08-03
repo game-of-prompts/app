@@ -19,7 +19,7 @@ import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../c
 const STAKE_DENOMINATOR = BigInt(5); // The creator's stake is divided by this value to determine the penalty amount.
 
 // The cooldown period in blocks before the next stake drain can occur.
-const COOLDOWN_IN_BLOCKS = 500; // This value must be higher than the contract's cooldown period to ensure it is valid. Can be any value greater than 3000, as per the contract's logic. 
+const COOLDOWN_IN_BLOCKS = 60; // This value must be higher than the contract's cooldown period to ensure it is valid. Can be any value greater than COOLDOWN_IN_BLOCKS, as per the contract's logic. 
 
 
 /**

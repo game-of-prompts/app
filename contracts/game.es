@@ -1,7 +1,7 @@
 {
   // === Constants ===
   val STAKE_DENOMINATOR = 5L
-  val COOLDOWN_IN_BLOCKS = 3000L
+  val COOLDOWN_IN_BLOCKS = 30L
 
   // === Register Definitions (GameBox) ===
   // R4: Coll[Byte] - gameCreatorPK: Raw bytes of the game creator's public key.
