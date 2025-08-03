@@ -72,14 +72,6 @@ function parseR5FromString(r5RenderedValue?: string): { unlockHeight: bigint, se
  * @returns The status of the game (GameStatus).
  */
 function getGameStatus(currentHeight: number, unlockHeight: bigint, deadline: bigint, creatorStakeNanoErg: number, box: Box): GameStatus {
-    console.log("----------")
-    console.log("Spent tx:", box.spentTransactionId);
-    console.log("Current height:", currentHeight);
-    console.log("Unlock height:", unlockHeight);
-    console.log("Deadline:", deadline);
-    console.log("Creator stake:", creatorStakeNanoErg);
-    console.log("Box value:", box.value);
-    console.log("----------")
     const height = BigInt(currentHeight);
 
     // This logic directly implements the state matrix from the contract's README.
@@ -178,17 +170,6 @@ function parseBoxToGame(box: Box, currentHeight: number): Game | null {
             console.warn(`Could not parse R9 JSON for game ${gameNftId}. Using default content.`);
         }
 
-        console.log("Game content:", gameContent);
-        console.log("Game creator PK (hex):", creatorPkBytesHex);
-        console.log("Game status:", gameStatus);
-        console.log("Deadline block:", deadlineBlock);
-        console.log("Creator stake (nanoErg):", creatorStakeNanoErg);
-        console.log("Participation fee (nanoErg):", participationFeeNanoErg);
-        console.log("Commission percentage:", commissionPercentage);
-        console.log("Game NFT ID (hex):", gameNftId);
-        console.log("Unlock height:", unlockHeight);
-        console.log("Secret (hex):", secretOrHashBytesHex);
-
 
         // 5. Construct the final Game object.
         return {
@@ -256,7 +237,6 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
             const data = await response.json();
             const items: Box[] = data.items || [];
 
-            console.log(`Fetched ${items.length} participation boxes for game NFT ID ${gameNftIdHex}.`);
 
             for (const pBox of items) {
 
@@ -317,7 +297,6 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
         }
     }
 
-    console.log(`Total participations fetched for game NFT ID ${gameNftIdHex}:`, participationsList.length);
     return participationsList;
 }
 
@@ -362,10 +341,6 @@ export async function fetchGoPGames(
 
                     // Fetch related data for the game
                     const participations = await fetchParticipationsForGame(game.gameId);
-                    console.log(`Participations for game ${game.gameId}:`);
-                    console.log(participations);
-                    console.log("....");
-
                     game.participations = participations;
 
                     // If the game has ended, try to find the secret and resolve the winner
@@ -415,7 +390,6 @@ async function fetch_tx_and_get_secret(game: Game): Promise<Uint8Array| undefine
             return undefined;
         }
         const txData = await txResponse.json();
-        console.log(txData)
         if (txData.outputs && txData.outputs.length > 1) {
             const targetOutputBox = txData.outputs[1];
             if (targetOutputBox && 
