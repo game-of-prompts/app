@@ -217,7 +217,7 @@
           val newR5Tuple = recreatedGameBox.R5[(Long, Coll[Byte])].get
           // 2. Check that S hasn't changed and the new unlock height is correct
           val r5StateIsCorrect = newR5Tuple._2 == secretOrHash_in_self && // S is the same
-                                 newR5Tuple._1 == HEIGHT + COOLDOWN_IN_BLOCKS // Cooldown is reset
+                                 newR5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS // Cooldown is reset
 
           cooldownIsOver && r5StateIsCorrect
         } else { false }
