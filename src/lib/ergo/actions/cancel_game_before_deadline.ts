@@ -114,7 +114,6 @@ export async function cancel_game_before_deadline(
 
     const gopGameContractErgoTree = getGopGameBoxErgoTreeHex();
 
-    // TODO How to get the change address with the hex public key?   026f371ad9887acfd802fcdcda422e706fc2aa8b9a1ea943741e2bd7477031dec3 => 9fN3MoJQyckgWuRwY7DNi72vJmN8zWBwe2wAw9mhk9wAaMcmHBb
     const creatorP2PKAddress = ErgoAddress.fromPublicKey(game.gameCreatorPK_Hex);
     const pkBytesArrayFromAddress = creatorP2PKAddress.getPublicKeys();
     if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
