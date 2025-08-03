@@ -599,7 +599,7 @@
                                     Game Cancelled: Draining Stake
                                 </p>
                                 <p class="text-xs mt-1 {$mode === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}">
-                                    A portion of the creator's stake can now be claimed periodically.
+                                    A portion of the creator's stake can now be claimed periodically. {game.unlockHeight}
                                 </p>
                                 {#await drainInfoPromise}
                                     <Button disabled class="w-full mt-3 py-2.5 text-base bg-slate-700 opacity-60 cursor-not-allowed">
@@ -608,7 +608,8 @@
                                     </Button>
                                 {:then data}
                                     <Button on:click={setupDrainingStake} disabled={!data.isAllowed} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
-                                        <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
+                                        <Trophy class="mr-2 h-4 w-4"/>
+                                        Drain Creator Stake
                                     </Button>
 
                                     {#if !data.isAllowed && game.unlockHeight > 0}
