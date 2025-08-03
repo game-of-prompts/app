@@ -93,7 +93,6 @@
             const deadlineDateObj = new Date(deadlineTimestamp);
             deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
-            console.log("EXECUTING initializeCardStateInternal for game:", currentGame.boxId);
             updateDisplayMessages();
 
             if (!currentGame.ended && !participationEnded) {
@@ -117,7 +116,6 @@
         initializeCardStateInternal(game);
     }
 
-    console.warn("8888 GameCard: Initialized with game:", game);
     onMount(() => {
         if (game) initializeCardStateInternal(game);
         else {
