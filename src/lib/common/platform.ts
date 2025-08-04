@@ -71,6 +71,18 @@ export interface Platform {
     ): Promise<string | null>;
 
     /**
+     * Reclama el reembolso de una participación en un juego "Game of Prompts".
+     * @param game - El objeto Game del que se reclama el reembolso.
+     * @param participationBoxId - El ID del box de la participación.
+     * @param claimerAddressString - La dirección Ergo del usuario que reclama el reembolso.
+     * @returns Una promesa que se resuelve con el ID de la transacción si tiene éxito, o null en caso contrario.
+    claimRefundParticipation(
+        game: Game,
+        participationBoxId: string,
+        claimerAddressString: string
+    ): Promise<string | null>;
+
+    /**
      * Obtiene los juegos "Game of Prompts" activos.
      * @param offset - Opcional, para paginación.
      * @returns Un Map con los juegos activos, donde la clave es el ID del juego.

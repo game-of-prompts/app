@@ -8,6 +8,7 @@ import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
 import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
+import { claim_refund_from_cancelled_game } from './actions/claim_refund_from_cancelled_game';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -190,6 +191,23 @@ export class ErgoPlatform implements Platform{
         return await cancel_game_before_deadline(
             game,
             secretS_hex,
+            claimerAddressString
+        );
+    }
+
+    async claimRefundFromCancelledGame(
+        game: Game,
+        participation: any,
+        claimerAddressString: string
+    ): Promise<string | null> {
+        if (!ergo) {
+            throw new Error("Wallet not connected or Ergo connector not available.");
+        }
+
+        console.log("ErgoPlatform: Calling claim_refund_from_cancelled_game_transaction.");
+        return await claim_refund_from_cancelled_game(
+            game,
+            participation,
             claimerAddressString
         );
     }

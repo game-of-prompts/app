@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { type Game, iGameDrainingStaking, isGameDrainingAllowed, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
+    import { type Game, GameState, iGameDrainingStaking, isGameDrainingAllowed, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
@@ -26,6 +26,9 @@
     import { mode } from "mode-watcher";
 
     // --- COMPONENT STATE ---
+
+    let isClaimingRefundFor: string | null = null; // Stores the boxId of the participation currently claiming a refund.
+    let claimRefundError: { [boxId: string]: string | null } = {}; // Stores errors by boxId.
 
     interface WinnerInfo {
         playerAddress: string;
@@ -319,6 +322,29 @@
             transactionId = result;
         } catch (e: any) { errorMessage = e.message || "Error draining stake.";
         } finally { isSubmitting = false; }
+    }
+
+    async function handleClaimRefund(participation: Participation) {
+        if (!game) return;
+
+        // Reset the error state for this specific participation
+        claimRefundError[participation.boxId] = null;
+        isClaimingRefundFor = participation.boxId; // Activate loading state
+
+        try {
+            // We assume a new method exists in the ErgoPlatform class
+            const result = await platform.claimRefundFromCancelledGame(game, participation, get(address) ?? "");
+            
+            // The global transactionId can be used to display a general success message
+            transactionId = result;
+            errorMessage = null; // Clear global errors
+
+        } catch (e: any) {
+            // Save the specific error for this card
+            claimRefundError[participation.boxId] = e.message || "Error claiming refund.";
+        } finally {
+            isClaimingRefundFor = null; // Deactivate loading state
+        }
     }
 
     async function handleJsonFileUpload(event: Event) {
@@ -728,6 +754,35 @@
                                         {/if}
                                     </div>
                                 </div>
+                                {#each game.participations as p (p.boxId)}
+                                    {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
+                                    {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant}
+
+                                    <div class="participation-card ...">
+                                        <div class="card-body ...">
+                                            {#if canClaimRefund}
+                                                <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                                    <p class="text-xs mb-2 {$mode === 'dark' ? 'text-blue-400' : 'text-blue-600'}">
+                                                        With the secret now revealed, the game has been canceled. Please claim a refund of your participation fee.
+                                                    </p>
+                                                    <Button 
+                                                        on:click={() => handleClaimRefund(p)} 
+                                                        disabled={isClaimingRefundFor === p.boxId}
+                                                        class="w-full text-base bg-blue-600 hover:bg-blue-700">
+                                                        {#if isClaimingRefundFor === p.boxId}
+                                                            Processing...
+                                                        {:else}
+                                                            <Trophy class="mr-2 h-4 w-4"/> Claim Refund
+                                                        {/if}
+                                                    </Button>
+                                                    {#if claimRefundError[p.boxId]}
+                                                        <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
+                                                    {/if}
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/each}
                             </div>
                         </div>
                     {/each}
