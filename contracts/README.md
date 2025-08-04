@@ -35,7 +35,7 @@ This contract governs the main game box, holding the prize pool, creator's stake
 * **R5: (Long, Coll\[Byte\]) \- StateTuple:** The core state register.  
   * If StateTuple.\_1 \== 0 (Active): StateTuple.\_2 holds hashS, the hash of the game's secret.  
   * If StateTuple.\_1 \> 0 (Canceled): StateTuple.\_2 holds the revealed secret S, and StateTuple.\_1 is the unlockHeight for the next stake withdrawal.  
-* **R6: Coll\[Byte\] \- expectedParticipationScriptHash:** The script hash of participation.es.  
+* **R6: Coll\[Byte\] \- {TODO}
 * **R7: Coll\[Long\] \- numericalParameters:** A collection \[deadline, creatorStake, participationFee\]. The creatorStake value is reduced if the game is canceled.  
 * **R8: Int \- commissionPercentage:** The creator's commission percentage.  
 * **R9: Coll\[Byte\] \- gameDetailsJsonHex:** Game details in JSON/Hex format.  

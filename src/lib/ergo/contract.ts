@@ -20,7 +20,10 @@ function ensureGameBoxCompiled(): void {
     if (!_gopGameBoxErgoTree) {
         console.log("Compiling GameBox script...");
         try {
-            _gopGameBoxErgoTree = compile(GOP_GAME_BOX_SCRIPT_SOURCE, { version: ergoTreeVersion });
+            const participation_box_script_hash = getGopParticipationBoxScriptHash();
+            let scriptSource = GOP_GAME_BOX_SCRIPT_SOURCE;
+            scriptSource = scriptSource.replace(/\$PARTICIPATION_BOX_SCRIPT_HASH/g, participation_box_script_hash);
+            _gopGameBoxErgoTree = compile(scriptSource, { version: ergoTreeVersion });
             console.log("GameBox script compiled successfully.");
         } catch (e) {
             console.error("ERROR Compiling GameBox script:", e); // Loguear el script fuente puede ser muy verboso
@@ -102,7 +105,7 @@ export function getGopGameBoxTemplateHash(): string {
 
 /**
  * Calcula el hash del ErgoTree *completo* del script de la ParticipationBox.
- * Este es el hash que se almacena en R6 de la GameBox y DEBE usar blake2b256
+ * Este es el hash que se almacena en la constante de la GameBox y DEBE usar blake2b256
  * si el script de la GameBox usa blake2b256 para la verificación.
  * @returns El hash del script en formato hexadecimal.
  */

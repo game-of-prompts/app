@@ -2,13 +2,16 @@
   // === Constants ===
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
+  // val DEV_ADDRESS = fromBase16("$DEV_ADDRESS")
+  // val DEV_PERCENT_FEE = 5
+  val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("$PARTICIPATION_BOX_SCRIPT_HASH")
 
   // === Register Definitions (GameBox) ===
   // R4: Coll[Byte] - gameCreatorPK: Raw bytes of the game creator's public key.
   // R5: (Long, Coll[Byte]) - StateTuple: (unlockHeight, secretOrHash)
   //     - If unlockHeight == 0, secretOrHash is hashS.
   //     - If unlockHeight > 0, secretOrHash is the revealed S, and unlockHeight is the next claim block.
-  // R6: Coll[Byte] - expectedParticipationScriptHash: Blake2b256 hash of the expected ErgoTree script for ParticipationBoxes.
+  // R6: Coll[Byte] - AUXILIAR FOR POKER MODE, MULTICHAIN, ETC ...
   // R7: Coll[Long] - numericalParameters: Collection [deadline, creatorStake, participationFee]
   //                   - numericalParameters(0) (deadline): Block height limit for participation/resolution.
   //                   - numericalParameters(1) (creatorStake): Creator's ERG stake.
@@ -34,8 +37,6 @@
   }
 
   val action2_not_initialized = unlockHeight_in_self == 0L
-
-  val expectedParticipationScriptHash = SELF.R6[Coll[Byte]].get
   
   val numericalParams = SELF.R7[Coll[Long]].get
   val deadline = numericalParams(0)
@@ -92,7 +93,7 @@
             val isStructurallyValidPBox = if (hasAllNeededRegisters) {
                                             gameNftId_opt_pBox.get == gameNftId &&
                                             pBox.value >= participationFee &&
-                                            blake2b256(pBox.propositionBytes) == expectedParticipationScriptHash
+                                            blake2b256(pBox.propositionBytes) == PARTICIPATION_BOX_SCRIPT_HASH
                                           } else { false }
 
             if (isStructurallyValidPBox) {

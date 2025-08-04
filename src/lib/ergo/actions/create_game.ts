@@ -61,9 +61,6 @@ export async function create_game(
 
     const hashedSecretBytes = hexToBytes(hashedSecret);
     if (!hashedSecretBytes) throw new Error("Failed to convert hashedSecret hex to bytes.");
-    
-    const expectedParticipationScriptHashBytes = hexToBytes(getGopParticipationBoxScriptHash());
-    if (!expectedParticipationScriptHashBytes) throw new Error("Failed to convert expected participation script hash hex to bytes.");
 
     const gameBoxOutput = new OutputBuilder(
         outputBoxValue,
@@ -76,7 +73,7 @@ export async function create_game(
     .setAdditionalRegisters({
         R4: SColl(SByte, creatorPkBytes_for_R4).toHex(),
         R5: SPair(SLong(0n), SColl(SByte, hashedSecretBytes)).toHex(),
-        R6: SColl(SByte, expectedParticipationScriptHashBytes).toHex(),
+        R6: SColl(SByte, "0008cd").toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
         R8: SInt(commissionPercentage).toHex(),
         R9: SString(gameDetailsJson)

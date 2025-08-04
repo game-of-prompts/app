@@ -252,7 +252,7 @@ The Game of Prompts system on Ergo is based on two main contracts: `game.es` whi
           * `participationFee` (ERG fee per participation).
       * `commissionPercentage` (commission percentage for the creator) in `R8`.
       * `gameCreatorPK` (bytes of the creator's public key) in `R4`.
-      * `expectedParticipationScriptHash` (hash of the `participation.es` script) in `R6`.
+      * {TODO} in `R6`.
       * `gameDetailsJsonHex` (game details in hexadecimal JSON format) in `R9`.
       * The `game.es` script governs the behavior of this `GameBox`.
 

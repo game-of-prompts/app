@@ -791,7 +791,7 @@
                                                         <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
                                                     {/if}
                                                 </div>
-                                            {:else if p.spent && isCurrentUserParticipant} <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                            {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)} <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                                                     <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
                                                         <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
                                                         A refund has already been requested.

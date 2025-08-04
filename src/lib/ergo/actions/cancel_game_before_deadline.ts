@@ -122,9 +122,6 @@ export async function cancel_game_before_deadline(
         throw new Error(msg);
     }
     const creatorPkBytes_for_R4 = pkBytesArrayFromAddress[0];
-    
-    const expectedParticipationScriptHashBytes = hexToBytes(getGopParticipationBoxScriptHash());
-    if (!expectedParticipationScriptHashBytes) throw new Error("Failed to convert expected participation script hash hex to bytes.");
 
     // OUTPUT(0): The re-created GameBox with updated state
     const recreatedGameBoxOutput = new OutputBuilder(
@@ -135,7 +132,7 @@ export async function cancel_game_before_deadline(
     .setAdditionalRegisters({
         R4: SColl(SByte, creatorPkBytes_for_R4).toHex(),
         R5:  SPair(SLong(newUnlockHeight), SColl(SByte, secretS_bytes)).toHex(),
-        R6: SColl(SByte, expectedParticipationScriptHashBytes).toHex(),
+        R6: SColl(SByte, "0008cd").toHex(),
         R7: SColl(SLong, [BigInt(game.deadlineBlock), newCreatorStake, participationFeeNanoErg]).toHex(),
         R8: SInt(game.commissionPercentage).toHex(),
         R9: SString(game.content.rawJsonString)
