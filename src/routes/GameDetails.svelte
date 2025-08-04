@@ -29,6 +29,7 @@
 
     let isClaimingRefundFor: string | null = null; // Stores the boxId of the participation currently claiming a refund.
     let claimRefundError: { [boxId: string]: string | null } = {}; // Stores errors by boxId.
+    let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
 
     interface WinnerInfo {
         playerAddress: string;
@@ -336,8 +337,8 @@
             const result = await platform.claimRefundFromCancelledGame(game, participation, get(address) ?? "");
             
             // The global transactionId can be used to display a general success message
-            transactionId = result;
-            errorMessage = null; // Clear global errors
+            claimRefundSuccessTxId[participation.boxId] = result; 
+            claimRefundError[participation.boxId] = null;
 
         } catch (e: any) {
             // Save the specific error for this card
@@ -756,7 +757,7 @@
                                 </div>
                                 {#each game.participations as p (p.boxId)}
                                     {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                                    {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant}
+                                    {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant && !p.spent}
 
                                     <div class="participation-card ...">
                                         <div class="card-body ...">
@@ -775,9 +776,26 @@
                                                             <Trophy class="mr-2 h-4 w-4"/> Claim Refund
                                                         {/if}
                                                     </Button>
+                                                
+
+                                                    {#if claimRefundSuccessTxId[p.boxId]}
+                                                        <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
+                                                            <strong>Success! Transaction ID:</strong><br/>
+                                                            <a href="{web_explorer_uri_tx + claimRefundSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
+                                                                {claimRefundSuccessTxId[p.boxId]}
+                                                            </a>
+                                                        </div>
+                                                    {/if}
+
                                                     {#if claimRefundError[p.boxId]}
                                                         <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
                                                     {/if}
+                                                </div>
+                                            {:else if p.spent && isCurrentUserParticipant} <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                                    <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
+                                                        <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
+                                                        A refund has already been requested.
+                                                    </div>
                                                 </div>
                                             {/if}
                                         </div>

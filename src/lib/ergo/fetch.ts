@@ -240,6 +240,8 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
 
             for (const pBox of items) {
 
+                console.log("Processing participation box:", pBox);
+
                 // Parse participation data.
                 const playerPK_Hex = parseCollByteToHex(pBox.additionalRegisters.R4?.renderedValue);
                 const commitmentC_Hex = parseCollByteToHex(pBox.additionalRegisters.R5?.renderedValue);
@@ -269,7 +271,7 @@ export async function fetchParticipationsForGame(gameNftIdHex: string): Promise<
                 
                 if (playerPK_Hex && commitmentC_Hex && solverId_RawBytesHex && hashLogs_Hex && scoreList_parsed.length > 0) {
                     participationsList.push({
-                        boxId: pBox.boxId, box: pBox,
+                        boxId: pBox.boxId, box: pBox, spent: pBox.spentTransactionId !== null,
                         transactionId: pBox.transactionId, creationHeight: pBox.creationHeight,
                         value: BigInt(pBox.value), playerPK_Hex, commitmentC_Hex, solverId_RawBytesHex,
                         solverId_String, hashLogs_Hex, scoreList: scoreList_parsed,

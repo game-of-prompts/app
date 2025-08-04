@@ -47,6 +47,7 @@ export interface Participation {
     transactionId: string;
     creationHeight: number;
     value: bigint;
+    spent: boolean;
 
     playerPK_Hex: string;
     commitmentC_Hex: string;
