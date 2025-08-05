@@ -248,6 +248,12 @@
       } else { false } // Incorrect number of outputs
     } else { false } // Action only valid before the deadline
   }
+
+  val action3_withdrawFunds = {
+    // Aqui se debe de agregar toda la parte de la accion 1 dedicada a transferir los fondos al ganador y al creador.
+
+    // ¿Gastar la caja y crear otra en un nuevo estado? ¿No gastar la caja, pero crear una nueva que contenga el candidato? ¿enviarle el NFT a la nueva caja? ¿referenciar la nueva caja en un registro? ¿referenciar la participacion candidata?
+  }
   
   // The script allows spending the GameBox if it's a valid resolution.
   sigmaProp(action1_isValidResolution || action2_isValidCancellation)
