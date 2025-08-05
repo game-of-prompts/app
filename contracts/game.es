@@ -2,8 +2,8 @@
   // === Constants ===
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
-  // val DEV_ADDRESS = fromBase16("$DEV_ADDRESS")
-  // val DEV_PERCENT_FEE = 5
+  // val DEV_TRIBE_ADDRESS = fromBase16("$DEV_TRIBE_ADDRESS")
+  // val DEV_TRIBE_PERCENT_FEE = 5
   val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("$PARTICIPATION_BOX_SCRIPT_HASH")
 
   // === Register Definitions (GameBox) ===
@@ -161,7 +161,8 @@
 
         if (foundAWinningCandidate) {
             val creatorCommissionAmount = finalTotalPrizePool * commissionPercentage / 100
-            val finalWinnerPrize = finalTotalPrizePool - creatorCommissionAmount
+            val devTribeFee = 0L // DEV_TRIBE_PERCENT_FEE * finalTotalPrizePool / 100 // Uncomment if needed
+            val finalWinnerPrize = finalTotalPrizePool - creatorCommissionAmount - devTribeFee
             
             val onChainWinnerP2PKPropBytes = P2PK_ERGOTREE_PREFIX ++ finalWinnerPKBytes
 
@@ -177,6 +178,9 @@
                                          creatorOutput.tokens.size == 0
             val creatorReceivesCommissionAndStake = creatorOutput.value >= creatorCommissionAmount + creatorStake &&
                                                     creatorOutputNoGameNft
+
+            // val devTribeOutput = OUTPUTS.find(_.propositionBytes == DEV_TRIBE_ADDRESS) // Uncomment if needed
+            // val devTribeReceivesFee = devTribeOutput.exists(_.value >= devTribeFee) // Uncomment if needed
             
             winnerReceivesCorrectPrize && creatorReceivesCommissionAndStake
         } else { false }
