@@ -157,7 +157,7 @@
         val finalWinnerPKBytes = finalNestedWinnerAndPool._1
         val finalTotalPrizePool = finalNestedWinnerAndPool._2
 
-        val foundAWinningCandidate = finalWinnerPKBytes.size > 0  // That works.
+        val foundAWinningCandidate = finalWinnerPKBytes.size > 0
 
         if (foundAWinningCandidate) {
             val creatorCommissionAmount = finalTotalPrizePool * commissionPercentage / 100
@@ -211,7 +211,8 @@
           sIsCorrect && unlockHeightIsCorrect
         } else { false }
 
-        // --- Case B: Subsequent withdrawals (draining the stake) ---   TODO This state could be a cancelled.es script box, that contains the token id of the game and is used by the participations as data input.
+        // --- Case B: Subsequent withdrawals (draining the stake) ---   
+        // COULD BE: This state could be a cancelled.es script box, that contains the token id of the game and is used by the participations as data input.  Only needs the R5 data.   This maintains a more lightweight box on this scenario. But makes incompatible with light clients because the game.es is spent in the previous action.
         val caseB = if (unlockHeight_in_self > 0L) {
           // 1. Check if the cooldown period has passed
           val cooldownIsOver = HEIGHT >= unlockHeight_in_self
