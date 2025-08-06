@@ -7,14 +7,16 @@
   val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("$PARTICIPATION_BOX_SCRIPT_HASH")
 
   // === Register Definitions (GameBox) ===
-  // R4: (Coll[Byte], Int) - gameCreatorPK: Game creator's public key and commission percentage.
-  // R5: Coll[Byte] - SecretHash
+  // R4: Coll[Byte] - gameCreatorPK: Raw bytes of the game creator's public key.
+  // R5: (Long, Coll[Byte]) - StateTuple: (unlockHeight, secretOrHash)
+  //     - If unlockHeight == 0, secretOrHash is hashS.
+  //     - If unlockHeight > 0, secretOrHash is the revealed S, and unlockHeight is the next claim block.
   // R6: Coll[Byte] - AUXILIAR FOR POKER MODE, MULTICHAIN, ETC ...
   // R7: Coll[Long] - numericalParameters: Collection [deadline, creatorStake, participationFee]
   //                   - numericalParameters(0) (deadline): Block height limit for participation/resolution.
   //                   - numericalParameters(1) (creatorStake): Creator's ERG stake.
   //                   - numericalParameters(2) (participationFee): ERG participation fee.
-  // R8: 
+  // R8: Int        - commissionPercentage: Commission percentage for the creator (e.g., 5 for 5%).
   // R9: Coll[Byte] - gameDetailsJsonHex: JSON String (UTF-8 -> Hex) with game details (title, description, etc.).
 
   // === Tokens (GameBox) ===
@@ -245,6 +247,13 @@
         (caseA || caseB) && claimerGetsPortion && gameBoxIntegrityPreserved
       } else { false } // Incorrect number of outputs
     } else { false } // Action only valid before the deadline
+  }
+
+  val action3_withdrawFunds = {
+    // Aqui se debe de agregar toda la parte de la accion 1 dedicada a transferir los fondos al ganador y al creador.
+
+    // ¿Gastar la caja y crear otra en un nuevo estado? ¿No gastar la caja, pero crear una nueva que contenga el candidato? ¿enviarle el NFT a la nueva caja? ¿referenciar la nueva caja en un registro? ¿referenciar la participacion candidata?
+    true
   }
   
   // The script allows spending the GameBox if it's a valid resolution.
