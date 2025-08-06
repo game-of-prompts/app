@@ -1,252 +1,172 @@
 {
-  // === Constants ===
+  // =================================================================
+  // === CONSTANTES Y HASHES DE SCRIPTS
+  // =================================================================
+
+  // Hashes de los scripts a los que esta caja puede transicionar.
+  // Estos valores deben ser reemplazados por los hashes reales de los scripts compilados.
+  val GAME_RESOLUTION_SCRIPT_HASH = fromBase16("...") 
+  val GAME_CANCELLATION_SCRIPT_HASH = fromBase16("...")
+  
+  // Hash del script que gobierna las cajas de participación de los jugadores.
+  val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("...")
+
+  // Hash del script de las participaciones una vez que el juego ha pasado a la fase de resolución.
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...")
+
+  // Constantes para la acción de cancelación.
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
-  // val DEV_TRIBE_ADDRESS = fromBase16("$DEV_TRIBE_ADDRESS")
-  // val DEV_TRIBE_PERCENT_FEE = 5
-  val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("$PARTICIPATION_BOX_SCRIPT_HASH")
 
-  // === Register Definitions (GameBox) ===
-  // R4: (Coll[Byte], Int) - gameCreatorPK: Game creator's public key and commission percentage.
-  // R5: Coll[Byte] - SecretHash
-  // R6: Coll[Byte] - AUXILIAR FOR POKER MODE, MULTICHAIN, ETC ...
-  // R7: Coll[Long] - numericalParameters: Collection [deadline, creatorStake, participationFee]
-  //                   - numericalParameters(0) (deadline): Block height limit for participation/resolution.
-  //                   - numericalParameters(1) (creatorStake): Creator's ERG stake.
-  //                   - numericalParameters(2) (participationFee): ERG participation fee.
-  // R8: 
-  // R9: Coll[Byte] - gameDetailsJsonHex: JSON String (UTF-8 -> Hex) with game details (title, description, etc.).
+  // =================================================================
+  // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
+  // =================================================================
 
-  // === Tokens (GameBox) ===
-  // SELF.tokens(0): (gameNftId: Coll[Byte], amount: Long) - Unique game NFT, amount 1L.
+  // R4: (Coll[Byte], Int) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
+  // R5: Coll[Byte]        - secretHash: Hash del secreto 'S' (blake2b256(S)).
+  // R6: Coll[Byte]        - gameAuxData: Datos auxiliares para diferentes modos de juego.
+  // R7: Coll[Long]        - numericalParameters: [deadline, creatorStake, participationFee].
+  // R8:                   -   - (No utilizado en este estado).
+  // R9: Coll[Byte]        - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
+  
+  // =================================================================
+  // === EXTRACCIÓN DE VALORES
+  // =================================================================
 
-  // === Value Extraction ===
-
-  val gameCreatorPK = SELF.R4[Coll[Byte]].get
-
-  val stateTuple_R5 = SELF.R5[(Long, Coll[Byte])].get
-  val unlockHeight_in_self = stateTuple_R5._1 // unlockHeight is now the first element
-  val secretOrHash_in_self = stateTuple_R5._2 // secretOrHash is now the second element
-
-  val hashS_in_self = if (unlockHeight_in_self == 0L) {
-    secretOrHash_in_self // If unlockHeight is 0, this is the hashS
-  } else {
-    blake2b256(secretOrHash_in_self) // If unlockHeight > 0, this is the revealed S
-  }
-
-  val action2_not_initialized = unlockHeight_in_self == 0L
+  val creatorInfo = SELF.R4[(Coll[Byte], Int)].get
+  val gameCreatorPK = creatorInfo._1
+  
+  val secretHash = SELF.R5[Coll[Byte]].get
   
   val numericalParams = SELF.R7[Coll[Long]].get
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
   
-  val commissionPercentage = SELF.R8[Int].get
-  val gameNftId = SELF.tokens(0)._1
-
-  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd") // For PK() workaround
-  val gameCreatorP2PKPropBytes = P2PK_ERGOTREE_PREFIX ++ gameCreatorPK
+  val gameNft = SELF.tokens(0)
+  val gameNftId = gameNft._1
 
   val isAfterDeadline = HEIGHT >= deadline
-  val isBeforeDeadline = HEIGHT < deadline 
+  val isBeforeDeadline = HEIGHT < deadline
 
-  // === ACTION 1: Game Resolution (On-Chain Winner Determination) ===
-  val action1_isValidResolution = {
-    if (isAfterDeadline && OUTPUTS.size > 1 && action2_not_initialized) {
-      val winnerOutput = OUTPUTS(0)
-      val creatorOutput = OUTPUTS(1)
-      val revealedS_fromOutput = creatorOutput.R4[Coll[Byte]].get 
+  // =================================================================
+  // === ACCIÓN 1: TRANSICIÓN A RESOLUCIÓN
+  // =================================================================
+  // Se ejecuta después de la fecha límite para iniciar la fase de resolución.
+  // Consume esta caja y todas las participaciones, creando una nueva caja 'game_resolution.es'.
+
+  val action1_transitionToResolution = {
+    if (isAfterDeadline) {
+      val resolutionBox = OUTPUTS(0)
       
-      val sCorrectlyRevealedAndOutputAuthorized = creatorOutput.propositionBytes == gameCreatorP2PKPropBytes &&
-                                                  blake2b256(revealedS_fromOutput) == hashS_in_self
+      // El secreto 'S' debe ser revelado en el R5 de la nueva caja de resolución.
+      val revealedS = resolutionBox.R5[Coll[Byte]].get
+      val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
 
-      if (sCorrectlyRevealedAndOutputAuthorized) {
-        val participationInputs = INPUTS.slice(1, INPUTS.size)   // Contains aggregated boxes to pay the transaction fee. They will be avoided within the fold with isStructurallyValidPBox
+      // La nueva caja debe tener el script de resolución.
+      val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH
+      
+      if (sIsCorrectlyRevealed && transitionsToResolutionScript) {
+        val participantInputs = INPUTS.slice(1, INPUTS.size)
         
-        // Outer fold state: (maxScore, (winnerPK, prizePool))
-        val initialOuterFoldState = (-1L, (Coll[Byte](), 0L))
+        // Se realiza un 'fold' sobre las participaciones para encontrar al candidato inicial y el pozo total.
+        val initialFoldState = (-1L, (Coll[Byte](), Coll[Byte](), 0L)) // (maxScore, winnerCommitment, winnerPK, prizePool)
+        val foldResult = participantInputs.fold(initialFoldState, { (acc, pBox) =>
+          if (blake2b256(pBox.propositionBytes) == PARTICIPATION_BOX_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
+            val pBoxScoreList = pBox.R9[Coll[Long]].get
+            val pBoxCommitment = pBox.R5[Coll[Byte]].get
 
+            // Inner fold para encontrar el score verdadero del jugador.
+            val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc, score) =>
+              if (scoreAcc._2) {
+                scoreAcc
+              } else {
+                val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
+                if (testCommitment == pBoxCommitment) { (score, true) } else { scoreAcc }
+              }
+            })
 
-        val outerFoldResult = participationInputs.fold(initialOuterFoldState, { 
-          (accOuter: (Long, (Coll[Byte], Long)), pBox: Box) =>
-            
-            val prevMaxScore = accOuter._1
+            val actualScore = scoreCheckResult._1
+            val isValidParticipant = scoreCheckResult._2
 
-            val nestedWinnerAndPool = accOuter._2
-            val prevWinnerPK = nestedWinnerAndPool._1
-            val prevPrizePool = nestedWinnerAndPool._2
-
-            // Extract optionals and validate pBox structure
-            val pBoxPlayerPK_opt = pBox.R4[Coll[Byte]]
-            val pBoxCommitment_opt = pBox.R5[Coll[Byte]]
-            val gameNftId_opt_pBox = pBox.R6[Coll[Byte]]
-            val pBoxSolverId_opt = pBox.R7[Coll[Byte]]
-            val pBoxHashLogs_opt = pBox.R8[Coll[Byte]]
-            val pBoxScoreList_opt = pBox.R9[Coll[Long]]
-
-            val hasAllNeededRegisters = pBoxPlayerPK_opt.isDefined && pBoxCommitment_opt.isDefined &&
-                                        gameNftId_opt_pBox.isDefined && pBoxSolverId_opt.isDefined &&
-                                        pBoxHashLogs_opt.isDefined && pBoxScoreList_opt.isDefined
-
-            val isStructurallyValidPBox = if (hasAllNeededRegisters) {
-                                            gameNftId_opt_pBox.get == gameNftId &&
-                                            pBox.value >= participationFee &&
-                                            blake2b256(pBox.propositionBytes) == PARTICIPATION_BOX_SCRIPT_HASH
-                                          } else { false }
-
-            if (isStructurallyValidPBox) {
-                val pBoxPlayerPK = pBoxPlayerPK_opt.get
-                val pBoxCommitment = pBoxCommitment_opt.get
-                val pBoxSolverId = pBoxSolverId_opt.get
-                val pBoxHashLogs = pBoxHashLogs_opt.get
-                val pBoxScoreList = pBoxScoreList_opt.get
-
-                // Inner fold to find the validated score in pBoxScoreList
-                // Inner fold state: (foundScore: Long, scoreIsValidated: Boolean)
-                val initialInnerFoldState = (-1L, false)
-                val innerFoldResult = pBoxScoreList.fold(initialInnerFoldState, {
-                    (accInner: (Long, Boolean), scoreAttempt: Long) =>
-                        val previouslyFoundScore = accInner._1
-                        val previouslyValidated = accInner._2
-
-                        if (previouslyValidated) { // If we already found one, no need to keep searching
-                            accInner 
-                        } else {
-                            val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(scoreAttempt) ++ pBoxHashLogs ++ revealedS_fromOutput)
-                            if (testCommitment == pBoxCommitment) {
-                                (scoreAttempt, true) // Score found and validated
-                            } else {
-                                accInner // Keep previous state, continue searching
-                            }
-                        }
-                })
-                
-                val actualScoreForThisPBox = innerFoldResult._1
-                val scoreFoundAndValidated = innerFoldResult._2
-
-                if (scoreFoundAndValidated) {
-                    val updatedPrizePool = prevPrizePool + pBox.value
-
-                    val comparitionResult = {
-                        if (actualScoreForThisPBox > prevMaxScore) {
-                            (actualScoreForThisPBox, pBoxPlayerPK)
-                        } else if (actualScoreForThisPBox == prevMaxScore && prevMaxScore != -1L) {
-                             // Tie-breaking Logic: We keep the first one found with the maximum score.
-                             // If you wanted to use creationHeight, 'accOuter' and 'initialOuterFoldState'
-                             // would need an additional field for 'winnerCreationHeight'.
-                            (prevMaxScore, prevWinnerPK)
-                        } else {
-                            (prevMaxScore, prevWinnerPK)
-                        }
-                    }
-                        
-                    (comparitionResult._1, (comparitionResult._2, updatedPrizePool))
-                } else {
-                    (prevMaxScore, (prevWinnerPK, prevPrizePool)) 
-                }
+            if (isValidParticipant && actualScore > acc._1) {
+              // Nuevo score máximo encontrado.
+              (actualScore, (pBoxCommitment, pBox.R4[Coll[Byte]].get, acc._2._2._2 + pBox.value))
+            } else if (isValidParticipant) {
+              // No es un nuevo máximo, solo se suma al pozo.
+              (acc._1, (acc._2._1, acc._2._2._1, acc._2._2._2 + pBox.value))
             } else {
-                (prevMaxScore, (prevWinnerPK, prevPrizePool))
+              acc // Participación inválida, se ignora.
             }
+          } else {
+            acc // No es una caja de participación válida.
+          }
         })
+        
+        val winnerCandidateCommitment = foldResult._2._1
+        val totalPrizePool = foldResult._2._2._2
+        val numParticipants = participantInputs.size
 
-        val finalMaxScore = outerFoldResult._1  // not used.
+        // Validar que la nueva caja 'game_resolution.es' se crea correctamente.
+        val resolutionBoxIsValid = {
+          resolutionBox.value >= totalPrizePool + creatorStake &&
+          resolutionBox.tokens.contains(gameNft) &&
+          resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, numParticipants) && // resolutionDeadline, resolvedCounter
+          resolutionBox.R6[Coll[Long]].get == numericalParams &&
+          resolutionBox.R7[Coll[Byte]].get == winnerCandidateCommitment &&
+          resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo
+        }
 
-        val finalNestedWinnerAndPool = outerFoldResult._2
-        val finalWinnerPKBytes = finalNestedWinnerAndPool._1
-        val finalTotalPrizePool = finalNestedWinnerAndPool._2
-
-        val foundAWinningCandidate = finalWinnerPKBytes.size > 0
-
-        if (foundAWinningCandidate) {
-            val creatorCommissionAmount = finalTotalPrizePool * commissionPercentage / 100
-            val devTribeFee = 0L // DEV_TRIBE_PERCENT_FEE * finalTotalPrizePool / 100 // Uncomment if needed
-            val finalWinnerPrize = finalTotalPrizePool - creatorCommissionAmount - devTribeFee
-            
-            val onChainWinnerP2PKPropBytes = P2PK_ERGOTREE_PREFIX ++ finalWinnerPKBytes
-
-            val winnerOutputHasNft = winnerOutput.tokens.size == 1 && 
-                                     winnerOutput.tokens(0)._1 == gameNftId && 
-                                     winnerOutput.tokens(0)._2 == 1L
-
-            val winnerReceivesCorrectPrize = winnerOutput.value >= finalWinnerPrize &&
-                                             winnerOutput.propositionBytes == onChainWinnerP2PKPropBytes && 
-                                             winnerOutputHasNft
-            
-            val creatorOutputNoGameNft = creatorOutput.tokens.forall({(token: (Coll[Byte], Long)) => token._1 != gameNftId}) || 
-                                         creatorOutput.tokens.size == 0
-            val creatorReceivesCommissionAndStake = creatorOutput.value >= creatorCommissionAmount + creatorStake &&
-                                                    creatorOutputNoGameNft
-
-            // val devTribeOutput = OUTPUTS.find(_.propositionBytes == DEV_TRIBE_ADDRESS) // Uncomment if needed
-            // val devTribeReceivesFee = devTribeOutput.exists(_.value >= devTribeFee) // Uncomment if needed
-            
-            winnerReceivesCorrectPrize && creatorReceivesCommissionAndStake
-        } else { false }
-      } else { false } 
-    } else { false } 
+        // Validar que todas las participaciones se recrean como cajas 'participation_resolved.es'.
+        val participantOutputs = OUTPUTS.slice(1, OUTPUTS.size)
+        val participationsAreRecreated = participantOutputs.forall { outBox =>
+          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+          outBox.tokens(0)._1 == gameNftId
+        }
+        
+        resolutionBoxIsValid && participationsAreRecreated
+      } else { false }
+    } else { false }
   }
 
-  // === ACTION 2: Partial Penalty for Early Secret Revelation (NEW IMPLEMENTATION) ===
-  val action2_isValidCancellation = {
-    if (isBeforeDeadline) {
-      if (OUTPUTS.size >= 2) {
-        val recreatedGameBox = OUTPUTS(0)
-        val claimerOutput = OUTPUTS(1)
+  // =================================================================
+  // === ACCIÓN 2: TRANSICIÓN A CANCELACIÓN
+  // =================================================================
+  // Se ejecuta antes de la fecha límite si alguien revela el secreto para penalizar al creador.
+
+  val action2_transitionToCancellation = {
+    if (isBeforeDeadline && OUTPUTS.size >= 2) {
+      val cancellationBox = OUTPUTS(0)
+      val claimerOutput = OUTPUTS(1)
+
+      // El secreto 'S' debe ser revelado en el R5 de la nueva caja de cancelación.
+      val r5Tuple = cancellationBox.R5[(Long, Coll[Byte])].get
+      val revealedS = r5Tuple._2
+      val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
+
+      val transitionsToCancellationScript = blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH
+
+      if (sIsCorrectlyRevealed && transitionsToCancellationScript) {
         val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
         val remainingStake = creatorStake - stakePortionToClaim
         
-        // --- Shared validation for the claimer's output ---
         val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
-
-        // --- Case A: First withdrawal (revealing the secret) ---
-        val caseA = if (unlockHeight_in_self == 0L) {
-          val newR5Tuple = recreatedGameBox.R5[(Long, Coll[Byte])].get
-          val newUnlockHeight = newR5Tuple._1
-          val revealedS = newR5Tuple._2
-          
-          // 1. Check if the revealed S in the new box matches the original hash
-          val sIsCorrect = blake2b256(revealedS) == hashS_in_self
-          // 2. Check if the new unlock height is correctly set
-          // val unlockHeightIsCorrect = newUnlockHeight == HEIGHT + COOLDOWN_IN_BLOCKS
-          val unlockHeightIsCorrect = newUnlockHeight >= HEIGHT + COOLDOWN_IN_BLOCKS
-
-          sIsCorrect && unlockHeightIsCorrect
-        } else { false }
-
-        // --- Case B: Subsequent withdrawals (draining the stake) ---   
-        // COULD BE: This state could be a cancelled.es script box, that contains the token id of the game and is used by the participations as data input.  Only needs the R5 data.   This maintains a more lightweight box on this scenario. But makes incompatible with light clients because the game.es is spent in the previous action.
-        val caseB = if (unlockHeight_in_self > 0L) {
-          // 1. Check if the cooldown period has passed
-          val cooldownIsOver = HEIGHT >= unlockHeight_in_self
-          val newR5Tuple = recreatedGameBox.R5[(Long, Coll[Byte])].get
-          // 2. Check that S hasn't changed and the new unlock height is correct
-          val r5StateIsCorrect = newR5Tuple._2 == secretOrHash_in_self && // S is the same
-                                 newR5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS // Cooldown is reset
-
-          cooldownIsOver && r5StateIsCorrect
-        } else { false }
-
-        // --- Shared validation for the recreated GameBox's integrity ---
-        val gameBoxIntegrityPreserved = {
-          recreatedGameBox.propositionBytes == SELF.propositionBytes &&
-          recreatedGameBox.value >= remainingStake &&
-          recreatedGameBox.tokens == SELF.tokens &&
-          // Check that only the stake value in R7 is modified
-          recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&
-          recreatedGameBox.R7[Coll[Long]].get(1) == remainingStake &&
-          recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
-          // Check that other registers are untouched
-          recreatedGameBox.R4[Coll[Byte]].get == gameCreatorPK &&
-          recreatedGameBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
-          recreatedGameBox.R8[Int].get == SELF.R8[Int].get &&
-          recreatedGameBox.R9[Coll[Byte]].get == SELF.R9[Coll[Byte]].get
+        
+        // Validar la creación de la nueva caja 'game_cancellation.es'.
+        val cancellationBoxIsValid = {
+            cancellationBox.value >= remainingStake &&
+            cancellationBox.tokens.contains(gameNft) &&
+            r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS && // El nuevo 'unlockHeight'.
+            // Validar que los otros registros importantes se mantienen.
+            cancellationBox.R4[(Coll[Byte], Int)].get == creatorInfo &&
+            cancellationBox.R7[Coll[Long]].get == numericalParams
         }
         
-        (caseA || caseB) && claimerGetsPortion && gameBoxIntegrityPreserved
-      } else { false } // Incorrect number of outputs
-    } else { false } // Action only valid before the deadline
+        claimerGetsPortion && cancellationBoxIsValid
+      } else { false }
+    } else { false }
   }
-  
-  // The script allows spending the GameBox if it's a valid resolution.
-  sigmaProp(action1_isValidResolution || action2_isValidCancellation)
+
+  // Se permite el gasto si se cumple una de las dos transiciones de estado.
+  sigmaProp(action1_transitionToResolution || action2_transitionToCancellation)
 }
