@@ -1,87 +1,116 @@
 {
-  // === Register Definitions (ParticipationBox) ===
-  // R4: Coll[Byte] - playerPKBytes: Raw bytes of the player's PK.
-  // R5: Coll[Byte] - commitmentC: Cryptographic commitment with the true score.
-  //                   Format: blake2b256(solverId_R7 ++ longToByteArray(TRUE_SCORE_FROM_R9) ++ hashLogs_R8 ++ S_game)
-  // R6: Coll[Byte] - gameNftId: ID of the GameBox's NFT to which this participation belongs.
-  // R7: Coll[Byte] - solverId: Player's solver ID (UTF-8 bytes).
-  // R8: Coll[Byte] - hashLogs: Hash of the game logs (bytes).
-  // R9: Coll[Long] - scoreList: Collection of scores (Long), one of which is the true one.
-  // SELF.value:      Long    - participationFee: Fee paid by the player.
+  // =================================================================
+  // === CONSTANTES Y HASHES DE SCRIPTS
+  // =================================================================
 
-  // === Value Extraction from SELF ===
+  // Hash del script al que esta caja debe transicionar en la fase de resolución.
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...") // Placeholder
+
+  // Prefijo P2PK para la validación de direcciones.
+  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
+
+  // =================================================================
+  // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
+  // =================================================================
+
+  // R4: Coll[Byte] - playerPKBytes: Clave pública del jugador.
+  // R5: Coll[Byte] - commitmentC: Commitment criptográfico con la puntuación verdadera.
+  // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participación.
+  // R7: Coll[Byte] - solverId: ID del solver del jugador.
+  // R8: Coll[Byte] - hashLogs: Hash de los logs del juego del jugador.
+  // R9: Coll[Long] - scoreList: Lista de puntuaciones, una de las cuales es la verdadera.
+  
+  // =================================================================
+  // === EXTRACCIÓN DE VALORES
+  // =================================================================
+
   val playerPKBytes = SELF.R4[Coll[Byte]].get
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
-  // === Helper for P2PK Addresses ===
-  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
+  // =================================================================
+  // === ACCIONES DE GASTO
+  // =================================================================
 
-  // === Action 1: Spent as part of a Valid Game Resolution (Action 1 of GameBox) ===
+  // ### Acción 1: Transición a Participación Resuelta
+  // Esta acción se ejecuta cuando 'game_active.es' inicia la resolución.
   val spentInValidGameResolution = {
-    val gameBoxCandidate = INPUTS(0) // Assume GameBox is INPUTS(0) in the resolution tx
+    val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_active.es' es la primera entrada.
 
-    val gameBoxIsPlausible = gameBoxCandidate.tokens.size > 0 &&
-                             gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
-                             gameBoxCandidate.R4[Coll[Byte]].isDefined && // creatorPK
-                             gameBoxCandidate.R5[(Long, Coll[Byte])].isDefined && // hashS
-                             gameBoxCandidate.R7[Coll[Long]].isDefined &&
-                             gameBoxCandidate.R7[Coll[Long]].get.size == 3 // numericalParams
+    // Verificación de que la caja del juego es plausible.
+    val gameBoxIsPlausible =
+      // 1. Verificar que la caja candidata tiene el NFT del juego.
+      gameBoxCandidate.tokens.size > 0 &&
+      gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
+
+      // 2. Verificar que R4 (creatorInfo) tiene la estructura correcta: (Coll[Byte], Int).
+      gameBoxCandidate.R4[(Coll[Byte], Int)].isDefined &&
+
+      // 3. Verificar que R5 (secretHash) es del tipo correcto: Coll[Byte].
+      gameBoxCandidate.R5[Coll[Byte]].isDefined &&
+
+      // 4. Verificar que R7 (numericalParameters) está definido y tiene 3 elementos.
+      gameBoxCandidate.R7[Coll[Long]].isDefined &&
+      gameBoxCandidate.R7[Coll[Long]].get.size == 3
 
     if (gameBoxIsPlausible) {
-        val gameDeadlineFromGameBox = gameBoxCandidate.R7[Coll[Long]].get(0)
-        val c1_isAfterDeadline = HEIGHT >= gameDeadlineFromGameBox
-        val c2_txStructureLooksLikeResolution = INPUTS.size >= 1 &&
-                                                OUTPUTS.size >= 2 &&
-                                                OUTPUTS(1).R4[Coll[Byte]].isDefined
-        c1_isAfterDeadline && c2_txStructureLooksLikeResolution
+        val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
+        
+        // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
+        val isAfterDeadline = HEIGHT >= gameDeadline
+        
+        // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
+        val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
+          // La nueva caja debe tener el script de la siguiente fase.
+          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+          // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
+          outBox.value == SELF.value &&
+          outBox.tokens == SELF.tokens &&
+          outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
+          outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
+          outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
+          outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
+          outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
+          outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
+        }
+        
+        isAfterDeadline && isRecreatedCorrectly
     } else {
         false
     }
   }
 
-  // === Action 2: Spent in Valid Game Cancellation ===
+  // ### Acción 2: Transicion a participacion Resuelta mediante game_resolution.es o game_resolution_no_creator.es, debido a que el creador omitió esta participacion.
+
+  // ### Acción 3: Reembolso por Cancelación de Juego
+  // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
   val spentInValidGameCancellation = {
-    // This action allows a player to get a refund if the game's secret 'S' 
-    // is revealed on-chain in the GameBox before the deadline.
-    // The GameBox MUST be provided as the first dataInput.
-    
     if (CONTEXT.dataInputs.size > 0) {
       val gameBoxInData = CONTEXT.dataInputs(0)
 
-      // Verify that the dataInput is the correct GameBox for this participation
       val gameBoxIsPlausible = gameBoxInData.tokens.size > 0 &&
                                gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
-                               // Check that R5 has the expected (Long, Coll[Byte]) structure
-                               gameBoxInData.R5[(Long, Coll[Byte])].isDefined && 
-                               gameBoxInData.R7[Coll[Long]].get.size == 3
+                               gameBoxInData.R5[(Long, Coll[Byte])].isDefined 
 
       if (gameBoxIsPlausible) {
-        val gameDeadline = gameBoxInData.R7[Coll[Long]].get(0)
         val stateTuple_R5 = gameBoxInData.R5[(Long, Coll[Byte])].get
 
-        // Condition 1: The secret 'S' must be revealed within the GameBox itself.
-        // This is true if the unlockHeight (the first element of the R5 tuple) is > 0.
-        // The GameBox contract itself ensures the revealed S was valid, so we can trust its state.
-        val secretIsRevealedInGameBox = stateTuple_R5._1 > 0L
+        // Condición 1: El secreto del juego ha sido revelado (el primer elemento de la tupla es > 0).
+        val secretIsRevealed = stateTuple_R5._1 > 0L
 
-        // Condition 2: The player must get their funds back.
+        // Condición 2: El jugador recibe un reembolso completo en una de las salidas.
         val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
-          val playerP2PKAddress = P2PK_ERGOTREE_PREFIX ++ playerPKBytes
-          outBox.propositionBytes == playerP2PKAddress && outBox.value >= SELF.value
+          outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
+          outBox.value >= SELF.value
         }
         
-        secretIsRevealedInGameBox && playerGetsRefund
-      } else {
-        false // The provided dataInput is not the correct GameBox
-      }
-    } else {
-      false // A dataInput for the GameBox is required
-    }
+        secretIsRevealed && playerGetsRefund
+      } else { false }
+    } else { false }
   }
 
-  // === Action 3: Player reclaims their funds after a grace period (COMMENTED OUT) ===
-  val playerReclaimsAfterGracePeriod = false // Placeholder
+  // ### Acción 4: Reclamo por Período de Gracia (Placeholder)
+  // Lógica futura que permitiría al jugador reclamar sus fondos si el juego queda "atascado".
+  val playerReclaimsAfterGracePeriod = false
 
-  // Allow spending if it's a valid resolution OR a valid cancellation.
-  sigmaProp(spentInValidGameResolution || spentInValidGameCancellation)
+  sigmaProp(spentInValidGameResolution || spentInValidGameCancellation || playerReclaimsAfterGracePeriod)
 }
