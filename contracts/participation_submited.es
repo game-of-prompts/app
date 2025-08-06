@@ -38,17 +38,10 @@
 
     // Verificación de que la caja del juego es plausible.
     val gameBoxIsPlausible =
-      // 1. Verificar que la caja candidata tiene el NFT del juego.
       gameBoxCandidate.tokens.size > 0 &&
       gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
-
-      // 2. Verificar que R4 (creatorInfo) tiene la estructura correcta: (Coll[Byte], Int).
       gameBoxCandidate.R4[(Coll[Byte], Int)].isDefined &&
-
-      // 3. Verificar que R5 (secretHash) es del tipo correcto: Coll[Byte].
       gameBoxCandidate.R5[Coll[Byte]].isDefined &&
-
-      // 4. Verificar que R7 (numericalParameters) está definido y tiene 3 elementos.
       gameBoxCandidate.R7[Coll[Long]].isDefined &&
       gameBoxCandidate.R7[Coll[Long]].get.size == 3
 
