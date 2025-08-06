@@ -1,70 +1,112 @@
 {
   // === Constants ===
-  val STAKE_DENOMINATOR = 5L
   val JUDGE_PERIOD = 30L
-  // val DEV_TRIBE_ADDRESS = fromBase16("$DEV_TRIBE_ADDRESS")
-  // val DEV_TRIBE_PERCENT_FEE = 5
-  val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("$PARTICIPATION_BOX_SCRIPT_HASH")
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...") // Placeholder
 
-  // === Register Definitions (GameBox) ===
-
-  // R4: (Long, Int) - Height for resolution and participation resolved counter.
-  // R5: Coll[Byte] - Secret
-  // R6: Coll[Long] - numericalParameters: Collection [deadline, creatorStake, participationFee]
-  //                   - numericalParameters(0) (deadline): Block height limit for participation/resolution.
-  //                   - numericalParameters(1) (creatorStake): Creator's ERG stake.
-  //                   - numericalParameters(2) (participationFee): ERG participation fee.
-  // R7: Coll[Byte] - winnerCandidateCommitment
-  // R8: Int        - Comission percentage for all the participants.
-  // R9: Coll[Byte] - gameDetailsJsonHex: JSON String (UTF-8 -> Hex) with game details (title, description, etc.). 
-
-
-  // === Tokens (GameBox) ===
-  // SELF.tokens(0): (gameNftId: Coll[Byte], amount: Long) - Unique game NFT, amount 1L.
-
+  // === Register Definitions (GameBox in Penalty State - REVISED) ===
+  // R4: (Long, Int)       - (resolutionDeadline, resolvedCounter): Límite de bloque y contador.
+  // R5: Coll[Byte]        - revealedSecretS: El secreto 'S' del juego.
+  // R6: Coll[Long]        - numericalParameters: [deadline, creatorStake, participationFee].
+  // R7: Coll[Byte]        - winnerCandidateCommitment: El 'commitmentC' del candidato a ganador.
+  // R8: (Coll[Byte], Int) - penaltyInfo: (lastRevealerPK, commissionPercentage). La PK es de la última persona que desveló una omisión.
+  // R9: Coll[Byte]        - gameDetailsJsonHex: Detalles del juego.
+  
   // === Value Extraction ===
+  val resolutionDeadline = SELF.R4[(Long, Int)].get._1
+  
+  val penaltyInfo = SELF.R8[(Coll[Byte], Int)].get
+  val lastRevealerPK = penaltyInfo._1
+  val commissionPercentage = penaltyInfo._2
 
-  val gameCreatorPK = SELF.R4[Coll[Byte]].get
+  val creatorStakeAtRisk = SELF.R6[Coll[Long]].get(1)
+  val gameNft = SELF.tokens(0)
 
-  val stateTuple_R5 = SELF.R5[(Long, Coll[Byte])].get
-  val unlockHeight_in_self = stateTuple_R5._1 // unlockHeight is now the first element
-  val secretOrHash_in_self = stateTuple_R5._2 // secretOrHash is now the second element
+  val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline
+  val isAfterResolutionDeadline = HEIGHT >= resolutionDeadline
 
-  val hashS_in_self = if (unlockHeight_in_self == 0L) {
-    secretOrHash_in_self // If unlockHeight is 0, this is the hashS
-  } else {
-    blake2b256(secretOrHash_in_self) // If unlockHeight > 0, this is the revealed S
+  // =================================================================
+  // === ACCIONES DE GASTO
+  // =================================================================
+
+  // ### Acción 1: Disputa (Participation Omitted)
+  // Alguien desvela una participación omitida con mayor puntuación. Esta acción ahora actualiza quién es el 'lastRevealer'.
+  val action1_dispute = {
+    if (isBeforeResolutionDeadline && INPUTS.size > 1 && OUTPUTS.size > 1) {
+      
+      val submittedPBox = INPUTS(1)
+      val recreatedGameBox = OUTPUTS(0)
+      
+      // La PK del ejecutor (quien realiza la transacción de disputa) se convierte en el nuevo 'lastRevealer'.
+      // Esta PK se extraería de una salida de la transacción que se paga a sí mismo.
+      val executorPK = OUTPUTS(1).R4[Coll[Byte]].get // Asumiendo que OUTPUTS(1) es la recompensa/cambio del ejecutor.
+
+      // 1. Placeholder para la lógica que verifica que el nuevo score es mayor.
+      val newScoreIsHigher = true 
+
+      // 2. Validar que la caja del juego se recrea correctamente.
+      val gameBoxIsRecreatedCorrectly = {
+          blake2b256(recreatedGameBox.propositionBytes) == blake2b256(SELF.propositionBytes) &&
+          recreatedGameBox.R7[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get && // Se actualiza el candidato.
+          recreatedGameBox.R8[(Coll[Byte], Int)].get._1 == executorPK && // ¡Importante! Se actualiza el último revelador.
+          recreatedGameBox.R8[(Coll[Byte], Int)].get._2 == commissionPercentage // La comisión se mantiene.
+      }
+      newScoreIsHigher && gameBoxIsRecreatedCorrectly
+    } else { false }
   }
 
-  val action2_not_initialized = unlockHeight_in_self == 0L
-  
-  val numericalParams = SELF.R7[Coll[Long]].get
-  val deadline = numericalParams(0)
-  val creatorStake = numericalParams(1)
-  val participationFee = numericalParams(2)
-  
-  val commissionPercentage = SELF.R8[Int].get
-  val gameNftId = SELF.tokens(0)._1
+  // ### Acción 2: Jueces Invalidan Candidato
+  // Un panel de jueces anula al candidato actual. La lógica es similar a la versión anterior.
+  val action2_judgesInvalidate = {
+    if (isBeforeResolutionDeadline) {
+      val isValidJudgeSignature = true // Placeholder para la lógica de validación de firmas de jueces.
+      val recreatedGameBox = OUTPUTS(0)
+      val fundsReturnedToPool = recreatedGameBox.value > SELF.value
+      val deadlineIsExtended = recreatedGameBox.R4[(Long, Int)].get._1 >= resolutionDeadline + JUDGE_PERIOD
+      isValidJudgeSignature && fundsReturnedToPool && deadlineIsExtended
+    } else { false }
+  }
 
-  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd") // For PK() workaround
-  val gameCreatorP2PKPropBytes = P2PK_ERGOTREE_PREFIX ++ gameCreatorPK
+  // ### Acción 3: Finalizar Juego (Distribución con Penalización)
+  // El período de resolución termina. Se distribuyen los fondos según las reglas de penalización.
+  val action3_finalize = {
+    if (isAfterResolutionDeadline) {
+      
+      val participantInputs = INPUTS.slice(1, INPUTS.size)
+      val numParticipants = participantInputs.size
+      
+      // 1. Calcular el valor total del premio y la comisión.
+      val totalPrizePool = participantInputs.fold(0L, { (acc: Long, box: Box) => acc + box.value })
+      val totalCommission = totalPrizePool * commissionPercentage / 100
+      
+      // 2. Validar la salida de recompensa para el último revelador.
+      //    El stake del creador va para la persona que desveló la última omisión.
+      val rewardOutput = OUTPUTS(0) // Asumimos que la primera salida es la recompensa.
+      val stakeGoesToRevealer = rewardOutput.value >= creatorStakeAtRisk &&
+                                rewardOutput.propositionBytes == proveDlog(lastRevealerPK).propBytes
+      
+      // 3. Validar la salida del ganador.
+      val winnerOutput = OUTPUTS(1) // Asumimos que la segunda salida es la del ganador.
+      val winnerGetsPrize = winnerOutput.tokens.contains(gameNft) &&
+                            winnerOutput.value >= totalPrizePool // El ganador se lleva el bote principal.
+                            // La validación del P2PK del ganador se haría aquí.
+      
+      // 4. Validar la redistribución de la comisión.
+      //    La comisión se reparte a partes iguales entre todos los participantes (incluido el ganador).
+      val commissionPerParticipant = totalCommission / numParticipants
+      val commissionIsRedistributed = {
+        // Se debe verificar que existen salidas que devuelven a cada participante su parte de la comisión.
+        // Esto es complejo de modelar genéricamente, pero la lógica sería:
+        // Para cada `p` en `participantInputs`, debe existir una `o` en `OUTPUTS` tal que:
+        //   o.propositionBytes == p.R4[Coll[Byte]].get (la PK del participante)
+        //   o.value >= commissionPerParticipant
+        true // Placeholder para esta lógica de validación.
+      }
+      
+      stakeGoesToRevealer && winnerGetsPrize && commissionIsRedistributed
 
-  val isAfterDeadline = HEIGHT >= deadline
-  val isBeforeDeadline = HEIGHT < deadline 
+    } else { false }
+  }
 
-
-  val action3b_participationOmmited = true  // Gasta la caja actual y una caja con el script participation_submited.es. Se agrega la caja de la participacion candidata (la cual tiene el script participation_resolved.es) como Data Input. El score de la caja de participación debe ser mayor al score de la participación candidata.  Se crea de nuevo la caja actual pero sumando el contador de participaciones en uno.   Se crea una caja de participacion similar a la gastada pero con el script participation_resolved.es.      El ejecutor de la transacción puede retirar ¿¿¿ 1/5 ???? del stake del creador como comisión. 
-
-  // > En este punto surgen varias dudas: A diferencia de la cancelación, aqui no tiene sentido limitar a un drenaje repartido del stake, ya que el secreto ya fue resuelto en A1a    ¿Que pasa si es el propio creador quien se omite una participación a proposito para llevarse el stake? Esto significa que no se puede entregar el stake al ejecutor. ¿parte al ejecutor (que puede ser el creador) y parte al participante de manera directa? esto recompensa a ambos y desincentiva al creador ya que perdería una porción del staking.     Tambien deberíamos de considerar que, siendo que igualmente se va a terminar resolviendo el juego y sabiendo que el creador ya ha cumplido con su parte (desvelar S mediante la acción A1a) ¿porque no retirarle tambien su recompensa?  ¿A donde debería de ir en ese caso la recompensa? ¿A todos los participantes? Si, a todos los participantes es la forma mas segura, pues asi se asegura de que el creador no es ni el jugador ganador (lo cual puede serlo simplemente comprando los jueces y generando él mismo una score falsa muy alta) ni los jueces en si mismos.    Se sabrá que el creador ya no tiene potestad para recibir su comisión porque  la caja cambiará al script game_resolution_no_creator, la cual será similar a game_resolution.es pero con gameCreatorPK en R9 y con R8 unicamente conteniendo el Int de la comisión del creador (que ahora irá para todos los participantes).
-
-  // Por lo tanto: El ejecutor de la transacción puede retirar 1/5 del stake del creador como comisión, 2/5 irán para el participante omitido.
-
-  // Ahora surge otro problema ... realmente se deben de agregar todas las participaciones omitidas, no tan solo las participaciones omitidas que tengan que ser candidatas ... asi que en realidad se debe de incentivar a agregar todas las participaciones omitidas y, ademas, a hacerlo en una sola tx. a ser posible. Para solucionar esto, el ejecutor debería de crear una caja (script: omited_participation_reward.es) que se podrá gastar al gastar la caja principal mediante la acción 1D. Pero si antes de JUDGE_PERIOD algun otro ejecutor demuestra que todavía quedaban participaciones omitidas, entonces el ejecutor original no podrá retirar la caja de recompensa y lo hará el nuevo ejecutor en su lugar.
-
-  val action3c_judges = true  // Los jueces consideran que la participación candidata no es válida.  Gasta la caja actual con la firma de M jueces.    Se debe de gastar la participacion (script: participation_resolved.es) que es candidata según R7.    Los fondos de la participación candidata se transfieren a la caja del juego de nuevo, con los mismos parámetros que la actual pero restando el contador de jueces y agregando una nueva participación candidata (a no ser que el contador sea 0, en cuyo caso el registro R7 quedará vacio).  Se debe de aumentar el bloque de R4 JUDGE_PERIOD para permitir que los jueces puedan volver a votar esta nueva participación candidata.
-
-  val action3d_endGame = true  // Esta acción se puede realizar cuando se ha superado el bloque marcado en R4.    Especificamente debe asegurarse de que  los fondos de todas las participaciones (con script participation_resolved.es) se envien a la participacion candidata. Y que a todas las participaciones se les envie su parte de la comisión del creador. Ademas debe asegurarse de que la caja omited_participation_reward.es es gastada y se envia el staking del creador a la dirección que tiene esta caja en su registro R4.
-  
-  // The script allows spending the GameBox if it's a valid resolution.
-  sigmaProp(action3b_participationOmmited || action3c_judges || action3d_endGame)
+  // La caja se puede gastar si se cumple cualquiera de las tres condiciones.
+  sigmaProp(action1_dispute || action2_judgesInvalidate || action3_finalize)
 }
