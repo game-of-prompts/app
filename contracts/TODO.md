@@ -1,0 +1,1 @@
+En game.es Se deberá de juntar R4 y R8 en algun momento.   Y R9 debería de ser Coll[Coll[Byte]] para acceder a los detalles del juego.
