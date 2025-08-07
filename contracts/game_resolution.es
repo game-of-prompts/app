@@ -108,7 +108,9 @@
   val action2_judgesInvalidate = {
     if (isBeforeResolutionDeadline) {
       val judgeVotes = CONTEXT.dataInputs
-      val requiredVotes = participatingJudges.size / 2 + 1
+      val requiredVotes =
+        if (participatingJudges.isEmpty) 0
+        else participatingJudges.size / 2 + 1
 
       val votesAreValid = if (judgeVotes.size < requiredVotes) { false } else {
         val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
