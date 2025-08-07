@@ -100,7 +100,7 @@
         val judgeProofDataInputs = CONTEXT.dataInputs
         val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
         val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
-        val judgesAreValid = participatingJudgesTokens.forall({(tokenId: Coll[Byte]) => tokenId.isIn(invitedJudges)})
+        val judgesAreValid = invitedJudges.size == participatingJudgesTokens.size && participatingJudgesTokens.forall({(tokenId: Coll[Byte]) => tokenId.isIn(invitedJudges)})
 
         val resolutionBoxIsValid = {
           winnerCandidateCommitment == initialWinnerCommitment &&
