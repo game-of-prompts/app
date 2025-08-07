@@ -17,6 +17,7 @@
   // Constantes para la acción de cancelación.
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
+  val JUDGE_PERIOD = 30L
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
@@ -24,7 +25,7 @@
 
   // R4: (Coll[Byte], Int) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
   // R5: Coll[Byte]        - secretHash: Hash del secreto 'S' (blake2b256(S)).
-  // R6: Coll[Byte]        - gameAuxData: Datos auxiliares para diferentes modos de juego.
+  // R6: Coll[Coll[Byte]]  - invitedJudgesReputationProofs
   // R7: Coll[Long]        - numericalParameters: [deadline, creatorStake, participationFee].
   // R8:                   -   - (No utilizado en este estado).
   // R9: Coll[Byte]        - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
@@ -42,6 +43,7 @@
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
+  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -53,78 +55,71 @@
   // === ACCIÓN 1: TRANSICIÓN A RESOLUCIÓN
   // =================================================================
   // Se ejecuta después de la fecha límite para iniciar la fase de resolución.
-  // Consume esta caja y todas las participaciones, creando una nueva caja 'game_resolution.es'.
+  // Consume esta caja y todas las participaciones, y lee las pruebas de los jueces como dataInputs.
 
   val action1_transitionToResolution = {
     if (isAfterDeadline) {
       val resolutionBox = OUTPUTS(0)
       
-      // El secreto 'S' debe ser revelado en el R5 de la nueva caja de resolución.
-      val revealedS = resolutionBox.R5[Coll[Byte]].get
-      val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
+      // La estructura de la nueva caja de resolución es (Coll[Byte], Coll[Byte])
+      val r5Tuple = resolutionBox.R5[(Coll[Byte], Coll[Byte])].get
+      val revealedS = r5Tuple._1
+      val winnerCandidateCommitment = r5Tuple._2
 
-      // La nueva caja debe tener el script de resolución.
+      val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
       val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH
       
       if (sIsCorrectlyRevealed && transitionsToResolutionScript) {
         val participantInputs = INPUTS.slice(1, INPUTS.size)
         
-        // Se realiza un 'fold' sobre las participaciones para encontrar al candidato inicial y el pozo total.
         val initialFoldState = (-1L, (Coll[Byte](), Coll[Byte](), 0L)) // (maxScore, winnerCommitment, winnerPK, prizePool)
         val foldResult = participantInputs.fold(initialFoldState, { (acc, pBox) =>
           if (blake2b256(pBox.propositionBytes) == PARTICIPATION_BOX_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
             val pBoxScoreList = pBox.R9[Coll[Long]].get
             val pBoxCommitment = pBox.R5[Coll[Byte]].get
-
-            // Inner fold para encontrar el score verdadero del jugador.
             val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc, score) =>
-              if (scoreAcc._2) {
-                scoreAcc
-              } else {
+              if (scoreAcc._2) { scoreAcc } else {
                 val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
                 if (testCommitment == pBoxCommitment) { (score, true) } else { scoreAcc }
               }
             })
-
             val actualScore = scoreCheckResult._1
             val isValidParticipant = scoreCheckResult._2
-
             if (isValidParticipant && actualScore > acc._1) {
-              // Nuevo score máximo encontrado.
               (actualScore, (pBoxCommitment, pBox.R4[Coll[Byte]].get, acc._2._2._2 + pBox.value))
             } else if (isValidParticipant) {
-              // No es un nuevo máximo, solo se suma al pozo.
               (acc._1, (acc._2._1, acc._2._2._1, acc._2._2._2 + pBox.value))
-            } else {
-              acc // Participación inválida, se ignora.
-            }
-          } else {
-            acc // No es una caja de participación válida.
-          }
+            } else { acc }
+          } else { acc }
         })
         
-        val winnerCandidateCommitment = foldResult._2._1
+        val initialWinnerCommitment = foldResult._2._1
         val totalPrizePool = foldResult._2._2._2
-        val numParticipants = participantInputs.size
+        
+        // --- Validación de Jueces ---
+        val judgeProofDataInputs = CONTEXT.dataInputs
+        val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
+        val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
+        val judgesAreValid = participatingJudgesTokens.forall({(tokenId: Coll[Byte]) => tokenId.isIn(invitedJudges)})
 
-        // Validar que la nueva caja 'game_resolution.es' se crea correctamente.
         val resolutionBoxIsValid = {
+          winnerCandidateCommitment == initialWinnerCommitment &&
           resolutionBox.value >= totalPrizePool + creatorStake &&
           resolutionBox.tokens.contains(gameNft) &&
-          resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, numParticipants) && // resolutionDeadline, resolvedCounter
-          resolutionBox.R6[Coll[Long]].get == numericalParams &&
-          resolutionBox.R7[Coll[Byte]].get == winnerCandidateCommitment &&
-          resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo
+          resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, participantInputs.size) &&
+          resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
+          resolutionBox.R7[Coll[Long]].get == numericalParams &&
+          resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo &&
+          resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
         }
 
-        // Validar que todas las participaciones se recrean como cajas 'participation_resolved.es'.
         val participantOutputs = OUTPUTS.slice(1, OUTPUTS.size)
         val participationsAreRecreated = participantOutputs.forall { outBox =>
           blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
           outBox.tokens(0)._1 == gameNftId
         }
         
-        resolutionBoxIsValid && participationsAreRecreated
+        judgesAreValid && resolutionBoxIsValid && participationsAreRecreated
       } else { false }
     } else { false }
   }
