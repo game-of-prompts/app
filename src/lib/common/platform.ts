@@ -63,6 +63,7 @@ export interface Platform {
      */
     resolveGame(
         game: GameActive,
+        participations: ParticipationSubmitted[],
         secretS_hex: string
     ): Promise<string | null>;
 
@@ -86,9 +87,8 @@ export interface Platform {
      * @param claimerAddressString La dirección del usuario que reclama.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      */
-    claimRefundFromCancelledGame(
+    drain_cancelled_game_stake(
         game: GameCancellation,
-        participation: ParticipationSubmitted,
         claimerAddressString: string
     ): Promise<string | null>;
 

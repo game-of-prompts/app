@@ -1,6 +1,6 @@
 // src/lib/common/game.ts
 
-import type { ErgoPlatform } from "$lib/ergo/platform";
+import { ErgoPlatform } from "$lib/ergo/platform";
 import type { Amount, Box, TokenEIP4 } from "@fleet-sdk/core";
 
 /**
@@ -54,21 +54,17 @@ export interface GameActive {
     boxId: string;
     box: Box<Amount>;
     platform: ErgoPlatform;
-    status: 'Active'; // El estado está fijado a 'Active'.
-
-    // --- Datos extraídos de los registros del contrato ---
-    gameId: string; // ID del NFT del juego (de tokens[0])
-    gameCreatorPK_Hex: string; // R4._1
-    commissionPercentage: number; // R4._2
-    secretHash: string; // R5
-    invitedJudges: string[]; // R6: Array de Token IDs
-    deadlineBlock: number; // R7[0]
-    creatorStakeNanoErg: bigint; // R7[1]
-    participationFeeNanoErg: bigint; // R7[2]
-    
-    // --- Contenido y valor ---
-    content: GameContent; // R9
-    value: bigint; // Valor en Ergs de la caja (el stake actual)
+    status: 'Active';
+    gameId: string;
+    gameCreatorPK_Hex: string;
+    commissionPercentage: number;
+    secretHash: string;
+    invitedJudges: string[];
+    deadlineBlock: number;
+    creatorStakeNanoErg: bigint;
+    participationFeeNanoErg: bigint;
+    content: GameContent;
+    value: bigint;
 }
 
 /**
@@ -79,113 +75,50 @@ export interface GameResolution {
     boxId: string;
     box: Box<Amount>;
     platform: ErgoPlatform;
-    status: 'Resolution'; // El estado está fijado a 'Resolution'.
-
-    // --- Datos extraídos de los registros del contrato ---
-    gameId: string; // ID del NFT del juego (de tokens[0])
-    
-    // R4
+    status: 'Resolution';
+    gameId: string;
     resolutionDeadline: number;
     resolvedCounter: number;
-
-    // R5
     revealedS_Hex: string;
     winnerCandidateCommitment: string;
-
-    // R6
-    participatingJudges: string[]; // Array de Token IDs
-
-    // R7 - Parámetros originales del juego
+    participatingJudges: string[];
     originalDeadline: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
-
-    // R8 - Información del "Resolvedor" (quien inició la resolución)
     resolverPK_Hex: string;
     resolverCommission: number;
-
-    // R9 - Procedencia del juego
     originalCreatorPK_Hex: string;
-    
-    // --- Contenido y valor ---
-    content: GameContent; // Re-parseado desde R9
-    value: bigint; // Valor en Ergs de la caja (pozo de premios + stake)
+    content: GameContent;
+    value: bigint;
 }
 
 /**
  * Representa la estructura de datos de una caja de juego en estado "Cancelación".
  * Corresponde al script `game_cancellation.es`.
- * Este estado significa que el stake del creador está siendo drenado.
  */
 export interface GameCancellation {
     boxId: string;
     box: Box<Amount>;
     platform: ErgoPlatform;
-    status: 'Cancelled_Draining'; // La caja existe, por lo tanto, está en proceso de drenaje.
-
-    // --- Datos extraídos de los registros del contrato ---
-    gameId: string; // ID del NFT del juego (de tokens[0])
-    
-    // R4
-    unlockHeight: number; // Altura a la que se puede realizar el siguiente drenaje.
-
-    // R5
-    revealedS_Hex: string; // El secreto 'S' que fue revelado.
-
-    // R6
-    currentStakeNanoErg: bigint; // El stake restante del creador.
-    
-    // --- Contenido y valor ---
-    content: GameContent; // R7: Información inmutable del juego, parseada.
-    value: bigint; // Valor en Ergs de la caja (debe coincidir con currentStakeNanoErg).
-}
-
-
-// =================================================================
-// === NUEVAS INTERFACES POR ESTADO DE PARTICIPACIÓN
-// =================================================================
-
-/**
- * Representa la estructura de datos de una caja de participación en estado "Enviada".
- * Corresponde al script `participation_submited.es`.
- */
-export interface ParticipationSubmitted {
-    boxId: string;
-    box: Box<Amount>;
-    status: 'Submitted';
-
-    // --- Datos de la transacción ---
-    transactionId: string;
-    creationHeight: number;
-    value: bigint; // La tarifa de participación pagada.
-
-    // --- Datos extraídos de los registros del contrato ---
-    gameNftId: string;          // R6: ID del juego al que pertenece.
-    playerPK_Hex: string;       // R4: Clave pública del jugador.
-    commitmentC_Hex: string;    // R5: Commitment criptográfico.
-    solverId_RawBytesHex: string; // R7: ID del solver (en bytes).
-    solverId_String?: string;   // R7: ID del solver (interpretado como texto).
-    hashLogs_Hex: string;       // R8: Hash de los logs del juego.
-    scoreList: bigint[];        // R9: Lista de puntuaciones.
+    status: 'Cancelled_Draining';
+    gameId: string;
+    unlockHeight: number;
+    revealedS_Hex: string;
+    currentStakeNanoErg: bigint;
+    content: GameContent;
+    value: bigint;
 }
 
 /**
- * Representa la estructura de datos de una caja de participación en estado "Resuelta".
- * Corresponde al script `participation_resolved.es`. La estructura de registros
- * es idéntica a la de `ParticipationSubmitted`.
+ * Contiene todas las propiedades comunes compartidas entre los diferentes
+ * estados de una caja de participación.
  */
-export interface ParticipationResolved {
+export interface ParticipationBase {
     boxId: string;
     box: Box<Amount>;
-    status: 'Resolved';
-    spent: boolean; // Indica si la caja ya fue gastada (ej. en la tx de pago al ganador).
-
-    // --- Datos de la transacción ---
     transactionId: string;
     creationHeight: number;
     value: bigint;
-
-    // --- Datos extraídos de los registros del contrato (idénticos a Submitted) ---
     gameNftId: string;
     playerPK_Hex: string;
     commitmentC_Hex: string;
@@ -195,16 +128,69 @@ export interface ParticipationResolved {
     scoreList: bigint[];
 }
 
-// =================================================================
-// === FUNCIONES DE UTILIDAD (EJEMPLO)
-// =================================================================
+/**
+ * Representa una participación en estado "Enviada".
+ * Extiende la base y añade su estado único.
+ */
+export interface ParticipationSubmitted extends ParticipationBase {
+    status: 'Submitted';
+}
 
 /**
- * Parses the content details for a game.
- * @param rawJsonDetails Optional JSON string with game details.
- * @param gameBoxId The box ID, used as a fallback identifier.
- * @param nft Optional EIP-4 token data from the Game NFT.
- * @returns Parsed GameContent.
+ * Representa una participación en estado "Resuelta".
+ * Extiende la base y añade sus propiedades únicas.
+ */
+export interface ParticipationResolved extends ParticipationBase {
+    status: 'Resolved';
+    spent: boolean; // Indica si la caja ya fue gastada.
+}
+
+// =================================================================
+// === TIPOS DE UNIÓN Y FUNCIONES DE UTILIDAD
+// =================================================================
+
+/** Un tipo de unión que puede representar un juego en cualquier estado de contrato. */
+export type AnyGame = GameActive | GameResolution | GameCancellation;
+
+/** Un tipo de unión que puede representar una participación en cualquier estado. */
+export type AnyParticipation = ParticipationSubmitted | ParticipationResolved;
+
+/**
+ * Determina si el período de participación de un juego ha terminado.
+ * Esto ocurre cuando el juego ya no está en estado 'Active'.
+ */
+export function isGameParticipationEnded(game: AnyGame): boolean {
+    return game.status !== GameState.Active;
+}
+
+/**
+ * Determina si un juego ha llegado a su estado final definitivo.
+ */
+export function isGameEnded(game: AnyGame): boolean {
+    return game.status === GameState.Finalized || game.status === GameState.Cancelled_Finalized;
+}
+
+/**
+ * Verifica si un juego está en el estado de drenaje de stake y actúa como un "type guard" de TypeScript.
+ */
+export function iGameDrainingStaking(game: AnyGame): game is GameCancellation {
+    return game.status === GameState.Cancelled_Draining;
+}
+
+/**
+ * Verifica si la acción de drenar el stake está permitida (si ha pasado el cooldown).
+ */
+export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
+    if (!iGameDrainingStaking(game)) {
+        return false;
+    }
+    const platform = new ErgoPlatform();
+    const currentHeight = await platform.get_current_height();
+    return currentHeight >= game.unlockHeight;
+}
+
+/**
+ * Parsea los detalles del contenido de un juego a partir de un string JSON.
  */
 export function parseGameContent(
     rawJsonDetails: string | undefined | null,
@@ -233,7 +219,7 @@ export function parseGameContent(
                 mirrorUrls: parsed.mirrorUrls || undefined,
             };
         } catch (error) {
-            console.warn(`Error parsing rawJsonDetails for game ${gameBoxId}. Using fallbacks. Error: ${error}`);
+            console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);
         }
     }
     

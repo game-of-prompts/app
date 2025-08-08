@@ -8,6 +8,7 @@ import {
     type GameActive,
     type GameResolution,
     type GameCancellation,
+    type ParticipationBase,
     type ParticipationSubmitted,
     type ParticipationResolved,
 } from "../common/game";
@@ -17,7 +18,10 @@ import {
     getGopGameResolutionScriptHash,
     getGopGameCancellationScriptHash,
     getGopParticipationSubmittedScriptHash,
-    getGopParticipationResolvedScriptHash
+    getGopParticipationResolvedScriptHash,
+    getGopGameResolutionTemplateHash,
+    getGopParticipationSubmittedTemplateHash,
+    getGopParticipationResolvedTemplateHash
 } from "./contract"; // Se asume que este archivo exporta las funciones para obtener los hashes de los scripts
 import {
     hexToUtf8,
@@ -184,16 +188,55 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
 }
 
 /**
- * Busca y recupera todos los juegos en estado "Resolución".
- * @returns Un `Promise` que resuelve a un `Map` de juegos en resolución.
+ * Busca y recupera todos los juegos que se encuentran actualmente en estado "Resolución".
+ * @returns Un `Promise` que resuelve a un `Map` con los juegos en resolución, usando el ID del juego como clave.
  */
 export async function fetchResolutionGames(): Promise<Map<string, GameResolution>> {
     const games = new Map<string, GameResolution>();
-    const scriptHash = getGopGameResolutionScriptHash();
+    // Usamos el TemplateHash para buscar en el explorador de la API.
+    const scriptHash = getGopGameResolutionTemplateHash(); 
     
-    // Implementación de paginación similar a fetchActiveGames...
-    // (Omitido por brevedad, pero seguiría el mismo patrón)
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
 
+    console.log("Buscando juegos en resolución con el hash de plantilla:", scriptHash);
+
+    while (moreAvailable) {
+        // Buscamos cajas no gastadas ('unspent') que coincidan con el script.
+        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            // Parseamos cada caja encontrada y la añadimos al mapa.
+            items.forEach(box => {
+                const game = parseGameResolutionBox(box);
+                if (game) {
+                    games.set(game.gameId, game);
+                }
+            });
+
+            offset += items.length;
+            moreAvailable = items.length === limit; // Si obtenemos menos del límite, es la última página.
+
+        } catch (error) {
+            console.error("Ocurrió una excepción al buscar juegos en resolución:", error);
+            moreAvailable = false; // Detenemos el bucle en caso de error.
+        }
+    }
+
+    console.log(`Se encontraron ${games.size} juegos en resolución.`);
     return games;
 }
 
@@ -229,16 +272,55 @@ export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | n
 }
 
 /**
- * Busca y recupera todos los juegos en estado "Cancelación".
- * @returns Un `Promise` que resuelve a un `Map` de juegos en cancelación.
+ * Busca y recupera todos los juegos que se encuentran actualmente en estado "Cancelación".
+ * @returns Un `Promise` que resuelve a un `Map` con los juegos en cancelación, usando el ID del juego como clave.
  */
 export async function fetchCancellationGames(): Promise<Map<string, GameCancellation>> {
     const games = new Map<string, GameCancellation>();
-    const scriptHash = getGopGameCancellationScriptHash();
+    // Usamos el TemplateHash para buscar en el explorador de la API.
+    const scriptHash = getGopGameCancellationTemplateHash();
     
-    // Implementación de paginación similar a fetchActiveGames...
-    // (Omitido por brevedad, pero seguiría el mismo patrón)
-    
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    console.log("Buscando juegos en cancelación con el hash de plantilla:", scriptHash);
+
+    while (moreAvailable) {
+        // Buscamos cajas no gastadas ('unspent') que coincidan con el script.
+        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            // Parseamos cada caja encontrada y la añadimos al mapa.
+            items.forEach(box => {
+                const game = parseGameCancellationBox(box);
+                if (game) {
+                    games.set(game.gameId, game);
+                }
+            });
+
+            offset += items.length;
+            moreAvailable = items.length === limit; // Si obtenemos menos del límite, es la última página.
+
+        } catch (error) {
+            console.error("Ocurrió una excepción al buscar juegos en cancelación:", error);
+            moreAvailable = false; // Detenemos el bucle en caso de error.
+        }
+    }
+
+    console.log(`Se encontraron ${games.size} juegos en cancelación.`);
     return games;
 }
 
@@ -246,7 +328,8 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
 // === ESTADO: PARTICIPATION SUBMITTED & RESOLVED
 // =================================================================
 
-function _parseParticipationBox(box: Box<Amount>): Omit<ParticipationSubmitted & ParticipationResolved, 'status' | 'spent'> | null {
+
+function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
     try {
         const playerPK_Hex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
         const commitmentC_Hex = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
@@ -259,12 +342,23 @@ function _parseParticipationBox(box: Box<Amount>): Omit<ParticipationSubmitted &
             throw new Error("Registros de participación inválidos.");
         }
 
-        return {
-            boxId: box.boxId, box, transactionId: box.transactionId, creationHeight: box.creationHeight,
-            value: BigInt(box.value), gameNftId, playerPK_Hex, commitmentC_Hex,
-            solverId_RawBytesHex, solverId_String: hexToUtf8(solverId_RawBytesHex) || undefined, 
-            hashLogs_Hex, scoreList
+        // Ahora esta función devuelve el tipo base, que es más simple y claro.
+        const participationBase: ParticipationBase = {
+            boxId: box.boxId,
+            box,
+            transactionId: box.transactionId,
+            creationHeight: box.creationHeight,
+            value: BigInt(box.value),
+            gameNftId,
+            playerPK_Hex,
+            commitmentC_Hex,
+            solverId_RawBytesHex,
+            solverId_String: hexToUtf8(solverId_RawBytesHex) || undefined, 
+            hashLogs_Hex,
+            scoreList
         };
+        return participationBase;
+
     } catch(e) {
         console.error(`Error al parsear caja de participación ${box.boxId}:`, e);
         return null;
@@ -278,21 +372,110 @@ function _parseParticipationBox(box: Box<Amount>): Omit<ParticipationSubmitted &
  */
 export async function fetchSubmittedParticipations(gameNftId: string): Promise<ParticipationSubmitted[]> {
     const participations: ParticipationSubmitted[] = [];
-    const scriptHash = getGopParticipationSubmittedScriptHash();
-    // Implementación de paginación similar a fetchActiveGames, pero con filtro en R6
-    // y usando `_parseParticipationBox` para construir los objetos.
+    const scriptHash = getGopParticipationSubmittedTemplateHash();
+    
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    console.log(`Buscando participaciones enviadas para el juego ${gameNftId}`);
+
+    while (moreAvailable) {
+        // Buscamos cajas no gastadas ('unspent') que coincidan con el script y el R6.
+        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ergoTreeTemplateHash: scriptHash,
+                    registers: {
+                        "R6": gameNftId
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                const p_base = _parseParticipationBox(box);
+                if (p_base) {
+                    participations.push({
+                        ...p_base,
+                        status: 'Submitted'
+                    });
+                }
+            }
+
+            offset += items.length;
+            moreAvailable = items.length === limit;
+
+        } catch (error) {
+            console.error(`Ocurrió una excepción al buscar participaciones enviadas para ${gameNftId}:`, error);
+            moreAvailable = false;
+        }
+    }
+
+    console.log(`Se encontraron ${participations.length} participaciones enviadas para el juego ${gameNftId}.`);
     return participations;
 }
 
 /**
  * Busca participaciones en estado "Resolved" para un juego (gastadas y no gastadas).
- * @param gameNftId ID del NFT del juego.
- * @returns Un `Promise` con un array de `ParticipationResolved`.
  */
 export async function fetchResolvedParticipations(gameNftId: string): Promise<ParticipationResolved[]> {
     const participations: ParticipationResolved[] = [];
-    const scriptHash = getGopParticipationResolvedScriptHash();
-    // Implementación de paginación similar a fetchActiveGames, pero usando el endpoint /search
-    // general para incluir cajas gastadas, con filtro en R6 y usando `_parseParticipationBox`.
+    const scriptHash = getGopParticipationResolvedTemplateHash();
+    
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    console.log(`Buscando participaciones resueltas para el juego ${gameNftId}`);
+
+    while (moreAvailable) {
+        // Usamos el endpoint de búsqueda general para incluir cajas ya gastadas.
+        const url = `${explorer_uri}/api/v1/boxes/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ergoTreeTemplateHash: scriptHash,
+                    registers: { "R6": gameNftId }
+                }),
+            });
+
+            if (!response.ok) throw new Error(`API response: ${response.status}`);
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                const p_base = _parseParticipationBox(box);
+                if (p_base) {
+                    participations.push({
+                        ...p_base,
+                        status: 'Resolved',
+                        spent: box.spentTransactionId !== null
+                    });
+                }
+            }
+
+            offset += items.length;
+            moreAvailable = items.length === limit;
+
+        } catch (error) {
+            console.error(`Ocurrió una excepción al buscar participaciones resueltas para ${gameNftId}:`, error);
+            moreAvailable = false;
+        }
+    }
+
+    console.log(`Se encontraron ${participations.length} participaciones resueltas para el juego ${gameNftId}.`);
     return participations;
 }

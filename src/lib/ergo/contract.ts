@@ -109,19 +109,22 @@ export function getGopGameActiveErgoTreeHex(): string { ensureGameActiveCompiled
 export const getGopGameResolutionTemplateHash = () => getTemplateHash(_gameResolution, ensureGameResolutionCompiled);
 export const getGopGameResolutionScriptHash = () => getScriptHash(_gameResolution, ensureGameResolutionCompiled);
 export function getGopGameResolutionAddress(): Address { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toAddress(networkType); }
+export function getGopGameResolutionErgoTreeHex(): string { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toHex(); }
 
 // --- Game Cancellation ---
 export const getGopGameCancellationTemplateHash = () => getTemplateHash(_gameCancellation, ensureGameCancellationCompiled);
 export const getGopGameCancellationScriptHash = () => getScriptHash(_gameCancellation, ensureGameCancellationCompiled);
 export function getGopGameCancellationAddress(): Address { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toAddress(networkType); }
+export function getGopGameCancellationErgoTreeHex(): string { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toHex(); }
 
 // --- Participation Submitted ---
 export const getGopParticipationSubmittedTemplateHash = () => getTemplateHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
 export const getGopParticipationSubmittedScriptHash = () => getScriptHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
 export function getGopParticipationSubmittedAddress(): Address { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toAddress(networkType); }
-export function getGopParticipationSubmittedBoxErgoTreeHex(): string { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toHex(); }
+export function getGopParticipationSubmittedErgoTreeHex(): string { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toHex(); }
 
 // --- Participation Resolved ---
 export const getGopParticipationResolvedTemplateHash = () => getTemplateHash(_participationResolved, ensureParticipationResolvedCompiled);
 export const getGopParticipationResolvedScriptHash = () => getScriptHash(_participationResolved, ensureParticipationResolvedCompiled);
 export function getGopParticipationResolvedAddress(): Address { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toAddress(networkType); }
+export function getGopParticipationResolvedErgoTreeHex(): string { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toHex(); }

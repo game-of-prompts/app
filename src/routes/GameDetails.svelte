@@ -1,20 +1,32 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { type Game, GameState, iGameDrainingStaking, isGameDrainingAllowed, isGameEnded, isGameParticipationEnded, type Participation } from "$lib/common/game";
+    import { 
+        type AnyGame,
+        type AnyParticipation,
+        type GameActive,
+        type GameCancellation,
+        type ParticipationSubmitted,
+        GameState, 
+        iGameDrainingStaking, 
+        isGameDrainingAllowed, 
+        isGameEnded, 
+        isGameParticipationEnded 
+    } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
+    import { fetchSubmittedParticipations, fetchResolvedParticipations } from "$lib/ergo/fetch";
 
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
-
+    
     // ICONS
     import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
-
+    
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { enUS } from 'date-fns/locale/en-US';
@@ -26,21 +38,9 @@
     import { mode } from "mode-watcher";
 
     // --- COMPONENT STATE ---
-
-    let isClaimingRefundFor: string | null = null; // Stores the boxId of the participation currently claiming a refund.
-    let claimRefundError: { [boxId: string]: string | null } = {}; // Stores errors by boxId.
-    let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
-
-    interface WinnerInfo {
-        playerAddress: string;
-        playerPK_Hex?: string;
-        score: bigint | number | string;
-        participationBoxId?: string;
-    }
-
-    let game: Game & { winnerInfo?: WinnerInfo; secret?: string } | null = null;
-
+    let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
+    let participations: AnyParticipation[] = [];
 
     // UI State
     let transactionId: string | null = null;
@@ -55,29 +55,20 @@
     let deadlineDateDisplay = "N/A";
     let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
-    $: isCurrentUserWinner = !!(isGameEnded(game) && game?.winnerInfo && $connected && $address && game.winnerInfo.playerAddress === $address);
-
-    // --- Countdown Clock State ---
+    
+    // Refund State
+    let isClaimingRefundFor: string | null = null;
+    let claimRefundError: { [boxId: string]: string | null } = {};
+    let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
+    
+    // Countdown Clock State
     let daysValue = 0, hoursValue = 0, minutesValue = 0, secondsValue = 0;
     let targetDate: number;
     let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
-
-    // Subscribes to the global store to get game details
-    const unsubscribeGameDetail = game_detail.subscribe(value => {
-        const typedValue = value as Game & { winnerInfo?: WinnerInfo; secret?: string } | null;
-        if (typedValue && (!game || typedValue.boxId !== game.boxId || typedValue.secret !== game.secret)) {
-            game = typedValue;
-            loadGameDetailsAndTimers();
-        } else if (!typedValue && game) {
-            game = null;
-            cleanupTimers();
-        }
-    });
-
     // Modal State
     let showActionModal = false;
-    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | null = null;
+    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | null = null;
     let modalTitle = "";
 
     // Form Inputs
@@ -88,589 +79,295 @@
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
 
+    // --- LOGIC ---
+    
+    const unsubscribeGameDetail = game_detail.subscribe(value => {
+        const typedValue = value as AnyGame | null;
+        if (typedValue && (!game || typedValue.boxId !== game.boxId)) {
+            game = typedValue;
+            loadGameDetailsAndTimers();
+        } else if (!typedValue && game) {
+            game = null;
+            cleanupTimers();
+        }
+    });
 
-    // --- LOGIC FUNCTIONS ---
-
-    // Converts a public key hex string to a Base58 address string.
-    function pkHexToBase58Address(pkHex: string | undefined | null): string {
-        if (!pkHex) return "N/A";
-        if (typeof pkHex !== 'string' || !/^[0-9a-fA-F]+$/.test(pkHex)) return "Invalid PK Hex";
-        const pkBytes = hexToBytes(pkHex);
-        if (!pkBytes) return "Error Addr (Conv)";
-        try {
-            return ErgoAddress.fromPublicKey(pkBytes).toString();
-        } catch (e) { return "Error Addr (Fleet)"; }
-    }
-
-    // Main function to load and process all game details when the component receives a new game.
     async function loadGameDetailsAndTimers() {
         if (!game) {
-            gameEnded = true;
-            participationIsEnded = true;
-            deadlineDateDisplay = "N/A";
-            isOwner = false;
-            isCurrentUserWinner = false;
             cleanupTimers();
             return;
         }
-        // Reset dynamic state
-        isSubmitting = false; transactionId = null; errorMessage = null; jsonUploadError = null;
+
+        isSubmitting = false;
+        transactionId = null; 
+        errorMessage = null;
 
         try {
-            // Determine if the game has ended
-            gameEnded = isGameEnded(game);
-
-            // Determine participation status
             participationIsEnded = isGameParticipationEnded(game);
-
-            // Format deadline for display
-            const deadlineTimestamp = await block_height_to_timestamp(game.deadlineBlock, game.platform);
-            targetDate = deadlineTimestamp; // Set target for clock
-            const date = new Date(deadlineTimestamp);
-            deadlineDateDisplay = `${date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric'})} at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-
-            await updateStatusLogic();
-
-            // Set up timers only if the game is active
-            cleanupTimers(); // Clear any existing timers before setting new ones
-            if (!participationIsEnded) {
-                statusCheckInterval = setInterval(updateStatusLogic, 30000);
-                clockCountdownInterval = setInterval(updateClockCountdown, 1000); // New clock timer
-                updateClockCountdown(); // Initial call
+            gameEnded = isGameEnded(game);
+            
+            if (game.status === GameState.Active) {
+                participations = await fetchSubmittedParticipations(game.gameId);
+            } else if (game.status === GameState.Resolution) {
+                participations = await fetchResolvedParticipations(game.gameId);
+            } else if (game.status === GameState.Cancelled_Draining) {
+                participations = await fetchSubmittedParticipations(game.gameId);
             }
 
-            // Check if the connected user is the owner of the game
-            const connectedAddressString = get(address);
-            if (get(connected) && connectedAddressString && game.gameCreatorPK_Hex) {
-                try {
-                    const ergoAddressInstance = ErgoAddress.fromBase58(connectedAddressString);
-                    const pkBytes = ergoAddressInstance.getPublicKeys()?.[0];
-                    const currentPKS = pkBytes ? uint8ArrayToHex(pkBytes).toLowerCase() : null;
-                    isOwner = !!(currentPKS && game.gameCreatorPK_Hex.toLowerCase() === currentPKS);
-                } catch (e) { console.warn(e); isOwner = false; }
-            } else { isOwner = false; }
+            if (game.status === 'Active') {
+                targetDate = await block_height_to_timestamp(game.deadlineBlock, platform);
+                deadlineDateDisplay = format(new Date(targetDate), "MMM d, yyyy 'at' HH:mm");
+            } else if (game.status === 'Resolution') {
+                targetDate = await block_height_to_timestamp(game.resolutionDeadline, platform);
+                deadlineDateDisplay = `Judge period ends ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
+            } else {
+                deadlineDateDisplay = "N/A";
+            }
+            
+            const connectedAddress = get(address);
+            if(get(connected) && connectedAddress && game) {
+                let creatorPK: string | undefined;
+                if (game.status === 'Active') creatorPK = game.gameCreatorPK_Hex;
+                else if (game.status === 'Resolution') creatorPK = game.originalCreatorPK_Hex;
+                
+                if (creatorPK) {
+                    const userPKBytes = ErgoAddress.fromBase58(connectedAddress).getPublicKeys()[0];
+                    if (userPKBytes) {
+                        isOwner = uint8ArrayToHex(userPKBytes) === creatorPK;
+                    }
+                }
+            }
+
+            cleanupTimers();
+            if (!participationIsEnded && game.status === 'Active') {
+                clockCountdownInterval = setInterval(updateClockCountdown, 1000);
+                updateClockCountdown();
+            }
 
         } catch (error: any) {
             errorMessage = "Could not load game details: " + (error.message || "Unknown error");
         }
     }
 
-    // Checks game status periodically.
-    async function updateStatusLogic() {
-        if (!game) { cleanupTimers(); return; }
+    // --- Action Handlers ---
 
-        // Check if the game has ended or participation is closed
+    async function handleSubmitScore() {
+        if (game?.status !== 'Active') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            const parsedScores = scores_input.split(',').map(s => BigInt(s.trim()));
+            transactionId = await platform.submitScoreToGopGame(game, parsedScores, commitmentC_input, solverId_input, hashLogs_input);
+        } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
+    }
 
-        const newParticipationStatus = isGameParticipationEnded(game);
-        if (newParticipationStatus && !participationIsEnded) {
-            participationIsEnded = true;
-            cleanupTimers();
+    async function handleResolveGame() {
+        if (game?.status !== 'Active' || participations.some(p => p.status !== 'Submitted')) return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            transactionId = await platform.resolveGame(game, participations as ParticipationSubmitted[], secret_S_input_resolve);
+        } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
+    }
+
+    async function handleCancelGame() {
+        if (game?.status !== 'Active') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            transactionId = await platform.cancel_game_before_deadline(game, secret_S_input_cancel, get(address) ?? "");
+        } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
+    }
+
+    async function handleDrainStake() {
+        if (!iGameDrainingStaking(game)) return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            transactionId = await platform.drain_cancelled_game_stake(game, get(address) ?? "");
+        } catch (e: any) { errorMessage = e.message || "Error draining stake.";
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleClaimRefund(participation: AnyParticipation) {
+        if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return;
+        isClaimingRefundFor = participation.boxId;
+        claimRefundError[participation.boxId] = null;
+        try {
+            const result = await platform.claim_refund(participation);
+            claimRefundSuccessTxId[participation.boxId] = result;
+        } catch (e: any) {
+            claimRefundError[participation.boxId] = e.message || "Error claiming refund.";
+        } finally {
+            isClaimingRefundFor = null;
         }
+    }
 
-        const newGameEnded = isGameEnded(game);
-        if (newGameEnded && !gameEnded) {
-            gameEnded = true;
-            cleanupTimers();
-        }
+    // --- UI Utility Functions ---
+
+    function setupActionModal(type: typeof currentActionType) {
+        currentActionType = type;
+        const titles = {
+            submit_score: `Submit Score: ${game?.content.title}`,
+            resolve_game: `Resolve Game: ${game?.content.title}`,
+            cancel_game: `Cancel Game: ${game?.content.title}`,
+            drain_stake: `Drain Creator Stake: ${game?.content.title}`,
+        };
+        modalTitle = titles[type] || "Action";
+        errorMessage = null;
+        isSubmitting = false;
+        transactionId = null;
+        showActionModal = true;
+    }
+
+    function closeModal() {
+        showActionModal = false;
+        currentActionType = null;
+    }
+
+    function pkHexToBase58Address(pkHex?: string): string {
+        if (!pkHex) return "N/A";
+        try {
+            const pkBytes = hexToBytes(pkHex);
+            if (!pkBytes) return "Invalid PK";
+            return ErgoAddress.fromPublicKey(pkBytes).toString();
+        } catch { return "Invalid PK"; }
     }
 
     function updateClockCountdown() {
         if (!targetDate) return;
-        const currentDate = new Date().getTime();
-        const diff = targetDate - currentDate;
-
+        const diff = targetDate - new Date().getTime();
         if (diff > 0) {
             daysValue = Math.floor(diff / (1000 * 60 * 60 * 24));
             hoursValue = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             minutesValue = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             secondsValue = Math.floor((diff % (1000 * 60)) / 1000);
         } else {
-            daysValue = 0; hoursValue = 0; minutesValue = 0; secondsValue = 0;
-            if (!participationIsEnded) updateStatusLogic();
+            daysValue = hoursValue = minutesValue = secondsValue = 0;
         }
     }
 
     function cleanupTimers() {
-        if (statusCheckInterval) {
-            clearInterval(statusCheckInterval);
-            statusCheckInterval = null;
-        }
-        if (clockCountdownInterval) { // Clean up new clock timer
-            clearInterval(clockCountdownInterval);
-            clockCountdownInterval = null;
-        }
-    }
-
-    // Lifecycle hooks
-    onMount(() => { if (game) loadGameDetailsAndTimers(); });
-    onDestroy(() => { cleanupTimers(); unsubscribeGameDetail(); });
-
-    // Validates and returns the actual score from a participation's score list
-    function getActualScore(p: Participation, secretHex: Uint8Array | undefined): bigint | null {
-        if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
-        const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
-        const pBox_R7_solverIdHex_raw = parseCollByteToHex(p.box.additionalRegisters.R7?.renderedValue);
-        const pBox_R8_hashLogsHex_raw = parseCollByteToHex(p.box.additionalRegisters.R8?.renderedValue);
-        let r9ParsedArray: any[] | null = null;
-        const r9ScoreListRaw = p.box.additionalRegisters.R9?.renderedValue;
-        if (typeof r9ScoreListRaw === 'string') {
-            try { r9ParsedArray = JSON.parse(r9ScoreListRaw); } catch (e) { /* silent fail */ }
-        } else if (Array.isArray(r9ScoreListRaw)) { r9ParsedArray = r9ScoreListRaw; }
-        const pBox_scoreList = parseLongColl(r9ParsedArray);
-
-        if (!pBox_R5_commitmentHex || !pBox_R7_solverIdHex_raw || !pBox_R8_hashLogsHex_raw || !pBox_scoreList || pBox_scoreList.length === 0) return null;
-
-        const pBoxSolverId_directBytes = hexToBytes(pBox_R7_solverIdHex_raw);
-        const pBoxHashLogs_directBytes = hexToBytes(pBox_R8_hashLogsHex_raw);
-        if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) return null;
-
-        for (const scoreAttempt of pBox_scoreList) {
-            const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
-            const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...secretHex]);
-            const testCommitmentBytes = fleetBlake2b256(dataToHash);
-            if (uint8ArrayToHex(testCommitmentBytes) === pBox_R5_commitmentHex) return scoreAttempt;
-        }
-        return null;
-    }
-
-    // --- Event Handlers & Action Functions ---
-    function setupSubmitScore() {
-        if (!game || gameEnded) return;
-        currentActionType = "submit_score";
-        modalTitle = `Submit Score: ${game.content.title}`;
-        commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
-        transactionId = null; errorMessage = null; jsonUploadError = null; isSubmitting = false;
-        showActionModal = true;
-    }
-
-    function setupResolveGame() {
-        if (!game || !isOwner || gameEnded) return;
-        currentActionType = "resolve_game";
-        modalTitle = `Resolve Game: ${game.content.title}`;
-        secret_S_input_resolve = "";
-        transactionId = null; errorMessage = null; isSubmitting = false;
-        showActionModal = true;
-    }
-
-    function setupCancelGame() {
-        if (!game || gameEnded) return;
-        currentActionType = "cancel_game";
-        modalTitle = `Cancel Game: ${game.content.title}`;
-        secret_S_input_cancel = "";
-        transactionId = null; errorMessage = null; isSubmitting = false;
-        showActionModal = true;
-    }
-
-    function setupDrainingStake() {
-        if (!game || gameEnded) return;
-        currentActionType = "drain_stake";
-        modalTitle = `Drain Stake: ${game.content.title}`;
-        transactionId = null; errorMessage = null; isSubmitting = false;
-        showActionModal = true;
-    }
-
-    async function handleSubmitScore() {
-        errorMessage = null;
-        if (!game || !commitmentC_input.trim() || !solverId_input.trim() || !hashLogs_input.trim() || !scores_input.trim()) {
-            errorMessage = "All fields (Commitment, Solver ID, Hash Logs, Scores) are required."; return;
-        }
-        let parsedScores: bigint[];
-        try {
-            parsedScores = scores_input.split(',').map(s => BigInt(s.trim()));
-        } catch (error) {
-            errorMessage = "Scores must be a comma-separated list of valid numbers."; isSubmitting = false; return;
-        }
-        isSubmitting = true; transactionId = null;
-        try {
-            const result = await platform.submitScoreToGopGame(game, parsedScores, commitmentC_input, solverId_input, hashLogs_input);
-            transactionId = result; jsonUploadError = null;
-        } catch (e: any) { errorMessage = e.message || "Error submitting score.";
-        } finally { isSubmitting = false; }
-    }
-
-    async function handleResolveGame() {
-        errorMessage = null;
-        if (!game || !secret_S_input_resolve.trim()) {
-            errorMessage = "Game Secret is required."; return;
-        }
-        isSubmitting = true; transactionId = null;
-        try {
-            const result = await platform.resolveGame(game, secret_S_input_resolve);
-            transactionId = result;
-        } catch (e: any) { errorMessage = e.message || "Error resolving game.";
-        } finally { isSubmitting = false; }
-    }
-
-    async function handleCancelGame() {
-        errorMessage = null;
-        if (!game || !secret_S_input_cancel.trim()) {
-            errorMessage = "Game Secret is required to cancel."; return;
-        }
-        isSubmitting = true; transactionId = null;
-        try {
-            const result = await platform.cancel_game_before_deadline(game, secret_S_input_cancel, get(address) ?? "");
-            transactionId = result;
-        } catch (e: any) { errorMessage = e.message || "Error cancelling game.";
-        } finally { isSubmitting = false; }
-    }
-
-    async function handleDrainStake() {
-        errorMessage = null;
-        if (!game) { errorMessage = "No game to drain stake from."; return; }
-        isSubmitting = true; transactionId = null;
-        try {
-            const result = await platform.cancel_game_before_deadline(game, game.revealedS_Hex ?? "", get(address) ?? "");
-            transactionId = result;
-        } catch (e: any) { errorMessage = e.message || "Error draining stake.";
-        } finally { isSubmitting = false; }
-    }
-
-    async function handleClaimRefund(participation: Participation) {
-        if (!game) return;
-
-        // Reset the error state for this specific participation
-        claimRefundError[participation.boxId] = null;
-        isClaimingRefundFor = participation.boxId; // Activate loading state
-
-        try {
-            // We assume a new method exists in the ErgoPlatform class
-            const result = await platform.claimRefundFromCancelledGame(game, participation, get(address) ?? "");
-            
-            // The global transactionId can be used to display a general success message
-            claimRefundSuccessTxId[participation.boxId] = result; 
-            claimRefundError[participation.boxId] = null;
-
-        } catch (e: any) {
-            // Save the specific error for this card
-            claimRefundError[participation.boxId] = e.message || "Error claiming refund.";
-        } finally {
-            isClaimingRefundFor = null; // Deactivate loading state
-        }
-    }
-
-    async function handleJsonFileUpload(event: Event) {
-        const target = event.target as HTMLInputElement;
-        jsonUploadError = null; errorMessage = null;
-        if (target.files && target.files[0]) {
-            const file = target.files[0];
-            if (file.type === "application/json") {
-                try {
-                    const fileContent = await file.text();
-                    const jsonData = JSON.parse(fileContent);
-                    if (jsonData.solver_id && typeof jsonData.solver_id === 'string') solverId_input = jsonData.solver_id; else throw new Error("Missing 'solver_id'");
-                    if (jsonData.hash_logs_hex && typeof jsonData.hash_logs_hex === 'string') hashLogs_input = jsonData.hash_logs_hex; else throw new Error("Missing 'hash_logs_hex'");
-                    if (jsonData.commitment_c_hex && typeof jsonData.commitment_c_hex === 'string') commitmentC_input = jsonData.commitment_c_hex; else throw new Error("Missing 'commitment_c_hex'");
-                    if (jsonData.score_list && Array.isArray(jsonData.score_list) && jsonData.score_list.every((item: any) => typeof item === 'number' || typeof item === 'string')) {
-                        scores_input = jsonData.score_list.map((s: number | string) => s.toString()).join(', ');
-                    } else throw new Error("Missing or invalid 'score_list'");
-                } catch (e: any) {
-                    jsonUploadError = `Error reading JSON: ${e.message}`;
-                    commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
-                }
-            } else jsonUploadError = "Invalid file type. Please upload a .json file.";
-            target.value = '';
-        }
+        if (clockCountdownInterval) clearInterval(clockCountdownInterval);
+        clockCountdownInterval = null;
     }
     
-    function closeModal() {
-        showActionModal = false; currentActionType = null; jsonUploadError = null; errorMessage = null;
-    }
-
-    function shareGame() {
-        if (!game) return;
-        const urlToCopy = `${window.location.origin}/web/?game=${game.gameId}`;
-        navigator.clipboard.writeText(urlToCopy).then(() => {
-            showCopyMessage = true; setTimeout(() => { showCopyMessage = false; }, 2500);
-        }).catch(err => console.error('Failed to copy game URL: ', err));
-    }
-
-    function formatErg(nanoErg: bigint | number | undefined): string {
+    function formatErg(nanoErg?: bigint | number): string {
         if (nanoErg === undefined || nanoErg === null) return "N/A";
-        return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 9 });
+        return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
     
-    $: if (game && $connected !== undefined && $address !== undefined) {
-        const connectedAddressString = $address;
-        if (connectedAddressString && game.gameCreatorPK_Hex) {
-            try {
-                const ergoAddressInstance = ErgoAddress.fromBase58(connectedAddressString);
-                const pkBytes = ergoAddressInstance.getPublicKeys()?.[0];
-                const currentPKS = pkBytes ? uint8ArrayToHex(pkBytes).toLowerCase() : null;
-                isOwner = !!($connected && currentPKS && game.gameCreatorPK_Hex.toLowerCase() === currentPKS);
-            } catch (e) { isOwner = false; }
-        } else {
-            isOwner = false;
-        }
-    }
+    onMount(() => { if (game) loadGameDetailsAndTimers(); });
+    onDestroy(() => {
+        cleanupTimers();
+        unsubscribeGameDetail();
+    });
 
-    $: drainInfoPromise = (async () => {
-        if (!game) return { isAllowed: false, timestamp: null };
-        const isAllowed = await isGameDrainingAllowed(game);
-        let timestamp = null;
-        // Solo calculamos el timestamp si es necesario
-        if (!isAllowed && game.unlockHeight > 0) {
-            timestamp = await block_height_to_timestamp(game.unlockHeight, game.platform);
-        }
-        return { isAllowed, timestamp };
-    })();
 </script>
 
 {#if game}
 <div class="game-detail-page min-h-screen {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'}">
-
-    <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">    
-        <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
-            <div class="hero-bg-image">
-                {#if game.content.imageURL}
-                    <img src={game.content.imageURL} alt="" class="absolute inset-0 w-full h-full object-cover blur-md scale-110" />
-                {/if}
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/60 to-transparent"></div>
-            </div>
-            <div class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
-                {#if game.content.imageURL}
-                <div class="md:w-1/3 flex-shrink-0">
-                    <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg">
-                </div>
-                {/if}
-                <div class="flex-1 text-center md:text-left">
-                    <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
-                    <div class="prose prose-sm text-slate-300 max-w-none mb-6">
-                        {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
-                    </div>
-
-                    <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
-                        <div class="stat-block">
-                            <Edit class="stat-icon"/>
-                            <span>{formatErg(game.participationFeeNanoErg)} ERG</span>
-                            <span class="stat-label">Fee per Player</span>
-                        </div>
-                        <div class="stat-block">
-                            <Users class="stat-icon"/>
-                            <span>{game.participations.length}</span>
-                            <span class="stat-label">Participants</span>
-                        </div>
-                        <div class="stat-block">
-                            <Trophy class="stat-icon"/>
-                            <span>{formatErg(game.participationFeeNanoErg * BigInt(game.participations.length))} ERG</span>
-                            <span class="stat-label">Total Fee Pool</span>
-                        </div>
-                        <div class="stat-block">
-                            <ShieldCheck class="stat-icon"/>
-                            <span>{formatErg(game.creatorStakeNanoErg)} ERG</span>
-                            <span class="stat-label">Creator Stake</span>
-                        </div>
-                        <div class="stat-block">
-                            <CheckSquare class="stat-icon"/>
-                            <span>{game.commissionPercentage}%</span>
-                            <span class="stat-label">Creator Commission</span>
-                        </div>
-                        <div class="stat-block">
-                            <Calendar class="stat-icon"/>
-                            <span>{deadlineDateDisplay.split(' at ')[0]}</span>
-                            <span class="stat-label">Deadline</span>
-                        </div>
-                    </div>
-
-                    {#if !participationIsEnded && targetDate}
-                        <div class="countdown-container">
-                            <div class="timeleft {participationIsEnded ? 'ended' : ''}">
-                                <span class="timeleft-label">
-                                    {#if participationIsEnded}
-                                        TIME'S UP!
-                                        <small class="secondary-text">Awaiting resolution...</small>
-                                    {:else}
-                                        TIME LEFT
-                                        <small class="secondary-text">until participation ends</small>
-                                    {/if}
-                                </span>
-                                <div class="countdown-items">
-                                    <div class="item">
-                                        <div>{daysValue}</div>
-                                        <div><h3>Days</h3></div>
-                                    </div>
-                                    <div class="item">
-                                        <div>{hoursValue}</div>
-                                        <div><h3>Hours</h3></div>
-                                    </div>
-                                    <div class="item">
-                                        <div>{minutesValue}</div>
-                                        <div><h3>Minutes</h3></div>
-                                    </div>
-                                    <div class="item">
-                                        <div>{secondsValue}</div>
-                                        <div><h3>Seconds</h3></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-
-                     <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
-                        {#if game.content.webLink}
-                            <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
-                                <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                                    <ExternalLink class="mr-2 h-4 w-4"/>
-                                    Visit Game Site
-                                </Button>
-                            </a>
-                        {/if}
-
-                        <!-- Share Game Button -->
-                        <Button on:click={shareGame} class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg">
-                            <Share2 class="mr-2 h-4 w-4"/>
-                            Share Game
-                        </Button>
-                        {#if showCopyMessage}
-                            <span class="text-xs text-green-400 ml-2 transition-opacity duration-300">Link Copied!</span>
-                        {/if}
-
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-
     <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
+            <div class="relative z-10 p-8 md:p-12">
+                <h1 class="text-4xl lg:text-5xl font-bold mb-3 text-white">{game.content.title}</h1>
+                <div class="prose prose-sm text-slate-300 max-w-none mb-6">
+                    {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
+                </div>
 
-        <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
-            <h2 class="text-2xl font-semibold mb-6">Game Details</h2>
-            {#if game}
-                {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                    <div class="info-block">
-                        <span class="info-label">Game ID (NFT)</span>
-                        <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
-                            {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
-                        </a>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-label">Service ID</span>
-                        <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
-                        <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
-                            {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
-                        </a>
-                    </div>
-                    {#if game.hashS}
-                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                        <span class="info-label">Hashed Secret (S)</span>
-                        <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
+                <div class="stat-blocks-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
+                    {#if game.status === 'Active' || game.status === 'Resolution'}
+                    <div class="stat-block">
+                        <Edit class="stat-icon"/>
+                        <span>{formatErg(game.participationFeeNanoErg)} ERG</span>
+                        <span class="stat-label">Fee per Player</span>
                     </div>
                     {/if}
+                    <div class="stat-block">
+                        <Users class="stat-icon"/>
+                        <span>{participations.length}</span>
+                        <span class="stat-label">Participants</span>
+                    </div>
+                    {#if game.status === 'Active' || game.status === 'Resolution'}
+                    <div class="stat-block">
+                        <Trophy class="stat-icon"/>
+                        <span>{formatErg(game.participationFeeNanoErg * BigInt(participations.length))} ERG</span>
+                        <span class="stat-label">Fee Pool</span>
+                    </div>
+                    {/if}
+                    <div class="stat-block">
+                        <ShieldCheck class="stat-icon"/>
+                        <span>
+                            {#if game.status === 'Active' || game.status === 'Resolution'}
+                                {formatErg(game.creatorStakeNanoErg)}
+                            {:else if game.status === 'Cancelled_Draining'}
+                                {formatErg(game.currentStakeNanoErg)}
+                            {/if} ERG
+                        </span>
+                        <span class="stat-label">Creator Stake</span>
+                    </div>
+                    {#if game.status === 'Active' || game.status === 'Resolution'}
+                    <div class="stat-block">
+                        <CheckSquare class="stat-icon"/>
+                        <span>{game.status === 'Active' ? game.commissionPercentage : game.resolverCommission}%</span>
+                        <span class="stat-label">Commission</span>
+                    </div>
+                    {/if}
+                    <div class="stat-block">
+                        <Calendar class="stat-icon"/>
+                        <span>{deadlineDateDisplay}</span>
+                        <span class="stat-label">Deadline</span>
+                    </div>
                 </div>
-            {/if}
+
+                {#if !participationIsEnded && game.status === 'Active'}
+                <div class="countdown-container mt-6">
+                    </div>
+                {/if}
+            </div>
         </section>
 
         <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
-                {#if gameEnded}
-                    <p class="text-xl font-medium text-blue-400">Game Ended & Resolved</p>
-                    {#if isCurrentUserWinner}
-                        <p class="mt-2 text-lg font-semibold text-green-500">🎉 Congratulations, You are the Winner! 🎉</p>
-                    {/if}
-                    {#if game.winnerInfo}
-                        <div class="mt-2 space-y-1 text-sm text-gray-300">
-                            <p><strong>Winner:</strong> <a href="{web_explorer_uri_addr + game.winnerInfo.playerAddress}" target="_blank" class="font-mono underline text-slate-400 hover:text-slate-300" title={game.winnerInfo.playerAddress}>...{game.winnerInfo.playerAddress.slice(-10)}</a></p>
-                            <p><strong>Winning Score:</strong> {game.winnerInfo.score.toString()}</p>
-                        </div>
-                    {:else}
-                         <p class="mt-2 text-sm text-gray-400">Winner information is not available.</p>
-                    {/if}
+                {#if game.status === 'Active' && !participationIsEnded}
+                    <p class="text-xl font-medium text-green-500">Open for Participation</p>
+                {:else if game.status === 'Active' && participationIsEnded}
+                    <p class="text-xl font-medium text-yellow-500">Awaiting Resolution</p>
+                {:else if game.status === 'Resolution'}
+                    <p class="text-xl font-medium text-blue-500">Resolving Winner</p>
+                {:else if game.status === 'Cancelled_Draining'}
+                    <p class="text-xl font-medium text-red-500">Cancelled - Draining Stake</p>
                 {:else}
-                    <p class="text-xl font-medium {participationIsEnded ? 'text-yellow-600' : 'text-green-600'}">
-                        {participationIsEnded ? 'Participation Closed' : 'Open for Participation'}
-                    </p>
-                    {/if}
-                 <p class="text-xs {$mode === 'dark' ? 'text-slate-600' : 'text-gray-500'} mt-2">Contract Status: {game.status}</p>
-                 {#if transactionId && !isSubmitting && !showActionModal}
-                    <div class="my-4 p-3 rounded-md text-sm bg-green-600/30 text-green-300 border border-green-500/50">
-                        <strong>Success! Transaction ID:</strong><br/>
-                        <a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
-                    </div>
+                    <p class="text-xl font-medium text-gray-500">Game Over</p>
                 {/if}
-                {#if errorMessage && !isSubmitting && !showActionModal}
-                    <div class="my-4 p-3 rounded-md text-sm bg-red-600/30 text-red-300 border border-red-500/50">
-                        <strong>Error:</strong> {errorMessage}
-                    </div>
-                {/if}
-            </div>
+                <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
+                 </div>
+        
             <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
-                <div class="space-y-3">
-                    {#if isGameEnded(game)}
-                        <p class="info-box">This game has been resolved. No further actions are available.</p>
-                    {:else if $connected}
-                        {#if !participationIsEnded}
-                            <Button on:click={setupSubmitScore} class="w-full py-3 text-base bg-slate-500 hover:bg-slate-600">
+                <div class="space-y-4">
+                    {#if $connected}
+                        {#if game.status === 'Active' && !participationIsEnded}
+                            <Button on:click={() => setupActionModal('submit_score')} class="w-full">
                                 <Edit class="mr-2 h-4 w-4"/>Submit My Score
+                            </Button>
+                            <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
+                                <XCircle class="mr-2 h-4 w-4"/>Cancel Game
                             </Button>
                         {/if}
 
-                        {#if !participationIsEnded}
-                            <div>
-                                <Button on:click={setupCancelGame} class="w-full py-3 text-base bg-red-600 hover:bg-red-700">
-                                    <XCircle class="mr-2 h-4 w-4"/>Cancel Game
-                                </Button>
-                                <p class="text-xs text-center px-2 mt-2 {$mode === 'dark' ? 'text-slate-400' : 'text-slate-600'}">
-                                    This will penalize the creator and allow participants to get a refund.
-                                </p>
-                            </div>
+                        {#if game.status === 'Active' && participationIsEnded && isOwner}
+                            <Button on:click={() => setupActionModal('resolve_game')} class="w-full">
+                                <CheckSquare class="mr-2 h-4 w-4"/>Resolve Game
+                            </Button>
                         {/if}
 
                         {#if iGameDrainingStaking(game)}
                             <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
-                                <p class="font-semibold {$mode === 'dark' ? 'text-yellow-300' : 'text-yellow-800'}">
-                                    Game Cancelled: Draining Stake
-                                </p>
-                                <p class="text-xs mt-1 {$mode === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}">
-                                    A portion of the creator's stake can now be claimed periodically. {game.unlockHeight}
-                                </p>
-                                {#await drainInfoPromise}
-                                    <Button disabled class="w-full mt-3 py-2.5 text-base bg-slate-700 opacity-60 cursor-not-allowed">
-                                        <Trophy class="mr-2 h-4 w-4"/>
-                                        Checking availability...
+                                {#await isGameDrainingAllowed(game) then isAllowed}
+                                    <Button on:click={() => setupActionModal('drain_stake')} disabled={!isAllowed} class="w-full">
+                                        <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
                                     </Button>
-                                {:then data}
-                                    <Button on:click={setupDrainingStake} disabled={!data.isAllowed} class="w-full mt-3 py-2.5 text-base bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed">
-                                        <Trophy class="mr-2 h-4 w-4"/>
-                                        Drain Creator Stake
-                                    </Button>
-
-                                    {#if !data.isAllowed && game.unlockHeight > 0}
-                                        <div class="text-center mt-2 text-xs p-2 rounded {$mode === 'dark' ? 'bg-slate-900/50' : 'bg-slate-200'}">
-                                            Next drain available in: <br>
-                                            <span class="font-semibold text-base block my-1">
-                                                {formatDistanceToNow(new Date(data.timestamp ?? 0), { addSuffix: true, locale: enUS })}
-                                            </span>
-                                            <span class="font-semibold text-base block my-1">
-                                                {format(new Date(data.timestamp ?? 0), "MMMM d, yyyy, HH:mm", { locale: enUS })}
-                                            </span>
-                                            <span>(Block {game.unlockHeight})</span>
-                                        </div>
-                                    {/if}
-                                {:catch error}
-                                    <div class="text-center mt-2 text-xs p-2 rounded bg-red-900/50 text-red-300">
-                                        Could not get drain info: {error.message}
-                                    </div>
                                 {/await}
                             </div>
                         {/if}
-
-                        {#if isOwner}
-                             {#if participationIsEnded && !iGameDrainingStaking(game)}
-                                <Button on:click={setupResolveGame} class="w-full py-3 text-base bg-slate-600 hover:bg-slate-700">
-                                    <CheckSquare class="mr-2 h-4 w-4"/>Resolve Game
-                                </Button>
-                             {/if}
-                        {/if}
-
-                        {#if participationIsEnded && !isOwner && !iGameDrainingStaking(game) && !transactionId}
-                             <p class="info-box">The participation period has ended. Waiting for the creator to resolve the game.</p>
-                        {/if}
-
                     {:else}
                         <p class="info-box">Connect your wallet to interact with the game.</p>
                     {/if}
@@ -678,13 +375,13 @@
             </div>
         </section>
 
-        {#if game.participations && game.participations.length > 0}
+        {#if participations && participations.length > 0}
             <section class="participations-section">
                 <h2 class="text-3xl font-semibold mb-8 text-center">
-                    Participations <span class="text-lg font-normal {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'}">({game.participations.length})</span>
+                    Participations <span class="text-lg font-normal {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'}">({participations.length})</span>
                 </h2>
                 <div class="flex flex-col gap-6">
-                    {#each game.participations as p (p.boxId)}
+                    {#each participations as p (p.boxId)}
                         {@const isCurrentParticipationWinner = gameEnded && game.winnerInfo && (p.boxId === game.winnerInfo.participationBoxId || (game.winnerInfo.playerPK_Hex && p.playerPK_Hex === game.winnerInfo.playerPK_Hex) || pkHexToBase58Address(p.playerPK_Hex) === game.winnerInfo.playerAddress)}
                         {@const actualScoreForThisParticipation = gameEnded && game.secret ? getActualScore(p, game.secret) : null}
 
@@ -755,7 +452,7 @@
                                         {/if}
                                     </div>
                                 </div>
-                                {#each game.participations as p (p.boxId)}
+                                {#each participations as p (p.boxId)}
                                     {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
                                     {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant && !p.spent}
 

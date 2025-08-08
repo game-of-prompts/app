@@ -1,35 +1,39 @@
-// submit_score.ts
 import {
     OutputBuilder,
     SAFE_MIN_BOX_VALUE,
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder,
     ErgoAddress,
-    type InputBox,
-    type Amount // Asegúrate de tener este tipo si Box es Box<Amount>
+    type InputBox
 } from '@fleet-sdk/core';
 import { SColl, SLong, SByte } from '@fleet-sdk/serializer';
-import { hexToBytes, utf8StringToCollByteHex } from '$lib/ergo/utils'; // utf8StringToCollByteHex serializa un string a Coll[Byte] en formato hex
-import { getGopParticipationBoxErgoTreeHex } from '../contract'; // Ajusta la ruta a contract.ts
+import { hexToBytes, utf8StringToCollByteHex } from '$lib/ergo/utils';
+import { getGopParticipationSubmittedErgoTreeHex } from '../contract'; // <-- Importación actualizada
 
-// Asumimos que 'ergo' es una variable global/accesible del conector del wallet
-// declare var ergo: any; 
+declare var ergo: any;
 
 /**
- * Construye y envía la transacción para crear una nueva GoP ParticipationBox.
+ * Construye y envía una transacción para crear una caja de participación en estado "Submitted".
+ * @param gameNftIdHex - ID del NFT del juego al que se une el jugador (para R6).
+ * @param scoreList - Lista de puntuaciones para ofuscar la real (para R9).
+ * @param participationFeeForBox - Tarifa de participación que será el valor de la caja.
+ * @param commitmentCHex - El commitment criptográfico con la puntuación real (para R5).
+ * @param solverIdString - El ID/nombre del solver (para R7).
+ * @param hashLogsHex - El hash de los logs del juego (para R8).
+ * @returns El ID de la transacción enviada.
  */
-export async function submit_score( // Manteniendo el nombre de tu archivo/función
-    gameNftIdHex: string,           // Para R6
-    scoreList: bigint[],            // Para R9: Lista de puntuaciones, una es la real
-    participationFeeForBox: bigint, // Valor de la caja (SELF.value)
-    commitmentCHex: string,         // Para R5: Commitment que usa la puntuación real de scoreList
-    solverIdString: string,         // Para R7: ID/Nombre del Solver (string UTF-8)
-    hashLogsHex: string,            // Para R8: Hash de los logs (hex)
+export async function submit_score(
+    gameNftIdHex: string,
+    scoreList: bigint[],
+    participationFeeForBox: bigint,
+    commitmentCHex: string,
+    solverIdString: string,
+    hashLogsHex: string
 ): Promise<string | null> {
 
-    console.log("Attempting to submit score with params:", {
+    console.log("Intentando enviar puntuación con los parámetros:", {
         gameNftIdHex,
-        scoreList: scoreList.map(s => s.toString()), // Loguear como strings para legibilidad
+        scoreList: scoreList.map(s => s.toString()),
         participationFeeForBox: participationFeeForBox.toString(),
         commitmentCHex,
         solverIdString,
@@ -38,94 +42,77 @@ export async function submit_score( // Manteniendo el nombre de tu archivo/funci
 
     if (participationFeeForBox < SAFE_MIN_BOX_VALUE) {
         throw new Error(
-            `Participation fee (${participationFeeForBox / 1000000000n} ERG) is less than the minimum required box value ` +
-            `(${SAFE_MIN_BOX_VALUE / 1000000000n} ERG).`
+            `La tarifa de participación (${participationFeeForBox / 1000000000n} ERG) es menor que el valor mínimo requerido para una caja.`
         );
     }
 
-    // 1. Obtener información del Wallet del Jugador
+    // 1. Obtener la clave pública del jugador desde la billetera
     const playerAddressString = await ergo.get_change_address();
     if (!playerAddressString) {
-        throw new Error("Failed to get player's change address from wallet.");
+        throw new Error("No se pudo obtener la dirección del jugador desde la billetera.");
     }
     const playerP2PKAddress = ErgoAddress.fromBase58(playerAddressString);
-    const pkBytesArrayFromAddress = playerP2PKAddress.getPublicKeys();
-
-    if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
-        throw new Error(`Could not extract public key from player address (${playerAddressString}) for R4.`);
+    const playerPkBytes = playerP2PKAddress.getPublicKeys()[0];
+    if (!playerPkBytes) {
+        throw new Error(`No se pudo extraer la clave pública de la dirección del jugador (${playerAddressString}).`);
     }
-    const playerPkBytes_for_R4 = pkBytesArrayFromAddress[0];
 
-    // 2. Obtener Inputs del Wallet del Jugador para cubrir la tarifa y la comisión de tx
+    // 2. Obtener UTXOs del jugador para cubrir la tarifa
     const inputs: InputBox[] = await ergo.get_utxos();
     if (!inputs || inputs.length === 0) {
-        throw new Error("No UTXOs found in the wallet to pay for participation. Please ensure your wallet has funds.");
+        throw new Error("No se encontraron UTXOs en la billetera. Asegúrate de tener fondos.");
     }
 
-    // 3. Obtener ErgoTree del Contrato de ParticipationBox
-    const participationContractErgoTree = getGopParticipationBoxErgoTreeHex();
+    // 3. Obtener el ErgoTree del contrato de participación
+    const participationContractErgoTree = getGopParticipationSubmittedErgoTreeHex(); // <-- Uso de la función actualizada
     if (!participationContractErgoTree) {
-        throw new Error("Failed to get GoP Participation Box Contract ErgoTree.");
+        throw new Error("No se pudo obtener el ErgoTree del contrato de participación.");
     }
 
-    // 4. Preparar Bytes/Valores Serializados para los Registros
+    // 4. Preparar los valores para los registros
     const commitmentC_bytes = hexToBytes(commitmentCHex);
-    if (!commitmentC_bytes) throw new Error(`Failed to convert commitmentC hex '${commitmentCHex}' to bytes.`);
+    if (!commitmentC_bytes) throw new Error("Fallo al convertir commitmentC a bytes.");
 
     const gameNftId_bytes = hexToBytes(gameNftIdHex);
-    if (!gameNftId_bytes) throw new Error(`Failed to convert gameNftId hex '${gameNftIdHex}' to bytes.`);
-    
-    // R7: solverId (Coll[Byte] a partir de string UTF-8)
-    const solverId_collByte_hex_for_R7 = utf8StringToCollByteHex(solverIdString); 
-    if (!solverId_collByte_hex_for_R7) throw new Error (`Failed to convert solverId string to CollByteHex.`)
+    if (!gameNftId_bytes) throw new Error("Fallo al convertir gameNftId a bytes.");
     
     const hashLogs_bytes = hexToBytes(hashLogsHex);
-    if (!hashLogs_bytes) throw new Error(`Failed to convert hashLogs hex '${hashLogsHex}' to bytes.`);
+    if (!hashLogs_bytes) throw new Error("Fallo al convertir hashLogs a bytes.");
 
-    // R9: scoreList (Coll[Long])
-    // SColl espera un array de BigInts o Numbers para SLong.
-    // Asegurarse de que scoreList ya es bigint[] o convertir.
-    const scoreList_for_R9_values = scoreList.map(s => BigInt(s)); // Asegurar que son BigInt
-    const scoreList_collLong_hex_for_R9 = SColl(SLong, scoreList_for_R9_values).toHex();
-
-    // 5. Construir la Salida (ParticipationBox)
+    // 5. Construir la caja de salida (ParticipationBox)
     const participationBoxOutput = new OutputBuilder(
-        participationFeeForBox, // El valor de la caja es la tarifa de participación
+        participationFeeForBox,
         participationContractErgoTree
     )
     .setAdditionalRegisters({
-        R4: SColl(SByte, playerPkBytes_for_R4).toHex(),
+        R4: SColl(SByte, playerPkBytes).toHex(),
         R5: SColl(SByte, commitmentC_bytes).toHex(),
         R6: SColl(SByte, gameNftId_bytes).toHex(),
-        R7: solverId_collByte_hex_for_R7, 
+        R7: utf8StringToCollByteHex(solverIdString), 
         R8: SColl(SByte, hashLogs_bytes).toHex(),
-        R9: scoreList_collLong_hex_for_R9 
+        R9: SColl(SLong, scoreList).toHex()
     });
 
-    // 6. Construir la Transacción
+    // 6. Construir y firmar la transacción
     const creationHeight = await ergo.get_current_height();
-    const unsignedTransactionBuilder = new TransactionBuilder(creationHeight)
-        .from(inputs) // Fleet SDK seleccionará las UTXOs necesarias de este pool
-        .to(participationBoxOutput) // Pasar la instancia de OutputBuilder directamente
+    const unsignedTransaction = new TransactionBuilder(creationHeight)
+        .from(inputs)
+        .to(participationBoxOutput)
         .sendChangeTo(playerAddressString)
-        .payFee(RECOMMENDED_MIN_FEE_VALUE);
+        .payFee(RECOMMENDED_MIN_FEE_VALUE)
+        .build();
     
-    const unsignedTransaction = await unsignedTransactionBuilder.build();
-    const eip12UnsignedTransaction = unsignedTransaction.toEIP12Object();
-
-    // 7. Firmar y Enviar
-    console.log("Requesting transaction signing for score submission...");
-    const signedTransaction = await ergo.sign_tx(eip12UnsignedTransaction);
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     if (!signedTransaction) {
-        throw new Error("Transaction signing was cancelled or failed by the user.");
+        throw new Error("El usuario canceló o falló la firma de la transacción.");
     }
 
-    console.log("Transaction signed. Submitting to Ergo network...");
+    // 7. Enviar la transacción a la red
     const transactionId = await ergo.submit_tx(signedTransaction);
     if (!transactionId) {
-        throw new Error("Failed to submit score transaction to the network.");
+        throw new Error("Fallo al enviar la transacción a la red.");
     }
 
-    console.log(`GoP Score submission transaction sent successfully. Transaction ID: ${transactionId}`);
+    console.log(`Transacción de envío de puntuación enviada con éxito. ID: ${transactionId}`);
     return transactionId;
 }

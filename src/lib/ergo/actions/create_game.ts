@@ -4,98 +4,104 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder,
     ErgoAddress,
-    type InputBox,
-    type Amount
+    type InputBox
 } from '@fleet-sdk/core';
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
 import { hexToBytes, SString } from '$lib/ergo/utils'; 
-import { getGopGameBoxErgoTreeHex, getGopParticipationBoxScriptHash } from '../contract';
+import { getGopGameActiveErgoTreeHex } from '../contract'; // <-- Importación actualizada
 
 declare var ergo: any;
 
+/**
+ * Crea una transacción para generar una caja de juego en estado "GameActive".
+ * @param gameServiceId - ID del servicio (opcional, puede ir en los detalles).
+ * @param hashedSecret - El hash Blake2b256 del secreto 'S'.
+ * @param deadlineBlock - Altura de bloque en la que finaliza el juego.
+ * @param creatorStakeNanoErg - Cantidad de ERG que el creador pone en juego.
+ * @param participationFeeNanoErg - Tarifa para que los jugadores participen.
+ * @param commissionPercentage - Porcentaje de comisión para el creador.
+ * @param invitedJudges - Array de IDs de los tokens de reputación de los jueces invitados.
+ * @param gameDetailsJson - String JSON con los detalles del juego (título, descripción, etc.).
+ * @returns El ID de la transacción enviada.
+ */
 export async function create_game(
-    gameServiceId: string,
+    gameServiceId: string, // Aunque no se usa directamente, es bueno mantenerlo por consistencia
     hashedSecret: string,
     deadlineBlock: number,
     creatorStakeNanoErg: bigint,
     participationFeeNanoErg: bigint,
     commissionPercentage: number,
-    gameDetailsJson: string,
+    invitedJudges: string[], // <-- Nuevo parámetro para los jueces
+    gameDetailsJson: string
 ): Promise<string | null> {
 
-    console.log("Attempting to create GoP game with params:", { 
-        gameServiceId,
+    console.log("Intentando crear un juego con los nuevos contratos (GameActive):", {
         hashedSecret: hashedSecret.substring(0, 10) + "...",
         deadlineBlock,
         creatorStakeNanoErg: creatorStakeNanoErg.toString(),
-        participationFeeNanoErg: participationFeeNanoErg.toString(),
-        commissionPercentage,
+        invitedJudges,
         gameDetailsJsonBrief: gameDetailsJson.substring(0, 100) + "..."
     });
 
+    // --- 1. Preparación de datos y direcciones ---
     const creatorAddressString = await ergo.get_change_address();
     if (!creatorAddressString) {
-        throw new Error("Failed to get creator's change address from wallet.");
+        throw new Error("No se pudo obtener la dirección del creador desde la billetera.");
     }
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
-    const pkBytesArrayFromAddress = creatorP2PKAddress.getPublicKeys();
-    if (!pkBytesArrayFromAddress || pkBytesArrayFromAddress.length === 0) {
-        const msg = `Could not extract public key from creator address (${creatorAddressString}) for R4.`;
-        console.error(msg);
-        throw new Error(msg);
+    const creatorPkBytes = creatorP2PKAddress.getPublicKeys()[0];
+    if (!creatorPkBytes) {
+        throw new Error(`No se pudo extraer la clave pública de la dirección ${creatorAddressString}.`);
     }
-    const creatorPkBytes_for_R4 = pkBytesArrayFromAddress[0];
 
     const inputs: InputBox[] = await ergo.get_utxos();
     if (!inputs || inputs.length === 0) {
-        throw new Error("No UTXOs found in the wallet to create the game.");
+        throw new Error("No se encontraron UTXOs en la billetera para crear el juego.");
     }
 
     if (creatorStakeNanoErg < SAFE_MIN_BOX_VALUE) {
-        throw new Error(
-            `Creator stake (${creatorStakeNanoErg / 1000000000n} ERG) is less than SAFE_MIN_BOX_VALUE.`
-        );
+        throw new Error(`El stake del creador (${creatorStakeNanoErg}) es menor que el mínimo seguro.`);
     }
-    const outputBoxValue = creatorStakeNanoErg;
-    const gopGameContractErgoTree = getGopGameBoxErgoTreeHex();
 
+    // --- 2. Construcción de la caja de salida del juego ---
+    const activeGameErgoTree = getGopGameActiveErgoTreeHex();
     const hashedSecretBytes = hexToBytes(hashedSecret);
-    if (!hashedSecretBytes) throw new Error("Failed to convert hashedSecret hex to bytes.");
+    if (!hashedSecretBytes) throw new Error("Fallo al convertir el hashedSecret a bytes.");
+
+    // Convertir los IDs de los jueces a un formato que el contrato entienda (Coll[Coll[Byte]])
+    const judgesColl = invitedJudges.map(judgeId => hexToBytes(judgeId));
 
     const gameBoxOutput = new OutputBuilder(
-        outputBoxValue,
-        gopGameContractErgoTree
+        creatorStakeNanoErg,
+        activeGameErgoTree
     )
-    .mintToken({ 
+    .mintToken({ // Mintear el NFT del juego
         amount: 1n,
+        name: "Game of Prompts NFT", // El nombre y descripción se pueden sobreescribir con EIP-004
         decimals: 0
     })
     .setAdditionalRegisters({
-        R4: SColl(SByte, creatorPkBytes_for_R4).toHex(),
-        R5: SPair(SLong(0n), SColl(SByte, hashedSecretBytes)).toHex(),
-        R6: SColl(SByte, "0008cd").toHex(),
+        // Estructura de registros según `game_active.es`
+        R4: SPair(SColl(SByte, creatorPkBytes), SInt(commissionPercentage)).toHex(),
+        R5: SColl(SByte, hashedSecretBytes).toHex(),
+        R6: SColl(SColl(SByte, judgesColl)).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
-        R8: SInt(commissionPercentage).toHex(),
+        // R8 ya no se usa aquí.
         R9: SString(gameDetailsJson)
     });
 
+    // --- 3. Construcción y envío de la transacción ---
     const creationHeight = await ergo.get_current_height();
-    const unsignedTransactionBuilder = new TransactionBuilder(creationHeight)
+    const unsignedTransaction = new TransactionBuilder(creationHeight)
         .from(inputs)
         .to(gameBoxOutput)
         .sendChangeTo(creatorAddressString)
-        .payFee(RECOMMENDED_MIN_FEE_VALUE);
+        .payFee(RECOMMENDED_MIN_FEE_VALUE)
+        .build();
     
-    const unsignedTransaction = await unsignedTransactionBuilder.build();
-    const eip12UnsignedTransaction = await unsignedTransaction.toEIP12Object();
-
-    console.log("Requesting transaction signing for game creation...");
-    const signedTransaction = await ergo.sign_tx(eip12UnsignedTransaction);
-    if (!signedTransaction) throw new Error("Transaction signing was cancelled or failed.");
-
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     const transactionId = await ergo.submit_tx(signedTransaction);
-    if (!transactionId) throw new Error("Failed to submit transaction to the network.");
 
-    console.log(`GoP Game creation transaction submitted successfully. Transaction ID: ${transactionId}`);
+    console.log(`Transacción de creación de juego (GameActive) enviada con éxito. ID: ${transactionId}`);
     return transactionId;
 }

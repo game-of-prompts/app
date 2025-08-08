@@ -13,7 +13,7 @@ import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
 import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
-import { claim_refund_from_cancelled_game } from './actions/claim_refund_from_cancelled_game';
+import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation;
@@ -25,6 +25,7 @@ interface CreateGoPGamePlatformParams {
     creatorStakeNanoErg: BigInt;
     participationFeeNanoErg: BigInt;
     commissionPercentage: number;
+    invitedJudges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
 }
 
@@ -103,6 +104,7 @@ export class ErgoPlatform implements Platform {
                 params.creatorStakeNanoErg,
                 params.participationFeeNanoErg,
                 params.commissionPercentage,
+                params.invitedJudges,
                 params.gameDetailsJson
             );
         } catch (error) {
@@ -132,12 +134,13 @@ export class ErgoPlatform implements Platform {
     }
 
     async resolveGame(
-        game: GameActive, // Tipo específico: solo se puede resolver un juego que está activo (y después de su deadline).
+        game: GameActive,
+        participations: ParticipationSubmitted[],
         secretS_hex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
         
-        return await resolve_game(game, secretS_hex);
+        return await resolve_game(game, participations, secretS_hex);
     }
 
     async cancel_game_before_deadline(
@@ -150,14 +153,13 @@ export class ErgoPlatform implements Platform {
         return await cancel_game_before_deadline(game, secretS_hex, claimerAddressString);
     }
 
-    async claimRefundFromCancelledGame(
+    async drain_cancelled_game_stake(
         game: GameCancellation, // Tipo específico: el juego debe estar en estado de cancelación.
-        participation: ParticipationSubmitted, // La participación debe estar en estado enviado.
         claimerAddressString: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
 
-        return await claim_refund_from_cancelled_game(game, participation, claimerAddressString);
+        return await drain_cancelled_game_stake(game, claimerAddressString);
     }
 
     /**
