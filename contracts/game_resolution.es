@@ -63,14 +63,14 @@
 
       if (pBoxIsValid && candidateDataInputIsValid) {
         
-        val newScore = submittedPBox.R9[Coll[Long]].get.fold((-1L, false), { (acc, score) =>
+        val newScore = submittedPBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
           if (acc._2) { acc } else {
             val testCommitment = blake2b256(submittedPBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ submittedPBox.R8[Coll[Byte]].get ++ revealedS)
             if (testCommitment == submittedPBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
           }
         })._1
         
-        val currentScore = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc, score) =>
+        val currentScore = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
           if (acc._2) { acc } else {
             val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ revealedS)
             if (testCommitment == currentCandidateBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
@@ -92,12 +92,12 @@
           recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
         }
         
-        val participationIsRecreated = OUTPUTS.exists { outBox =>
+        val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
           blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
           outBox.value == submittedPBox.value &&
           outBox.R4[Coll[Byte]].get == submittedPBox.R4[Coll[Byte]].get &&
           outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get
-        }
+        })
         
         gameBoxIsRecreatedCorrectly && participationIsRecreated
       } else { false }
@@ -109,18 +109,24 @@
     if (isBeforeResolutionDeadline) {
       val judgeVotes = CONTEXT.dataInputs
       val requiredVotes =
-        if (participatingJudges.isEmpty) 0
+        if (participatingJudges.size == 0) 0
         else participatingJudges.size / 2 + 1
 
       val votesAreValid = if (judgeVotes.size < requiredVotes) { false } else {
         val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
-        val allVotesAreUnique = judgeVoteTokens.distinct.size == judgeVoteTokens.size
+        
+        val allVotesAreUnique = judgeVoteTokens.indices.forall { (i: Int) =>
+            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
+                otherToken == judgeVoteTokens(i)
+            }))
+        }
 
-        allVotesAreUnique && judgeVotes.forall { voteBox =>
+        allVotesAreUnique && judgeVotes.forall( { (voteBox: Box) =>
           val judgeTokenId = voteBox.tokens(0)._1
           val voteTargetCommitment = voteBox.R5[Coll[Byte]].get
-          judgeTokenId.isIn(participatingJudges) && voteTargetCommitment == winnerCandidateCommitment
-        }
+          val allJudgesParticipate = participatingJudges.exists({ (pJudge: Coll[Byte]) => pJudge == judgeTokenId })
+          allJudgesParticipate && voteTargetCommitment == winnerCandidateCommitment
+        })
       }
       
       if (votesAreValid) {
