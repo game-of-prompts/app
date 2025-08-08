@@ -4,8 +4,8 @@
   // =================================================================
 
   val JUDGE_PERIOD = 30L 
-  val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("...") 
-  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...")
+  val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
 
   // =================================================================

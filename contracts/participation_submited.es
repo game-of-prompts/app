@@ -4,7 +4,7 @@
   // =================================================================
 
   // Hash del script al que esta caja debe transicionar en la fase de resolución.
-  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...") // Placeholder
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`") // Placeholder
 
   // Prefijo P2PK para la validación de direcciones.
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")

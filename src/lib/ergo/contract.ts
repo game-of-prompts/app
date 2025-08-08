@@ -39,7 +39,7 @@ function ensureParticipationSubmittedCompiled(): void {
     if (_participationSubmitted.ergoTree) return;
     ensureParticipationResolvedCompiled();
     const resolvedHash = getGopParticipationResolvedScriptHash();
-    let source = PARTICIPATION_SUBMITTED_SOURCE.replace(/\$PARTICIPATION_RESOLVED_SCRIPT_HASH/g, resolvedHash);
+    let source = PARTICIPATION_SUBMITTED_SOURCE.replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
     _participationSubmitted.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
@@ -54,8 +54,8 @@ function ensureGameResolutionCompiled(): void {
     const submittedHash = getGopParticipationSubmittedScriptHash();
     const resolvedHash = getGopParticipationResolvedScriptHash();
     let source = GAME_RESOLUTION_SOURCE
-        .replace(/\$PARTICIPATION_SUBMITTED_SCRIPT_HASH/g, submittedHash)
-        .replace(/\$PARTICIPATION_RESOLVED_SCRIPT_HASH/g, resolvedHash);
+        .replace(/`\+PARTICIPATION_SUBMITTED_SCRIPT_HASH\+`/g, submittedHash)
+        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
@@ -70,9 +70,9 @@ function ensureGameActiveCompiled(): void {
     const participationHash = getGopParticipationSubmittedScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
-        .replace(/\$GAME_RESOLUTION_SCRIPT_HASH/g, resolutionHash)
-        .replace(/\$GAME_CANCELLATION_SCRIPT_HASH/g, cancellationHash)
-        .replace(/\$PARTICIPATION_BOX_SCRIPT_HASH/g, participationHash);
+        .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
+        .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
+        .replace(/`\+PARTICIPATION_SUBMITED_SCRIPT_HASH\+`/g, participationHash);
         
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }

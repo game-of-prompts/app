@@ -5,14 +5,14 @@
 
   // Hashes de los scripts a los que esta caja puede transicionar.
   // Estos valores deben ser reemplazados por los hashes reales de los scripts compilados.
-  val GAME_RESOLUTION_SCRIPT_HASH = fromBase16("...") 
-  val GAME_CANCELLATION_SCRIPT_HASH = fromBase16("...")
+  val GAME_RESOLUTION_SCRIPT_HASH = fromBase16("`+GAME_RESOLUTION_SCRIPT_HASH+`") 
+  val GAME_CANCELLATION_SCRIPT_HASH = fromBase16("`+GAME_CANCELLATION_SCRIPT_HASH+`")
   
   // Hash del script que gobierna las cajas de participación de los jugadores.
-  val PARTICIPATION_BOX_SCRIPT_HASH = fromBase16("...")
+  val PARTICIPATION_SUBMITED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`")
 
   // Hash del script de las participaciones una vez que el juego ha pasado a la fase de resolución.
-  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("...")
+  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
 
   // Constantes para la acción de cancelación.
   val STAKE_DENOMINATOR = 5L
@@ -74,7 +74,7 @@
         
         val initialFoldState = (-1L, (Coll[Byte](), Coll[Byte](), 0L)) // (maxScore, winnerCommitment, winnerPK, prizePool)
         val foldResult = participantInputs.fold(initialFoldState, { (acc, pBox) =>
-          if (blake2b256(pBox.propositionBytes) == PARTICIPATION_BOX_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
+          if (blake2b256(pBox.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
             val pBoxScoreList = pBox.R9[Coll[Long]].get
             val pBoxCommitment = pBox.R5[Coll[Byte]].get
             val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc, score) =>

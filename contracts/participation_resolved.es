@@ -3,9 +3,6 @@
   // === CONSTANTES Y HASHES DE SCRIPTS
   // =================================================================
 
-  // Hashes de los scripts de la caja del juego en sus estados finales.
-  val GAME_RESOLUTION_SCRIPT_HASH = fromBase16("...") 
-
   // =================================================================
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN RESUELTA)
   // =================================================================
@@ -33,15 +30,14 @@
 
     // 2. Verificar que el script de la caja principal es uno de los dos estados finales válidos.
     val mainBoxScriptHash = blake2b256(mainGameBox.propositionBytes)
-    val scriptIsCorrect = mainBoxScriptHash == GAME_RESOLUTION_SCRIPT_HASH
     
     // 3. Verificar que el período de resolución/juicio ha terminado.
     //    La fecha límite para la resolución se encuentra en el R4 de las cajas de resolución.
     val resolutionDeadline = mainGameBox.R4[(Long, Int)].get._1
     val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
 
-    // Se deben cumplir las tres condiciones para que el gasto sea válido.
-    gameLinkIsValid && scriptIsCorrect && resolutionPeriodIsOver
+    // Se deben cumplir las dos condiciones para que el gasto sea válido.
+    gameLinkIsValid && resolutionPeriodIsOver
   }
 
   sigmaProp(isValidEndGame)
