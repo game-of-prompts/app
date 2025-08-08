@@ -1,6 +1,11 @@
 // src/ergo/platform.ts
-import type { Game } from '../common/game';
-import { fetchGoPGames } from './fetch';
+import { 
+    type GameActive, 
+    type GameResolution, 
+    type GameCancellation, 
+    type ParticipationSubmitted 
+} from '../common/game';
+import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
 import { explorer_uri, network_id } from './envs';
 import { address, connected, network, balance } from "../common/store";
@@ -9,6 +14,9 @@ import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
 import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
 import { claim_refund_from_cancelled_game } from './actions/claim_refund_from_cancelled_game';
+
+// Un tipo de unión para representar un juego en cualquier estado posible.
+type AnyGame = GameActive | GameResolution | GameCancellation;
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -20,7 +28,7 @@ interface CreateGoPGamePlatformParams {
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
 }
 
-export class ErgoPlatform implements Platform{
+export class ErgoPlatform implements Platform {
 
     id = "ergo";
     main_token = "ERG";
@@ -33,39 +41,32 @@ export class ErgoPlatform implements Platform{
             const nautilus = ergoConnector.nautilus;
             if (nautilus) {
                 if (await nautilus.connect()) {
-                    console.log('Connected!');
+                    console.log('¡Conectado!');
                     address.set(await ergo.get_change_address());
                     network.set((network_id == "mainnet") ? "ergo-mainnet" : "ergo-testnet");
                     await this.get_balance();
                     connected.set(true);
                 } else {
-                    alert('Not connected!');
+                    alert('No conectado');
                 }
             } else {
-                alert('Nautilus Wallet is not active');
+                alert('La billetera Nautilus no está activa');
             }
-            } /*else {
-                alert('No wallet available');
-            } */
+        }
     }
 
     async get_current_height(): Promise<number> {
         try {
-            // If connected to the Ergo wallet, get the current height directly
             return await ergo.get_current_height();
         } catch {
-            // Fallback to fetching the current height from the Ergo API
             try {
-                const response = await fetch(explorer_uri+'/api/v1/networkState');
-                if (!response.ok) {
-                    throw new Error(`API request failed with status: ${response.status}`);
-                }
-    
+                const response = await fetch(explorer_uri + '/api/v1/networkState');
+                if (!response.ok) throw new Error(`La solicitud a la API falló: ${response.status}`);
                 const data = await response.json();
-                return data.height; // Extract and return the height
+                return data.height;
             } catch (error) {
-                console.error("Failed to fetch network height from API:", error);
-                throw new Error("Unable to get current height.");
+                console.error("No se pudo obtener la altura de la red desde la API:", error);
+                throw new Error("No se puede obtener la altura actual.");
             }
         }
     }
@@ -73,53 +74,29 @@ export class ErgoPlatform implements Platform{
     async get_balance(id?: string): Promise<Map<string, number>> {
         const balanceMap = new Map<string, number>();
         const addr = await ergo.get_change_address();
+        if (!addr) throw new Error("Se requiere una dirección para obtener el saldo.");
 
-        if (addr) {
-            try {
-                // Fetch balance for the specific address from the API
-                const response = await fetch(explorer_uri+`/api/v1/addresses/${addr}/balance/confirmed`);
-                if (!response.ok) {
-                    throw new Error(`API request failed with status: ${response.status}`);
-                }
-    
-                const data = await response.json();
-    
-                // Add nanoErgs balance to the map
-                balanceMap.set("ERG", data.nanoErgs);
-                balance.set(data.nanoErgs)
-    
-                // Add tokens balances to the map
-                data.tokens.forEach((token: { tokenId: string; amount: number }) => {
-                    balanceMap.set(token.tokenId, token.amount);
-                });
-            } catch (error) {
-                console.error(`Failed to fetch balance for address ${addr} from API:`, error);
-                throw new Error("Unable to fetch balance.");
-            }
-        } else {
-            throw new Error("Address is required to fetch balance.");
+        try {
+            const response = await fetch(explorer_uri + `/api/v1/addresses/${addr}/balance/confirmed`);
+            if (!response.ok) throw new Error(`La solicitud a la API falló: ${response.status}`);
+            const data = await response.json();
+            balanceMap.set("ERG", data.nanoErgs);
+            balance.set(data.nanoErgs);
+            data.tokens.forEach((token: { tokenId: string; amount: number }) => {
+                balanceMap.set(token.tokenId, token.amount);
+            });
+        } catch (error) {
+            console.error(`No se pudo obtener el saldo para la dirección ${addr}:`, error);
+            throw new Error("No se puede obtener el saldo.");
         }
-    
         return balanceMap;
     }
 
-    /**
-     * Initiates the creation of a new Game of Prompts game on the Ergo blockchain.
-     * This method prepares the parameters and calls the underlying transaction function.
-     *
-     * @param params - An object containing all necessary parameters for game creation.
-     * @returns A promise that resolves with the transaction ID string if successful, or null otherwise.
-     */
     public async createGoPGame(params: CreateGoPGamePlatformParams): Promise<string | null> {
-        if (!ergo) {
-            throw new Error("Wallet not connected or Ergo connector not available.");
-        }
+        if (!ergo) throw new Error("Billetera no conectada.");
         
         try {
-            // Call the new underlying function 'create_game' responsible for
-            // building and submitting the actual Ergo transaction.
-            const transactionId = await create_game(
-                // currentContractVersion, // Pass if create_game expects it
+            return await create_game(
                 params.gameServiceId,
                 params.hashedSecret,
                 params.deadlineBlock,
@@ -128,32 +105,24 @@ export class ErgoPlatform implements Platform{
                 params.commissionPercentage,
                 params.gameDetailsJson
             );
-            return transactionId;
         } catch (error) {
-            console.error("Error in createGoPGame platform method:", error);
-            // Optionally, re-throw or handle specific error types if needed
-            // For example, if 'create_game' throws custom errors.
-            if (error instanceof Error) {
-                throw new Error(`Failed to create GoP game: ${error.message}`);
-            }
-            throw new Error("An unknown error occurred while creating the GoP game.");
+            console.error("Error en el método de plataforma createGoPGame:", error);
+            if (error instanceof Error) throw new Error(`No se pudo crear el juego: ${error.message}`);
+            throw new Error("Ocurrió un error desconocido al crear el juego.");
         }
     }
 
     async submitScoreToGopGame(
-        game: Game, 
+        game: GameActive, // Tipo específico: solo se puede enviar puntuación a un juego activo.
         scoreList: bigint[],
         commitmentC_hex: string, 
         solverId_string: string, 
         hashLogs_hex: string
     ): Promise<string | null> {
-        if (!ergo) {
-            throw new Error("Wallet not connected or Ergo connector not available.");
-        }
+        if (!ergo) throw new Error("Billetera no conectada.");
 
-        console.log("ErgoPlatform: Preparing to submit score.");
         return await submit_score(
-            game.gameId, // gameNftId es string hexadecimal
+            game.gameId,
             scoreList,
             game.participationFeeNanoErg,
             commitmentC_hex,
@@ -163,57 +132,58 @@ export class ErgoPlatform implements Platform{
     }
 
     async resolveGame(
-        game: Game,
+        game: GameActive, // Tipo específico: solo se puede resolver un juego que está activo (y después de su deadline).
         secretS_hex: string
     ): Promise<string | null> {
-        if (!ergo) {
-            throw new Error("Wallet not connected or Ergo connector not available.");
-        }
+        if (!ergo) throw new Error("Billetera no conectada.");
         
-        console.log("ErgoPlatform: Calling resolve_game_transaction.");
-        // Ahora simplemente delegamos, pasando el conector 'this.ergo'
-        return await resolve_game(
-            game,
-            secretS_hex
-        );
+        return await resolve_game(game, secretS_hex);
     }
 
     async cancel_game_before_deadline(
-        game: Game,
+        game: GameActive, // Tipo específico: solo se puede cancelar un juego activo.
         secretS_hex: string,
         claimerAddressString: string
     ): Promise<string | null> {
-        if (!ergo) {
-            throw new Error("Wallet not connected or Ergo connector not available.");
-        }
+        if (!ergo) throw new Error("Billetera no conectada.");
         
-        console.log("ErgoPlatform: Calling cancel_game_before_deadline_transaction.");
-        return await cancel_game_before_deadline(
-            game,
-            secretS_hex,
-            claimerAddressString
-        );
+        return await cancel_game_before_deadline(game, secretS_hex, claimerAddressString);
     }
 
     async claimRefundFromCancelledGame(
-        game: Game,
-        participation: any,
+        game: GameCancellation, // Tipo específico: el juego debe estar en estado de cancelación.
+        participation: ParticipationSubmitted, // La participación debe estar en estado enviado.
         claimerAddressString: string
     ): Promise<string | null> {
-        if (!ergo) {
-            throw new Error("Wallet not connected or Ergo connector not available.");
-        }
+        if (!ergo) throw new Error("Billetera no conectada.");
 
-        console.log("ErgoPlatform: Calling claim_refund_from_cancelled_game_transaction.");
-        return await claim_refund_from_cancelled_game(
-            game,
-            participation,
-            claimerAddressString
-        );
+        return await claim_refund_from_cancelled_game(game, participation, claimerAddressString);
     }
 
+    /**
+     * Busca todos los juegos en la blockchain, combinando los resultados de cada estado posible.
+     * @returns Un `Promise` que resuelve a un `Map` que contiene todos los juegos, usando el ID del juego como clave.
+     */
+    async fetchGoPGames(): Promise<Map<string, AnyGame>> {
+        console.log("Buscando todos los juegos en todos los estados...");
 
-    async fetchGoPGames(offset: number = 0): Promise<Map<string, Game>> {
-        return await fetchGoPGames(offset, 'all');
+        // Ejecutar todas las búsquedas en paralelo para mayor eficiencia.
+        const [activeGames, resolutionGames, cancellationGames] = await Promise.all([
+            fetchActiveGames(),
+            fetchResolutionGames(),
+            fetchCancellationGames()
+        ]);
+
+        // Combinar los resultados en un solo mapa.
+        // El operador '...' permite fusionar los mapas. Si un ID existiera en múltiples
+        // mapas (lo cual es imposible por diseño de los contratos), el último prevalecería.
+        const allGames = new Map<string, AnyGame>([
+            ...activeGames,
+            ...resolutionGames,
+            ...cancellationGames,
+        ]);
+
+        console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
+        return allGames;
     }
 }

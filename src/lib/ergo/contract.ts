@@ -119,6 +119,7 @@ export function getGopGameCancellationAddress(): Address { ensureGameCancellatio
 export const getGopParticipationSubmittedTemplateHash = () => getTemplateHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
 export const getGopParticipationSubmittedScriptHash = () => getScriptHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
 export function getGopParticipationSubmittedAddress(): Address { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toAddress(networkType); }
+export function getGopParticipationSubmittedBoxErgoTreeHex(): string { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toHex(); }
 
 // --- Participation Resolved ---
 export const getGopParticipationResolvedTemplateHash = () => getTemplateHash(_participationResolved, ensureParticipationResolvedCompiled);
