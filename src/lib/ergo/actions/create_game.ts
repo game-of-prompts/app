@@ -75,9 +75,8 @@ export async function create_game(
         creatorStakeNanoErg,
         activeGameErgoTree
     )
-    .mintToken({ // Mintear el NFT del juego
+    .mintToken({ 
         amount: 1n,
-        name: "Game of Prompts NFT", // El nombre y descripción se pueden sobreescribir con EIP-004
         decimals: 0
     })
     .setAdditionalRegisters({

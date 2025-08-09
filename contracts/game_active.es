@@ -27,8 +27,7 @@
   // R5: Coll[Byte]        - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R6: Coll[Coll[Byte]]  - invitedJudgesReputationProofs
   // R7: Coll[Long]        - numericalParameters: [deadline, creatorStake, participationFee].
-  // R8:                   -   - (No utilizado en este estado).
-  // R9: Coll[Byte]        - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
+  // R8: Coll[Byte]        - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
   
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -43,7 +42,7 @@
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
+  val gameDetailsJsonHex = SELF.R8[Coll[Byte]].get
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
