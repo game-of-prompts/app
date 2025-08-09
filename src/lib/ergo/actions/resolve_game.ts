@@ -8,10 +8,11 @@ import {
     type Amount
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
+import { bigintToLongByteArray, hexToBytes, parseBox, SString, uint8ArrayToHex, utf8StringToCollByteHex } from '$lib/ergo/utils';
 import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex } from '../contract';
+import { stringToBytes } from '@scure/base';
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = 30;
@@ -56,7 +57,6 @@ export async function resolve_game(
     // Esta lógica simula lo que el contrato hará on-chain para asegurar que la tx es válida.
     let maxScore = -1n;
     let winnerCandidateCommitment: string | null = null;
-    let totalPrizePool = 0n;
     const validParticipationInputs: InputBox[] = [];
 
     for (const p of participations) {
@@ -66,7 +66,7 @@ export async function resolve_game(
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
                 ...hexToBytes(p.solverId_RawBytesHex)!,
-                ...bigintToLongByteArray(score),
+                ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
                 ...secretS_bytes
             ]);
@@ -79,8 +79,7 @@ export async function resolve_game(
         }
 
         if (scoreIsValid) {
-            validParticipationInputs.push(parseBox(p.box));
-            totalPrizePool += p.value;
+            validParticipationInputs.push(p);
             if (actualScore > maxScore) {
                 maxScore = actualScore;
                 winnerCandidateCommitment = p.commitmentC_Hex;
@@ -93,8 +92,9 @@ export async function resolve_game(
     }
     
     if (!winnerCandidateCommitment) {
-        console.warn("No se encontraron participaciones válidas. El pozo de premios será cero.");
-        winnerCandidateCommitment = uint8ArrayToHex(new Uint8Array(32).fill(0)); // Un commitment placeholder si no hay ganador.
+        const _msg = "No se encontraron participaciones válidas. No se puede resolver el juego.";
+        console.warn(_msg);
+        throw new Error(_msg)
     }
 
     // --- 3. Construir las Salidas de la Transacción ---
@@ -103,42 +103,64 @@ export async function resolve_game(
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
     const resolvedCounter = validParticipationInputs.length;
+
+    const judgesColl = game.invitedJudges
+        .map(judgeId => {
+            const bytes = hexToBytes(judgeId);
+            return bytes ? [...bytes] : null;
+        })
+        .filter((item): item is number[] => item !== null);
     
     const resolutionBoxOutput = new OutputBuilder(
-        game.creatorStakeNanoErg + totalPrizePool,
+        game.creatorStakeNanoErg,
         resolutionErgoTree
     )
     .addTokens(game.box.assets) // Transferir el NFT del juego
     .setAdditionalRegisters({
         R4: SPair(SLong(resolutionDeadline), SInt(resolvedCounter)).toHex(),
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-        R6: SColl(SColl(SByte, game.invitedJudges.map(hexToBytes) as Uint8Array[])).toHex(),
+        R6: SColl(SColl(SByte), judgesColl).toHex(),
         R7: SColl(SLong, [BigInt(game.deadlineBlock), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
-        R8: SPair(SColl(SByte, resolverPkBytes), SInt(game.commissionPercentage)).toHex(),
-        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SString(game.content.rawJsonString).toBytes()).toHex()
+        R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
+        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
     
     // SALIDAS(1...N): Las cajas ParticipationResolved
     const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
-    const resolvedParticipationOutputs = validParticipationInputs.map(pBox => {
+    const resolvedParticipationOutputs = validParticipationInputs.map((p: ParticipationSubmitted) => {
+        const pBox = parseBox(p.box)
+
         return new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
-            .setAdditionalRegisters(pBox.additionalRegisters);
+            .setAdditionalRegisters({
+                R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
+                R6: SColl(SByte, hexToBytes(p.gameNftId) ?? "").toHex(),
+                R7: utf8StringToCollByteHex(p.solverId_String ?? ""), 
+                R8: SColl(SByte, hexToBytes(p.hashLogs_Hex) ?? "").toHex(),
+                R9: SColl(SLong, p.scoreList.map(s => BigInt(s))).toHex()
+            });
     });
 
     // --- 4. Construir y Enviar la Transacción ---
     const utxos = await ergo.get_utxos();
-    const inputs = [parseBox(game.box), ...validParticipationInputs, ...utxos];
+    const inputs = [parseBox(game.box), ...validParticipationInputs.map(p => parseBox(p.box)), ...utxos];
     
-    const unsignedTransaction = new TransactionBuilder(currentHeight)
-        .from(inputs)
-        .to([resolutionBoxOutput, ...resolvedParticipationOutputs])
-        .sendChangeTo(resolverAddressString)
-        .payFee(RECOMMENDED_MIN_FEE_VALUE)
-        .build();
+    try {
+        const unsignedTransaction = new TransactionBuilder(currentHeight)
+            .from(inputs)
+            .to([resolutionBoxOutput, ...resolvedParticipationOutputs])
+            .sendChangeTo(resolverAddressString)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
 
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
-    const txId = await ergo.submit_tx(signedTransaction);
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
 
-    console.log(`Transición a resolución enviada con éxito. ID de la transacción: ${txId}`);
-    return txId;
+        console.log(`Transición a resolución enviada con éxito. ID de la transacción: ${txId}`);
+        return txId;
+        
+    } catch (error) {
+        console.warn(error)
+    }
+
 }
