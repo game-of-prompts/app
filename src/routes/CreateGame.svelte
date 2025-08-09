@@ -15,7 +15,7 @@
 
     let platform = new ErgoPlatform();
 
-    // --- State declarations remain the same ---
+    // --- State declarations
     let gameServiceId: string = "";
     let gameSecret: string = "";
     let showGameSecret: boolean = false;
@@ -24,6 +24,7 @@
     let gameImageURL: string = "";
     let gameWebLink: string = "";
     let mirrorUrls: string = "";
+    let invitedJudges: string = "";
     let deadlineValue: number;
     let deadlineUnit: 'days' | 'minutes' = 'days';
     let deadlineBlock: number | undefined;
@@ -35,7 +36,7 @@
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
 
-    // --- Logic functions remain the same ---
+    // --- Logic functions
     $: {
         if (deadlineValue > 0) {
             calculateBlockLimit(deadlineValue, deadlineUnit);
@@ -44,8 +45,9 @@
             deadlineBlockDateText = "";
         }
     }
+
     async function calculateBlockLimit(value: number, unit: 'days' | 'minutes') {
-        if (!platform || !value || value <=0) {
+        if (!platform || !value || value <= 0) {
             deadlineBlock = undefined;
             deadlineBlockDateText = "";
             return;
@@ -67,10 +69,12 @@
             deadlineBlockDateText = "Error calculating deadline";
         }
     }
+
     function toNanoErg(ergValue: number | undefined): BigInt {
         if (ergValue === undefined || ergValue === null || isNaN(ergValue)) return BigInt(0);
         return BigInt(Math.round(ergValue * 1000000000));
     }
+
     async function handleSubmit() {
         isSubmitting = true;
         errorMessage = null;
@@ -112,6 +116,8 @@
             mirrorUrls: mirrorUrls.split(',').map(url => url.trim()).filter(url => url),
         });
 
+        const judgesArray = invitedJudges.split(',').map(id => id.trim()).filter(id => id);
+
         try {
             const result = await platform.createGoPGame({
                 gameServiceId: gameServiceId,
@@ -119,7 +125,8 @@
                 deadlineBlock: deadlineBlock,
                 creatorStakeNanoErg: toNanoErg(creatorStakeErg),
                 participationFeeNanoErg: toNanoErg(participationFeeErg),
-                commissionPercentage: commissionPercentage,
+                commissionPercentage: Math.round(commissionPercentage), // <-- CAMBIO REALIZADO AQUÍ
+                invitedJudges: judgesArray,
                 gameDetailsJson: gameDetails,
             });
             transactionId = result;
@@ -209,6 +216,10 @@
                     <div class="form-group">
                         <Label for="commissionPercentage">Creator Commission (%)</Label>
                         <Input id="commissionPercentage" bind:value={commissionPercentage} type="number" min="0" max="100" step="0.1" placeholder="e.g., 5 for 5%" required />
+                    </div>
+                    <div class="form-group lg:col-span-2">
+                        <Label for="invitedJudges">Invited Judges (Reputation Token IDs)</Label>
+                        <Input id="invitedJudges" bind:value={invitedJudges} placeholder="Comma-separated token IDs (optional)" />
                     </div>
                 </div>
             </section>
@@ -301,6 +312,7 @@
     .section-title {
         @apply text-xl font-semibold mb-1 text-slate-800 dark:text-slate-200;
     }
+
     .section-description {
         @apply text-sm text-muted-foreground mb-6;
     }
@@ -308,9 +320,11 @@
     .form-group {
         @apply flex flex-col gap-2;
     }
+
     :global(.form-group label) {
         @apply text-sm font-medium;
     }
+
     :global(.form-group input), :global(.form-group select), :global(.form-group textarea) {
         @apply bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 focus:border-primary/50 focus:ring-primary/20 focus:ring-2;
     }
