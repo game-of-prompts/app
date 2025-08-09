@@ -21,7 +21,8 @@ import {
     getGopParticipationResolvedScriptHash,
     getGopGameResolutionTemplateHash,
     getGopParticipationSubmittedTemplateHash,
-    getGopParticipationResolvedTemplateHash
+    getGopParticipationResolvedTemplateHash,
+    getGopGameCancellationTemplateHash
 } from "./contract"; // Se asume que este archivo exporta las funciones para obtener los hashes de los scripts
 import {
     hexToUtf8,
