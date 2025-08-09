@@ -348,7 +348,7 @@ function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
         const gameNftId = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         const solverId_RawBytesHex = parseCollByteToHex(box.additionalRegisters.R7?.renderedValue);
         const hashLogs_Hex = parseCollByteToHex(box.additionalRegisters.R8?.renderedValue);
-        const scoreList = parseLongColl(box.additionalRegisters.R9?.renderedValue) ?? [];
+        const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
 
         if (!playerPK_Hex || !commitmentC_Hex || !gameNftId || !solverId_RawBytesHex || !hashLogs_Hex) {
             throw new Error("Registros de participación inválidos.");
