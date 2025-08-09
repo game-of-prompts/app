@@ -52,7 +52,7 @@ export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
         }
         const gameId = box.assets[0].tokenId;
 
-        const r4Value = box.additionalRegisters.R4?.renderedValue;
+        const r4Value = JSON.parse(box.additionalRegisters.R4?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
         if (!Array.isArray(r4Value) || r4Value.length < 2) throw new Error("R4 no es una tupla válida.");
         const gameCreatorPK_Hex = parseCollByteToHex(r4Value[0]);
         const commissionPercentage = parseInt(r4Value[1], 10);
@@ -64,8 +64,13 @@ export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
         const r6Value = box.additionalRegisters.R6?.renderedValue;
         const invitedJudges = Array.isArray(r6Value) ? r6Value.map(parseCollByteToHex) : [];
 
-        const r7Value = box.additionalRegisters.R7?.renderedValue;
-        const numericalParams = parseLongColl(r7Value);
+        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
+        let parsedR7Array: any[] | null = null;
+        if (typeof r7RenderedValue === 'string') {
+            try { parsedR7Array = JSON.parse(r7RenderedValue); } 
+            catch (e) { console.warn(`Could not JSON.parse R7 for ${box.boxId}: ${r7RenderedValue}`); }
+        } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
+        const numericalParams = parseLongColl(parsedR7Array);
         if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
@@ -161,9 +166,15 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
         
         const participatingJudges = (box.additionalRegisters.R6?.renderedValue as string[] || []).map(parseCollByteToHex);
 
-        const r7Value = parseLongColl(box.additionalRegisters.R7?.renderedValue);
-        if (!r7Value || r7Value.length < 3) throw new Error("R7 inválido.");
-        const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg] = r7Value;
+        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
+        let parsedR7Array: any[] | null = null;
+        if (typeof r7RenderedValue === 'string') {
+            try { parsedR7Array = JSON.parse(r7RenderedValue); } 
+            catch (e) { console.warn(`Could not JSON.parse R7 for ${box.boxId}: ${r7RenderedValue}`); }
+        } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
+        const numericalParams = parseLongColl(parsedR7Array);
+        if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
+        const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
         const r8Value = box.additionalRegisters.R8?.renderedValue;
         if (!Array.isArray(r8Value) || r8Value.length < 2) throw new Error("R8 inválido.");
