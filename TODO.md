@@ -5,3 +5,6 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 [x] Todas las votaciones deben validarse.
 - Los jueces deben opinar tambien en positivo, aunque en el contrato la omisión significa que acceden.   <--- ESTO ES SOLO DE FRONT.
 - Votación con peso.
+
+- GameInfo without JSON
+- Allow for P2SH

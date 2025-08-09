@@ -85,8 +85,7 @@ export async function create_game(
         R5: SColl(SByte, hashedSecretBytes).toHex(),
         R6: SColl(SColl(SByte, judgesColl)).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
-        // R8 ya no se usa aquí.
-        R9: SString(gameDetailsJson)
+        R8: SString(gameDetailsJson)
     });
 
     // --- 3. Construcción y envío de la transacción ---
