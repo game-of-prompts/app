@@ -23,7 +23,7 @@
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
   // =================================================================
 
-  // R4: (Coll[Byte], Int) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
+  // R4: (Coll[Byte], Long) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
   // R5: Coll[Byte]        - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R6: Coll[Coll[Byte]]  - invitedJudgesReputationProofs
   // R7: Coll[Long]        - numericalParameters: [deadline, creatorStake, participationFee].
@@ -34,7 +34,7 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val creatorInfo = SELF.R4[(Coll[Byte], Int)].get
+  val creatorInfo = SELF.R4[(Coll[Byte], Long)].get
   val gameCreatorPK = creatorInfo._1
   
   val secretHash = SELF.R5[Coll[Byte]].get
@@ -155,7 +155,7 @@
               resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, validParticipantsCounter) &&
               resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
               resolutionBox.R7[Coll[Long]].get == numericalParams &&
-              resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo &&
+              resolutionBox.R8[(Coll[Byte], Long)].get == creatorInfo &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
             }
 
@@ -196,7 +196,7 @@
             cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
             r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS && // El nuevo 'unlockHeight'.
             // Validar que los otros registros importantes se mantienen.
-            cancellationBox.R4[(Coll[Byte], Int)].get == creatorInfo &&
+            cancellationBox.R4[(Coll[Byte], Long)].get == creatorInfo && // ESTO ESTA MAL, R4 ES EL unlockHeight.
             cancellationBox.R7[Coll[Long]].get == numericalParams
         }
         

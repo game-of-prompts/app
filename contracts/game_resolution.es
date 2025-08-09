@@ -21,7 +21,7 @@
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
   // R7: Coll[Long]                 - numericalParams: [deadline, creatorStake, participationFee].
-  // R8: (Coll[Byte], Int)          - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
+  // R8: (Coll[Byte], Long)          - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
   // =================================================================
@@ -38,7 +38,7 @@
   val numericalParams = SELF.R7[Coll[Long]].get
   val creatorStake = numericalParams(1)
 
-  val resolverInfo = SELF.R8[(Coll[Byte], Int)].get
+  val resolverInfo = SELF.R8[(Coll[Byte], Long)].get
   val resolverPK = resolverInfo._1
   val commissionPercentage = resolverInfo._2
   
@@ -172,16 +172,16 @@
       
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       val resolverCommissionAmount = {
-        val amount = prizePool * commissionPercentage / 100
-        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+        val amount = prizePool * commissionPercentage / 100L
+        if (amount > MIN_ERG_BOX) { amount } else { 0L }
       }
       val devCommissionAmount = {
-        val amount = prizePool * DEV_COMMISSION_PERCENTAGE / 100
-        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+        val amount = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+        if (amount > MIN_ERG_BOX) { amount } else { 0L }
       }
       val judgesCommissionAmount = {
-        val amount = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100
-        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+        val amount = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
+        if (amount > MIN_ERG_BOX) { amount } else { 0L }
       }
       val winnerPrize = prizePool - resolverCommissionAmount - devCommissionAmount - judgesCommissionAmount
 
