@@ -21,20 +21,25 @@ const JUDGE_PERIOD = 30;
  * Inicia la transición de un juego del estado Activo al de Resolución.
  * Esta acción consume la caja del juego y todas las participaciones válidas,
  * y crea una nueva caja 'GameResolution' y cajas 'ParticipationResolved'.
- * * @param game El objeto GameActive a resolver.
+ * @param game El objeto GameActive a resolver.
  * @param participations Un array de todas las participaciones enviadas (ParticipationSubmitted).
  * @param secretS_hex El secreto 'S' en formato hexadecimal para revelar al ganador.
+ * @param judgeProofBoxes Un array de las cajas de prueba de reputación de los jueces, que se usarán como dataInputs.
  * @returns El ID de la transacción si tiene éxito.
  */
 export async function resolve_game(
     game: GameActive,
     participations: ParticipationSubmitted[],
-    secretS_hex: string
+    secretS_hex: string,
+    judgeProofBoxes: Box<Amount>[] // MODIFICADO: Se añade este parámetro.
 ): Promise<string | null> {
 
     console.log(`Iniciando transición a resolución para el juego: ${game.boxId}`);
     
     // --- 1. Preparación de datos y validaciones ---
+    if (!Array.isArray(participations)) {
+        throw new Error("El listado de participaciones proporcionado es inválido.");
+    }
     const currentHeight = await ergo.get_current_height();
     if (currentHeight < game.deadlineBlock) {
         throw new Error("El juego no puede ser resuelto antes de su fecha límite.");
@@ -43,7 +48,6 @@ export async function resolve_game(
     const secretS_bytes = hexToBytes(secretS_hex);
     if (!secretS_bytes) throw new Error("Formato de secretS_hex inválido.");
 
-    // Verificar que el secreto coincide con el hash del juego activo.
     const hash_of_provided_secret = fleetBlake2b256(secretS_bytes);
     if (uint8ArrayToHex(hash_of_provided_secret) !== game.secretHash) {
         throw new Error("El secreto proporcionado no coincide con el hash del juego.");
@@ -51,10 +55,26 @@ export async function resolve_game(
 
     const resolverAddressString = await ergo.get_change_address();
     const resolverPkBytes = ErgoAddress.fromBase58(resolverAddressString).getPublicKeys()[0];
-    if (!resolverPkBytes) throw new Error("No se pudo obtener la clave pública del 'resolvedor'.");
+    if (!resolverPkBytes || uint8ArrayToHex(resolverPkBytes) !== game.gameCreatorPK_Hex) {
+        throw new Error("La resolución debe ser iniciada desde la billetera del creador original del juego.");
+    }
+
+    if (!Array.isArray(judgeProofBoxes)) {
+        throw new Error("El listado de cajas de prueba de los jueces es inválido.");
+    }
+    if (game.invitedJudges.length !== judgeProofBoxes.length) {
+        throw new Error(`Se esperaba ${game.invitedJudges.length} prueba(s) de juez, pero se recibieron ${judgeProofBoxes.length}.`);
+    }
+
+    const invitedJudgesTokens = [...game.invitedJudges].sort();
+    const participatingJudgesTokens = judgeProofBoxes.map(box => box.assets[0].tokenId).sort();
+
+    if (JSON.stringify(invitedJudgesTokens) !== JSON.stringify(participatingJudgesTokens)) {
+        throw new Error("Los tokens de prueba de los jueces no coinciden con los jueces invitados en el contrato.");
+    }
 
     // --- 2. Determinar el ganador y el pozo de premios (lógica off-chain) ---
-    // Esta lógica simula lo que el contrato hará on-chain para asegurar que la tx es válida.
+    // ... (el resto de esta sección no cambia)
     let maxScore = -1n;
     let winnerCandidateCommitment: string | null = null;
     const validParticipationInputs: InputBox[] = [];
@@ -99,14 +119,14 @@ export async function resolve_game(
 
     // --- 3. Construir las Salidas de la Transacción ---
 
-    // SALIDA(0): La caja GameResolution
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
     const resolvedCounter = validParticipationInputs.length;
-
-    const judgesColl = game.invitedJudges
-        .map(judgeId => {
-            const bytes = hexToBytes(judgeId);
+    
+    // MODIFICADO: `judgesColl` ahora se construye a partir de los tokens de los jueces participantes (de los dataInputs).
+    const judgesColl = participatingJudgesTokens
+        .map(judgeTokenId => {
+            const bytes = hexToBytes(judgeTokenId);
             return bytes ? [...bytes] : null;
         })
         .filter((item): item is number[] => item !== null);
@@ -115,17 +135,16 @@ export async function resolve_game(
         game.creatorStakeNanoErg,
         resolutionErgoTree
     )
-    .addTokens(game.box.assets) // Transferir el NFT del juego
+    .addTokens(game.box.assets)
     .setAdditionalRegisters({
         R4: SPair(SLong(resolutionDeadline), SInt(resolvedCounter)).toHex(),
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-        R6: SColl(SColl(SByte), judgesColl).toHex(),
+        R6: SColl(SColl(SByte), judgesColl).toHex(), // R6 contiene los tokens de los jueces
         R7: SColl(SLong, [BigInt(game.deadlineBlock), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
         R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
     
-    // SALIDAS(1...N): Las cajas ParticipationResolved
     const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
     const resolvedParticipationOutputs = validParticipationInputs.map((p: ParticipationSubmitted) => {
         const pBox = parseBox(p.box)
@@ -151,6 +170,7 @@ export async function resolve_game(
             .to([resolutionBoxOutput, ...resolvedParticipationOutputs])
             .sendChangeTo(resolverAddressString)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .withDataInputs(judgeProofBoxes) // MODIFICADO: Se añaden los dataInputs de los jueces.
             .build();
 
         const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
@@ -162,5 +182,4 @@ export async function resolve_game(
     } catch (error) {
         console.warn(error)
     }
-
 }
