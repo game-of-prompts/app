@@ -31,7 +31,7 @@ export async function resolve_game(
     game: GameActive,
     participations: ParticipationSubmitted[],
     secretS_hex: string,
-    judgeProofBoxes: Box<Amount>[] // MODIFICADO: Se añade este parámetro.
+    judgeProofBoxes: Box<Amount>[]
 ): Promise<string | null> {
 
     console.log(`Iniciando transición a resolución para el juego: ${game.boxId}`);
@@ -123,7 +123,6 @@ export async function resolve_game(
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
     const resolvedCounter = validParticipationInputs.length;
     
-    // MODIFICADO: `judgesColl` ahora se construye a partir de los tokens de los jueces participantes (de los dataInputs).
     const judgesColl = participatingJudgesTokens
         .map(judgeTokenId => {
             const bytes = hexToBytes(judgeTokenId);
@@ -170,7 +169,7 @@ export async function resolve_game(
             .to([resolutionBoxOutput, ...resolvedParticipationOutputs])
             .sendChangeTo(resolverAddressString)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .withDataInputs(judgeProofBoxes) // MODIFICADO: Se añaden los dataInputs de los jueces.
+            .withDataFrom(judgeProofBoxes)
             .build();
 
         const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());

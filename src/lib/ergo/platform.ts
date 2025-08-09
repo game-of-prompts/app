@@ -140,7 +140,7 @@ export class ErgoPlatform implements Platform {
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
         
-        return await resolve_game(game, participations, secretS_hex);
+        return await resolve_game(game, participations, secretS_hex, []);
     }
 
     async cancel_game_before_deadline(
