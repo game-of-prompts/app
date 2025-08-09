@@ -68,11 +68,13 @@ function ensureGameActiveCompiled(): void {
     const resolutionHash = getGopGameResolutionScriptHash();
     const cancellationHash = getGopGameCancellationScriptHash();
     const participationHash = getGopParticipationSubmittedScriptHash();
+    const resolvedHash = getGopParticipationResolvedScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
         .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
         .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
-        .replace(/`\+PARTICIPATION_SUBMITED_SCRIPT_HASH\+`/g, participationHash);
+        .replace(/`\+PARTICIPATION_SUBMITED_SCRIPT_HASH\+`/g, participationHash)
+        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
         
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }
