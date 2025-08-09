@@ -198,3 +198,12 @@ export function parseGameContent(
     
     return content;
 }
+
+export function pkHexToBase58Address(pkHex?: string): string {
+    if (!pkHex) return "N/A";
+    try {
+        const pkBytes = hexToBytes(pkHex);
+        if (!pkBytes) return "Invalid PK";
+        return ErgoAddress.fromPublicKey(pkBytes).toString();
+    } catch { return "Invalid PK"; }
+}

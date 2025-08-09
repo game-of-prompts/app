@@ -5,7 +5,7 @@
 
   val JUDGE_PERIOD = 30L 
   val JUDGE_COMMISSION_PERCENTAGE = 5L
-  val DEV_PK = fromBase16("`+DEV_PK+`")
+  val DEV_ADDR = fromBase58("`+DEV_ADDR+`")
   val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
   val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
@@ -187,7 +187,7 @@
       val winnerPK = winnerBox.R4[Coll[Byte]].get
       val winnerAddressBytes = P2PK_ERGOTREE_PREFIX ++ winnerPK
 
-      val devGetsPaid = devOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_PK) && 
+      val devGetsPaid = devOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR) && 
                         devOutput.value >= devCommissionAmount
       
       val judgesGetsPaid = true  // Send to rep. proofs R7 addres

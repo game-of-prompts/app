@@ -24,6 +24,9 @@ let _participationSubmitted: { ergoTree?: ErgoTree, templateHash?: string, scrip
 let _participationResolved: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 
+const dev_addr_base58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD"
+console.log("Dev addr", dev_addr_base58)
+
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS
 // =============================================================================
@@ -54,6 +57,7 @@ function ensureGameResolutionCompiled(): void {
     const submittedHash = getGopParticipationSubmittedScriptHash();
     const resolvedHash = getGopParticipationResolvedScriptHash();
     let source = GAME_RESOLUTION_SOURCE
+        .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
         .replace(/`\+PARTICIPATION_SUBMITTED_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });

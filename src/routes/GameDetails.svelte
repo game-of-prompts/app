@@ -33,7 +33,7 @@
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
-    import { uint8ArrayToHex, hexToBytes, parseCollByteToHex, parseLongColl, bigintToLongByteArray } from "$lib/ergo/utils";
+    import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
 
@@ -219,15 +219,6 @@
     function closeModal() {
         showActionModal = false;
         currentActionType = null;
-    }
-
-    function pkHexToBase58Address(pkHex?: string): string {
-        if (!pkHex) return "N/A";
-        try {
-            const pkBytes = hexToBytes(pkHex);
-            if (!pkBytes) return "Invalid PK";
-            return ErgoAddress.fromPublicKey(pkBytes).toString();
-        } catch { return "Invalid PK"; }
     }
 
     function updateClockCountdown() {
