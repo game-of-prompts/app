@@ -199,6 +199,30 @@
         }
     }
 
+    async function handleJsonFileUpload(event: Event) {
+        const target = event.target as HTMLInputElement;
+        jsonUploadError = null; errorMessage = null;
+        if (target.files && target.files[0]) {
+            const file = target.files[0];
+            if (file.type === "application/json") {
+                try {
+                    const fileContent = await file.text();
+                    const jsonData = JSON.parse(fileContent);
+                    if (jsonData.solver_id && typeof jsonData.solver_id === 'string') solverId_input = jsonData.solver_id; else throw new Error("Missing 'solver_id'");
+                    if (jsonData.hash_logs_hex && typeof jsonData.hash_logs_hex === 'string') hashLogs_input = jsonData.hash_logs_hex; else throw new Error("Missing 'hash_logs_hex'");
+                    if (jsonData.commitment_c_hex && typeof jsonData.commitment_c_hex === 'string') commitmentC_input = jsonData.commitment_c_hex; else throw new Error("Missing 'commitment_c_hex'");
+                    if (jsonData.score_list && Array.isArray(jsonData.score_list) && jsonData.score_list.every((item: any) => typeof item === 'number' || typeof item === 'string')) {
+                        scores_input = jsonData.score_list.map((s: number | string) => s.toString()).join(', ');
+                    } else throw new Error("Missing or invalid 'score_list'");
+                } catch (e: any) {
+                    jsonUploadError = `Error reading JSON: ${e.message}`;
+                    commitmentC_input = ""; solverId_input = ""; hashLogs_input = ""; scores_input = "";
+                }
+            } else jsonUploadError = "Invalid file type. Please upload a .json file.";
+            target.value = '';
+        }
+    }
+
     // --- UI Utility Functions ---
 
     function setupActionModal(type: typeof currentActionType) {
