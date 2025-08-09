@@ -114,10 +114,10 @@
         }
 
         val participantOutputs = OUTPUTS.slice(1, OUTPUTS.size)
-        val participationsAreRecreated = participantOutputs.forall { outBox =>
+        val participationsAreRecreated = participantOutputs.forall( { (outBox: Box) =>
           blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
           outBox.tokens(0)._1 == gameNftId
-        }
+        })
         
         judgesAreValid && resolutionBoxIsValid && participationsAreRecreated
       } else { false }

@@ -93,13 +93,13 @@
         // R5: Descripción del Token (String)
         finalOutput.R5[Coll[Byte]].isDefined &&
         // R6: Número de decimales (Int), debe ser 0 para un NFT.
-        finalOutput.R6[Int].get == 0 &&
+        finalOutput.R6[Int].get == 0
         // R7: Tipo de Token (String), "NFT" según EIP-0022.
-        finalOutput.R7[Coll[Byte]].get == Coll[Byte]("NFT".utf8) &&
+        // finalOutput.R7[Coll[Byte]].get == Coll[Byte]("NFT".utf8) &&
         // R8: Enlace a los assets (String)
-        finalOutput.R8[Coll[Byte]].isDefined &&
+        // finalOutput.R8[Coll[Byte]].isDefined &&
         // R9: Hash del archivo de assets (Coll[Byte])
-        finalOutput.R9[Coll[Byte]].isDefined
+        // finalOutput.R9[Coll[Byte]].isDefined
       }
       
       newTokenMinted && dustIsClaimed && nftIsDefinedCorrectly
@@ -107,5 +107,5 @@
   }
 
   // La caja se puede gastar si se cumple una de las dos acciones.
-  sigmaProp(action_drainStake || action_finalizeDrain)
+  sigmaProp(action1_drainStake || action2_finalizeDrain)
 }
