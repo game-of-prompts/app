@@ -11,7 +11,7 @@
     import { Textarea } from "$lib/components/ui/textarea";
     import { Button } from '$lib/components/ui/button';
     import { Input } from "$lib/components/ui/input";
-    import { Eye, EyeOff, Wand2 } from 'lucide-svelte';
+    import { Eye, EyeOff, Wand2, ChevronDown, ChevronUp, X } from 'lucide-svelte';
 
     let platform = new ErgoPlatform();
 
@@ -23,8 +23,6 @@
     let gameDescription: string = "";
     let gameImageURL: string = "";
     let gameWebLink: string = "";
-    let mirrorUrls: string = "";
-    let invitedJudges: string = "";
     let deadlineValue: number;
     let deadlineUnit: 'days' | 'minutes' = 'days';
     let deadlineBlock: number | undefined;
@@ -35,6 +33,31 @@
     let transactionId: string | null = null;
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
+
+    // --- State for repeaters
+    let judges: { id: number, value: string }[] = [{ id: 0, value: '' }];
+    let mirrors: { id: number, value: string }[] = [{ id: 0, value: '' }];
+    let nextJudgeId = 1;
+    let nextMirrorId = 1;
+    let judgesExpanded = false;
+    let mirrorsExpanded = false;
+
+    // --- Logic for repeaters
+    function addJudge() {
+        judges = [...judges, { id: nextJudgeId++, value: '' }];
+    }
+    function removeJudge(id: number) {
+        judges = judges.filter(j => j.id !== id);
+        if (judges.length === 0) addJudge(); // Always keep at least one input
+    }
+    function addMirror() {
+        mirrors = [...mirrors, { id: nextMirrorId++, value: '' }];
+    }
+    function removeMirror(id: number) {
+        mirrors = mirrors.filter(m => m.id !== id);
+        if (mirrors.length === 0) addMirror(); // Always keep at least one input
+    }
+
 
     // --- Logic functions
     $: {
@@ -107,16 +130,17 @@
             return;
         }
 
+        const judgesArray = judges.map(j => j.value.trim()).filter(id => id);
+        const mirrorUrlsArray = mirrors.map(m => m.value.trim()).filter(url => url);
+
         const gameDetails = JSON.stringify({
             title: gameTitle,
             description: gameDescription,
             imageURL: gameImageURL,
             webLink: gameWebLink,
             serviceId: gameServiceId,
-            mirrorUrls: mirrorUrls.split(',').map(url => url.trim()).filter(url => url),
+            mirrorUrls: mirrorUrlsArray,
         });
-
-        const judgesArray = invitedJudges.split(',').map(id => id.trim()).filter(id => id);
 
         try {
             const result = await platform.createGoPGame({
@@ -125,7 +149,7 @@
                 deadlineBlock: deadlineBlock,
                 creatorStakeNanoErg: toNanoErg(creatorStakeErg),
                 participationFeeNanoErg: toNanoErg(participationFeeErg),
-                commissionPercentage: Math.round(commissionPercentage), // <-- CAMBIO REALIZADO AQUÍ
+                commissionPercentage: Math.round(commissionPercentage),
                 invitedJudges: judgesArray,
                 gameDetailsJson: gameDetails,
             });
@@ -140,7 +164,7 @@
 
     function generateGameSecret() {
         if (typeof window !== 'undefined' && window.crypto) {
-            const randomBytes = new Uint8Array(32); // 32 bytes = 256 bits
+            const randomBytes = new Uint8Array(32);
             window.crypto.getRandomValues(randomBytes);
             gameSecret = uint8ArrayToHex(randomBytes);
         } else {
@@ -218,8 +242,25 @@
                         <Input id="commissionPercentage" bind:value={commissionPercentage} type="number" min="0" max="100" step="0.1" placeholder="e.g., 5 for 5%" required />
                     </div>
                     <div class="form-group lg:col-span-2">
-                        <Label for="invitedJudges">Invited Judges (Reputation Token IDs)</Label>
-                        <Input id="invitedJudges" bind:value={invitedJudges} placeholder="Comma-separated token IDs (optional)" />
+                        <div class="repeater-container">
+                            <button type="button" class="repeater-header" on:click={() => judgesExpanded = !judgesExpanded}>
+                                <Label>Invited Judges (Reputation Token IDs)</Label>
+                                {#if judgesExpanded} <ChevronUp class="w-5 h-5"/> {:else} <ChevronDown class="w-5 h-5"/> {/if}
+                            </button>
+                            {#if judgesExpanded}
+                                <div class="repeater-content">
+                                    {#each judges as judge (judge.id)}
+                                        <div class="repeater-item">
+                                            <Input bind:value={judge.value} placeholder="Token ID (optional)" />
+                                            <Button variant="ghost" size="icon" on:click={() => removeJudge(judge.id)} aria-label="Remove Judge">
+                                                <X class="w-4 h-4 text-red-500"/>
+                                            </Button>
+                                        </div>
+                                    {/each}
+                                    <Button variant="outline" size="sm" on:click={addJudge}>+ Add Judge</Button>
+                                </div>
+                            {/if}
+                        </div>
                     </div>
                 </div>
             </section>
@@ -241,8 +282,25 @@
                         <Input id="gameImageURL" type="url" bind:value={gameImageURL} placeholder="https://example.com/image.png" />
                     </div>
                     <div class="form-group lg:col-span-2">
-                        <Label for="mirrorUrls">Mirror Download URLs</Label>
-                        <Input id="mirrorUrls" type="text" bind:value={mirrorUrls} placeholder="Comma-separated URLs" />
+                        <div class="repeater-container">
+                             <button type="button" class="repeater-header" on:click={() => mirrorsExpanded = !mirrorsExpanded}>
+                                <Label>Mirror Download URLs</Label>
+                                {#if mirrorsExpanded} <ChevronUp class="w-5 h-5"/> {:else} <ChevronDown class="w-5 h-5"/> {/if}
+                            </button>
+                            {#if mirrorsExpanded}
+                                <div class="repeater-content">
+                                    {#each mirrors as mirror (mirror.id)}
+                                        <div class="repeater-item">
+                                            <Input type="url" bind:value={mirror.value} placeholder="https://example.com/mirror" />
+                                            <Button variant="ghost" size="icon" on:click={() => removeMirror(mirror.id)} aria-label="Remove Mirror URL">
+                                                <X class="w-4 h-4 text-red-500"/>
+                                            </Button>
+                                        </div>
+                                    {/each}
+                                    <Button variant="outline" size="sm" on:click={addMirror}>+ Add URL</Button>
+                                </div>
+                            {/if}
+                        </div>
                     </div>
                 </div>
             </section>
@@ -257,7 +315,7 @@
             </div>
 
         {:else}
-             <div class="result-container text-center py-12">
+            <div class="result-container text-center py-12">
                 <h3 class="text-2xl font-bold text-green-500 mb-4">Game Submitted!</h3>
                 <p class="mb-2">Your game creation transaction has been sent to the blockchain.</p>
                 <p class="text-sm text-muted-foreground mb-4">It may take a few moments to confirm.</p>
@@ -283,7 +341,6 @@
         margin: 0 auto;
         padding: 10px 15px 4rem;
     }
-
     .project-title {
         text-align: center;
         font-size: 2.8rem;
@@ -291,41 +348,53 @@
         color: hsl(var(--foreground));
         text-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
-    
     .subtitle {
         font-size: 1.1rem;
         color: hsl(var(--muted-foreground));
         margin-top: 0.5rem;
         margin-bottom: 3rem;
     }
-
     .form-section {
         @apply p-6 bg-background/50 backdrop-blur-lg rounded-xl shadow border border-white/10;
         animation: fadeIn 0.5s ease-out;
     }
-
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
-
     .section-title {
         @apply text-xl font-semibold mb-1 text-slate-800 dark:text-slate-200;
     }
-
     .section-description {
         @apply text-sm text-muted-foreground mb-6;
     }
-    
     .form-group {
         @apply flex flex-col gap-2;
     }
-
     :global(.form-group label) {
         @apply text-sm font-medium;
     }
-
     :global(.form-group input), :global(.form-group select), :global(.form-group textarea) {
         @apply bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 focus:border-primary/50 focus:ring-primary/20 focus:ring-2;
+    }
+
+    /* Repeater Styles */
+    .repeater-container {
+        @apply w-full flex flex-col gap-2;
+    }
+    .repeater-header {
+        @apply flex justify-between items-center w-full cursor-pointer;
+    }
+    .repeater-header > :global(label) {
+        @apply cursor-pointer;
+    }
+    .repeater-content {
+        @apply flex flex-col gap-3 pl-2 pt-2 border-l border-slate-500/20;
+    }
+    .repeater-item {
+        @apply flex items-center gap-2;
+    }
+    .repeater-item > :global(input) {
+        @apply flex-grow;
     }
 </style>
