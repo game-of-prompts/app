@@ -104,12 +104,18 @@
         val judgeProofDataInputs = CONTEXT.dataInputs
         val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
         val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
-        val judgesAreValid = invitedJudges.size == participatingJudgesTokens.size && participatingJudgesTokens.forall({(tokenId: Coll[Byte]) => tokenId.isIn(invitedJudges)})
+        val judgesAreValid = {
+          val sameSize = invitedJudges.size == participatingJudgesTokens.size
+          val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
+              participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
+          })
+          sameSize && areTheSame
+        }
 
         val resolutionBoxIsValid = {
           winnerCandidateCommitment == initialWinnerCommitment &&
           resolutionBox.value >= totalPrizePool + creatorStake &&
-          resolutionBox.tokens.filter({ (token: Token) => token._1 == gameNftId }).size == 1 &&
+          resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
           resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, participantInputs.size) &&
           resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
           resolutionBox.R7[Coll[Long]].get == numericalParams &&
@@ -154,7 +160,7 @@
         // Validar la creación de la nueva caja 'game_cancellation.es'.
         val cancellationBoxIsValid = {
             cancellationBox.value >= remainingStake &&
-            cancellationBox.tokens.contains(gameNft) &&
+            cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
             r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS && // El nuevo 'unlockHeight'.
             // Validar que los otros registros importantes se mantienen.
             cancellationBox.R4[(Coll[Byte], Int)].get == creatorInfo &&
