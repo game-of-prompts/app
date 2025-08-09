@@ -72,7 +72,7 @@
       if (sIsCorrectlyRevealed && transitionsToResolutionScript) {
         val participantInputs = INPUTS.slice(1, INPUTS.size)
         
-        val initialFoldState = (-1L, (Coll[Byte](), Coll[Byte](), 0L)) // (maxScore, winnerCommitment, winnerPK, prizePool)
+        val initialFoldState = (-1L, (Coll[Byte](), 0L)) // (maxScore, winnerCommitment, prizePool)
         val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, (Coll[Byte], Long)), pBox: Box) =>
           if (blake2b256(pBox.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
             val pBoxScoreList = pBox.R9[Coll[Long]].get
@@ -85,16 +85,20 @@
             })
             val actualScore = scoreCheckResult._1
             val isValidParticipant = scoreCheckResult._2
-            if (isValidParticipant && actualScore > acc._1) {
-              (actualScore, (pBoxCommitment, pBox.R4[Coll[Byte]].get, acc._2._2._2 + pBox.value))
-            } else if (isValidParticipant) {
-              (acc._1, (acc._2._1, acc._2._2._1, acc._2._2._2 + pBox.value))
-            } else { acc }
+            if (isValidParticipant && actualScore > acc._1) 
+            {
+              (actualScore, (pBoxCommitment, acc._2._2 + pBox.value))
+            } 
+            else if (isValidParticipant) 
+            {
+              (acc._1, (acc._2._1, acc._2._2 + pBox.value))
+            } 
+            else { acc }
           } else { acc }
         })
         
         val initialWinnerCommitment = foldResult._2._1
-        val totalPrizePool = foldResult._2._2._2
+        val totalPrizePool = foldResult._2._2
         
         // --- Validación de Jueces ---
         val judgeProofDataInputs = CONTEXT.dataInputs
