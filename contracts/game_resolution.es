@@ -132,12 +132,12 @@
       if (votesAreValid) {
         val recreatedGameBox = OUTPUTS(0)
         val participantInputs = INPUTS.slice(1, INPUTS.size)
-        val invalidatedCandidateBox = INPUTS.find({(b:Box) => b.R5[Coll[Byte]].get == winnerCandidateCommitment}).get
+        val invalidatedCandidateBox = INPUTS.filter({(b:Box) => b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
 
         val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
-        val foldResult = participantInputs.fold(initialFoldState, { (acc, pBox) =>
+        val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
             if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {
-                val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc, score) =>
+                val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
                     if (scoreAcc._2) { scoreAcc } else {
                         val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
                         if (testCommitment == pBox.R5[Coll[Byte]].get) { (score, true) } else { scoreAcc }
@@ -167,13 +167,13 @@
       val resolvedorCommissionAmount = prizePool * commissionPercentage / 100
       val winnerPrize = prizePool - resolvedorCommissionAmount
 
-      val winnerBoxOption = INPUTS.find({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
-      val winnerPK = winnerBoxOption.get.R4[Coll[Byte]].get
+      val winnerBoxOption = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
+      val winnerPK = winnerBoxOption.R4[Coll[Byte]].get
       val winnerAddressBytes = P2PK_ERGOTREE_PREFIX ++ winnerPK
       
       val winnerGetsPrize = winnerOutput.value >= winnerPrize &&
                             winnerOutput.propositionBytes == winnerAddressBytes &&
-                            winnerOutput.tokens.contains(gameNft)
+                            winnerOutput.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1
       
       val resolvedorGetsPaid = resolvedorOutput.value >= creatorStake + resolvedorCommissionAmount &&
                                resolvedorOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolvedorPK)

@@ -73,11 +73,11 @@
         val participantInputs = INPUTS.slice(1, INPUTS.size)
         
         val initialFoldState = (-1L, (Coll[Byte](), Coll[Byte](), 0L)) // (maxScore, winnerCommitment, winnerPK, prizePool)
-        val foldResult = participantInputs.fold(initialFoldState, { (acc, pBox) =>
+        val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, (Coll[Byte], Long)), pBox: Box) =>
           if (blake2b256(pBox.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH && pBox.tokens(0)._1 == gameNftId) {
             val pBoxScoreList = pBox.R9[Coll[Long]].get
             val pBoxCommitment = pBox.R5[Coll[Byte]].get
-            val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc, score) =>
+            val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
               if (scoreAcc._2) { scoreAcc } else {
                 val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
                 if (testCommitment == pBoxCommitment) { (score, true) } else { scoreAcc }
@@ -105,7 +105,7 @@
         val resolutionBoxIsValid = {
           winnerCandidateCommitment == initialWinnerCommitment &&
           resolutionBox.value >= totalPrizePool + creatorStake &&
-          resolutionBox.tokens.contains(gameNft) &&
+          resolutionBox.tokens.filter({ (token: Token) => token._1 == gameNftId }).size == 1 &&
           resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, participantInputs.size) &&
           resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
           resolutionBox.R7[Coll[Long]].get == numericalParams &&
