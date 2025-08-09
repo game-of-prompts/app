@@ -31,7 +31,7 @@ export async function create_game(
     creatorStakeNanoErg: bigint,
     participationFeeNanoErg: bigint,
     commissionPercentage: number,
-    invitedJudges: string[], // <-- Nuevo parámetro para los jueces
+    invitedJudges: string[],
     gameDetailsJson: string
 ): Promise<string | null> {
 
@@ -68,8 +68,12 @@ export async function create_game(
     const hashedSecretBytes = hexToBytes(hashedSecret);
     if (!hashedSecretBytes) throw new Error("Fallo al convertir el hashedSecret a bytes.");
 
-    // Convertir los IDs de los jueces a un formato que el contrato entienda (Coll[Coll[Byte]])
-    const judgesColl = invitedJudges.map(judgeId => hexToBytes(judgeId));
+    const judgesColl = invitedJudges
+        .map(judgeId => {
+            const bytes = hexToBytes(judgeId);
+            return bytes ? [...bytes] : null;
+        })
+        .filter((item): item is number[] => item !== null);
 
     const gameBoxOutput = new OutputBuilder(
         creatorStakeNanoErg,
@@ -81,9 +85,9 @@ export async function create_game(
     })
     .setAdditionalRegisters({
         // Estructura de registros según `game_active.es`
-        R4: SPair(SColl(SByte, creatorPkBytes), SInt(commissionPercentage)).toHex(),
+        R4: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
         R5: SColl(SByte, hashedSecretBytes).toHex(),
-        R6: SColl(SColl(SByte, judgesColl)).toHex(),
+        R6: SColl(SColl(SByte), judgesColl).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
         R8: SString(gameDetailsJson)
     });
