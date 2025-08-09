@@ -132,8 +132,8 @@ export async function resolve_game(
         }
     }
 
-    if (!winnerCandidateCommitment && participations.length > 0) {
-        throw new Error("Se procesaron participaciones válidas, pero no se pudo determinar un ganador.");
+    if (!winnerCandidateCommitment) {
+        throw new Error("No se pudo determinar un ganador.");
     }
 
     // --- 3. Construir las Salidas de la Transacción ---
