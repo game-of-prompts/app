@@ -4,6 +4,9 @@
   // =================================================================
 
   val JUDGE_PERIOD = 30L 
+  val JUDGE_COMMISSION_PERCENTAGE = 5L
+  val DEV_PK = fromBase16("`+DEV_PK+`")
+  val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
   val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
@@ -15,8 +18,8 @@
   // R4: (Long, Int)                - (resolutionDeadline, resolvedCounter): Límite de bloque y contador.
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R7: Coll[Long]                 - numericalParameters: [deadline, creatorStake, participationFee].
-  // R8: (Coll[Byte], Int)          - resolvedorInfo: (Clave pública del "Resolvedor", % de comisión).
+  // R7: Coll[Long]                 - numericalParams: [deadline, creatorStake, participationFee].
+  // R8: (Coll[Byte], Int)          - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
   // =================================================================
@@ -33,9 +36,9 @@
   val numericalParams = SELF.R7[Coll[Long]].get
   val creatorStake = numericalParams(1)
 
-  val resolvedorInfo = SELF.R8[(Coll[Byte], Int)].get
-  val resolvedorPK = resolvedorInfo._1
-  val commissionPercentage = resolvedorInfo._2
+  val resolverInfo = SELF.R8[(Coll[Byte], Int)].get
+  val resolverPK = resolverInfo._1
+  val commissionPercentage = resolverInfo._2
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -160,25 +163,43 @@
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
     if (isAfterResolutionDeadline && OUTPUTS.size > 1) {
+      val participations = INPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_RESOLVED_SCRIPT_HASH })
       val winnerOutput = OUTPUTS(0)
-      val resolvedorOutput = OUTPUTS(1)
+      val resolverOutput = OUTPUTS(1)
+      val devOutput = OUTPUTS(2)
       
-      val prizePool = SELF.value - creatorStake
-      val resolvedorCommissionAmount = prizePool * commissionPercentage / 100
-      val winnerPrize = prizePool - resolvedorCommissionAmount
+      val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+      val resolverCommissionAmount = {
+        val amount = prizePool * commissionPercentage / 100
+        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+      }
+      val devCommissionAmount = {
+        val amount = prizePool * DEV_COMMISSION_PERCENTAGE / 100
+        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+      }
+      val judgesCommissionAmount = {
+        val amount = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100
+        if (amount > MIN_ERG_BOX) { amount } else { 0 }
+      }
+      val winnerPrize = prizePool - resolverCommissionAmount - devCommissionAmount - judgesCommissionAmount
 
-      val winnerBoxOption = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
-      val winnerPK = winnerBoxOption.R4[Coll[Byte]].get
+      val winnerBox = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
+      val winnerPK = winnerBox.R4[Coll[Byte]].get
       val winnerAddressBytes = P2PK_ERGOTREE_PREFIX ++ winnerPK
+
+      val devGetsPaid = devOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_PK) && 
+                        devOutput.value >= devCommissionAmount
       
+      val judgesGetsPaid = true  // Send to rep. proofs R7 addres
+
       val winnerGetsPrize = winnerOutput.value >= winnerPrize &&
                             winnerOutput.propositionBytes == winnerAddressBytes &&
                             winnerOutput.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1
       
-      val resolvedorGetsPaid = resolvedorOutput.value >= creatorStake + resolvedorCommissionAmount &&
-                               resolvedorOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolvedorPK)
+      val resolverGetsPaid = resolverOutput.value >= creatorStake + resolverCommissionAmount &&
+                               resolverOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)
       
-      winnerGetsPrize && resolvedorGetsPaid
+      winnerGetsPrize && resolverGetsPaid && devGetsPaid && judgesGetsPaid
     } else { false }
   }
 
