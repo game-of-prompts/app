@@ -74,7 +74,7 @@ export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
         if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
-        const gameDetailsHex = parseCollByteToHex(box.additionalRegisters.R9?.renderedValue);
+        const gameDetailsHex = box.additionalRegisters.R8?.renderedValue;
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
@@ -184,7 +184,7 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
         const r9Value = box.additionalRegisters.R9?.renderedValue;
         if (!Array.isArray(r9Value) || r9Value.length < 2) throw new Error("R9 inválido.");
         const originalCreatorPK_Hex = parseCollByteToHex(r9Value[0]);
-        const gameDetailsHex = parseCollByteToHex(r9Value[1]);
+        const gameDetailsHex = r9Value[1];
         const content = parseGameContent(hexToUtf8(gameDetailsHex || ""), box.boxId, box.assets[0]);
 
         return {
