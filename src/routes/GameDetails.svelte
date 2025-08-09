@@ -103,7 +103,7 @@
         errorMessage = null;
 
         try {
-            participationIsEnded = isGameParticipationEnded(game);
+            participationIsEnded = await isGameParticipationEnded(game);
             gameEnded = isGameEnded(game);
             
             if (game.status === GameState.Active) {

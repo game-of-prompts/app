@@ -159,8 +159,8 @@ export type AnyParticipation = ParticipationSubmitted | ParticipationResolved;
  * Determina si el período de participación de un juego ha terminado.
  * Esto ocurre cuando el juego ya no está en estado 'Active'.
  */
-export function isGameParticipationEnded(game: AnyGame): boolean {
-    return game.status !== GameState.Active;
+export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> {
+    return game.status !== GameState.Active || game.deadlineBlock < await game.platform.get_current_height();
 }
 
 /**
