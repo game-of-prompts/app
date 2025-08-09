@@ -69,12 +69,14 @@
       val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
       val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH
       
-      if (sIsCorrectlyRevealed && transitionsToResolutionScript) {
-        val participantInputs = INPUTS.slice(1, INPUTS.size)
-        val initialFoldState = (-1L, (Coll[Byte](), 0L)) // (maxScore, winnerCommitment, prizePool)
+      val participantInputs = INPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_SUBMITED_SCRIPT_HASH })
+      val participantOutputs = OUTPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_RESOLVED_SCRIPT_HASH })
+
+      if (sIsCorrectlyRevealed && transitionsToResolutionScript && participantInputs.size == participantOutputs.size) {
+        val initialFoldState = (-1L, (Coll[Byte](), 0)) // (maxScore, winnerCommitment, validParticipantsCount)
 
         val foldResult = participantInputs.fold(initialFoldState, { 
-          (acc: (Long, (Coll[Byte], Long)), pBox: Box) => {
+          (acc: (Long, (Coll[Byte], Int)), pBox: Box) => {
             val validScript = blake2b256(pBox.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH
             val pointsToTheGame = pBox.R6[Coll[Byte]].get == gameNftId
 
@@ -91,15 +93,29 @@
                 }
               })
               val actualScore = scoreCheckResult._1
-              val isValidParticipant = scoreCheckResult._2
+              val isValidParticipant = {
+
+                val validScoreExists = scoreCheckResult._2
+                val correctParticipationFee = pBox.value >= participationFee
+
+                val resolvedOutputExists = OUTPUTS.exists({ (outBox: Box) =>
+                  blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+                  outBox.value == pBox.value &&
+                  outBox.R4[Coll[Byte]].get == pBox.R4[Coll[Byte]].get &&
+                  outBox.R5[Coll[Byte]].get == pBox.R5[Coll[Byte]].get && 
+                  outBox.R6[Coll[Byte]].get == pBox.R6[Coll[Byte]].get
+                })
+
+                validScoreExists && correctParticipationFee && resolvedOutputExists
+              }
               
               if (isValidParticipant && actualScore > acc._1) 
               {
-                (actualScore, (pBoxCommitment, acc._2._2 + pBox.value))
+                (actualScore, (pBoxCommitment, acc._2._2 + 1))
               }
               else if (isValidParticipant) 
               {
-                (acc._1, (acc._2._1, acc._2._2 + pBox.value))
+                (acc._1, (acc._2._1, acc._2._2 + 1))
               }
               else { acc }  // Not valid participation (real score not found)
             } 
@@ -107,47 +123,48 @@
           }
         })
         
-        val initialWinnerCommitment = foldResult._2._1
-        val totalPrizePool = foldResult._2._2
-        
-        // --- Validación de Jueces ---
-        val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
-        val judgeProofDataInputs = CONTEXT.dataInputs
-        /* .filter({(box: Box) => 
-          box.propositionBytes == REPUTATION_PROOF_BOX && 
-          box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
-          box.R5[Coll[Byte]].get == gameNftId &&
-          box.R6[(Boolean, Long)].get._1
-        })*/
-        val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
-        val judgesAreValid = {
-          val sameSize = invitedJudges.size == participatingJudgesTokens.size
-          val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
-              participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
-          })
-          sameSize && areTheSame
-        }
+        if (foldResult._1 > -1L) {
+          val initialWinnerCommitment = foldResult._2._1
+          val validParticipantsCounter = foldResult._2._2
 
-        val resolutionBoxIsValid = {
-          winnerCandidateCommitment == initialWinnerCommitment &&
-          resolutionBox.value >= totalPrizePool + creatorStake &&
-          resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-          resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, participantInputs.size) &&
-          resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
-          resolutionBox.R7[Coll[Long]].get == numericalParams &&
-          resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo &&
-          resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
-        }
+          if (validParticipantsCounter == participantInputs.size) {
 
-        val participantOutputs = OUTPUTS.slice(1, OUTPUTS.size)
-        val participationsAreRecreated = participantOutputs.forall( { (outBox: Box) =>
-          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-          outBox.tokens(0)._1 == gameNftId
-        })
-        
-        judgesAreValid && resolutionBoxIsValid && participationsAreRecreated
-      } else { false }
-    } else { false }
+            // --- Validación de Jueces ---
+            val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
+            val judgeProofDataInputs = CONTEXT.dataInputs
+            /* .filter({(box: Box) => 
+              box.propositionBytes == REPUTATION_PROOF_BOX && 
+              box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
+              box.R5[Coll[Byte]].get == gameNftId &&
+              box.R6[(Boolean, Long)].get._1
+            })*/
+            val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
+            
+            val judgesAreValid = {
+              val sameSize = invitedJudges.size == participatingJudgesTokens.size
+              val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
+                  participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
+              })
+              sameSize && areTheSame
+            }
+
+            val resolutionBoxIsValid = {
+              winnerCandidateCommitment == initialWinnerCommitment &&
+              resolutionBox.value >= creatorStake &&
+              resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
+              resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, validParticipantsCounter) &&
+              resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
+              resolutionBox.R7[Coll[Long]].get == numericalParams &&
+              resolutionBox.R8[(Coll[Byte], Int)].get == creatorInfo &&
+              resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
+            }
+
+            judgesAreValid && resolutionBoxIsValid
+
+          } else { false }  // Inputs (1-n) were not valid participation boxes.
+        } else { false }  // Must be at least one valid participation box.
+      } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.
+    } else { false }  // Deadline not reached.
   }
 
   // =================================================================
