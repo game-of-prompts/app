@@ -15,7 +15,7 @@ import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex
 import { stringToBytes } from '@scure/base';
 
 // Constante del contrato game_resolution.es
-const JUDGE_PERIOD = 30;
+const JUDGE_PERIOD = 40;
 
 /**
  * Inicia la transición de un juego del estado Activo al de Resolución.
@@ -141,6 +141,8 @@ export async function resolve_game(
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
     const resolvedCounter = participations.length;
+
+    console.log("Resolved counter: ", resolvedCounter)
     
     const judgesColl = participatingJudgesTokens
         .map(judgeTokenId => {

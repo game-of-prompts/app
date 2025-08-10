@@ -145,7 +145,8 @@
               winnerCandidateCommitment == initialWinnerCommitment &&
               resolutionBox.value >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-              resolutionBox.R4[(Long, Int)].get == (HEIGHT + JUDGE_PERIOD, validParticipantsCounter) &&
+              resolutionBox.R4[(Long, Int)].get._1 >= HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R4[(Long, Int)].get._2 == validParticipantsCounter &&
               resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
               resolutionBox.R7[Coll[Long]].get == numericalParams &&
               resolutionBox.R8[(Coll[Byte], Long)].get == creatorInfo &&
