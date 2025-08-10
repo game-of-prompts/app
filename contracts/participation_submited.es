@@ -40,7 +40,7 @@
     val gameBoxIsPlausible =
       gameBoxCandidate.tokens.size > 0 &&
       gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
-      gameBoxCandidate.R4[(Coll[Byte], Int)].isDefined &&
+      gameBoxCandidate.R4[(Coll[Byte], Long)].isDefined &&
       gameBoxCandidate.R5[Coll[Byte]].isDefined &&
       gameBoxCandidate.R7[Coll[Long]].isDefined &&
       gameBoxCandidate.R7[Coll[Long]].get.size == 3
