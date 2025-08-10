@@ -300,7 +300,7 @@
                         <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg">
                     </div>
                     {/if}
-                    <div class="flex-1 text-center md:text-left">
+                    <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
                         <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
                         <div class="prose prose-sm text-slate-300 max-w-none mb-6">
                             {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
