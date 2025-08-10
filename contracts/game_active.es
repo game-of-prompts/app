@@ -149,8 +149,7 @@
               resolutionBox.R4[(Long, Int)].get._2 == validParticipantsCounter &&
               resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
               resolutionBox.R7[Coll[Long]].get == numericalParams &&
-              resolutionBox.R8[(Coll[Byte], Long)].get == creatorInfo &&
-              // resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
+              resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
             }
 
