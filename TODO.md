@@ -8,3 +8,10 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 - GameInfo without JSON
 - Allow for P2SH
+- Check constants on fetch.
+
+- Poker
+
+- Game obfuscated
+- Señuelos
+- Limited resources
