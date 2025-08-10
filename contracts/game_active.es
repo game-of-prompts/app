@@ -68,57 +68,51 @@
       val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
       val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH
       
-      val participantInputs = INPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_SUBMITED_SCRIPT_HASH })
-      val participantOutputs = OUTPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_RESOLVED_SCRIPT_HASH })
+      val participantInputs = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH && box.R6[Coll[Byte]].get == gameNftId})
+      val participantOutputs = OUTPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && box.R6[Coll[Byte]].get == gameNftId })
 
       if (sIsCorrectlyRevealed && transitionsToResolutionScript && participantInputs.size == participantOutputs.size) {
         val initialFoldState = (-1L, (Coll[Byte](), 0)) // (maxScore, winnerCommitment, validParticipantsCount)
 
         val foldResult = participantInputs.fold(initialFoldState, { 
           (acc: (Long, (Coll[Byte], Int)), pBox: Box) => {
-            val validScript = blake2b256(pBox.propositionBytes) == PARTICIPATION_SUBMITED_SCRIPT_HASH
-            val pointsToTheGame = pBox.R6[Coll[Byte]].get == gameNftId
+ 
+            val pBoxScoreList = pBox.R9[Coll[Long]].get
+            val pBoxCommitment = pBox.R5[Coll[Byte]].get
+            val pBoxSolverId = pBox.R7[Coll[Byte]].get
+            val pBoxLogsHash = pBox.R8[Coll[Byte]].get
 
-            if (validScript && pointsToTheGame) {
-              val pBoxScoreList = pBox.R9[Coll[Long]].get
-              val pBoxCommitment = pBox.R5[Coll[Byte]].get
-              val pBoxSolverId = pBox.R7[Coll[Byte]].get
-              val pBoxLogsHash = pBox.R8[Coll[Byte]].get
+            val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
+              if (scoreAcc._2) { scoreAcc } else {
+                val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
+                if (testCommitment == pBoxCommitment) { (score, true) } else { scoreAcc }
+              }
+            })
+            val actualScore = scoreCheckResult._1
+            val isValidParticipant = {
 
-              val scoreCheckResult = pBoxScoreList.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
-                if (scoreAcc._2) { scoreAcc } else {
-                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
-                  if (testCommitment == pBoxCommitment) { (score, true) } else { scoreAcc }
-                }
+              val validScoreExists = scoreCheckResult._2
+              val correctParticipationFee = pBox.value >= participationFee
+
+              val resolvedOutputExists = OUTPUTS.exists({ (outBox: Box) =>
+                blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+                outBox.value == pBox.value &&
+                outBox.R4[Coll[Byte]].get == pBox.R4[Coll[Byte]].get &&
+                outBox.R5[Coll[Byte]].get == pBox.R5[Coll[Byte]].get
               })
-              val actualScore = scoreCheckResult._1
-              val isValidParticipant = {
 
-                val validScoreExists = scoreCheckResult._2
-                val correctParticipationFee = pBox.value >= participationFee
-
-                val resolvedOutputExists = OUTPUTS.exists({ (outBox: Box) =>
-                  blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-                  outBox.value == pBox.value &&
-                  outBox.R4[Coll[Byte]].get == pBox.R4[Coll[Byte]].get &&
-                  outBox.R5[Coll[Byte]].get == pBox.R5[Coll[Byte]].get && 
-                  outBox.R6[Coll[Byte]].get == pBox.R6[Coll[Byte]].get
-                })
-
-                validScoreExists && correctParticipationFee && resolvedOutputExists
-              }
-              
-              if (isValidParticipant && actualScore > acc._1) 
-              {
-                (actualScore, (pBoxCommitment, acc._2._2 + 1))
-              }
-              else if (isValidParticipant) 
-              {
-                (acc._1, (acc._2._1, acc._2._2 + 1))
-              }
-              else { acc }  // Not valid participation (real score not found)
-            } 
-            else { acc }  // Not valid participation (invalid script or not points to the game)
+              validScoreExists && correctParticipationFee && resolvedOutputExists
+            }
+            
+            if (isValidParticipant && actualScore > acc._1) 
+            {
+              (actualScore, (pBoxCommitment, acc._2._2 + 1))
+            }
+            else if (isValidParticipant) 
+            {
+              (acc._1, (acc._2._1, acc._2._2 + 1))
+            }
+            else { acc }  // Not valid participation (real score not found)
           }
         })
         
