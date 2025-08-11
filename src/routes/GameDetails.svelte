@@ -55,6 +55,8 @@
     let deadlineDateDisplay = "N/A";
     let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
+    let isResolver = false;
+    let isJudge = false;
     
     // Refund State
     let isClaimingRefundFor: string | null = null;
@@ -68,7 +70,9 @@
 
     // Modal State
     let showActionModal = false;
-    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | null = null;
+    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" |
+                         "end_game" | "invalidate_winner" | "include_omitted" |
+                         null = null;
     let modalTitle = "";
 
     // Form Inputs
@@ -127,14 +131,23 @@
             const connectedAddress = get(address);
             if(get(connected) && connectedAddress && game) {
                 let creatorPK: string | undefined;
-                if (game.status === 'Active') creatorPK = game.gameCreatorPK_Hex;
-                else if (game.status === 'Resolution') creatorPK = game.originalCreatorPK_Hex;
-                
-                if (creatorPK) {
-                    const userPKBytes = ErgoAddress.fromBase58(connectedAddress).getPublicKeys()[0];
-                    if (userPKBytes) {
-                        isOwner = uint8ArrayToHex(userPKBytes) === creatorPK;
+                isOwner = false;
+                isResolver = false;
+                isJudge = false;
+                const userPKBytes = ErgoAddress.fromBase58(connectedAddress).getPublicKeys()[0];
+                const userPKHex = userPKBytes ? uint8ArrayToHex(userPKBytes) : null;
+
+                if (game.status === 'Active') {creatorPK = game.gameCreatorPK_Hex;}
+                else if (game.status === 'Resolution') {
+                    creatorPK = game.originalCreatorPK_Hex;
+                    if(userPKHex) {
+                        isResolver = userPKHex === game.resolverPK_Hex;
+                        // isJudge = game.participatingJudges.includes();  TODO Check local reputation proofs. 
                     }
+                }
+                
+                if (creatorPK && userPKHex) {
+                    isOwner = userPKHex === creatorPK;
                 }
             }
 
@@ -199,6 +212,36 @@
         }
     }
 
+    async function handleEndGame() {
+        if (game?.status !== 'Resolution') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            // Lógica de platform.endGame(...) a implementar aquí
+            errorMessage = "Acción 'Finalizar Juego' aún no implementada.";
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleJudgesInvalidate() {
+        if (game?.status !== 'Resolution') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            // Lógica de platform.judgesInvalidate(...) a implementar aquí
+            errorMessage = "Acción 'Invalidar por Jueces' aún no implementada.";
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
+    }
+
+    async function handleIncludeOmitted() {
+        if (game?.status !== 'Resolution') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            // Lógica de platform.includeOmittedParticipation(...) a implementar aquí
+            errorMessage = "Acción 'Incluir Participación Omitida' aún no implementada.";
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
+    }
+
     async function handleJsonFileUpload(event: Event) {
         const target = event.target as HTMLInputElement;
         jsonUploadError = null; errorMessage = null;
@@ -232,6 +275,9 @@
             resolve_game: `Resolve Game: ${game?.content.title}`,
             cancel_game: `Cancel Game: ${game?.content.title}`,
             drain_stake: `Drain Creator Stake: ${game?.content.title}`,
+            end_game: `Finalize Game: ${game?.content.title}`,
+            invalidate_winner: `Judge Invalidation: ${game?.content.title}`,
+            include_omitted: `Include Omitted Participation: ${game?.content.comtent.title}`,
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -494,6 +540,31 @@
                                 </Button>
                             {/if}
 
+                            {#if game.status === 'Resolution'}
+                                {@const isBeforeDeadline = new Date().getTime() < targetDate}
+                                
+                                {#if isResolver}
+                                    <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline} class="w-full">
+                                        <Trophy class="mr-2 h-4 w-4"/> End Game & Distribute Prizes
+                                    </Button>
+                                {/if}
+
+                                <Button 
+                                    on:click={() => setupActionModal('include_omitted')} 
+                                    disabled={!isBeforeDeadline} 
+                                    variant="outline" 
+                                    class="w-full"
+                                    title="Cualquiera puede ejecutar esta acción para reclamar la comisión del resolver.">
+                                    <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
+                                </Button>
+
+                                {#if isJudge}
+                                    <Button on:click={() => setupActionModal('invalidate_winner')} disabled={!isBeforeDeadline} variant="destructive" class="w-full">
+                                        <XCircle class="mr-2 h-4 w-4"/> Judges: Invalidate Winner
+                                    </Button>
+                                {/if}
+                            {/if}
+
                             {#if iGameDrainingStaking(game)}
                                 <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
                                     {#await isGameDrainingAllowed(game) then isAllowed}
@@ -503,6 +574,9 @@
                                     {/await}
                                 </div>
                             {/if}
+
+                            
+
                         {:else}
                             <p class="info-box">Connect your wallet to interact with the game.</p>
                         {/if}
