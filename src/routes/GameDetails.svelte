@@ -655,7 +655,7 @@ async function handleEndGame() {
                                 {#if isCurrentParticipationWinner}
                                     <div class="winner-badge">
                                         <Trophy class="w-4 h-4 mr-2" />
-                                        <span>WINNER</span>
+                                        <span>WINNER CANDIDATE</span>
                                     </div>
                                 {/if}
 
@@ -864,9 +864,8 @@ async function handleEndGame() {
                      <div class="space-y-4">
                         <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-gray-600/20 text-gray-300 border border-gray-500/30' : 'bg-gray-100 text-gray-700 border border-gray-200'}">
                             <strong>Action: Include Omitted Participation</strong><br>
-                            Select a participation submitted before the deadline that wasn't included. By doing this, you can set yourself as the new resolver and claim the creator's commission when the game ends.
+                            All missed entries before the deadline will be selected by default. This will designate you as the new 'resolver' and will allow you to claim the creator's commission when the game ends.
                         </p>
-                        <p class="text-center font-bold py-4">-- UI for selecting a participation would go here --</p>
                         <Button on:click={handleIncludeOmitted} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-500 hover:bg-gray-600 text-white'} font-semibold">
                             {isSubmitting ? 'Processing...' : 'Confirm Inclusion'}
                         </Button>
