@@ -168,38 +168,51 @@
       val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
 
-      val forfeitedToDev = 0L
-
       val resolverPotentialPayout = creatorStake + (prizePool * commissionPercentage / 100L)
+      val judgesPotentialCommission = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
+      val baseDevCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+
+      // Calcula el pago final y la cantidad perdida por el resolutor
       val finalResolverPayout = if (resolverPotentialPayout >= MIN_ERG_BOX) {
         resolverPotentialPayout
       } else {
-        forfeitedToDev = forfeitedToDev + resolverPotentialPayout
+        0L
+      }
+      val forfeitedByResolver = if (resolverPotentialPayout < MIN_ERG_BOX) {
+        resolverPotentialPayout
+      } else {
         0L
       }
 
-      val judgesPotentialCommission = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
+      // Calcula el pago final y la cantidad perdida por los jueces
       val finalJudgesCommission = if (judgesPotentialCommission >= MIN_ERG_BOX) {
         judgesPotentialCommission
       } else {
-        forfeitedToDev = forfeitedToDev + judgesPotentialCommission
+        0L
+      }
+      val forfeitedByJudges = if (judgesPotentialCommission < MIN_ERG_BOX) {
+        judgesPotentialCommission
+      } else {
         0L
       }
 
-      val baseDevCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-
-      val winnerPotentialPrize = (prizePool + creatorStake) - resolverPotentialPayout - judgesPotentialCommission - baseDevCommission
+      // Calcula el pago final y la cantidad perdida por el ganador
+      val winnerPotentialPrize = (prizePool + creatorStake) - finalResolverPayout - finalJudgesCommission - baseDevCommission
       
       val finalWinnerPrize = if (winnerPotentialPrize >= MIN_ERG_BOX) {
           winnerPotentialPrize
       } else {
-          if (winnerPotentialPrize > 0L) {
-              forfeitedToDev = forfeitedToDev + winnerPotentialPrize
-          }
           0L
       }
-
-      val finalDevPayout = baseDevCommission + forfeitedToDev
+      val forfeitedByWinner = if (winnerPotentialPrize > 0L && winnerPotentialPrize < MIN_ERG_BOX) {
+          winnerPotentialPrize
+      } else {
+          0L
+      }
+      
+      // Calcula el pago total final para el desarrollador
+      val totalForfeited = forfeitedByResolver + forfeitedByJudges + forfeitedByWinner
+      val finalDevPayout = baseDevCommission + totalForfeited
 
       val winnerBox = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
       val winnerPK = winnerBox.R4[Coll[Byte]].get
@@ -213,6 +226,7 @@
           OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
       } else { true }
 
+      // El pago a los jueces (si lo hay) ahora va a la dirección de DEV
       val judgesGetsPaid = if (finalJudgesCommission > 0L) {
           OUTPUTS.exists({(b:Box) => b.value >= finalJudgesCommission && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
       } else { true }
