@@ -165,51 +165,61 @@
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
     if (isAfterResolutionDeadline && OUTPUTS.size > 1) {
-      val participations = INPUTS.filter({ (box: Box) => box.propositionBytes == PARTICIPATION_RESOLVED_SCRIPT_HASH })
-      val winnerOutput = OUTPUTS(0)
-      val resolverOutput = OUTPUTS(1)
-      val devOutput = OUTPUTS(2)
-      
+      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
 
-      val resolverCommissionAmount = {
-        val rawResolverCommission = prizePool * commissionPercentage / 100L
-        val resolverTotalPayout = creatorStake + rawResolverCommission
+      val forfeitedToDev = 0L
 
-        if (resolverTotalPayout >= MIN_ERG_BOX) {
-            rawResolverCommission
-        } else {
-            -creatorStake 
-        }
+      val resolverPotentialPayout = creatorStake + (prizePool * commissionPercentage / 100L)
+      val finalResolverPayout = if (resolverPotentialPayout >= MIN_ERG_BOX) {
+        resolverPotentialPayout
+      } else {
+        forfeitedToDev = forfeitedToDev + resolverPotentialPayout
+        0L
       }
 
-      val devCommissionAmount = {
-        val amount = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-        if (amount >= MIN_ERG_BOX) { amount } else { 0L }
+      val judgesPotentialCommission = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
+      val finalJudgesCommission = if (judgesPotentialCommission >= MIN_ERG_BOX) {
+        judgesPotentialCommission
+      } else {
+        forfeitedToDev = forfeitedToDev + judgesPotentialCommission
+        0L
       }
-      val judgesCommissionAmount = {
-        val amount = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
-        if (amount >= MIN_ERG_BOX) { amount } else { 0L }
+
+      val baseDevCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+
+      val winnerPotentialPrize = (prizePool + creatorStake) - resolverPotentialPayout - judgesPotentialCommission - baseDevCommission
+      
+      val finalWinnerPrize = if (winnerPotentialPrize >= MIN_ERG_BOX) {
+          winnerPotentialPrize
+      } else {
+          if (winnerPotentialPrize > 0L) {
+              forfeitedToDev = forfeitedToDev + winnerPotentialPrize
+          }
+          0L
       }
-      val winnerPrize = prizePool - resolverCommissionAmount - devCommissionAmount - judgesCommissionAmount
+
+      val finalDevPayout = baseDevCommission + forfeitedToDev
 
       val winnerBox = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
       val winnerPK = winnerBox.R4[Coll[Byte]].get
-      val winnerAddressBytes = P2PK_ERGOTREE_PREFIX ++ winnerPK
+      
+      val winnerGetsPaid = if (finalWinnerPrize > 0L) {
+          val out = OUTPUTS(0)
+          out.value >= finalWinnerPrize && out.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) && out.tokens(0)._1 == gameNftId
+      } else { true }
 
-      val devGetsPaid = devOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR) && 
-                        devOutput.value >= devCommissionAmount
-      
-      val judgesGetsPaid = true  // Send to rep. proofs R7 addres
+      val resolverGetsPaid = if (finalResolverPayout > 0L) {
+          OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
+      } else { true }
 
-      val winnerGetsPrize = winnerOutput.value >= winnerPrize &&
-                            winnerOutput.propositionBytes == winnerAddressBytes &&
-                            winnerOutput.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1
+      val judgesGetsPaid = if (finalJudgesCommission > 0L) {
+          OUTPUTS.exists({(b:Box) => b.value >= finalJudgesCommission && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
+      } else { true }
       
-      val resolverGetsPaid = resolverOutput.value >= creatorStake + resolverCommissionAmount &&
-                              resolverOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)
-      
-      winnerGetsPrize && resolverGetsPaid && devGetsPaid && judgesGetsPaid
+      val devGetsPaid = OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
+
+      winnerGetsPaid && resolverGetsPaid && judgesGetsPaid && devGetsPaid
     } else { false }
   }
 
