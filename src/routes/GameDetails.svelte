@@ -456,12 +456,13 @@ async function handleEndGame() {
                             </div>
                             <div class="stat-block">
                                 <CheckSquare class="stat-icon"/>
-                                <span>{game.commissionPercentage}%</span>
+                                <span>{game.status == "Active" ? game.commissionPercentage : ( game.status == "Resolution" ? game.resolverCommission : "N/A")}%</span>
                                 <span class="stat-label">Creator Commission</span>
                             </div>
                             <div class="stat-block">
                                 <Calendar class="stat-icon"/>
                                 <span>{deadlineDateDisplay.split(' at ')[0]}</span>
+                                <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : "N/A")}</a>
                                 <span class="stat-label">Deadline</span>
                             </div>
                         </div>
