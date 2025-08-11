@@ -6,12 +6,12 @@
         type GameActive,
         type GameCancellation,
         type ParticipationSubmitted,
+        type ParticipationResolved,
         GameState, 
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
         isGameEnded, 
-        isGameParticipationEnded, 
-        ParticipationResolved
+        isGameParticipationEnded
 
     } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
@@ -282,9 +282,9 @@ async function handleEndGame() {
             // Llama al método de la plataforma para incluir la participación.
             // Se necesita el juego, la participación a incluir, las ya resueltas y la clave
             // pública del usuario que ejecuta la acción.
-            transactionId = await platform.includeOmittedParticipation(
+            transactionId = await platform.includeOmittedParticipations(
                 game,
-                omittedParticipation,
+                [], // omittedParticipations as ParticipationSubmitted[],
                 participations as ParticipationResolved[],
                 newResolverPkHex
             );

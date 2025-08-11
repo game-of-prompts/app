@@ -3,7 +3,8 @@ import {
     type GameActive, 
     type GameResolution, 
     type GameCancellation, 
-    type ParticipationSubmitted 
+    type ParticipationSubmitted, 
+    type ParticipationResolved
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
@@ -14,6 +15,10 @@ import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
 import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
+import { end_game } from './actions/end_game';
+import { judges_invalidate } from './actions/judges_invalidate';
+import { type Box } from '@fleet-sdk/core';
+import { include_omitted_participation } from './actions/include_omitted_participation';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation;
@@ -160,6 +165,45 @@ export class ErgoPlatform implements Platform {
         if (!ergo) throw new Error("Billetera no conectada.");
 
         return await drain_cancelled_game_stake(game, claimerAddressString);
+    }
+
+    /**
+     * Finaliza un juego en estado de resolución, pagando al ganador y distribuyendo las comisiones.
+     * Solo puede ser llamado por el 'resolver' actual después de que el período de jueces haya terminado.
+     */
+    async endGame(
+        game: GameResolution,
+        participations: ParticipationResolved[]
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Billetera no conectada.");
+        return await end_game(game, participations);
+    }
+
+    /**
+     * Permite a un juez votar para invalidar al candidato a ganador actual.
+     * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
+     */
+    async judgesInvalidate(
+        game: GameResolution,
+        invalidatedParticipation: ParticipationResolved,
+        judgeVoteDataInputs: Box<bigint>[]
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Billetera no conectada.");
+        return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
+    }
+
+    /**
+     * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
+     * El usuario que ejecuta esta acción se convierte en el nuevo 'resolver' para reclamar la comisión.
+     */
+    async includeOmittedParticipations(
+        game: GameResolution,
+        omittedParticipations: ParticipationSubmitted[],
+        currentResolved: ParticipationResolved[],
+        newResolverPkHex: string
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Billetera no conectada.");
+        return await include_omitted_participation(game, omittedParticipations, currentResolved, newResolverPkHex);
     }
 
     /**

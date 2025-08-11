@@ -4,8 +4,10 @@ import type {
     GameActive,
     GameResolution,
     GameCancellation,
-    ParticipationSubmitted
+    ParticipationSubmitted,
+    ParticipationResolved
 } from "$lib/common/game";
+import { type Box } from "@fleet-sdk/core";
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 export type AnyGame = GameActive | GameResolution | GameCancellation;
@@ -91,6 +93,32 @@ export interface Platform {
         game: GameCancellation,
         claimerAddressString: string
     ): Promise<string | null>;
+
+    endGame(
+        game: GameResolution,
+        participations: ParticipationResolved[]
+    ): Promise<string | null>;
+
+    /**
+     * Permite a un juez votar para invalidar al candidato a ganador actual.
+     * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
+     */
+    judgesInvalidate(
+        game: GameResolution,
+        invalidatedParticipation: ParticipationResolved,
+        judgeVoteDataInputs: Box<bigint>[]
+    ): Promise<string | null>
+
+    /**
+     * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
+     * El usuario que ejecuta esta acción se convierte en el nuevo 'resolver' para reclamar la comisión.
+     */
+    includeOmittedParticipations(
+        game: GameResolution,
+        omittedParticipation: ParticipationSubmitted[],
+        currentResolved: ParticipationResolved[],
+        newResolverPkHex: string
+    ): Promise<string | null>
 
     /**
      * Obtiene todos los juegos "Game of Prompts" de la blockchain en todos sus estados.
