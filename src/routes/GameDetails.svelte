@@ -277,7 +277,7 @@
             drain_stake: `Drain Creator Stake: ${game?.content.title}`,
             end_game: `Finalize Game: ${game?.content.title}`,
             invalidate_winner: `Judge Invalidation: ${game?.content.title}`,
-            include_omitted: `Include Omitted Participation: ${game?.content.comtent.title}`,
+            include_omitted: `Include Omitted Participation: ${game?.content.title}`,
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -697,7 +697,7 @@
                                                             <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
                                                         {/if}
                                                     </div>
-                                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)} <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)}       <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                                                         <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
                                                             <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
                                                             A refund has already been requested.
@@ -725,8 +725,8 @@
                 </Button>
             </div>
 
-            <div class="modal-form-body">
-                {#if currentActionType === 'submit_score'}
+             <div class="modal-form-body">
+                 {#if currentActionType === 'submit_score'}
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                              <div class="lg:col-span-2">
@@ -786,7 +786,40 @@
                             {isSubmitting ? 'Processing...' : 'Confirm & Drain Stake'}
                         </Button>
                     </div>
+
+                {:else if currentActionType === 'end_game'}
+                    <div class="space-y-4">
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
+                            <strong>Action: End Game</strong><br>
+                            This will finalize the game, distributing the prize pool to the winner, your resolver fee, and other commissions. This action is irreversible.
+                        </p>
+                        <Button on:click={handleEndGame} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold">
+                            {isSubmitting ? 'Processing...' : 'Confirm & End Game'}
+                        </Button>
+                    </div>
+                {:else if currentActionType === 'invalidate_winner'}
+                    <div class="space-y-4">
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}">
+                            <strong>Action: Judge Invalidation</strong><br>
+                            As a judge, you are voting to invalidate the current winner candidate. This requires a majority of judges to perform the same action. If successful, the resolution deadline will be extended.
+                        </p>
+                        <Button on:click={handleJudgesInvalidate} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold">
+                            {isSubmitting ? 'Processing...' : 'Confirm Invalidation Vote'}
+                        </Button>
+                    </div>
+                {:else if currentActionType === 'include_omitted'}
+                     <div class="space-y-4">
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-gray-600/20 text-gray-300 border border-gray-500/30' : 'bg-gray-100 text-gray-700 border border-gray-200'}">
+                            <strong>Action: Include Omitted Participation</strong><br>
+                            Select a participation submitted before the deadline that wasn't included. By doing this, you can set yourself as the new resolver and claim the creator's commission when the game ends.
+                        </p>
+                        <p class="text-center font-bold py-4">-- UI for selecting a participation would go here --</p>
+                        <Button on:click={handleIncludeOmitted} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-500 hover:bg-gray-600 text-white'} font-semibold">
+                            {isSubmitting ? 'Processing...' : 'Confirm Inclusion'}
+                        </Button>
+                    </div>
                 {/if}
+
                 {#if transactionId && !isSubmitting && showActionModal}
                     <div class="mt-6 p-3 rounded-md text-sm {$mode === 'dark' ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-700 border border-green-200'}">
                         <strong>Success! Transaction ID:</strong><br/><a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
