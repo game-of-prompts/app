@@ -10,7 +10,9 @@
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
         isGameEnded, 
-        isGameParticipationEnded 
+        isGameParticipationEnded, 
+        ParticipationResolved
+
     } from "$lib/common/game";
     import { address, connected, game_detail } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
@@ -212,34 +214,85 @@
         }
     }
 
-    async function handleEndGame() {
-        if (game?.status !== 'Resolution') return;
-        errorMessage = null; isSubmitting = true;
+async function handleEndGame() {
+        // Asegura que el juego está en el estado correcto y hay participaciones que procesar.
+        if (game?.status !== 'Resolution' || !participations.length) return;
+
+        errorMessage = null; 
+        isSubmitting = true;
         try {
-            // Lógica de platform.endGame(...) a implementar aquí
-            errorMessage = "Acción 'Finalizar Juego' aún no implementada.";
-        } catch (e: any) { errorMessage = e.message;
-        } finally { isSubmitting = false; }
+            // Llama al método de la plataforma para finalizar el juego.
+            // Se le pasa el objeto del juego y todas las participaciones ya resueltas
+            // para que la plataforma construya la transacción final de pago.
+            transactionId = await platform.endGame(
+                game,
+                participations as ParticipationResolved[]
+            );
+        } catch (e: any) { 
+            errorMessage = e.message;
+        } finally { 
+            isSubmitting = false; 
+        }
     }
 
     async function handleJudgesInvalidate() {
+        // Asegura que el juego está en el estado correcto para la invalidación.
         if (game?.status !== 'Resolution') return;
-        errorMessage = null; isSubmitting = true;
+
+        errorMessage = null; 
+        isSubmitting = true;
         try {
-            // Lógica de platform.judgesInvalidate(...) a implementar aquí
-            errorMessage = "Acción 'Invalidar por Jueces' aún no implementada.";
-        } catch (e: any) { errorMessage = e.message;
-        } finally { isSubmitting = false; }
+            // Llama al método para que un juez invalide al candidato a ganador.
+            // La plataforma usará el objeto 'game' para saber a quién invalidar y la lista de
+            // 'participations' para encontrar un nuevo candidato. También buscará las "cajas de voto"
+            // del juez conectado para usarlas como data-inputs.
+            transactionId = await platform.judgesInvalidate(
+                game,
+                participations as ParticipationResolved[]
+            );
+        } catch (e: any) { 
+            errorMessage = e.message;
+        } finally { 
+            isSubmitting = false; 
+        }
     }
 
     async function handleIncludeOmitted() {
-        if (game?.status !== 'Resolution') return;
-        errorMessage = null; isSubmitting = true;
+        const selectedOmittedBoxId = "";  // TODO
+        // Verifica el estado del juego y que se haya seleccionado una participación del modal.
+        if (game?.status !== 'Resolution' || !selectedOmittedBoxId) return;
+
+        errorMessage = null; 
+        isSubmitting = true;
         try {
-            // Lógica de platform.includeOmittedParticipation(...) a implementar aquí
-            errorMessage = "Acción 'Incluir Participación Omitida' aún no implementada.";
-        } catch (e: any) { errorMessage = e.message;
-        } finally { isSubmitting = false; }
+            // Busca el objeto completo de la participación omitida seleccionada.
+            const omittedParticipation = participations.find(p => p.boxId === selectedOmittedBoxId);
+            if (!omittedParticipation) {
+                throw new Error("La participación seleccionada no se ha encontrado.");
+            }
+
+            const userAddress = get(address);
+            if (!userAddress) {
+                throw new Error("Cartera no conectada.");
+            }
+            
+            // Obtiene la clave pública del usuario actual para designarlo como el nuevo "resolver".
+            const newResolverPkHex = uint8ArrayToHex(ErgoAddress.fromBase58(userAddress).getPublicKeys()[0]);
+            
+            // Llama al método de la plataforma para incluir la participación.
+            // Se necesita el juego, la participación a incluir, las ya resueltas y la clave
+            // pública del usuario que ejecuta la acción.
+            transactionId = await platform.includeOmittedParticipation(
+                game,
+                omittedParticipation,
+                participations as ParticipationResolved[],
+                newResolverPkHex
+            );
+        } catch (e: any) { 
+            errorMessage = e.message;
+        } finally { 
+            isSubmitting = false; 
+        }
     }
 
     async function handleJsonFileUpload(event: Event) {
