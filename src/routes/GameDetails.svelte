@@ -447,7 +447,7 @@ async function handleEndGame() {
                             <div class="stat-block">
                                 <Trophy class="stat-icon"/>
                                 <span>{formatErg(game.participationFeeNanoErg * BigInt(participations.length))} ERG</span>
-                                <span class="stat-label">Total Fee Pool</span>
+                                <span class="stat-label">Price</span>
                             </div>
                             <div class="stat-block">
                                 <ShieldCheck class="stat-icon"/>
