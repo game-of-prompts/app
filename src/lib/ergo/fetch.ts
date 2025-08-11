@@ -147,51 +147,112 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
 // =================================================================
 
 /**
- * Parsea una Box para convertirla en un objeto `GameResolution`.
- * @param box La caja raw del explorador.
- * @returns Un objeto `GameResolution` o `null`.
+ * Parsea una Box de la blockchain para convertirla en un objeto `GameResolution`.
+ * Esta función está diseñada para ser robusta, manejando `renderedValue` como array,
+ * JSON string válido, y string con formato de array pero sin comillas.
+ * @param box La caja raw obtenida del explorador.
+ * @returns Un objeto `GameResolution` o `null` si la caja no tiene el formato esperado.
  */
 export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null {
     try {
-        if (!box.assets || box.assets.length === 0) return null;
+        if (!box.assets || box.assets.length === 0) {
+            console.warn(`parseGameResolutionBox: Se omitió la caja ${box.boxId} por no tener assets (NFT).`);
+            return null;
+        }
         const gameId = box.assets[0].tokenId;
 
-        const r4Value = parseLongColl(box.additionalRegisters.R4?.renderedValue);
-        if (!r4Value || r4Value.length < 2) throw new Error("R4 inválido.");
-        const [resolutionDeadline, resolvedCounter] = [Number(r4Value[0]), Number(r4Value[1])];
-        
-        const r5Value = box.additionalRegisters.R5?.renderedValue;
-        if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 inválido.");
-        const [revealedS_Hex, winnerCandidateCommitment] = [parseCollByteToHex(r5Value[0]), parseCollByteToHex(r5Value[1])];
-        
-        const participatingJudges = (box.additionalRegisters.R6?.renderedValue as string[] || []).map(parseCollByteToHex);
+        // --- MANEJO ROBUSTO DE REGISTROS ---
 
-        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
-        let parsedR7Array: any[] | null = null;
-        if (typeof r7RenderedValue === 'string') {
-            try { parsedR7Array = JSON.parse(r7RenderedValue); } 
-            catch (e) { console.warn(`Could not JSON.parse R7 for ${box.boxId}: ${r7RenderedValue}`); }
-        } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
-        const numericalParams = parseLongColl(parsedR7Array);
+        const getArrayFromValue = (value: any): any[] | null => {
+            // Caso 1: Ya es un array de JavaScript válido.
+            if (Array.isArray(value)) {
+                return value;
+            }
+
+            // Caso 2: Es un string que necesita ser procesado.
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+
+                // Caso 2a: Maneja strings malformados como `[hex1,hex2]` (sin comillas).
+                if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes('"')) {
+                    const inner = trimmed.substring(1, trimmed.length - 1);
+                    if (inner === '') return []; // Maneja el caso de un array vacío "[]"
+                    return inner.split(','); // Devuelve un array de strings, ej: ['hex1', 'hex2']
+                }
+
+                // Caso 2b: Intenta parsear strings de JSON bien formados.
+                try {
+                    return JSON.parse(trimmed);
+                } catch (e) {
+                    console.warn(`No se pudo parsear el string JSON para la caja ${box.boxId}: ${value}`);
+                    return null;
+                }
+            }
+
+            // Caso 3: No es un array ni un string, por lo tanto es inválido.
+            return null;
+        };
+
+        // R4: (SLong, SInt) -> resolutionDeadline, resolvedCounter
+        const r4Value = getArrayFromValue(box.additionalRegisters.R4?.renderedValue);
+        if (!r4Value || r4Value.length < 2) throw new Error("R4 no es una tupla válida.");
+        const [resolutionDeadline, resolvedCounter] = [Number(r4Value[0]), Number(r4Value[1])];
+        if (isNaN(resolutionDeadline) || isNaN(resolvedCounter)) throw new Error("No se pudo parsear R4.");
+        
+        // R5: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
+        const r5Value = getArrayFromValue(box.additionalRegisters.R5?.renderedValue);
+        if (!r5Value || r5Value.length < 2) throw new Error("R5 no es una tupla válida.");
+        const revealedS_Hex = parseCollByteToHex(r5Value[0]);
+        const winnerCandidateCommitment = parseCollByteToHex(r5Value[1]);
+        if (!revealedS_Hex || !winnerCandidateCommitment) throw new Error("No se pudo parsear R5.");
+        
+        // R6: Coll[Coll[Byte]] -> participatingJudges
+        const participatingJudges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
+            .map(parseCollByteToHex)
+            .filter((judge): judge is string => judge !== null && judge !== undefined);
+
+        // R7: Coll[SLong] -> originalDeadline, creatorStakeNanoErg, participationFeeNanoErg
+        const r7Array = getArrayFromValue(box.additionalRegisters.R7?.renderedValue);
+        const numericalParams = parseLongColl(r7Array);
         if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
         const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
-        const r8Value = box.additionalRegisters.R8?.renderedValue;
-        if (!Array.isArray(r8Value) || r8Value.length < 2) throw new Error("R8 inválido.");
+        // R8: (Coll[Byte], SLong) -> resolverPK_Hex, resolverCommission
+        const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
+        if (!r8Value || r8Value.length < 2) throw new Error("R8 no es una tupla válida.");
         const resolverPK_Hex = parseCollByteToHex(r8Value[0]);
         const resolverCommission = parseInt(r8Value[1], 10);
+        if (!resolverPK_Hex || isNaN(resolverCommission)) throw new Error("No se pudo parsear R8.");
 
-        const r9Value = box.additionalRegisters.R9?.renderedValue;
-        if (!Array.isArray(r9Value) || r9Value.length < 2) throw new Error("R9 inválido.");
+        // R9: (Coll[Byte], Coll[Byte]) -> originalCreatorPK_Hex, gameDetailsHex
+        const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
+        if (!r9Value || r9Value.length < 2) throw new Error("R9 no es una tupla válida.");
         const originalCreatorPK_Hex = parseCollByteToHex(r9Value[0]);
         const gameDetailsHex = r9Value[1];
-        const content = parseGameContent(hexToUtf8(gameDetailsHex || ""), box.boxId, box.assets[0]);
+        if (!originalCreatorPK_Hex || !gameDetailsHex) throw new Error("No se pudo parsear R9.");
+        const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
 
+        // --- CONSTRUCCIÓN DEL OBJETO FINAL ---
+        
         return {
-            platform: new ErgoPlatform(), boxId: box.boxId, box, status: GameState.Resolution, gameId,
-            resolutionDeadline, resolvedCounter, revealedS_Hex, winnerCandidateCommitment, participatingJudges,
-            originalDeadline: Number(originalDeadline), creatorStakeNanoErg, participationFeeNanoErg,
-            resolverPK_Hex, resolverCommission, originalCreatorPK_Hex, content, value: BigInt(box.value)
+            platform: new ErgoPlatform(), 
+            boxId: box.boxId, 
+            box, 
+            status: GameState.Resolution, 
+            gameId,
+            resolutionDeadline, 
+            resolvedCounter, 
+            revealedS_Hex, 
+            winnerCandidateCommitment, 
+            participatingJudges,
+            originalDeadline: Number(originalDeadline), 
+            creatorStakeNanoErg, 
+            participationFeeNanoErg,
+            resolverPK_Hex, 
+            resolverCommission, 
+            originalCreatorPK_Hex, 
+            content, 
+            value: BigInt(box.value)
         };
     } catch (e) {
         console.error(`Error al parsear la caja en resolución ${box.boxId}:`, e);
