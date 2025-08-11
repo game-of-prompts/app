@@ -655,7 +655,7 @@
                                                 {/each}
                                                 {#if actualScoreForThisParticipation !== null}
                                                     <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
-                                                        (Actual Score: {actualScoreForThisParticipation.toString()})
+                                                        (Real Score: {actualScoreForThisParticipation})
                                                     </span>
                                                 {/if}
                                             {/if}
