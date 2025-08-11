@@ -170,6 +170,12 @@ export function parseGameContent(
     gameBoxId: string, 
     nft?: TokenEIP4
 ): GameContent {
+    const defaultImageUrl = [
+        "https://images5.alphacoders.com/136/thumb-1920-1364878.png",
+        "https://backiee.com/static/wallpapers/560x315/302851.jpg",
+        "https://wallpaperaccess.com/full/5027932.png",
+        "https://wallpaperaccess.com/full/6273500.jpg"
+    ][rawJsonDetails?.length % 4];
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
     let content: GameContent = {
@@ -187,7 +193,7 @@ export function parseGameContent(
                 title: parsed.title || defaultTitle,
                 description: parsed.description || defaultDescription,
                 serviceId: parsed.serviceId || "",
-                imageURL: parsed.imageURL || parsed.image || undefined,
+                imageURL: parsed.imageURL || parsed.image || defaultImageUrl,
                 webLink: parsed.webLink || parsed.link || undefined,
                 mirrorUrls: parsed.mirrorUrls || undefined,
             };
