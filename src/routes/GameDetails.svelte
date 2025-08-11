@@ -33,7 +33,7 @@
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
-    import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
+    import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
 
@@ -275,6 +275,34 @@
         if (nanoErg === undefined || nanoErg === null) return "N/A";
         return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
+
+    // Validates and returns the actual score from a participation's score list
+    function getActualScore(p: AnyParticipation, secretHex: Uint8Array | undefined): bigint | null {
+        if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
+        const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
+        const pBox_R7_solverIdHex_raw = parseCollByteToHex(p.box.additionalRegisters.R7?.renderedValue);
+        const pBox_R8_hashLogsHex_raw = parseCollByteToHex(p.box.additionalRegisters.R8?.renderedValue);
+        let r9ParsedArray: any[] | null = null;
+        const r9ScoreListRaw = p.box.additionalRegisters.R9?.renderedValue;
+        if (typeof r9ScoreListRaw === 'string') {
+            try { r9ParsedArray = JSON.parse(r9ScoreListRaw); } catch (e) { /* silent fail */ }
+        } else if (Array.isArray(r9ScoreListRaw)) { r9ParsedArray = r9ScoreListRaw; }
+        const pBox_scoreList = parseLongColl(r9ParsedArray);
+
+        if (!pBox_R5_commitmentHex || !pBox_R7_solverIdHex_raw || !pBox_R8_hashLogsHex_raw || !pBox_scoreList || pBox_scoreList.length === 0) return null;
+
+        const pBoxSolverId_directBytes = hexToBytes(pBox_R7_solverIdHex_raw);
+        const pBoxHashLogs_directBytes = hexToBytes(pBox_R8_hashLogsHex_raw);
+        if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) return null;
+
+        for (const scoreAttempt of pBox_scoreList) {
+            const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
+            const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...secretHex]);
+            const testCommitmentBytes = fleetBlake2b256(dataToHash);
+            if (uint8ArrayToHex(testCommitmentBytes) === pBox_R5_commitmentHex) return scoreAttempt;
+        }
+        return null;
+    }
     
     onMount(() => { if (game) loadGameDetailsAndTimers(); });
     onDestroy(() => {
@@ -489,8 +517,8 @@
                     </h2>
                     <div class="flex flex-col gap-6">
                         {#each participations as p (p.boxId)}
-                            {@const isCurrentParticipationWinner = gameEnded && game.winnerInfo && (p.boxId === game.winnerInfo.participationBoxId || (game.winnerInfo.playerPK_Hex && p.playerPK_Hex === game.winnerInfo.playerPK_Hex) || pkHexToBase58Address(p.playerPK_Hex) === game.winnerInfo.playerAddress)}
-                            {@const actualScoreForThisParticipation = gameEnded && game.secret ? getActualScore(p, game.secret) : null}
+                            {@const isCurrentParticipationWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === p.commitmentC_Hex}
+                            {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
 
                             <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
                                 {isCurrentParticipationWinner
