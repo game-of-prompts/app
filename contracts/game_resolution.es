@@ -171,17 +171,25 @@
       val devOutput = OUTPUTS(2)
       
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+
       val resolverCommissionAmount = {
-        val amount = prizePool * commissionPercentage / 100L
-        if (amount > MIN_ERG_BOX) { amount } else { 0L }
+        val rawResolverCommission = prizePool * commissionPercentage / 100L
+        val resolverTotalPayout = creatorStake + rawResolverCommission
+
+        if (resolverTotalPayout >= MIN_ERG_BOX) {
+            rawResolverCommission
+        } else {
+            -creatorStake 
+        }
       }
+
       val devCommissionAmount = {
         val amount = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-        if (amount > MIN_ERG_BOX) { amount } else { 0L }
+        if (amount >= MIN_ERG_BOX) { amount } else { 0L }
       }
       val judgesCommissionAmount = {
         val amount = prizePool * JUDGE_COMMISSION_PERCENTAGE / 100L
-        if (amount > MIN_ERG_BOX) { amount } else { 0L }
+        if (amount >= MIN_ERG_BOX) { amount } else { 0L }
       }
       val winnerPrize = prizePool - resolverCommissionAmount - devCommissionAmount - judgesCommissionAmount
 
@@ -199,7 +207,7 @@
                             winnerOutput.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1
       
       val resolverGetsPaid = resolverOutput.value >= creatorStake + resolverCommissionAmount &&
-                               resolverOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)
+                              resolverOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)
       
       winnerGetsPrize && resolverGetsPaid && devGetsPaid && judgesGetsPaid
     } else { false }
