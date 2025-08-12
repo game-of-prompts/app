@@ -7,14 +7,13 @@ import {
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ParticipationResolved } from '$lib/common/game';
 
-// --- Constantes del contrato ---
+// --- Constantes ---
 const DEV_ADDR = "9gGZp7HRAFxgGWSwvS4hCbxM2RpkYr6pHvwpU4GPrpvxY7Y2nQo"; 
 const DEV_COMMISSION_PERCENTAGE = 5n;
-const JUDGE_COMMISSION_PERCENTAGE = 5n;
 
 /**
  * Construye y envía la transacción para finalizar un juego.
- * Los pagos que no alcanzan el mínimo seguro (polvo) se redirigen al desarrollador.
+ * Los pagos que no alcanzan el mínimo (polvo) se redirigen al ganador.
  * @param game El objeto que representa la caja del juego a finalizar.
  * @param participations Un array con las cajas de participación resueltas.
  * @returns El ID de la transacción enviada.
@@ -36,51 +35,48 @@ export async function end_game(
         throw new Error("No se pudo encontrar la caja de participación del ganador declarado.");
     }
 
-    console.log("Participations found:", participations.map(p => p.boxId))
-
-    // --- 2. Lógica de Cálculo de Pagos ---
+    // --- 2. Lógica de Cálculo de Pagos (NUEVA POLÍTICA) ---
     const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
-    let forfeitedToDev = 0n;
+    
+    // 2.1. Calcular los componentes base del pago
+    const creatorStake = game.creatorStakeNanoErg;
+    const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
+    const devCommission = (prizePool * DEV_COMMISSION_PERCENTAGE) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
-    // 2.1. Pago al Resolutor
-    const resolverPotentialPayout = game.creatorStakeNanoErg + (prizePool * BigInt(game.resolverCommission)) / 100n;
-    const finalResolverPayout = resolverPotentialPayout >= SAFE_MIN_BOX_VALUE ? resolverPotentialPayout : 0n;
-    if (finalResolverPayout === 0n && resolverPotentialPayout > 0n) {
-        forfeitedToDev += resolverPotentialPayout;
-    }
-    
-    // 2.2. Premio del Ganador
-    const baseDevCommission = (prizePool * DEV_COMMISSION_PERCENTAGE) / 100n;
-    const totalPot = prizePool + game.creatorStakeNanoErg;
-    const winnerPotentialPrize = totalPot - resolverPotentialPayout - baseDevCommission;
-    
-    let finalWinnerPrize = 0n;
-    if (winnerPotentialPrize >= SAFE_MIN_BOX_VALUE) {
-        finalWinnerPrize = winnerPotentialPrize;
-    } else if (winnerPotentialPrize > 0n) {
-        forfeitedToDev += winnerPotentialPrize;
-    }
-    
-    // 2.4. Pago total al Desarrollador
-    const finalDevPayout = baseDevCommission + forfeitedToDev;
-    
+    // 2.2. Determinar los pagos intermedios según si el premio del ganador es "polvo"
+    const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
+
+    const intermediateDevPayout = winnerGetsBasePrize ? devCommission : 0n;
+    const intermediateResolverPayout = winnerGetsBasePrize ? (creatorStake + resolverCommission) : creatorStake;
+    const intermediateWinnerPayout = winnerGetsBasePrize ? winnerBasePrize : (winnerBasePrize + resolverCommission + devCommission);
+
+    // 2.3. Calcular qué cantidades se confiscan por ser "polvo" y redistribuirlas al ganador
+    const devForfeits = (intermediateDevPayout > 0n && intermediateDevPayout < SAFE_MIN_BOX_VALUE) ? intermediateDevPayout : 0n;
+    const resolverForfeits = (intermediateResolverPayout > 0n && intermediateResolverPayout < SAFE_MIN_BOX_VALUE) ? intermediateResolverPayout : 0n;
+
+    // 2.4. Asignar los pagos finales
+    const finalDevPayout = intermediateDevPayout - devForfeits;
+    const finalResolverPayout = intermediateResolverPayout - resolverForfeits;
+    const finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits;
+
     console.log("--- Resumen de Pagos (nanoErgs) ---");
-    console.log(`Pago Final Resolver: ${finalResolverPayout} (Potencial: ${resolverPotentialPayout})`);
-    console.log(`Premio Final Ganador: ${finalWinnerPrize} (Potencial: ${winnerPotentialPrize})`);
-    console.log(`Pago Final Dev (Base + Forfeited): ${finalDevPayout}`);
+    console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
+    console.log(`Pago Final Resolver: ${finalResolverPayout}`);
+    console.log(`Pago Final Dev: ${finalDevPayout}`);
     console.log("------------------------------------");
 
     // --- 3. Construcción de Salidas ---
     const outputs: OutputBuilder[] = [];
+    const gameNft = game.box.assets[0];
+    const winnerAddressString = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
 
-    // 3.1. Salida para el Ganador (si aplica)
-    if (finalWinnerPrize > 0n) {
-        const gameNft = game.box.assets[0];
-        const winnerAddressString = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
-        outputs.push(
-            new OutputBuilder(finalWinnerPrize, winnerAddressString).addTokens([gameNft])
-        );
-    }
+    // 3.1. Salida para el Ganador (siempre se crea, contiene el NFT)
+    // La transacción fallará a nivel de protocolo si finalWinnerPrize < SAFE_MIN_BOX_VALUE,
+    // lo cual es el comportamiento deseado.
+    outputs.push(
+        new OutputBuilder(finalWinnerPrize, winnerAddressString).addTokens([gameNft])
+    );
 
     // 3.2. Salida para el Resolutor (si aplica)
     if (finalResolverPayout > 0n) {
@@ -90,9 +86,7 @@ export async function end_game(
         );
     }
 
-    // 3.3. Salida Unificada para el Desarrollador
-    console.log(`Monto total a la dirección del DEV: ${finalDevPayout}`);
-
+    // 3.3. Salida para el Desarrollador (si aplica)
     if (finalDevPayout > 0n) {
         outputs.push(
             new OutputBuilder(finalDevPayout, DEV_ADDR)
@@ -112,7 +106,7 @@ export async function end_game(
         .build()
         .toEIP12Object();
 
-    console.log("Transacción EIP-12 sin firmar.");
+    console.log("Transacción EIP-12 sin firmar generada.");
 
     try {
         const signedTransaction = await ergo.sign_tx(unsignedTransaction);
