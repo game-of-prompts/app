@@ -30,9 +30,6 @@
 
   // El ID del NFT original del juego se extrae de los tokens de la propia caja.
   val gameNftId = SELF.tokens(0)._1
-  
-  // Condición para verificar si el período de enfriamiento ha pasado.
-  val cooldownIsOver = HEIGHT >= unlockHeight
 
   // =================================================================
   // === ACCIONES DE GASTO
@@ -42,34 +39,28 @@
   // Permite a cualquiera reclamar una porción del stake si ha pasado el cooldown
   // y si queda suficiente stake para continuar el ciclo.
   val action1_drainStake = {
-    // Esta acción solo se puede realizar si el stake restante es suficiente para crear una nueva caja de cancelación y la recompensa.
-    val stakeIsSufficient = currentStake > (MinErg + (currentStake / STAKE_DENOMINATOR))
+    val recreatedCancellationBox = OUTPUTS(0)
+    val claimerOutput = OUTPUTS(1)
+    
+    val stakePortionToClaim = currentStake / STAKE_DENOMINATOR
+    val remainingStake = currentStake - stakePortionToClaim
 
-    if (cooldownIsOver && stakeIsSufficient) {
-      val recreatedCancellationBox = OUTPUTS(0)
-      val claimerOutput = OUTPUTS(1)
-      
-      val stakePortionToClaim = currentStake / STAKE_DENOMINATOR
-      val remainingStake = currentStake - stakePortionToClaim
+    val cooldownIsOver = HEIGHT >= unlockHeight
 
-      // 1. Validar la salida del reclamador.
-      val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
+    val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
 
-      // 2. Validar que la caja de cancelación se recrea correctamente para el siguiente ciclo.
-      val boxIsRecreatedCorrectly = {
-        recreatedCancellationBox.propositionBytes == SELF.propositionBytes &&
-        recreatedCancellationBox.value >= remainingStake &&
-        recreatedCancellationBox.tokens(0)._1 == gameNftId && // Conserva el NFT original.
-        recreatedCancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS && // Nuevo unlockHeight.
-        recreatedCancellationBox.R5[Coll[Byte]].get == revealedSecret && // El secreto no cambia.
-        recreatedCancellationBox.R6[Long].get == remainingStake && // El stake se reduce.
-        recreatedCancellationBox.R7[Coll[Byte]].get == readOnlyInfo // La info no cambia.
-      }
-      
-      claimerGetsPortion && boxIsRecreatedCorrectly
-    } else { false }
+    val boxIsRecreatedCorrectly = {
+      recreatedCancellationBox.propositionBytes == SELF.propositionBytes &&
+      recreatedCancellationBox.value >= remainingStake &&
+      recreatedCancellationBox.tokens(0)._1 == gameNftId &&
+      recreatedCancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+      recreatedCancellationBox.R5[Coll[Byte]].get == revealedSecret &&
+      recreatedCancellationBox.R6[Long].get == remainingStake &&
+      recreatedCancellationBox.R7[Coll[Byte]].get == readOnlyInfo
+    }
+    
+    claimerGetsPortion && boxIsRecreatedCorrectly
   }
 
-  // La caja se puede gastar si se cumple una de las dos acciones.
   sigmaProp(action1_drainStake)
 }
