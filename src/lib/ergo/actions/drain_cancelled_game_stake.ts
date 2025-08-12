@@ -12,7 +12,8 @@ import { getGopGameCancellationErgoTreeHex } from '../contract';
 
 // Constantes del contrato game_cancellation.es
 const STAKE_DENOMINATOR = 5n;
-const COOLDOWN_IN_BLOCKS = 30;
+const COOLDOWN_IN_BLOCKS_BASE = 30; // Cooldown definido en el contrato
+const COOLDOWN_IN_BLOCKS_USED = COOLDOWN_IN_BLOCKS_BASE + 10;
 
 /**
  * Ejecuta la acción de drenaje sobre una caja de juego en estado "Cancelación".
@@ -49,7 +50,7 @@ export async function drain_cancelled_game_stake(
 
     // --- 2. Construir Salidas ---
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
+    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS_USED);
 
     // SALIDA(0): La caja de cancelación recreada con valores actualizados
     const recreatedCancellationBox = new OutputBuilder(

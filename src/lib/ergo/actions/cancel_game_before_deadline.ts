@@ -12,7 +12,8 @@ import { getGopGameCancellationErgoTreeHex } from '../contract';
 
 // --- Constantes del contrato game_cancellation.es ---
 const STAKE_DENOMINATOR = 5n; // Usar BigInt para consistencia
-const COOLDOWN_IN_BLOCKS = 30; // Cooldown definido en el contrato
+const COOLDOWN_IN_BLOCKS_BASE = 30; // Cooldown definido en el contrato
+const COOLDOWN_IN_BLOCKS_USED = COOLDOWN_IN_BLOCKS_BASE + 10;
 
 /**
  * Inicia la cancelación de un juego activo, haciendo la transición de GameActive -> GameCancellation.
@@ -61,7 +62,7 @@ export async function cancel_game_before_deadline(
     
     // La dirección/ErgoTree de la nueva caja será la del script de cancelación.
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
+    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS_USED);
 
     // SALIDA(0): La nueva caja de cancelación (`game_cancellation.es`)
     const cancellationBoxOutput = new OutputBuilder(
