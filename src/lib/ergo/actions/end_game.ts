@@ -122,11 +122,17 @@ export async function end_game(
         .build()
         .toEIP12Object();
 
-    console.log("Transacción EIP-12 sin firmar:", JSON.stringify(unsignedTransaction, null, 2));
+    console.log("Transacción EIP-12 sin firmar.");
 
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction);
-    const txId = await ergo.submit_tx(signedTransaction);
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction);
+        const txId = await ergo.submit_tx(signedTransaction);
 
-    console.log(`✅ ¡Éxito! Transacción de finalización enviada. ID: ${txId}`);
-    return txId;
+        console.log(`✅ ¡Éxito! Transacción de finalización enviada. ID: ${txId}`);
+        return txId;
+    } 
+    catch (error) {
+        console.error("Error al firmar o enviar la transacción:", error);
+        throw error;
+    }
 }
