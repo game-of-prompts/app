@@ -163,56 +163,49 @@
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
-    if (isAfterResolutionDeadline && OUTPUTS.size > 1) {
-      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
-      val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+    if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
+      // 1. Calcular los componentes base del pago
+      val prizePool = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
+                            .fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
 
-      val resolverPotentialPayout = creatorStake + (prizePool * commissionPercentage / 100L)
-      val baseDevCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+      val resolverCommission = prizePool * commissionPercentage / 100L
+      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+      val winnerBasePrize = prizePool - resolverCommission - devCommission
 
-      // Calcula el pago final y la cantidad perdida por el resolutor
-      val finalResolverPayout = if (resolverPotentialPayout >= MIN_ERG_BOX) {
-        resolverPotentialPayout
-      } else {
-        0L
-      }
-      val forfeitedByResolver = if (resolverPotentialPayout < MIN_ERG_BOX) {
-        resolverPotentialPayout
-      } else {
-        0L
-      }
+      // 2. Determinar los pagos intermedios según si el premio del ganador es "polvo"
+      val winnerGetsBasePrize = winnerBasePrize >= MIN_ERG_BOX
 
-      // Calcula el pago final y la cantidad perdida por el ganador
-      val winnerPotentialPrize = (prizePool + creatorStake) - finalResolverPayout - baseDevCommission
+      val intermediateDevPayout = if (winnerGetsBasePrize) { devCommission } else { 0L }
+      val intermediateResolverPayout = if (winnerGetsBasePrize) { creatorStake + resolverCommission } else { creatorStake }
+      val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { winnerBasePrize + resolverCommission + devCommission }
+
+      // 3. Calcular qué cantidades se confiscan por ser "polvo" y redistribuirlas al ganador
+      val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0) { intermediateDevPayout } else { 0L }
+      val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0) { intermediateResolverPayout } else { 0L }
+
+      val finalDevPayout = intermediateDevPayout - devForfeits
+      val finalResolverPayout = intermediateResolverPayout - resolverForfeits
+      val finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits
+
+      // 4. Validar las salidas de la transacción
+      val winnerBoxInput = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
+      val winnerPK = winnerBoxInput.R4[Coll[Byte]].get
+
+      // Por convención, la salida del ganador (que siempre recibe el NFT) debe ser la primera.
+      val winnerOutput = OUTPUTS(0)
+      val winnerGetsPaid = winnerOutput.value >= finalWinnerPrize &&
+                           winnerOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) &&
+                           winnerOutput.tokens(0)._1 == gameNftId
       
-      val finalWinnerPrize = if (winnerPotentialPrize >= MIN_ERG_BOX) {
-          winnerPotentialPrize
-      } else {
-          0L
-      }
-      val forfeitedByWinner = if (winnerPotentialPrize > 0L && winnerPotentialPrize < MIN_ERG_BOX) {
-          winnerPotentialPrize
-      } else {
-          0L
-      }
-      
-      // Calcula el pago total final para el desarrollador
-      val totalForfeited = forfeitedByResolver + forfeitedByWinner
-      val finalDevPayout = baseDevCommission + totalForfeited
-
-      val winnerBox = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
-      val winnerPK = winnerBox.R4[Coll[Byte]].get
-      
-      val winnerGetsPaid = if (finalWinnerPrize > 0L) {
-          val out = OUTPUTS(0)
-          out.value >= finalWinnerPrize && out.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) && out.tokens(0)._1 == gameNftId
-      } else { true }
+      // NOTA: Si `finalWinnerPrize` resulta ser menor que MIN_ERG_BOX, la creación de `winnerOutput` fallará a nivel de protocolo, lo cual es el comportamiento esperado para bloquear fondos insuficientes. No debería jamás alcanzarse este punto ya como mínimo cuanta con los fondos totales de una caja de participación.
 
       val resolverGetsPaid = if (finalResolverPayout > 0L) {
           OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
       } else { true }
       
-      val devGetsPaid = OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
+      val devGetsPaid = if (finalDevPayout > 0L) {
+          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
+      } else { true }
 
       winnerGetsPaid && resolverGetsPaid && devGetsPaid
     } else { false }
