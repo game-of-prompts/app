@@ -13,7 +13,7 @@
 
 
   // =================================================================
-  // === DEFINICIONES DE REGISTROS (ESTADO DE RESOLUCIÓN FINAL)
+  // === DEFINICIONES DE REGISTROS
   // =================================================================
 
   // R4: (Long, Int)                - (resolutionDeadline, resolvedCounter): Límite de bloque y contador.
