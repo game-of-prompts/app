@@ -7,7 +7,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 - Estado 1 (activo)
     - [x] Resolución
-    - [] Cancelación
+    - [x] Cancelación
 
 - Estado 2 (juicio)
     - [] Finalización
