@@ -180,8 +180,8 @@
       val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { winnerBasePrize + resolverCommission + devCommission }
 
       // 3. Calcular qué cantidades se confiscan por ser "polvo" y redistribuirlas al ganador
-      val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0) { intermediateDevPayout } else { 0L }
-      val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0) { intermediateResolverPayout } else { 0L }
+      val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0L) { intermediateDevPayout } else { 0L }
+      val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0L) { intermediateResolverPayout } else { 0L }
 
       val finalDevPayout = intermediateDevPayout - devForfeits
       val finalResolverPayout = intermediateResolverPayout - resolverForfeits
