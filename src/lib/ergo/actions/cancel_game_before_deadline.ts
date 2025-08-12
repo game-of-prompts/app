@@ -94,9 +94,15 @@ export async function cancel_game_before_deadline(
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
     
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
-    const txId = await ergo.submit_tx(signedTransaction);
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
 
-    console.log(`Transición a cancelación enviada con éxito. ID de la transacción: ${txId}`);
-    return txId;
+        console.log(`Transición a cancelación enviada con éxito. ID de la transacción: ${txId}`);
+        return txId;
+    }
+    catch (error) {
+        console.warn(error)
+        throw error;
+    }
 }

@@ -81,9 +81,15 @@ export async function drain_cancelled_game_stake(
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
 
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
-    const txId = await ergo.submit_tx(signedTransaction);
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
 
-    console.log(`Transacción de drenaje de stake enviada con éxito. ID: ${txId}`);
-    return txId;
+        console.log(`Transacción de drenaje de stake enviada con éxito. ID: ${txId}`);
+        return txId;
+    }
+    catch (error) {
+        console.warn(error)
+        throw error;
+    }
 }
