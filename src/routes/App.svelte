@@ -10,12 +10,9 @@
     import { page } from '$app/stores';
     import { type Game } from '$lib/common/game';
     import Kya from './kya.svelte';
-    import { web_explorer_uri_addr } from '$lib/ergo/envs';
     import Theme from './Theme.svelte';
     import { Badge } from "$lib/components/ui/badge";
-    import { Button, buttonVariants } from '$lib/components/ui/button';
     import * as Dialog from "$lib/components/ui/dialog/index.js";
-    import * as Alert from "$lib/components/ui/alert";
     import { get } from 'svelte/store';
     import { fade } from 'svelte/transition';
 
@@ -28,7 +25,7 @@
 
     const footerMessages = [
         "Direct P2P to your node. No central servers. Powered by Ergo Blockchain.",
-        "Package your solution. Compete in an isolated and verifiable environment. Powered by the Celaut paradigm.",
+        "Package your solution. Compete in a verifiable environment. Powered by the Celaut paradigm.",
         "This web page is the public gateway to GoP. Transparently hosted on GitHub. Or run it yourself for full P2P sovereignty.",
     ];
     let activeMessageIndex = 0;
