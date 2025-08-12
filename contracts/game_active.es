@@ -188,8 +188,7 @@
         val cancellationBoxIsValid = {
             cancellationBox.value >= remainingStake &&
             cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-            r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS && // El nuevo 'unlockHeight'.
-            // Validar que los otros registros importantes se mantienen.
+            r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS &&
             cancellationBox.R4[(Coll[Byte], Long)].get == creatorInfo && // ESTO ESTA MAL, R4 ES EL unlockHeight.
             cancellationBox.R7[Coll[Long]].get == numericalParams
         }

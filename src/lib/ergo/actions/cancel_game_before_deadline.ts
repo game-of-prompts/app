@@ -2,9 +2,7 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    SAFE_MIN_BOX_VALUE,
-    type InputBox,
-    type Amount
+    SAFE_MIN_BOX_VALUE
 } from '@fleet-sdk/core';
 import { SColl, SByte, SLong } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, SString, uint8ArrayToHex } from '$lib/ergo/utils';
