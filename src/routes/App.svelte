@@ -26,14 +26,40 @@
 
     let platform = new ErgoPlatform();
 
+    const footerMessages = [
+        "Direct P2P to your node. No central servers. Powered by Ergo Blockchain.",
+        "Package your solution. Compete in an isolated and verifiable environment. Powered by the Celaut paradigm.",
+        "This web page is the public gateway to GoP. Transparently hosted on GitHub. Or run it yourself for full P2P sovereignty.",
+    ];
+    let activeMessageIndex = 0;
+    let scrollingTextElement: HTMLElement;
+
+    function handleAnimationIteration() {
+        activeMessageIndex = (activeMessageIndex + 1) % footerMessages.length;
+    }
+
+    let current_height: number | null = null;
+    let balanceUpdateInterval: number;
+
     onMount(async () => {
         if (!browser) return;
-        // Connect wallet on mount
+        
+        // Conectar wallet
         await platform.connect();
 
         const gameToken = $page.url.searchParams.get('game');
         if (gameToken) {
             await loadGameById(gameToken, platform);
+        }
+
+        getCurrentHeight();
+        balanceUpdateInterval = setInterval(updateWalletInfo, 30000);
+
+        scrollingTextElement?.addEventListener('animationiteration', handleAnimationIteration);
+
+        return () => {
+            if (balanceUpdateInterval) clearInterval(balanceUpdateInterval);
+            scrollingTextElement?.removeEventListener('animationiteration', handleAnimationIteration);
         }
     });
 
@@ -73,19 +99,6 @@
             console.error("Error updating wallet info:", error);
         }
     }
-
-    let current_height: number | null = null;
-    let balanceUpdateInterval: number;
-
-    onMount(() => {
-        getCurrentHeight();
-        if (browser) {
-            balanceUpdateInterval = setInterval(updateWalletInfo, 30000);
-        }
-        return () => {
-            if (balanceUpdateInterval) clearInterval(balanceUpdateInterval);
-        }
-    });
 
     async function getCurrentHeight() {
         try { current_height = await platform.get_current_height(); }
@@ -198,10 +211,10 @@
     </div>
 
     <div class="footer-center">
-        <div class="scrolling-text-wrapper">
-            Direct P2P to the Ergo node. No central servers. Powered by Ergo Blockchain.
+        <div bind:this={scrollingTextElement} class="scrolling-text-wrapper">
+            {footerMessages[activeMessageIndex]}
         </div>
-    </div>
+        </div>
 
     <div class="footer-right">
         <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.502 2.999L6 0L11.495 3.03L6.0025 5.96L0.502 2.999V2.999ZM6.5 6.8365V12L11.5 9.319V4.156L6.5 6.8365V6.8365ZM5.5 6.8365L0.5 4.131V9.319L5.5 12V6.8365Z" fill="currentColor"></path></svg>
@@ -311,21 +324,13 @@
         transition: animation-duration 0.5s ease;
     }
 
-    /*.page-footer:hover .scrolling-text-wrapper {
-        animation-duration: 8s;
-    }*/
-
-    /* START: Animación corregida */
     @keyframes scroll-left {
         from {
-            /* Comienza fuera de la pantalla (a la derecha) */
             transform: translateX(100vw);
         }
         to {
-            /* Termina fuera de la pantalla (a la izquierda) */
             transform: translateX(-100%);
         }
     }
-    /* END: Animación corregida */
 
 </style>
