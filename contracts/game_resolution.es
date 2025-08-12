@@ -207,6 +207,8 @@
           OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
       } else { true }
 
+      // TODO Check participation resolved counter.
+
       winnerGetsPaid && resolverGetsPaid && devGetsPaid
     } else { false }
   }
