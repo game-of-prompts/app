@@ -77,28 +77,18 @@
   // ### Acción 3: Reembolso por Cancelación de Juego
   // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
   val spentInValidGameCancellation = {
-    if (CONTEXT.dataInputs.size > 0) {
-      val gameBoxInData = CONTEXT.dataInputs(0)
+    val gameBoxInData = CONTEXT.dataInputs(0)  // Caja del juego game_cancelled.es como Data Input.
 
-      val gameBoxIsPlausible = gameBoxInData.tokens.size > 0 &&
-                               gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
-                               gameBoxInData.R5[(Long, Coll[Byte])].isDefined 
+    val correctGame = gameBoxInData.tokens.size > 0 &&
+                      gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
+                      gameBoxInData.R5[Coll[Byte]].isDefined
 
-      if (gameBoxIsPlausible) {
-        val stateTuple_R5 = gameBoxInData.R5[(Long, Coll[Byte])].get
-
-        // Condición 1: El secreto del juego ha sido revelado (el primer elemento de la tupla es > 0).
-        val secretIsRevealed = stateTuple_R5._1 > 0L
-
-        // Condición 2: El jugador recibe un reembolso completo en una de las salidas.
-        val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
-          outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
-          outBox.value >= SELF.value
-        }
-        
-        secretIsRevealed && playerGetsRefund
-      } else { false }
-    } else { false }
+    val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
+      outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
+      outBox.value >= SELF.value
+    }
+    
+    correctGame && playerGetsRefund
   }
 
   // ### Acción 4: Reclamo por Período de Gracia (Placeholder)

@@ -70,42 +70,6 @@
     } else { false }
   }
 
-  // ### Acción 2: Finalizar Drenaje y Minting de NFT
-  // Se ejecuta cuando el stake restante es demasiado pequeño para continuar el ciclo.
-  // Envía el polvo restante al ejecutor y mintea un NFT como prueba de la cancelación final.
-  val action2_finalizeDrain = {
-    val stakeIsInsufficient = currentStake <= (MinErg + (currentStake / STAKE_DENOMINATOR))
-
-    if (cooldownIsOver && stakeIsInsufficient) {
-      val finalOutput = OUTPUTS(0)
-      
-      // 1. El primer token de la salida debe ser el nuevo NFT que se está minteando.
-      //    Su ID es el ID de la caja que se gasta (SELF.id).
-      val newTokenMinted = finalOutput.tokens(0)._1 == SELF.id && finalOutput.tokens(0)._2 == 1L
-
-      // 2. El valor de la salida es el polvo de Ergs que quedaba en el stake.
-      val dustIsClaimed = finalOutput.value >= currentStake
-
-      // 3. (EIP-0004) Se pueblan los registros de la caja de salida para definir el NFT.
-      val nftIsDefinedCorrectly = {
-        // R4: Nombre del Token (String)
-        finalOutput.R4[Coll[Byte]].isDefined &&
-        // R5: Descripción del Token (String)
-        finalOutput.R5[Coll[Byte]].isDefined &&
-        // R6: Número de decimales (Int), debe ser 0 para un NFT.
-        finalOutput.R6[Int].get == 0
-        // R7: Tipo de Token (String), "NFT" según EIP-0022.
-        // finalOutput.R7[Coll[Byte]].get == Coll[Byte]("NFT".utf8) &&
-        // R8: Enlace a los assets (String)
-        // finalOutput.R8[Coll[Byte]].isDefined &&
-        // R9: Hash del archivo de assets (Coll[Byte])
-        // finalOutput.R9[Coll[Byte]].isDefined
-      }
-      
-      newTokenMinted && dustIsClaimed && nftIsDefinedCorrectly
-    } else { false }
-  }
-
   // La caja se puede gastar si se cumple una de las dos acciones.
-  sigmaProp(action1_drainStake || action2_finalizeDrain)
+  sigmaProp(action1_drainStake)
 }

@@ -171,30 +171,30 @@
       val cancellationBox = OUTPUTS(0)
       val claimerOutput = OUTPUTS(1)
 
-      // El secreto 'S' debe ser revelado en el R5 de la nueva caja de cancelación.
-      val revealedS = cancellationBox.R5[Coll[Byte]].get
-      val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
+      // Calcular los valores esperados para las comprobaciones.
+      val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
+      val remainingStake = creatorStake - stakePortionToClaim
 
-      val transitionsToCancellationScript = blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH
+      // --- 1. Validar la caja de cancelación (OUTPUTS(0)) ---
+      val cancellationBoxIsValid = {
+          blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH &&
+          cancellationBox.value >= remainingStake &&
+          cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
+          cancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+          blake2b256(cancellationBox.R5[Coll[Byte]].get) == secretHash &&
+          cancellationBox.R6[Long].get == remainingStake &&
+          cancellationBox.R7[Coll[Byte]].isDefined
+      }
+      
+      // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
+      val claimerOutputIsValid = claimerOutput.value >= stakePortionToClaim
+      
+      // El resultado final es verdadero solo si ambas cajas son válidas.
+      cancellationBoxIsValid && claimerOutputIsValid
 
-      if (sIsCorrectlyRevealed && transitionsToCancellationScript) {
-        val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
-        val remainingStake = creatorStake - stakePortionToClaim
-        
-        val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
-        
-        // Validar la creación de la nueva caja 'game_cancellation.es'.
-        val cancellationBoxIsValid = {
-            cancellationBox.value >= remainingStake &&
-            cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-            cancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
-            cancellationBox.R6[Long].get == remainingStake &&
-            cancellationBox.R7[Coll[Byte]].isDefined
-        }
-        
-        claimerGetsPortion && cancellationBoxIsValid
-      } else { false }
-    } else { false }
+    } else { 
+      false 
+    }
   }
 
   // Se permite el gasto si se cumple una de las dos transiciones de estado.
