@@ -172,8 +172,7 @@
       val claimerOutput = OUTPUTS(1)
 
       // El secreto 'S' debe ser revelado en el R5 de la nueva caja de cancelación.
-      val r5Tuple = cancellationBox.R5[(Long, Coll[Byte])].get
-      val revealedS = r5Tuple._2
+      val revealedS = cancellationBox.R5[Coll[Byte]].get
       val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
 
       val transitionsToCancellationScript = blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH
@@ -188,9 +187,9 @@
         val cancellationBoxIsValid = {
             cancellationBox.value >= remainingStake &&
             cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-            r5Tuple._1 >= HEIGHT + COOLDOWN_IN_BLOCKS &&
-            cancellationBox.R4[(Coll[Byte], Long)].get == creatorInfo && // ESTO ESTA MAL, R4 ES EL unlockHeight.
-            cancellationBox.R7[Coll[Long]].get == numericalParams
+            cancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+            cancellationBox.R6[Long].get == remainingStake &&
+            cancellationBox.R7[Coll[Byte]].isDefined
         }
         
         claimerGetsPortion && cancellationBoxIsValid
