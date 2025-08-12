@@ -36,6 +36,8 @@ export async function end_game(
         throw new Error("No se pudo encontrar la caja de participación del ganador declarado.");
     }
 
+    console.log("Participations found:", participations.map(p => p.boxId))
+
     // --- 2. Lógica de Cálculo de Pagos ---
     const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
     let forfeitedToDev = 0n;
@@ -48,11 +50,13 @@ export async function end_game(
     }
 
     // 2.2. Comisión de los Jueces (se paga a la dirección del DEV)  <-- TODO
-    const judgesPotentialCommission = (prizePool * JUDGE_COMMISSION_PERCENTAGE) / 100n;
-    const finalJudgesCommission = judgesPotentialCommission >= SAFE_MIN_BOX_VALUE ? judgesPotentialCommission : 0n;
-    if (finalJudgesCommission === 0n && judgesPotentialCommission > 0n) {
-        forfeitedToDev += judgesPotentialCommission;
-    }
+    // const judgesPotentialCommission = (prizePool * JUDGE_COMMISSION_PERCENTAGE) / 100n;
+    // const finalJudgesCommission = judgesPotentialCommission >= SAFE_MIN_BOX_VALUE ? judgesPotentialCommission : 0n;
+    // if (finalJudgesCommission === 0n && judgesPotentialCommission > 0n) {
+    //     forfeitedToDev += judgesPotentialCommission;
+    // }
+    const judgesPotentialCommission = 0n;
+    const finalJudgesCommission = 0n;
     
     // 2.3. Premio del Ganador
     const baseDevCommission = (prizePool * DEV_COMMISSION_PERCENTAGE) / 100n;
@@ -71,7 +75,7 @@ export async function end_game(
     
     console.log("--- Resumen de Pagos (nanoErgs) ---");
     console.log(`Pago Final Resolver: ${finalResolverPayout} (Potencial: ${resolverPotentialPayout})`);
-    console.log(`Comisión Final Jueces (a DEV): ${finalJudgesCommission} (Potencial: ${judgesPotentialCommission})`);
+    // console.log(`Comisión Final Jueces (a DEV): ${finalJudgesCommission} (Potencial: ${judgesPotentialCommission})`);
     console.log(`Premio Final Ganador: ${finalWinnerPrize} (Potencial: ${winnerPotentialPrize})`);
     console.log(`Pago Final Dev (Base + Forfeited): ${finalDevPayout}`);
     console.log("------------------------------------");
@@ -97,15 +101,13 @@ export async function end_game(
     }
 
     // 3.3. Salida Unificada para el Desarrollador
-    // Calculamos el monto total para la dirección del dev ANTES de crear el output.
-    // Este monto incluye la comisión base, los fondos perdidos ("forfeited") y la comisión de los jueces.
-    const totalDevAddressPayout = finalDevPayout + finalJudgesCommission;
+    const totalDevAddressPayout = finalDevPayout;
 
-    console.log(`Monto total a la dirección del DEV: ${totalDevAddressPayout} (Pago Dev: ${finalDevPayout} + Comisión Jueces: ${finalJudgesCommission})`);
+    console.log(`Monto total a la dirección del DEV: ${finalDevPayout}`);
 
-    if (totalDevAddressPayout > 0n) {
+    if (finalDevPayout > 0n) {
         outputs.push(
-            new OutputBuilder(totalDevAddressPayout, DEV_ADDR)
+            new OutputBuilder(finalDevPayout, DEV_ADDR)
         );
     }
 
