@@ -48,20 +48,11 @@ export async function end_game(
     if (finalResolverPayout === 0n && resolverPotentialPayout > 0n) {
         forfeitedToDev += resolverPotentialPayout;
     }
-
-    // 2.2. Comisión de los Jueces (se paga a la dirección del DEV)  <-- TODO
-    // const judgesPotentialCommission = (prizePool * JUDGE_COMMISSION_PERCENTAGE) / 100n;
-    // const finalJudgesCommission = judgesPotentialCommission >= SAFE_MIN_BOX_VALUE ? judgesPotentialCommission : 0n;
-    // if (finalJudgesCommission === 0n && judgesPotentialCommission > 0n) {
-    //     forfeitedToDev += judgesPotentialCommission;
-    // }
-    const judgesPotentialCommission = 0n;
-    const finalJudgesCommission = 0n;
     
-    // 2.3. Premio del Ganador
+    // 2.2. Premio del Ganador
     const baseDevCommission = (prizePool * DEV_COMMISSION_PERCENTAGE) / 100n;
     const totalPot = prizePool + game.creatorStakeNanoErg;
-    const winnerPotentialPrize = totalPot - resolverPotentialPayout - judgesPotentialCommission - baseDevCommission;
+    const winnerPotentialPrize = totalPot - resolverPotentialPayout - baseDevCommission;
     
     let finalWinnerPrize = 0n;
     if (winnerPotentialPrize >= SAFE_MIN_BOX_VALUE) {
@@ -75,7 +66,6 @@ export async function end_game(
     
     console.log("--- Resumen de Pagos (nanoErgs) ---");
     console.log(`Pago Final Resolver: ${finalResolverPayout} (Potencial: ${resolverPotentialPayout})`);
-    // console.log(`Comisión Final Jueces (a DEV): ${finalJudgesCommission} (Potencial: ${judgesPotentialCommission})`);
     console.log(`Premio Final Ganador: ${finalWinnerPrize} (Potencial: ${winnerPotentialPrize})`);
     console.log(`Pago Final Dev (Base + Forfeited): ${finalDevPayout}`);
     console.log("------------------------------------");
@@ -101,8 +91,6 @@ export async function end_game(
     }
 
     // 3.3. Salida Unificada para el Desarrollador
-    const totalDevAddressPayout = finalDevPayout;
-
     console.log(`Monto total a la dirección del DEV: ${finalDevPayout}`);
 
     if (finalDevPayout > 0n) {
