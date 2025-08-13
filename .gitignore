@@ -47,3 +47,4 @@ yarn-error.log
 *.apk
 .metals/
 .scala-build/
+.test.scala
