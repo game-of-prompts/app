@@ -43,8 +43,8 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 =======
 
 
-de prueba
+Test de prueba
 https://scastie.scala-lang.org/DYmWz9EcSd2ZISfb2teC6w
 
-tests
+
 
