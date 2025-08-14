@@ -324,13 +324,13 @@ async function handleEndGame() {
     function setupActionModal(type: typeof currentActionType) {
         currentActionType = type;
         const titles = {
-            submit_score: `Submit Score: ${game?.content.title}`,
-            resolve_game: `Resolve Game: ${game?.content.title}`,
-            cancel_game: `Cancel Game: ${game?.content.title}`,
-            drain_stake: `Drain Creator Stake: ${game?.content.title}`,
-            end_game: `Finalize Game: ${game?.content.title}`,
-            invalidate_winner: `Judge Invalidation: ${game?.content.title}`,
-            include_omitted: `Include Omitted Participation: ${game?.content.title}`,
+            submit_score: `Submit Score`,
+            resolve_game: `Resolve Game`,
+            cancel_game: `Cancel Game`,
+            drain_stake: `Drain Creator Stake`,
+            end_game: `Finalize Game`,
+            invalidate_winner: `Judge Invalidation`,
+            include_omitted: `Include Omitted Participation`,
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
