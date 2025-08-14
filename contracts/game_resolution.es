@@ -110,7 +110,7 @@
 
   // ### Acción 2: Invalidación por Jueces
   val action2_judgesInvalidate = {
-    if (isBeforeResolutionDeadline) {
+    if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
       val judgeVotes = CONTEXT.dataInputs
       val requiredVotes =
         if (participatingJudges.size == 0) 0
