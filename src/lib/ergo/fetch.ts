@@ -1,7 +1,6 @@
 // src/lib/ergo/fetch.ts
 
-import { type Box, type Amount, ErgoAddress } from "@fleet-sdk/core";
-import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
+import { type Box, type Amount } from "@fleet-sdk/core";
 import { ErgoPlatform } from "./platform";
 import {
     GameState,
@@ -15,22 +14,20 @@ import {
 import { explorer_uri } from "./envs";
 import { 
     getGopGameActiveScriptHash,
-    getGopGameResolutionScriptHash,
-    getGopGameCancellationScriptHash,
-    getGopParticipationSubmittedScriptHash,
-    getGopParticipationResolvedScriptHash,
     getGopGameResolutionTemplateHash,
     getGopParticipationSubmittedTemplateHash,
     getGopParticipationResolvedTemplateHash,
-    getGopGameCancellationTemplateHash
+    getGopGameCancellationTemplateHash,
+    getGopGameActiveErgoTreeHex,
+    getGopGameResolutionErgoTreeHex,
+    getGopGameCancellationErgoTreeHex,
+    getGopParticipationSubmittedErgoTreeHex,
+    getGopParticipationResolvedErgoTreeHex
 } from "./contract"; // Se asume que este archivo exporta las funciones para obtener los hashes de los scripts
 import {
     hexToUtf8,
-    hexToBytes,
-    uint8ArrayToHex,
     parseCollByteToHex,
     parseLongColl,
-    bigintToLongByteArray,
     parseGameContent
 } from "./utils"; // Se asume que este archivo contiene las utilidades de parseo
 
@@ -46,6 +43,11 @@ import {
  */
 export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
     try {
+        if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
+            console.warn('parseGameActiveBox: invalid contstants');
+            return null;
+        }
+
         if (!box.assets || box.assets.length === 0) {
             console.warn(`parseGameActiveBox: Se omitió la caja ${box.boxId} por no tener assets (NFT).`);
             return null;
@@ -155,6 +157,11 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
  */
 export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null {
     try {
+        if (box.ergoTree !== getGopGameResolutionErgoTreeHex()) {
+            console.warn('parseGameResolutionBox: invalid contstants');
+            return null;
+        }
+
         if (!box.assets || box.assets.length === 0) {
             console.warn(`parseGameResolutionBox: Se omitió la caja ${box.boxId} por no tener assets (NFT).`);
             return null;
@@ -324,6 +331,11 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
  */
 export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | null {
     try {
+        if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
+            console.warn('parseGameCancellationBox: invalid contstants');
+            return null;
+        }
+
         if (!box.assets || box.assets.length === 0) return null;
         const gameId = box.assets[0].tokenId;
 
@@ -476,6 +488,10 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
             const items: Box[] = data.items || [];
 
             for (const box of items) {
+                if (box.ergoTree !== getGopParticipationSubmittedErgoTreeHex()) {
+                    console.warn('parseParticipationSubmittedBox: invalid contstants');
+                    continue;
+                }
                 const p_base = _parseParticipationBox(box);
                 if (p_base) {
                     participations.push({
@@ -530,6 +546,10 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
             const items: Box[] = data.items || [];
 
             for (const box of items) {
+                if (box.ergoTree !== getGopParticipationResolvedErgoTreeHex()) {
+                    console.warn('parseParticipationResolvedBox: invalid contstants');
+                    continue;
+                }
                 const p_base = _parseParticipationBox(box);
                 if (p_base) {
                     participations.push({
