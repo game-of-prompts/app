@@ -48,5 +48,4 @@ https://scastie.scala-lang.org/DYmWz9EcSd2ZISfb2teC6w
 
 
 
-Test actual: https://scastie.scala-lang.org/DSkvZ2QWTXWpcx7Me88mUQ
-            https://scastie.scala-lang.org/wJ5K77WGTnWT2EQihrCU8w
+Test actual: https://scastie.scala-lang.org/jI0FqvEMT5i2OrsJIETqEA
