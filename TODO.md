@@ -6,7 +6,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 ### Acciones
 
 - Estado 1 (activo)
-    - [] Resolución  (En esta versión, no se porque, no funciona)
+    - [x] Resolución
     - [x] Cancelación
 
 - Estado 2 (juicio)
