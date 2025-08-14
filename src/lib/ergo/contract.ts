@@ -24,8 +24,8 @@ let _participationSubmitted: { ergoTree?: ErgoTree, templateHash?: string, scrip
 let _participationResolved: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 
-const dev_addr_base58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD"
-console.log("Dev addr", dev_addr_base58)
+export const dev_addr_base58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD"
+export const dev_fee = 5n;
 
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS

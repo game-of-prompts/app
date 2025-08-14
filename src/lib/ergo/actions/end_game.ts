@@ -6,10 +6,7 @@ import {
 } from '@fleet-sdk/core';
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ParticipationResolved } from '$lib/common/game';
-
-// --- Constantes ---
-const DEV_ADDR = "9gGZp7HRAFxgGWSwvS4hCbxM2RpkYr6pHvwpU4GPrpvxY7Y2nQo"; 
-const DEV_COMMISSION_PERCENTAGE = 5n;
+import { dev_addr_base58, dev_fee } from '../contract';
 
 /**
  * Construye y envía la transacción para finalizar un juego.
@@ -41,7 +38,7 @@ export async function end_game(
     // 2.1. Calcular los componentes base del pago
     const creatorStake = game.creatorStakeNanoErg;
     const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
-    const devCommission = (prizePool * DEV_COMMISSION_PERCENTAGE) / 100n;
+    const devCommission = (prizePool * dev_fee) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     // 2.2. Determinar los pagos intermedios según si el premio del ganador es "polvo"
@@ -89,7 +86,7 @@ export async function end_game(
     // 3.3. Salida para el Desarrollador (si aplica)
     if (finalDevPayout > 0n) {
         outputs.push(
-            new OutputBuilder(finalDevPayout, DEV_ADDR)
+            new OutputBuilder(finalDevPayout, dev_addr_base58)
         );
     }
 
