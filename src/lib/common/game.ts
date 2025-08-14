@@ -160,7 +160,7 @@ export type AnyParticipation = ParticipationSubmitted | ParticipationResolved;
  * Esto ocurre cuando el juego ya no está en estado 'Active'.
  */
 export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> {
-    return game.status !== GameState.Active || game.deadlineBlock < await game.platform.get_current_height();
+    return game.status !== GameState.Active || game.deadlineBlock <= await game.platform.get_current_height();
 }
 
 /**
