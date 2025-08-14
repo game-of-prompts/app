@@ -165,8 +165,10 @@
   val action3_endGame = {
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
       // 1. Calcular los componentes base del pago
-      val prizePool = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
-                            .fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+
+      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH })
+
+      val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
 
       val resolverCommission = prizePool * commissionPercentage / 100L
       val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
@@ -188,7 +190,7 @@
       val finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits
 
       // 4. Validar las salidas de la transacción
-      val winnerBoxInput = INPUTS.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
+      val winnerBoxInput = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
       val winnerPK = winnerBoxInput.R4[Coll[Byte]].get
 
       // Por convención, la salida del ganador (que siempre recibe el NFT) debe ser la primera.
