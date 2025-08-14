@@ -47,5 +47,8 @@ Test de prueba
 https://scastie.scala-lang.org/DYmWz9EcSd2ZISfb2teC6w
 
 
+Mismo test pero compilando
+https://scastie.scala-lang.org/hntoyWvcSDazaxap0zqeag
+
 
 Test actual: https://scastie.scala-lang.org/jI0FqvEMT5i2OrsJIETqEA
