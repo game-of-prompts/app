@@ -3,8 +3,13 @@
     import { game_detail } from "$lib/common/store";
     import { Button } from "$lib/components/ui/button";
     import { onMount, onDestroy } from "svelte";
-    import { isGameEnded, type Game } from "$lib/common/game";
     import { Badge } from "$lib/components/ui/badge/index.js";
+    
+    import { 
+        isGameParticipationEnded, 
+        GameState, 
+        type AnyGame as Game 
+    } from "$lib/common/game";
 
     export let game: Game;
     export let index: number;
@@ -14,7 +19,9 @@
     const STATUS_COLORS = {
         OPEN: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200",
         AWAITING_RESULTS: "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200",
+        RESOLUTION: "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200",
         RESOLVED: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200",
+        CANCELLED: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200",
         DEFAULT: "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300",
     };
 
@@ -34,38 +41,63 @@
     let _initializedGameId: string | null = null;
     let _isCurrentlyInitializing = false;
 
+    // [MODIFICADO] La lógica de visualización ahora se basa en game.status.
     function updateDisplayMessages() {
         if (!game) return;
-        console.log("game:", game);
-        const participationFeeErg = Number(game.participationFeeNanoErg) / 1e9;
 
-        if (game.ended) {
-            statusMessage = "Resolved";
-            statusColor = STATUS_COLORS.RESOLVED;
-            remainingTimeCountdown = "Game has ended";
-        } else if (participationEnded) {
-            statusMessage = "Awaiting Results";
-            statusColor = STATUS_COLORS.AWAITING_RESULTS;
-            remainingTimeCountdown = "Participation closed";
-        } else {
-            statusMessage = `Fee: ${participationFeeErg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 9})} ERG`;
-            statusColor = STATUS_COLORS.OPEN;
+        switch (game.status) {
+            case GameState.Active:
+                const participationFeeErg = Number(game.participationFeeNanoErg) / 1e9;
+                if (participationEnded) {
+                    statusMessage = "Awaiting Results";
+                    statusColor = STATUS_COLORS.AWAITING_RESULTS;
+                    remainingTimeCountdown = "Participation closed";
+                } else {
+                    statusMessage = `Fee: ${participationFeeErg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 9})} ERG`;
+                    statusColor = STATUS_COLORS.OPEN;
+                }
+                break;
+            
+            case GameState.Resolution:
+                statusMessage = "Judging in Progress";
+                statusColor = STATUS_COLORS.RESOLUTION;
+                remainingTimeCountdown = "Awaiting verdict";
+                break;
+
+            case GameState.Cancelled_Draining:
+            case GameState.Cancelled_Finalized:
+                statusMessage = "Game Cancelled";
+                statusColor = STATUS_COLORS.CANCELLED;
+                remainingTimeCountdown = "Ended";
+                break;
+
+            case GameState.Finalized:
+                statusMessage = "Resolved";
+                statusColor = STATUS_COLORS.RESOLVED;
+                remainingTimeCountdown = "Game has ended";
+                break;
+
+            default:
+                statusMessage = "Unknown Status";
+                statusColor = STATUS_COLORS.DEFAULT;
+                remainingTimeCountdown = "N/A";
+                break;
         }
     }
 
     async function runTimerTick() {
-        if (!game || !game.platform || game.ended || participationEnded) {
+        if (!game || game.status !== GameState.Active || participationEnded) {
             cleanupTimer();
             return;
         }
         try {
             remainingTimeCountdown = await block_to_time_remaining(game.deadlineBlock, game.platform);
-            const currentParticipationStatus = await isGameEnded(game);
+            const currentParticipationStatus = await isGameParticipationEnded(game);
 
-            if (currentParticipationStatus && !participationEnded) {
+            if (currentParticipationStatus) {
                 participationEnded = true;
                 cleanupTimer();
-                updateDisplayMessages();
+                updateDisplayMessages(); // Actualiza el mensaje a "Awaiting Results"
             }
         } catch (error) {
             console.error(`GameCard (${game?.boxId}): Error in runTimerTick:`, error);
@@ -88,14 +120,20 @@
         cleanupTimer();
 
         try {
-            participationEnded = currentGame.ended ? true : await isGameEnded(currentGame);
-            const deadlineTimestamp = await block_height_to_timestamp(currentGame.deadlineBlock, currentGame.platform);
-            const deadlineDateObj = new Date(deadlineTimestamp);
-            deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+            participationEnded = await isGameParticipationEnded(currentGame);
 
+            if (currentGame.status === 'Active' || currentGame.status === 'Resolution') {
+                const deadline = currentGame.status === 'Active' ? currentGame.deadlineBlock : currentGame.originalDeadline;
+                const deadlineTimestamp = await block_height_to_timestamp(deadline, currentGame.platform);
+                const deadlineDateObj = new Date(deadlineTimestamp);
+                deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+            } else {
+                deadlineDateString = 'N/A';
+            }
+            
             updateDisplayMessages();
 
-            if (!currentGame.ended && !participationEnded) {
+            if (currentGame.status === GameState.Active && !participationEnded) {
                 await runTimerTick();
                 if (!participationEnded) {
                     timerInterval = setInterval(runTimerTick, 30000);
@@ -137,15 +175,13 @@
             <img
                 src={game.content.imageURL}
                 alt="{game.content.title} banner"
-                class="w-full h-auto object-cover rounded-lg  aspect-video"
+                class="w-full h-auto object-cover rounded-lg aspect-video"
                 loading="lazy"
             />
         {/if}
     </div>
 
-    <div 
-        class="content-wrapper w-full md:w-6/12 text-center md:text-left"
-    >
+    <div class="content-wrapper w-full md:w-6/12 text-center md:text-left">
         <Badge variant="secondary" class="mb-3">
             {game.participations?.length || 0} Participants
         </Badge>
@@ -171,7 +207,6 @@
             {/if}
         </div>
 
-
         <p class="description-text mb-6 text-slate-600 dark:text-slate-400">
             {game?.content?.description?.slice(0, 200) || 'No description.'}
             {#if game?.content?.description && game.content.description.length > 200}...{/if}
@@ -184,12 +219,12 @@
                     {statusMessage}
                 </div>
             </div>
-            <div class="text-center md:text-left">
+            <div class="text-center md:text-left" style="margin-left: 30px;">
                 <div class="text-xs uppercase text-slate-500 dark:text-slate-400 tracking-wider">Time Remaining</div>
                 <div class="text-lg font-semibold text-slate-700 dark:text-slate-200 mt-1">
                     {remainingTimeCountdown}
                 </div>
-                {#if (game?.ended || participationEnded) && deadlineDateString !== 'N/A'}
+                {#if (game.status === 'Resolution' || participationEnded) && deadlineDateString !== 'N/A'}
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         Original Deadline: {deadlineDateString}
                     </p>

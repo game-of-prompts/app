@@ -8,7 +8,6 @@
     import { onMount, onDestroy } from 'svelte';
     import { get } from 'svelte/store';
     import { Input } from "$lib/components/ui/input";
-    import { fade } from 'svelte/transition';
 
     let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, Game> = new Map();
@@ -154,7 +153,7 @@
         padding: 2rem 15px 0;
         margin-bottom: 40px;
         width: 100%;
-        max-width: 1200px;
+        max-width: 1600px;
         margin-left: auto;
         margin-right: auto;
     }
