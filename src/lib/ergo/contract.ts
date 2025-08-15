@@ -91,7 +91,7 @@ function ensureGameActiveCompiled(): void {
 function getTemplateHash(stateObject: { ergoTree?: ErgoTree, templateHash?: string }, ensureCompiled: () => void): string {
     if (!stateObject.templateHash) {
         ensureCompiled();
-        const templateBytes = stateObject.ergoTree!.template.toBytes();
+        const templateBytes = stateObject.ergoTree.template;
         stateObject.templateHash = uint8ArrayToHex(sha256(templateBytes)); // SHA256 para búsqueda en explorador
     }
     return stateObject.templateHash;
@@ -100,7 +100,7 @@ function getTemplateHash(stateObject: { ergoTree?: ErgoTree, templateHash?: stri
 function getScriptHash(stateObject: { ergoTree?: ErgoTree, scriptHash?: string }, ensureCompiled: () => void): string {
     if (!stateObject.scriptHash) {
         ensureCompiled();
-        const ergoTreeBytes = stateObject.ergoTree!.toBytes();
+        const ergoTreeBytes = stateObject.ergoTree.bytes;
         stateObject.scriptHash = uint8ArrayToHex(blake2b256(ergoTreeBytes)); // BLAKE2B256 para constantes en scripts
     }
     return stateObject.scriptHash;
