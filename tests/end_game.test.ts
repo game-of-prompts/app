@@ -16,10 +16,8 @@ import {
   SPair
 } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-// No se necesita la importación 'pk' de '@fleet-sdk/wallet'
 import * as fs from "fs";
 import * as path from "path";
-import { SString } from "$lib/ergo/utils";
 import { stringToBytes } from "@scure/base";
 
 /**
@@ -89,8 +87,12 @@ describe("Game Finalization (end_game)", () => {
     mockChain.reset();
     mockChain.jumpTo(800_000);
 
-    // Crear y distribuir el Game NFT
+    // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: 1_000_000n });
+    // FIX: Dar fondos al resolver para que pueda pagar las tasas de transacción.
+    resolver.addBalance({ nanoergs: 1_000_000_000n }); // 1 ERG
+
+    // Crear y distribuir el Game NFT
     const gameNftSourceBox = creator.utxos.toArray()[0];
     gameNftId = gameNftSourceBox.boxId;
 
@@ -107,7 +109,6 @@ describe("Game Finalization (end_game)", () => {
         R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [BigInt(resolutionDeadline - 50), creatorStake, participationFee]).toHex(),
-        // ACTUALIZADO: Usar SColl(SByte, ...) para las claves públicas, como en el resto del código
         R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
         R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
     };
@@ -117,7 +118,6 @@ describe("Game Finalization (end_game)", () => {
         participationContract.addBalance({ nanoergs: participationFee });
         const pBox = participationContract.utxos.toArray().at(-1)!;
         pBox.additionalRegisters = {
-            // ACTUALIZADO: Usar SColl(SByte, ...) para la clave pública del jugador
             R4: SColl(SByte, party.key.publicKey).toHex(),
             R5: SColl(SByte, commitment).toHex(),
             R6: SColl(SByte, gameNftId).toHex(),
@@ -135,8 +135,7 @@ describe("Game Finalization (end_game)", () => {
     mockChain.jumpTo(resolutionDeadline);
     const gameBox = gameResolutionContract.utxos.toArray()[0];
     const participationBoxes = participationContract.utxos;
-    const creatorInitialUtxo = creator.utxos.toArray()[0]; // El UTXO usado para el ID del NFT
-
+    
     // --- Act ---
     const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
     const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
@@ -148,7 +147,8 @@ describe("Game Finalization (end_game)", () => {
     const finalDevPayout = devCommission;
 
     const transaction = new TransactionBuilder(mockChain.height)
-      .from([gameBox, ...participationBoxes, creatorInitialUtxo]) // Incluir el UTXO del creador
+      // FIX: Incluir las UTXOs del resolver para cubrir la tasa de transacción.
+      .from([gameBox, ...participationBoxes, ...resolver.utxos.toArray()])
       .to([
         new OutputBuilder(finalWinnerPrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
         new OutputBuilder(finalResolverPayout, resolver.address),
@@ -161,6 +161,8 @@ describe("Game Finalization (end_game)", () => {
     // --- Assert ---
     expect(mockChain.execute(transaction, { signers: [resolver, creator] })).to.be.true;
 
+    // El balance final del resolver será su fondo inicial + pago - tasa - cambio.
+    // Como el cálculo exacto del cambio es complejo, verificamos los otros balances que son deterministas.
     expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
     expect(creator.balance.nanoergs).to.equal(0n);
@@ -178,13 +180,15 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Act ---
     const transaction = new TransactionBuilder(mockChain.height)
-      .from([gameBox])
+      // FIX: Incluir las UTXOs del resolver para cubrir la tasa de transacción.
+      .from([gameBox, ...resolver.utxos.toArray()])
       .to(new OutputBuilder(SAFE_MIN_BOX_VALUE, winner.address))
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(resolver.address)
       .build();
 
     // --- Assert ---
+    // La ejecución del contrato fallará, pero la construcción de la tx es ahora posible.
     expect(mockChain.execute(transaction, { signers: [resolver], throw: false })).to.be.false;
 
     expect(winner.balance.nanoergs).to.equal(0n);
