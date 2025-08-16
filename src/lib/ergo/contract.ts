@@ -1,7 +1,7 @@
 // src/lib/ergo/contract.ts
 
 import { compile, type ErgoTree } from "@fleet-sdk/compiler";
-import { Network, type Address } from "@fleet-sdk/core";
+import { Network, type ErgoAddress as Address } from "@fleet-sdk/core";
 import { blake2b256, sha256 } from "@fleet-sdk/crypto";
 import { uint8ArrayToHex } from "./utils";
 import { network_id } from "./envs"; 
