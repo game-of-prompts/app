@@ -12,14 +12,15 @@ import {
   SByte,
   SColl,
   SInt,
-  SGroupElement,
   SLong,
   SPair
 } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import { pk } from "@fleet-sdk/wallet";
+// No se necesita la importación 'pk' de '@fleet-sdk/wallet'
 import * as fs from "fs";
 import * as path from "path";
+import { SString } from "$lib/ergo/utils";
+import { stringToBytes } from "@scure/base";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -92,6 +93,8 @@ describe("Game Finalization (end_game)", () => {
     creator.addBalance({ nanoergs: 1_000_000n });
     const gameNftSourceBox = creator.utxos.toArray()[0];
     gameNftId = gameNftSourceBox.boxId;
+
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     
     // 1. Crear la caja del juego en estado de resolución
     gameResolutionContract.addBalance({
@@ -104,16 +107,18 @@ describe("Game Finalization (end_game)", () => {
         R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [BigInt(resolutionDeadline - 50), creatorStake, participationFee]).toHex(),
-        R8: SPair(SGroupElement(pk(resolver.key.publicKey).toRawBytes()), SLong(resolverCommissionPercent)).toHex(),
-        R9: SPair(SGroupElement(pk(creator.key.publicKey).toRawBytes()), SColl(SByte, "")).toHex()
+        // ACTUALIZADO: Usar SColl(SByte, ...) para las claves públicas, como en el resto del código
+        R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
+        R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
     };
     
     // 2. Crear las cajas de participación (ganador y perdedor)
     const createParticipation = (party: any, commitment: string) => {
         participationContract.addBalance({ nanoergs: participationFee });
-        const pBox = participationContract.utxos.at(-1)!;
+        const pBox = participationContract.utxos.toArray().at(-1)!;
         pBox.additionalRegisters = {
-            R4: SGroupElement(pk(party.key.publicKey).toRawBytes()).toHex(),
+            // ACTUALIZADO: Usar SColl(SByte, ...) para la clave pública del jugador
+            R4: SColl(SByte, party.key.publicKey).toHex(),
             R5: SColl(SByte, commitment).toHex(),
             R6: SColl(SByte, gameNftId).toHex(),
             R7: SColl(SByte, "c3".repeat(32)).toHex(),
