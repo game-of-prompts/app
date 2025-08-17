@@ -19,24 +19,24 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 
 /**
- * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
- * Esta función es necesaria para comparar los hashes de los scripts y los
- * valores de los registros, que se manejan como cadenas hexadecimales.
+ * Utility function to convert a Uint8Array to a hex string.
+ * This is necessary for comparing script hashes and register values,
+ * which are handled as hex strings.
  */
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");
 }
 
-// --- Constantes y Carga de Archivos ---
+// --- Constants and File Loading ---
 
-// Dirección del desarrollador para la comisión, requerida por el contrato `game_resolution`.
+// Developer's address for the commission, required by the `game_resolution` contract.
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
-// Se resuelve la ruta al directorio de contratos para cargar los archivos de código fuente.
+// Resolve the path to the contracts directory to load the source files.
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
-// Carga del código fuente de cada contrato ErgoScript.
-// Se leen como texto plano para poder reemplazar los placeholders antes de la compilación.
+// Load the source code of each ErgoScript contract.
+// They are read as plain text to allow placeholder replacement before compilation.
 const GAME_ACTIVE_TEMPLATE = fs.readFileSync(
   path.join(contractsDir, "game_active.es"),
   "utf-8"
@@ -45,8 +45,8 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
   path.join(contractsDir, "game_resolution.es"),
   "utf-8"
 );
-// NOTA: El contrato de cancelación no fue proporcionado. Se crea un mock simple
-// que siempre falla, para permitir la compilación del contrato `game_active`.
+// NOTE: The cancellation contract was not provided. A simple mock
+// that always fails is created to allow the `game_active` contract to compile.
 const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }"; 
 const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(
   path.join(contractsDir, "participation_submited.es"),
@@ -58,52 +58,45 @@ const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(
 );
 
 
-// --- Suite de Pruebas ---
+// --- Test Suite ---
 
 describe("Game Creation (create_game)", () => {
-  // `mockChain` simula una blockchain de Ergo, permitiendo ejecutar transacciones
-  // y verificar sus resultados sin necesidad de una red real.
+  // `mockChain` simulates an Ergo blockchain, allowing transactions to be
+  // executed and their results verified without a real network.
   let mockChain: MockChain;
 
-  // --- Partes Involucradas ---
-  // Se define un 'creator' que será el actor principal en la creación del juego.
+  // --- Involved Parties ---
+  // A 'creator' is defined as the main actor in the game creation.
   let creator: ReturnType<MockChain["newParty"]>;
+  
+  // A 'party' representing the game contract address.
+  let gameActiveContract: ReturnType<MockChain["newParty"]>;
 
-  // --- Contratos Compilados ---
-  // Estas variables almacenarán los ErgoTrees compilados de nuestros contratos.
-  // La compilación se realiza una sola vez para toda la suite de pruebas.
+  // --- Compiled Contracts ---
+  // These variables will store the compiled ErgoTrees of our contracts.
+  // Compilation is done once for the entire test suite.
   let gameActiveErgoTree: ReturnType<typeof compile>;
   
-  // Se inicializa la cadena y los actores antes de cada test.
-  beforeEach(() => {
-    mockChain = new MockChain({ height: 800_000 });
-    creator = mockChain.newParty("GameCreator");
+  // --- Dynamic Contract Compilation ---
+  // ErgoScript contracts often depend on each other.
+  // The `game_active` contract needs to know the hash of other contracts it can transition to.
+  // Therefore, we compile in order of dependency, injecting the necessary hashes.
 
-    // Se asignan fondos al creador para que pueda crear la caja del juego y pagar la tasa de transacción.
-    // Es crucial que tenga un balance superior al stake del juego + la tasa.
-    creator.addBalance({ nanoergs: 10_000_000_000n }); // 10 ERG
-  });
-
-  // --- Compilación Dinámica de Contratos ---
-  // Los contratos de ErgoScript a menudo dependen unos de otros.
-  // El contrato `game_active` necesita conocer el hash de otros contratos a los que puede transicionar.
-  // Por lo tanto, compilamos en orden de dependencia, inyectando los hashes necesarios.
-
-  // 1. `participation_resolved`: No tiene dependencias.
+  // 1. `participation_resolved`: No dependencies.
   const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
   const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
 
-  // 2. `participation_submited`: Depende del hash de `participation_resolved`.
+  // 2. `participation_submited`: Depends on the hash of `participation_resolved`.
   const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE
     .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
   const participationSubmittedErgoTree = compile(participationSubmittedSource);
   const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
   
-  // 3. `game_cancellation`: Mock sin dependencias.
+  // 3. `game_cancellation`: Mock with no dependencies.
   const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
   const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
   
-  // 4. `game_resolution`: Depende de los hashes de participación.
+  // 4. `game_resolution`: Depends on participation hashes.
   const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
     .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
@@ -111,99 +104,109 @@ describe("Game Creation (create_game)", () => {
   const gameResolutionErgoTree = compile(gameResolutionSource);
   const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
 
-  // 5. `game_active`: Es el contrato principal y depende de todos los demás.
+  // 5. `game_active`: This is the main contract and depends on all others.
   const gameActiveSource = GAME_ACTIVE_TEMPLATE
     .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
     .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
     .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash); // Dependencia añadida para completitud.
+    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash); // Dependency added for completeness.
   
   gameActiveErgoTree = compile(gameActiveSource);
   
-  // Se añade una "parte" a la mockchain que representa la dirección del contrato `game_active`.
-  // Esto nos permite consultar fácilmente las UTXOs que pertenecen a este contrato.
-  const gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
+  // Initialize the chain and actors before each test.
+  beforeEach(() => {
+    mockChain = new MockChain({ height: 800_000 });
+    creator = mockChain.newParty("GameCreator");
+
+    // Funds are assigned to the creator to create the game box and pay the transaction fee.
+    // It's crucial that the balance is greater than the game stake + fee.
+    creator.addBalance({ nanoergs: 10_000_000_000n }); // 10 ERG
+
+    // A "party" is added to the mockchain representing the `game_active` contract address.
+    // This allows us to easily query UTXOs belonging to this contract.
+    gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
+  });
 
   it("Should successfully create a new game box", () => {
-    // --- 1. Arrange (Preparación) ---
+    // --- 1. Arrange ---
 
-    // Parámetros del juego que se va a crear.
+    // Parameters for the game to be created.
     const deadlineBlock = mockChain.height + 200;
     const creatorStake = 2_000_000_000n; // 2 ERG
     const participationFee = 1_000_000n; // 0.001 ERG
     const commissionPercentage = 10;
     const gameDetailsJson = JSON.stringify({ title: "New Test Game", desc: "A test." });
 
-    // El secreto 'S' y su hash. El hash se almacena on-chain, el secreto se revela después.
+    // The secret 'S' and its hash. The hash is stored on-chain, the secret is revealed later.
     const secret = stringToBytes("utf8", "super-secret-phrase");
     const hashedSecret = blake2b256(secret);
 
-    // Se obtiene una UTXO del creador para usar como entrada.
-    // En Ergo, el ID del primer input de la transacción se usa para determinar el ID de los tokens minteados.
+    // Get a UTXO from the creator to use as input.
+    // In Ergo, the ID of the first transaction input is used to determine the ID of minted tokens.
     const inputUTXO = creator.utxos.toArray()[0];
     const gameNftId = inputUTXO.boxId;
 
-    // Se extrae la clave pública en bytes del creador, necesaria para el registro R4.
+    // Extract the creator's public key in bytes, required for register R4.
     const creatorPkBytes = creator.address.getPublicKeys()[0];
 
-    // --- 2. Act (Actuación) ---
+    // --- 2. Act ---
 
-    // Se construye la caja de salida que representará el juego activo.
+    // Build the output box that will represent the active game.
     const gameBoxOutput = new OutputBuilder(
         creatorStake,
         gameActiveErgoTree
     )
-    // Se mintea el Game NFT. Es un token único que identifica al juego.
+    // Mint the Game NFT. It's a unique token that identifies the game.
     .mintToken({
-        amount: 1n, // Solo se crea uno.
+        amount: 1n, // Only one is created.
         name: "Game NFT"
     })
-    // Se establecen los registros adicionales con la información del juego,
-    // siguiendo la especificación del contrato `game_active.es`.
+    // Set the additional registers with the game information,
+    // following the specification in `game_active.es`.
     .setAdditionalRegisters({
-        // R4: (Clave pública del creador, Porcentaje de comisión)
+        // R4: (Creator's public key, Commission percentage)
         R4: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
-        // R5: Hash del secreto 'S'
+        // R5: Hash of the secret 'S'
         R5: SColl(SByte, hashedSecret).toHex(),
-        // R6: Jueces invitados (vacío en este test)
+        // R6: Invited judges (empty in this test)
         R6: SColl(SColl(SByte), []).toHex(),
-        // R7: [deadline, stake del creador, tarifa de participación]
+        // R7: [deadline, creator's stake, participation fee]
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
-        // R8: Detalles del juego en formato JSON (convertido a bytes)
+        // R8: Game details in JSON format (converted to bytes)
         R8: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
     });
 
-    // Se construye la transacción.
+    // Build the transaction.
     const transaction = new TransactionBuilder(mockChain.height)
-      .from(inputUTXO) // Se usa la UTXO del creador.
-      .to(gameBoxOutput) // Se crea la caja del juego.
-      .sendChangeTo(creator.address) // El cambio vuelve al creador.
-      .payFee(RECOMMENDED_MIN_FEE_VALUE) // Se paga la tasa de minería.
+      .from(inputUTXO) // Use the creator's UTXO.
+      .to(gameBoxOutput) // Create the game box.
+      .sendChangeTo(creator.address) // Change goes back to the creator.
+      .payFee(RECOMMENDED_MIN_FEE_VALUE) // Pay the mining fee.
       .build();
 
-    // Se ejecuta la transacción en la mockchain. El creador debe firmarla.
+    // Execute the transaction on the mockchain. The creator must sign it.
     const executionResult = mockChain.execute(transaction, { signers: [creator] });
     
-    // --- 3. Assert (Verificación) ---
+    // --- 3. Assert ---
 
-    // La transacción debería haberse ejecutado con éxito.
+    // The transaction should have been executed successfully.
     expect(executionResult).to.be.true;
 
-    // Debería existir una única UTXO en la dirección del contrato del juego.
+    // There should be a single UTXO at the game contract's address.
     expect(gameActiveContract.utxos.length).to.equal(1);
     
-    // Se obtiene la caja creada para verificar sus propiedades.
+    // Get the created box to verify its properties.
     const createdGameBox = gameActiveContract.utxos.toArray()[0];
 
-    // El valor en nanoERGs de la caja debe ser igual al stake del creador.
+    // The nanoERG value of the box must equal the creator's stake.
     expect(createdGameBox.value).to.equal(creatorStake);
-    // El ID del token minteado (Game NFT) debe coincidir con el ID de la caja de entrada.
+    // The ID of the minted token (Game NFT) must match the input box ID.
     expect(createdGameBox.assets[0].tokenId).to.equal(gameNftId);
-    // La cantidad del NFT debe ser 1.
+    // The amount of the NFT must be 1.
     expect(createdGameBox.assets[0].amount).to.equal(1n);
 
-    // Se verifica que cada registro contenga la información correcta y serializada.
-    // Esta es la parte más importante para asegurar la compatibilidad con el contrato.
+    // Verify that each register contains the correct, serialized information.
+    // This is the most important part to ensure compatibility with the contract.
     expect(createdGameBox.additionalRegisters.R4).to.equal(gameBoxOutput.additionalRegisters.R4);
     expect(createdGameBox.additionalRegisters.R5).to.equal(gameBoxOutput.additionalRegisters.R5);
     expect(createdGameBox.additionalRegisters.R6).to.equal(gameBoxOutput.additionalRegisters.R6);
