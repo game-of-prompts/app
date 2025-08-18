@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
@@ -71,6 +71,10 @@ describe("Game Resolution (resolve_game)", () => {
   let score2: bigint;
   let participation1_registers: Record<string, string>;
   let participation2_registers: Record<string, string>;
+
+  afterEach(() => {
+    mockChain.reset();
+  });
   
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
