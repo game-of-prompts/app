@@ -13,7 +13,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { bigintToLongByteArray } from "$lib/ergo/utils";
+import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 
 // Helper functions and contract loading remain the same...
 function uint8ArrayToHex(bytes: Uint8Array): string {
@@ -58,13 +58,19 @@ describe("Game Resolution (resolve_game)", () => {
 
 
   // --- Estado del Juego ---
-  let gameBox: Box<bigint>;
-  let participationBox1: Box<bigint>;
-  let participationBox2: Box<bigint>;
   let secret: Uint8Array;
   let gameNftId: string;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
+  let commitment1Hex: string;
+  let commitment2Hex: string;
+  let gameBoxOutput: OutputBuilder;
+  let participation1Output: OutputBuilder;
+  let participation2Output: OutputBuilder;
+  let score1: bigint;
+  let score2: bigint;
+  let participation1_registers: Record<string, string>;
+  let participation2_registers: Record<string, string>;
   
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
@@ -94,6 +100,7 @@ describe("Game Resolution (resolve_game)", () => {
     const inputUTXO = creator.utxos.toArray()[0];
     gameNftId = inputUTXO.boxId;
 
+    // INPUTS(0)
     gameActiveContract.addUTxOs({
       creationHeight: mockChain.height,
       ergoTree: gameActiveErgoTree.toHex(),
@@ -110,26 +117,29 @@ describe("Game Resolution (resolve_game)", () => {
 
     const resolutionDeadline = BigInt(mockChain.height + 30);
     const resolvedCounter = 2;
-    const winnerCandidateCommitment = participationBox1.additionalRegisters.R5 ?? "";
     const resolvedorPkBytes = creatorPkBytes;
-    
-    const gameBoxOutput = new OutputBuilder(creatorStake, gameActiveContract.address) 
+
+    // --- Creación de las cajas `participation_submited.es` ---
+    score1 = 1000n;
+    commitment1Hex = uint8ArrayToHex(blake2b256(
+        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...secret])
+    ));
+
+    const winnerCandidateCommitment = commitment1Hex;
+
+    // OUTPUT(0)
+    gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
+      .addTokens([{ tokenId: gameNftId, amount: 1n }])
       .setAdditionalRegisters({
         R4: SPair(SLong(resolutionDeadline), SInt(resolvedCounter)).toHex(),
-        R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCandidateCommitment)).toHex(),
+        R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
         R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
         R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
       });
 
-    // --- Creación de las cajas `participation_submited.es` ---
-    const score1 = 1000n;
-    const commitment1Hex = uint8ArrayToHex(blake2b256(
-        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...secret])
-    ));
-
-    const participation1_registers = {
+    participation1_registers = {
             R4: SColl(SByte, participant1.address.getPublicKeys()[0]).toHex(),
             R5: SColl(SByte, commitment1Hex).toHex(),
             R6: SColl(SByte, gameNftId).toHex(),
@@ -138,6 +148,7 @@ describe("Game Resolution (resolve_game)", () => {
             R9: SColl(SLong, [500n, 800n, score1, 1200n]).toHex(),
         };
 
+    // INPUTS(1)
     participationSubmittedContract.addUTxOs({
       creationHeight: mockChain.height,
       ergoTree: participationSubmittedErgoTree.toHex(),
@@ -146,16 +157,17 @@ describe("Game Resolution (resolve_game)", () => {
       additionalRegisters: participation1_registers
     });
 
-    const participation1Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
+    // OUTPUTS(1)
+    participation1Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
       .setAdditionalRegisters(participation1_registers);
 
 
-    const score2 = 850n;
-    const commitment2Hex = uint8ArrayToHex(blake2b256(
+    score2 = 850n;
+    commitment2Hex = uint8ArrayToHex(blake2b256(
         new Uint8Array([...stringToBytes("utf8", "player2-solver"), ...bigintToLongByteArray(score2), ...stringToBytes("utf8", "logs2"), ...secret])
     ));
 
-    const participation2_registers = {
+    participation2_registers = {
             R4: SColl(SByte, participant2.address.getPublicKeys()[0]).toHex(),
             R5: SColl(SByte, commitment2Hex).toHex(),
             R6: SColl(SByte, gameNftId).toHex(),
@@ -164,6 +176,7 @@ describe("Game Resolution (resolve_game)", () => {
             R9: SColl(SLong, [score2, 900n, 950n]).toHex(),
         };
 
+    // INPUTS(2)
     participationSubmittedContract.addUTxOs({
       creationHeight: mockChain.height,
       ergoTree: participationSubmittedErgoTree.toHex(),
@@ -172,7 +185,8 @@ describe("Game Resolution (resolve_game)", () => {
       additionalRegisters: participation2_registers
     });
 
-    const participation2Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
+    // OUTPUTS(2)
+    participation2Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
       .setAdditionalRegisters(participation2_registers)
     
     mockChain.newBlocks(deadlineBlock - mockChain.height + 1);
@@ -180,7 +194,6 @@ describe("Game Resolution (resolve_game)", () => {
 
   it("should successfully transition the game to the resolution phase", () => {
     const currentHeight = mockChain.height;
-    const resolverPkBytes = creator.address.getPublicKeys()[0];
     const JUDGE_PERIOD = 30;
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
     const winnerCandidateCommitment = commitment1Hex;
@@ -207,7 +220,7 @@ describe("Game Resolution (resolve_game)", () => {
     expect(participationResolvedContract.utxos.length).to.equal(2);
 
     const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
-    expect(newResolutionBox.value).to.equal(gameBox.value);
+    expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
     expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
     
     const r4 = newResolutionBox.additionalRegisters.R4;
@@ -217,9 +230,9 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, winnerCandidateCommitment)).toHex());
     
     const resolvedParticipationBoxes = participationResolvedContract.utxos.toArray();
-    const matchingResolvedBox = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === participationBox1.additionalRegisters.R5);
+    const matchingResolvedBox = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === commitment1Hex);
     expect(matchingResolvedBox).to.not.be.undefined;
-    expect(matchingResolvedBox!.value).to.equal(participationBox1.value);
-    expect(matchingResolvedBox!.additionalRegisters).to.deep.equal(participationBox1.additionalRegisters);
+    expect(matchingResolvedBox!.value).to.equal(participationFee);
+    expect(matchingResolvedBox!.additionalRegisters).to.deep.equal(participation1_registers);
   });
 });
