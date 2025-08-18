@@ -60,6 +60,8 @@ describe("Game Resolution (resolve_game)", () => {
   let gameNftId: string;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
+  const resolutionDeadline = BigInt(deadlineBlock + 40);
+  const resolvedCounter = 2;
   let commitment1Hex: string;
   let commitment2Hex: string;
   let gameBoxOutput: OutputBuilder;
@@ -69,6 +71,7 @@ describe("Game Resolution (resolve_game)", () => {
   let score2: bigint;
   let participation1_registers: Record<string, string>;
   let participation2_registers: Record<string, string>;
+  let winnerCandidateCommitment: string;
 
   afterEach(() => {
     mockChain.reset();
@@ -113,8 +116,6 @@ describe("Game Resolution (resolve_game)", () => {
       }
     })
 
-    const resolutionDeadline = BigInt(deadlineBlock + 40);
-    const resolvedCounter = 2;
     const resolvedorPkBytes = creatorPkBytes;
 
     // --- Creación de las cajas `participation_submited.es` ---
@@ -123,7 +124,7 @@ describe("Game Resolution (resolve_game)", () => {
         new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...secret])
     ));
 
-    const winnerCandidateCommitment = commitment1Hex;
+    winnerCandidateCommitment = commitment1Hex;
 
     // OUTPUT(0)
     gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
@@ -207,7 +208,7 @@ describe("Game Resolution (resolve_game)", () => {
     const executionResult = mockChain.execute(tx, { signers: [creator] });
 
     expect(executionResult).to.be.true;
-/*
+
     // --- Verificación usando los partidos de contrato --- 
     expect(gameActiveContract.utxos.length).to.equal(0);
     expect(participationSubmittedContract.utxos.length).to.equal(0);
@@ -225,9 +226,15 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, winnerCandidateCommitment)).toHex());
     
     const resolvedParticipationBoxes = participationResolvedContract.utxos.toArray();
-    const matchingResolvedBox = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === commitment1Hex);
-    expect(matchingResolvedBox).to.not.be.undefined;
-    expect(matchingResolvedBox!.value).to.equal(participationFee);
-    expect(matchingResolvedBox!.additionalRegisters).to.deep.equal(participation1_registers);     */ 
+
+    const matchingResolvedBox1 = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === SColl(SByte, commitment1Hex).toHex());
+    expect(matchingResolvedBox1).to.not.be.undefined;
+    expect(matchingResolvedBox1!.value).to.equal(participationFee);
+    expect(matchingResolvedBox1!.additionalRegisters).to.deep.equal(participation1_registers);
+
+    const matchingResolvedBox2 = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === SColl(SByte, commitment2Hex).toHex());
+    expect(matchingResolvedBox2).to.not.be.undefined;
+    expect(matchingResolvedBox2!.value).to.equal(participationFee);
+    expect(matchingResolvedBox2!.additionalRegisters).to.deep.equal(participation2_registers);
   });
 });
