@@ -76,6 +76,10 @@ describe("Game Resolution (resolve_game)", () => {
     participant1.addBalance({ nanoergs: 1_000_000_000n });
     participant2.addBalance({ nanoergs: 1_000_000_000n });
 
+    const creatorStake = 2_000_000_000n;
+    const creator_commission_percentage = 10n;
+
+
     // --- Definir Partidos de Contratos --- 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
     participationSubmittedContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationSubmittedContract");
@@ -84,21 +88,39 @@ describe("Game Resolution (resolve_game)", () => {
 
 
     // --- Creación de la caja `game_active.es` ---
-    const creatorStake = 2_000_000_000n;
     secret = stringToBytes("utf8", "the-secret-phrase-for-testing");
     const hashedSecret = blake2b256(secret);
     const creatorPkBytes = creator.address.getPublicKeys()[0];
     const inputUTXO = creator.utxos.toArray()[0];
     gameNftId = inputUTXO.boxId;
-    
-    const gameBoxOutput = new OutputBuilder(creatorStake, gameActiveContract.address) 
-      .mintToken({ amount: 1n, name: "Game NFT" })
-      .setAdditionalRegisters({
-        R4: SPair(SColl(SByte, creatorPkBytes), SLong(10n)).toHex(),
+
+    gameActiveContract.addUTxOs({
+      creationHeight: mockChain.height,
+      ergoTree: gameActiveErgoTree.toHex(),
+      assets: [{ tokenId: gameNftId, amount: 1n }],
+      value: creatorStake,
+      additionalRegisters: {
+        R4: SPair(SColl(SByte, creatorPkBytes), SLong(creator_commission_percentage)).toHex(),
         R5: SColl(SByte, hashedSecret).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
         R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+      }
+    })
+
+    const resolutionDeadline = BigInt(mockChain.height + 30);
+    const resolvedCounter = 2;
+    const winnerCandidateCommitment = participationBox1.additionalRegisters.R5 ?? "";
+    const resolvedorPkBytes = creatorPkBytes;
+    
+    const gameBoxOutput = new OutputBuilder(creatorStake, gameActiveContract.address) 
+      .setAdditionalRegisters({
+        R4: SPair(SLong(resolutionDeadline), SInt(resolvedCounter)).toHex(),
+        R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCandidateCommitment)).toHex(),
+        R6: SColl(SColl(SByte), []).toHex(),
+        R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
+        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
+        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
       });
       
     const tx0 =  new TransactionBuilder(mockChain.height)
