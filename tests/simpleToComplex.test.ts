@@ -274,7 +274,7 @@ describe("Game Resolution (resolve_game)", () => {
     const creator_commission_percentage = 10n;
 
     // --- Definir Partidos de Contratos --- 
-    let gameActiveContractTree = alwaysTrueErgoTree.toHex()
+    let gameActiveContractTree = gameActiveErgoTree.toHex()
     let participationSubmitedContractTree = participationSubmittedErgoTree.toHex()
 
     gameActiveContract = mockChain.addParty(gameActiveContractTree, "GameActiveContract");
@@ -305,7 +305,7 @@ describe("Game Resolution (resolve_game)", () => {
       }
     })
 
-    const resolutionDeadline = BigInt(mockChain.height + 30);
+    const resolutionDeadline = BigInt(deadlineBlock + 40);
     const resolvedCounter = 2;
     const resolvedorPkBytes = creatorPkBytes;
 
@@ -384,9 +384,6 @@ describe("Game Resolution (resolve_game)", () => {
 
   it("should successfully transition the game to the resolution phase", () => {
     const currentHeight = mockChain.height;
-    const JUDGE_PERIOD = 30;
-    const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
-    const winnerCandidateCommitment = commitment1Hex;
   
     const tx = new TransactionBuilder(currentHeight)
       .from([
