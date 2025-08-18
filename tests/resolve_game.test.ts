@@ -5,8 +5,6 @@ import {
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
-  type Box,
-  type TokenAmount
 } from "@fleet-sdk/core";
 import { SByte, SColl, SLong, SPair, SInt } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
@@ -89,6 +87,12 @@ describe("Game Resolution (resolve_game)", () => {
     const creatorStake = 2_000_000_000n;
     const creator_commission_percentage = 10n;
 
+
+    const ergoTreeSimple = compile("sigmaProp(HEIGHT > deadline)", {
+      map: {
+        deadline: SInt(800_000)
+      }
+    });
 
     // --- Definir Partidos de Contratos --- 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
@@ -209,8 +213,6 @@ describe("Game Resolution (resolve_game)", () => {
         participationSubmittedContract.utxos.toArray()[1],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput, participation1Output, participation2Output])
-      .sendChangeTo(creator.address)
-      .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
       
     const executionResult = mockChain.execute(tx, { signers: [creator] });
