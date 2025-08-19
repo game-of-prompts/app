@@ -15,7 +15,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
     - [] Invalidación por jueces
 
 - Estado 3 (cancelacion)
-    - [] Drenar staking
+    - [x] Drenar staking
 
 - Acciones individuales de participacion:
     - [] cancelar por inactividad en estado 1
