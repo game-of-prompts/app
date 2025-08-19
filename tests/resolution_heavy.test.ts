@@ -198,7 +198,7 @@ describe("Game Resolution (resolve_game)", () => {
   });
 
   it("should successfully resolve the game with 100 dynamic participations", () => {
-    const participationCount = 100; // 1000;   Maximum call stack size exceeded
+    const participationCount = 100; // 1000;   Maximum call stack size exceeded.  In case is because of JS, needed to reimplement with Rust a backend utility.
     const participationOutputs = [];
     
     // Variables to track the winner
