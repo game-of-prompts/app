@@ -197,6 +197,10 @@ describe("Omitted Participation Inclusion", () => {
 
         const currentWinnerCommitment = currentWinnerBox.additionalRegisters.R5;
 
+        if (!currentWinnerCommitment) {
+            throw new Error("Current winner commitment is undefined");
+        }
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
             .to([
@@ -205,11 +209,11 @@ describe("Omitted Participation Inclusion", () => {
                     .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
                         R4: SPair(SLong(BigInt(resolutionDeadline)), SInt(2)).toHex(),
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, stringToBytes("hex", currentWinnerCommitment!.substring(4)))).toHex(),
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, stringToBytes("hex", currentWinnerCommitment.substring(4)))).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: gameResolutionBox.additionalRegisters.R7,
                         // FIX: Use SInt here as well for the recreated box
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SInt(10)).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
                 // Newly Resolved Participant Box
