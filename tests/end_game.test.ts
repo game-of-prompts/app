@@ -88,43 +88,47 @@ describe("Game Finalization (end_game)", () => {
     mockChain.jumpTo(800_000);
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
-    creator.addBalance({ nanoergs: 1_000_000n });
+    creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
     // FIX: Dar fondos al resolver para que pueda pagar las tasas de transacción.
-    resolver.addBalance({ nanoergs: 1_000_000_000n }); // 1 ERG
+    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE }); // 1 ERG
 
     // Crear y distribuir el Game NFT
-    const gameNftSourceBox = creator.utxos.toArray()[0];
-    gameNftId = gameNftSourceBox.boxId;
+    gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
 
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     
     // 1. Crear la caja del juego en estado de resolución
-    gameResolutionContract.addBalance({
-        nanoergs: creatorStake,
-        tokens: [{ tokenId: gameNftId, amount: 1n }]
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SPair(SLong(resolutionDeadline), SInt(0)).toHex(),
+            R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(),
+            R7: SColl(SLong, [BigInt(resolutionDeadline - 50), creatorStake, participationFee]).toHex(),
+            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
     });
-    const gameBox = gameResolutionContract.utxos.toArray()[0];
-    gameBox.additionalRegisters = {
-        R4: SPair(SLong(resolutionDeadline), SInt(0)).toHex(),
-        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, [BigInt(resolutionDeadline - 50), creatorStake, participationFee]).toHex(),
-        R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
-        R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
-    };
     
     // 2. Crear las cajas de participación (ganador y perdedor)
     const createParticipation = (party: any, commitment: string) => {
-        participationContract.addBalance({ nanoergs: participationFee });
-        const pBox = participationContract.utxos.toArray().at(-1)!;
-        pBox.additionalRegisters = {
-            R4: SColl(SByte, party.key.publicKey).toHex(),
-            R5: SColl(SByte, commitment).toHex(),
-            R6: SColl(SByte, gameNftId).toHex(),
-            R7: SColl(SByte, "c3".repeat(32)).toHex(),
-            R8: SColl(SByte, "d4".repeat(32)).toHex(),
-            R9: SColl(SLong, [100n]).toHex(),
-        };
+        participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: participationResolvedErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, party.key.publicKey).toHex(),
+                R5: SColl(SByte, commitment).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, "c3".repeat(32)).toHex(),
+                R8: SColl(SByte, "d4".repeat(32)).toHex(),
+                R9: SColl(SLong, [100n]).toHex(),
+            },
+        });
     };
     createParticipation(winner, winnerCommitment);
     createParticipation(loser, loserCommitment);
@@ -147,8 +151,7 @@ describe("Game Finalization (end_game)", () => {
     const finalDevPayout = devCommission;
 
     const transaction = new TransactionBuilder(mockChain.height)
-      // FIX: Incluir las UTXOs del resolver para cubrir la tasa de transacción.
-      .from([gameBox, ...participationBoxes, ...resolver.utxos.toArray()])
+      .from([gameBox, ...participationBoxes.toArray(), ...resolver.utxos.toArray()])
       .to([
         new OutputBuilder(finalWinnerPrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
         new OutputBuilder(finalResolverPayout, resolver.address),
