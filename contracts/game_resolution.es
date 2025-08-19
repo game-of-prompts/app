@@ -35,6 +35,7 @@
   
   val participatingJudges = SELF.R6[Coll[Coll[Byte]]].get
   val numericalParams = SELF.R7[Coll[Long]].get
+  val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
 
   val resolverInfo = SELF.R8[(Coll[Byte], Long)].get
@@ -59,7 +60,7 @@
       val currentCandidateBox = CONTEXT.dataInputs(0)
 
       val pBoxIsValid = blake2b256(submittedPBox.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH &&
-                        submittedPBox.R6[Coll[Byte]].get == gameNftId
+                        submittedPBox.R6[Coll[Byte]].get == gameNftId && submittedPBox.creationInfo._1 >= deadline
 
       val candidateDataInputIsValid = currentCandidateBox.R5[Coll[Byte]].get == winnerCandidateCommitment &&
                                       blake2b256(currentCandidateBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
@@ -81,26 +82,39 @@
           }
         })._1
 
-        val newWinnerCandidate = if (newScore > currentScore) {
+        val newWinnerCandidate = if (
+            newScore > currentScore ||   // If the new score is higher than the current one
+            newScore == currentScore && submittedPBox.creationInfo._1 < currentCandidateBox.creationInfo._1  // Or if the scores are equal but the new one is from an earlier block
+          ) {
           submittedPBox.R5[Coll[Byte]].get
-        } else {
+        } 
+        else {
           winnerCandidateCommitment
         }
 
         val gameBoxIsRecreatedCorrectly = {
           recreatedGameBox.propositionBytes == SELF.propositionBytes &&
-          recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&
-          recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&
-          recreatedGameBox.R7[Coll[Long]].get == numericalParams &&
-          recreatedGameBox.R8[(Coll[Byte], Int)].get._2 == commissionPercentage &&
-          recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
+          recreatedGameBox.R4[(Long, Int)].get._1 == resolutionDeadline &&  // The resolution deadline remains the same
+          recreatedGameBox.R4[(Long, Int)].get._2 == SELF.R4[(Long, Int)].get._2 + 1 &&  // Increment the resolved counter
+          recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
+          recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
+          recreatedGameBox.R7[Coll[Long]].get == numericalParams &&  // The numerical parameters remain the same
+          recreatedGameBox.R8[(Coll[Byte], Int)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
+          recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get  // The game provenance remains the same
         }
         
         val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
           blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
           outBox.value == submittedPBox.value &&
           outBox.R4[Coll[Byte]].get == submittedPBox.R4[Coll[Byte]].get &&
-          outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get
+          outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get &&
+          outBox.R6[Coll[Byte]].get == submittedPBox.R6[Coll[Byte]].get &&
+          outBox.R7[Coll[Byte]].get == submittedPBox.R7[Coll[Byte]].get &&
+          outBox.R8[Coll[Byte]].get == submittedPBox.R8[Coll[Byte]].get &&
+          outBox.R9[Coll[Long]].get == submittedPBox.R9[Coll[Long]].get &&
+          outBox.tokens.size == 1 &&
+          outBox.tokens(0)._1 == gameNftId &&
+          outBox.tokens(0)._2 == 1L
         })
         
         gameBoxIsRecreatedCorrectly && participationIsRecreated
