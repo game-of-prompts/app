@@ -60,7 +60,7 @@ describe("Game Finalization (end_game)", () => {
   // --- Constantes del Juego para la Prueba ---
   const resolutionDeadline = mockChain.height + 100;
   const creatorStake = 2_000_000n;
-  const participationFee = 10_000_000n;
+  const participationFee = 100_000_000n;
   const resolverCommissionPercent = 10;
 
   // --- Compilación Dinámica de Contratos ---
@@ -145,6 +145,8 @@ describe("Game Finalization (end_game)", () => {
     const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+    console.log(`Prize Pool: ${prizePool/1_000_000n}, Resolver Commission: ${resolverCommission/1_000_000n}, Dev Commission: ${devCommission/1_000_000n}, Winner Base Prize: ${winnerBasePrize/1_000_000n}`);
     
     const finalWinnerPrize = winnerBasePrize;
     const finalResolverPayout = creatorStake + resolverCommission;
