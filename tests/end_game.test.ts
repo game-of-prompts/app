@@ -146,7 +146,7 @@ describe("Game Finalization (end_game)", () => {
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
-    console.log(`Prize Pool: ${prizePool/1_000_000n}, Resolver Commission: ${resolverCommission/1_000_000n}, Dev Commission: ${devCommission/1_000_000n}, Winner Base Prize: ${winnerBasePrize/1_000_000n}`);
+    // console.log(`Prize Pool: ${prizePool/1_000_000n}, Resolver Commission: ${resolverCommission/1_000_000n}, Dev Commission: ${devCommission/1_000_000n}, Winner Base Prize: ${winnerBasePrize/1_000_000n}`);
     
     const finalWinnerPrize = winnerBasePrize;
     const finalResolverPayout = creatorStake + resolverCommission;
