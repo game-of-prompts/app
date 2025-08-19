@@ -4,7 +4,7 @@
   // =================================================================
 
   val JUDGE_PERIOD = 30L 
-  val DEV_ADDR = fromBase58("`+DEV_ADDR+`")
+  val DEV_ADDR = PK("`+DEV_ADDR+`")
   val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
   val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
@@ -206,7 +206,7 @@
       } else { true }
       
       val devGetsPaid = if (finalDevPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ DEV_ADDR)})
+          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
       } else { true }
 
       // TODO Check participation resolved counter.
