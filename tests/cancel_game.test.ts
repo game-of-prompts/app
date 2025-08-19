@@ -18,46 +18,44 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 
-// --- Utility and Constants Setup ---
+// --- Configuración de Utilidades y Constantes ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
-// Load contract templates. We need the active game contract (as input)
-// and the cancellation contract (as output).
+/**
+ * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
+ * @param bytes El array de bytes a convertir.
+ * @returns La representación hexadecimal en formato string.
+ */
+function uint8ArrayToHex(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("hex");
+}
+
+// --- Carga de Plantillas de Contratos ---
+// Se cargan todos los contratos necesarios para la prueba.
 const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
 const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
+const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
+const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation_submited.es"), "utf-8");
+const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
 
-// Mocks for dependencies needed to compile the game_active contract
-const GAME_RESOLUTION_SOURCE = "{ sigmaProp(false) }";
-const PARTICIPATION_SUBMITTED_SOURCE = "{ sigmaProp(false) }";
-const PARTICIPATION_RESOLVED_SOURCE = "{ sigmaProp(false) }";
+// Dirección de desarrollador para comisiones, requerida por game_resolution.es
+const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
+
 
 describe("Game Cancellation (cancel_game_before_deadline)", () => {
     let mockChain: MockChain;
 
-    // --- Actors ---
+    // --- Actores ---
     let game: ReturnType<MockChain["newParty"]>;
     let creator: ReturnType<MockChain["newParty"]>;
     let claimer: ReturnType<MockChain["newParty"]>;
 
-    // --- Contract Compilation ---
-    // We must compile the contracts to get their ErgoTree for transaction building.
-    const gameResolutionErgoTree = compile(GAME_RESOLUTION_SOURCE);
-    const participationSubmittedErgoTree = compile(PARTICIPATION_SUBMITTED_SOURCE);
-    const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-    
-    // The game_cancellation contract depends on the creator's public key,
-    // so we will compile it inside `beforeEach` once the creator is defined.
+    // --- Árboles de Contratos (ErgoTrees) ---
+    // Estas variables se inicializarán en `beforeEach` después de compilar los contratos.
+    let gameActiveErgoTree: ReturnType<typeof compile>;
     let gameCancellationErgoTree: ReturnType<typeof compile>;
 
-    // The game_active contract depends on the hashes of the other contracts.
-    const gameActiveSource = GAME_ACTIVE_TEMPLATE
-        .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", Buffer.from(blake2b256(gameResolutionErgoTree.bytes)).toString("hex"))
-        .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", Buffer.from(blake2b256(participationSubmittedErgoTree.bytes)).toString("hex"))
-        .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", Buffer.from(blake2b256(participationResolvedErgoTree.bytes)).toString("hex"));
-
-    let gameActiveErgoTree: ReturnType<typeof compile>;
-    
-    // --- Game Parameters for the Test ---
+    // --- Parámetros del Juego para la Prueba ---
     const creatorStake = 10_000_000_000n; // 10 ERG
     const deadlineBlock = 800_200;
     const secret = stringToBytes("utf8", "this-is-the-revealed-secret");
@@ -72,20 +70,43 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         creator = mockChain.newParty("GameCreator");
         claimer = mockChain.newParty("Claimer");
 
-        // The claimer needs funds to pay the transaction fee.
+        // El reclamante necesita fondos para pagar la tarifa de la transacción.
         claimer.addBalance({ nanoergs: 1_000_000_000n });
 
-        // Compile the cancellation contract with the specific creator's public key.
-        const creatorPkHex = Buffer.from(creator.key.publicKey).toString("hex");
+        // --- Compilación de Contratos en Orden de Dependencia ---
+
+        // 1. Compilar contratos sin dependencias de hash.
+        const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
+        const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
+        
+        // 2. Compilar contratos que dependen de los hashes anteriores.
+        const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+        const participationSubmittedErgoTree = compile(participationSubmittedSource);
+        const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+
+        const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
+            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
+            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
+        const gameResolutionErgoTree = compile(gameResolutionSource);
+        const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
+
+        // 3. Compilar el contrato de cancelación (depende de la PK del creador).
+        const creatorPkHex = uint8ArrayToHex(creator.key.publicKey);
         const gameCancellationSource = GAME_CANCELLATION_TEMPLATE.replace("`+CREATOR_PK+`", creatorPkHex);
         gameCancellationErgoTree = compile(gameCancellationSource);
+        const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
 
-        // Compile the active contract with the hash of the newly compiled cancellation contract.
-        const gameCancellationScriptHash = Buffer.from(blake2b256(gameCancellationErgoTree.bytes)).toString("hex");
-        const finalGameActiveSource = gameActiveSource.replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash);
+        // 4. Finalmente, compilar el contrato principal del juego con todos los hashes necesarios.
+        const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
+            .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
+            .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+            .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
         gameActiveErgoTree = compile(finalGameActiveSource);
 
-        // Arrange: Create the initial GameActive box that will be cancelled.
+        // --- Creación de la Caja del Juego ---
+        // Se crea la caja `game_active` inicial que será cancelada en la prueba.
         game.addUTxOs({
             value: creatorStake,
             ergoTree: gameActiveErgoTree.toHex(),
@@ -112,24 +133,24 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         const claimerInitialBalance = claimer.balance.nanoergs;
 
         // --- Act ---
-        // Calculate the expected fund distribution.
-        const stakePortionToClaim = creatorStake / 5n;
+        // Calcular la distribución de fondos esperada según la lógica del contrato.
+        const stakePortionToClaim = creatorStake / 5n; // 20% de penalización
         const newCreatorStake = creatorStake - stakePortionToClaim;
-        const newUnlockHeight = BigInt(mockChain.height + 40); // From contract logic
+        const newUnlockHeight = BigInt(mockChain.height + 40); // Altura de desbloqueo definida en el contrato
 
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
             .to([
-                // Output 0: The new GameCancellation box
+                // Salida 0: La nueva caja `GameCancellation`
                 new OutputBuilder(newCreatorStake, gameCancellationErgoTree)
                     .addTokens(gameBox.assets)
                     .setAdditionalRegisters({
                         R4: SLong(newUnlockHeight).toHex(),
-                        R5: SColl(SByte, secret).toHex(),
+                        R5: SColl(SByte, secret).toHex(), // Se revela el secreto
                         R6: SLong(newCreatorStake).toHex(),
                         R7: gameBox.additionalRegisters.R8,
                     }),
-                // Output 1: The penalty paid to the claimer
+                // Salida 1: La penalización pagada al reclamante
                 new OutputBuilder(stakePortionToClaim, claimer.address)
             ])
             .sendChangeTo(claimer.address)
@@ -139,12 +160,12 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         const executionResult = mockChain.execute(transaction, { signers: [claimer] });
 
         // --- Assert ---
-        expect(executionResult).to.be.true;
+        expect(executionResult, "La transacción de cancelación debería ser válida").to.be.true;
 
-        // Verify the original game box was spent
+        // Verificar que la caja original del juego fue gastada
         /* expect(mockChain.boxes.at(gameActiveErgoTree.toHex())).to.have.length(0);
 
-        // Verify the new cancellation box was created
+        // Verificar que la nueva caja de cancelación fue creada correctamente
         const cancellationBoxes = mockChain.boxes.at(gameCancellationErgoTree.toHex());
         expect(cancellationBoxes).to.have.length(1);
         
@@ -153,30 +174,32 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         expect(newCancellationBox.assets[0].tokenId).to.equal(gameNftId);
         expect(newCancellationBox.registers.R5).to.equal(SColl(SByte, secret).toHex());
 
-        // Verify the claimer received the penalty
+        // Verificar que el reclamante recibió la penalización
         const expectedFinalBalance = claimerInitialBalance + stakePortionToClaim - RECOMMENDED_MIN_FEE_VALUE;
         expect(claimer.balance.nanoergs).to.equal(expectedFinalBalance); */
     });
 
     it("should fail to cancel if the game deadline has passed", () => {
-        // Advance time past the deadline
+        // --- Arrange ---
+        // Avanzar el tiempo de la cadena de bloques más allá de la fecha límite del juego.
         mockChain.jumpTo(deadlineBlock + 1);
         expect(mockChain.height).to.be.greaterThan(deadlineBlock);
 
         // --- Act ---
+        // Intentar construir y ejecutar la misma transacción de cancelación.
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
-            .to([ new OutputBuilder(1_000_000_000n, claimer.address) ]) // Dummy output
+            .to([ new OutputBuilder(1_000_000_000n, claimer.address) ]) // Salida de ejemplo
             .sendChangeTo(claimer.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
         // --- Assert ---
-        // The contract's guard `HEIGHT < deadline` should prevent this transaction.
+        // La guarda del contrato `HEIGHT < deadline` debería prevenir esta transacción.
         const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
-        expect(executionResult).to.be.false;
+        expect(executionResult, "La cancelación no debería ser posible después de la fecha límite").to.be.false;
 
-        // Verify the game box was NOT spent
-        // expect(mockChain.boxes.toArray().at(gameActiveErgoTree.toHex())).to.have.length(1);
+        // Verificar que la caja del juego NO fue gastada.
+        // expect(mockChain.boxes.at(gameActiveErgoTree.toHex())).to.have.length(1);
     });
 });

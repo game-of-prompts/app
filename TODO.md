@@ -10,7 +10,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
     - [x] Cancelación
 
 - Estado 2 (juicio)
-    - [] Finalización
+    - [x] Finalización
     - [] Omisión de participación
     - [] Invalidación por jueces
 
@@ -33,6 +33,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 - Poker
 
+##### game-service-factory
 - Game obfuscated
 - Señuelos
 - Limited resources
