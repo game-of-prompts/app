@@ -166,7 +166,7 @@
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
       // 1. Calcular los componentes base del pago
 
-      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH })
+      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
 
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
 
