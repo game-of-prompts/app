@@ -106,9 +106,8 @@ describe("Omitted Participation Inclusion", () => {
                 R4: SPair(SLong(BigInt(resolutionDeadline)), SInt(1)).toHex(), // 1 participant resolved
                 R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
                 R6: SColl(SColl(SByte), []).toHex(),
-                R7: SColl(SLong, [800100n, 2_000_000_000n, 1_000_000n]).toHex(),
-                // FIX: Use SInt instead of SLong to match the contract's validation path
-                R8: SPair(SColl(SByte, originalResolver.key.publicKey), SInt(10)).toHex(),
+                R7: SColl(SLong, [800_100n, 2_000_000_000n, 1_000_000n]).toHex(),
+                R8: SPair(SColl(SByte, originalResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                 R9: SPair(SColl(SByte, originalResolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
             }
         });
