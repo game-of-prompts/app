@@ -198,22 +198,35 @@ describe("Game Resolution (resolve_game)", () => {
   });
 
   it("should successfully resolve the game with 100 dynamic participations", () => {
-    const participationCount = 100;
+    const participationCount = 100; // 1000;   Maximum call stack size exceeded
     const participationOutputs = [];
-    let firstCommitmentHex = "";
+    
+    // Variables to track the winner
+    let highestScore = -1n; // Use BigInt for comparison, start with a value lower than any possible score
+    let highestScoreCommitmentHex = ""; // This will store the winner's commitment
 
     for (let i = 0; i < participationCount; i++) {
         const participant = mockChain.newParty(`DynamicPlayer${i + 1}`);
-        const score = BigInt(1000 + i);
+        
+        // 1. Generate a random score for the participant
+        const score = BigInt(Math.floor(Math.random() * 10000)); // Random score between 0 and 9999
+        
         const solverStr = `player${i + 1}-solver`;
         const logsStr = `logs${i + 1}`;
         const commitmentHex = uint8ArrayToHex(blake2b256(
             new Uint8Array([...stringToBytes("utf8", solverStr), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logsStr), ...secret])
         ));
         
-        if (i === 0) {
-            firstCommitmentHex = commitmentHex;
+        // 2. Check if this participant has the highest score so far and store their commitment
+        if (score > highestScore) {
+            highestScore = score;
+            highestScoreCommitmentHex = commitmentHex;
         }
+
+        // 3. Generate two additional random scores for the R9 register
+        const r9_score2 = BigInt(Math.floor(Math.random() * 10000));
+        const r9_score3 = BigInt(Math.floor(Math.random() * 10000));
+        const r9_score4 = BigInt(Math.floor(Math.random() * 10000));
 
         const registers = {
             R4: SColl(SByte, participant.address.getPublicKeys()[0]).toHex(),
@@ -221,7 +234,7 @@ describe("Game Resolution (resolve_game)", () => {
             R6: SColl(SByte, hexToBytes(gameNftId)!).toHex(),
             R7: SColl(SByte, stringToBytes("utf8", solverStr)).toHex(),
             R8: SColl(SByte, stringToBytes("utf8", logsStr)).toHex(),
-            R9: SColl(SLong, [score, 800n, 900n]).toHex(),
+            R9: SColl(SLong, [score, r9_score2, r9_score3, r9_score4]).toHex(),
         };
 
         participationSubmittedContract.addUTxOs({
@@ -244,7 +257,7 @@ describe("Game Resolution (resolve_game)", () => {
       .addTokens(gameBox.assets)
       .setAdditionalRegisters({
         R4: SPair(SLong(resolutionDeadline), SInt(participationCount)).toHex(),
-        R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(firstCommitmentHex)!)).toHex(),
+        R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(highestScoreCommitmentHex)!)).toHex(),
         R6: gameBox.additionalRegisters.R6,
         R7: gameBox.additionalRegisters.R7,
         R8: SPair(SColl(SByte, creator.address.getPublicKeys()[0]), SLong(creator_commission_percentage)).toHex(), 
