@@ -99,7 +99,7 @@
           recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
           recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
           recreatedGameBox.R7[Coll[Long]].get == numericalParams &&  // The numerical parameters remain the same
-          recreatedGameBox.R8[(Coll[Byte], Int)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
+          recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
           recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get  // The game provenance remains the same
         }
         
