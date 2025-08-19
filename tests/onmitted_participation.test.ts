@@ -69,7 +69,7 @@ describe("Omitted Participation Inclusion", () => {
         currentWinnerPlayer = mockChain.newParty("CurrentWinner");
         omittedPlayer = mockChain.newParty("OmittedPlayer");
 
-        newResolver.addBalance({ nanoergs: 1_000_000_000n });
+        newResolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // --- Compile Contracts ---
         participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
@@ -146,12 +146,18 @@ describe("Omitted Participation Inclusion", () => {
             }
         });
         omittedParticipantBox = participationSubmittedContract.utxos.toArray()[0];
+
+        mockChain.newBlocks(mockChain.height + 10); // Advance the chain height to ensure all boxes are valid, must be lower than the resolution deadline
     };
 
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n); // Omitted player has a higher score
 
         const newWinnerCommitment = omittedParticipantBox.additionalRegisters.R5;
+
+        if (!newWinnerCommitment) {
+            throw new Error("New winner commitment is undefined");
+        }
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
@@ -161,11 +167,10 @@ describe("Omitted Participation Inclusion", () => {
                     .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
                         R4: SPair(SLong(BigInt(resolutionDeadline)), SInt(2)).toHex(),
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, stringToBytes("hex", newWinnerCommitment!.substring(4)))).toHex(),
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, stringToBytes("hex", newWinnerCommitment.substring(4)))).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: gameResolutionBox.additionalRegisters.R7,
-                        // FIX: Use SInt here as well for the recreated box
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SInt(10)).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
                 // Newly Resolved Participant Box
