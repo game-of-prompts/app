@@ -164,13 +164,14 @@ describe("Game Finalization (end_game)", () => {
       .build();
 
     // --- Assert ---
-    expect(mockChain.execute(transaction, { signers: [resolver, creator] })).to.be.true;
+    expect(mockChain.execute(transaction, { signers: [resolver] })).to.be.true;
 
     // El balance final del resolver será su fondo inicial + pago - tasa - cambio.
     // Como el cálculo exacto del cambio es complejo, verificamos los otros balances que son deterministas.
     expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
-    expect(creator.balance.nanoergs).to.equal(0n);
+    expect(creator.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
+    expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
     
     expect(winner.balance.tokens[0].tokenId).to.equal(gameNftId);
 
