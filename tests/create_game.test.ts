@@ -10,6 +10,7 @@ import {
 import {
   SByte,
   SColl,
+  SInt,
   SLong,
   SPair
 } from "@fleet-sdk/serializer";
@@ -146,7 +147,7 @@ describe("Game Creation (create_game)", () => {
     const inputUTXO = creator.utxos.toArray()[0];
     const gameNftId = inputUTXO.boxId;
 
-    // Extract the creator's public key in bytes, required for register R4.
+    // Extract the creator's public key in bytes, required for register R5.
     const creatorPkBytes = creator.address.getPublicKeys()[0];
 
     // --- 2. Act ---
@@ -164,16 +165,18 @@ describe("Game Creation (create_game)", () => {
     // Set the additional registers with the game information,
     // following the specification in `game_active.es`.
     .setAdditionalRegisters({
-        // R4: (Creator's public key, Commission percentage)
-        R4: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
-        // R5: Hash of the secret 'S'
-        R5: SColl(SByte, hashedSecret).toHex(),
-        // R6: Invited judges (empty in this test)
-        R6: SColl(SColl(SByte), []).toHex(),
-        // R7: [deadline, creator's stake, participation fee]
-        R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
-        // R8: Game details in JSON format (converted to bytes)
-        R8: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
+        // R4: Game state (0: Active)
+        R4: SInt(0).toHex(),
+        // R5: (Creator's public key, Commission percentage)
+        R5: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
+        // R6: Hash of the secret 'S'
+        R6: SColl(SByte, hashedSecret).toHex(),
+        // R7: Invited judges (empty in this test)
+        R7: SColl(SColl(SByte), []).toHex(),
+        // R8: [deadline, creator's stake, participation fee]
+        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
+        // R9: Game details in JSON format (converted to bytes)
+        R9: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
     });
 
     // Build the transaction.
@@ -212,5 +215,6 @@ describe("Game Creation (create_game)", () => {
     expect(createdGameBox.additionalRegisters.R6).to.equal(gameBoxOutput.additionalRegisters.R6);
     expect(createdGameBox.additionalRegisters.R7).to.equal(gameBoxOutput.additionalRegisters.R7);
     expect(createdGameBox.additionalRegisters.R8).to.equal(gameBoxOutput.additionalRegisters.R8);
+    expect(createdGameBox.additionalRegisters.R9).to.equal(gameBoxOutput.additionalRegisters.R9);
   });
 });
