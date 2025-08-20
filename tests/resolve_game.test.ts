@@ -139,13 +139,13 @@ describe("Game Resolution (resolve_game)", () => {
       });
 
     participation1_registers = {
-            R4: SColl(SByte, participant1.address.getPublicKeys()[0]).toHex(),
-            R5: SColl(SByte, commitment1Hex).toHex(),
-            R6: SColl(SByte, gameNftId).toHex(),
-            R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
-            R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
-            R9: SColl(SLong, [500n, 800n, score1, 1200n]).toHex(),
-        };
+        R4: SColl(SByte, participant1.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, commitment1Hex).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, [500n, 800n, score1, 1200n]).toHex()
+      };
 
     // INPUTS(1)
     participationSubmittedContract.addUTxOs({
@@ -167,13 +167,13 @@ describe("Game Resolution (resolve_game)", () => {
     ));
 
     participation2_registers = {
-            R4: SColl(SByte, participant2.address.getPublicKeys()[0]).toHex(),
-            R5: SColl(SByte, commitment2Hex).toHex(),
-            R6: SColl(SByte, gameNftId).toHex(),
-            R7: SColl(SByte, stringToBytes("utf8", "player2-solver")).toHex(),
-            R8: SColl(SByte, stringToBytes("utf8", "logs2")).toHex(),
-            R9: SColl(SLong, [score2, 900n, 950n]).toHex(),
-        };
+        R4: SColl(SByte, participant2.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, commitment2Hex).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player2-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs2")).toHex(),
+        R9: SColl(SLong, [score2, 900n, 950n]).toHex(),
+    };
 
     // INPUTS(2)
     participationSubmittedContract.addUTxOs({
