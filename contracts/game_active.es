@@ -42,16 +42,17 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val creatorInfo = SELF.R4[(Coll[Byte], Long)].get
+  val gameState = SELF.R4[Int].get
+  val creatorInfo = SELF.R5[(Coll[Byte], Long)].get
   val gameCreatorPK = creatorInfo._1
   
-  val secretHash = SELF.R5[Coll[Byte]].get
+  val secretHash = SELF.R6[Coll[Byte]].get
   
-  val numericalParams = SELF.R7[Coll[Long]].get
+  val numericalParams = SELF.R8[Coll[Long]].get
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val gameDetailsJsonHex = SELF.R8[Coll[Byte]].get
+  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -132,7 +133,7 @@
           if (validParticipantsCounter == participantInputs.size) {
 
             // --- Validación de Jueces ---
-            val invitedJudges = SELF.R6[Coll[Coll[Byte]]].get
+            val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
             val judgeProofDataInputs = CONTEXT.dataInputs
             /* .filter({(box: Box) => 
               box.propositionBytes == REPUTATION_PROOF_BOX && 
@@ -151,13 +152,14 @@
             }
 
             val resolutionBoxIsValid = {
+              val newNumericalParams = numericalParams ++ Coll(HEIGHT + JUDGE_PERIOD, validParticipantsCounter)
+              
               winnerCandidateCommitment == initialWinnerCommitment &&
               resolutionBox.value >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-              resolutionBox.R4[(Long, Int)].get._1 >= HEIGHT + JUDGE_PERIOD &&
-              resolutionBox.R4[(Long, Int)].get._2 == validParticipantsCounter &&
+              resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
               resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
-              resolutionBox.R7[Coll[Long]].get == numericalParams &&
+              resolutionBox.R7[Coll[Long]].get == newNumericalParams &&
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
             }
@@ -206,6 +208,7 @@
     }
   }
 
-  // Se permite el gasto si se cumple una de las dos transiciones de estado.
-  sigmaProp(action1_transitionToResolution || action2_transitionToCancellation)
+  val game_active = gameState == 0
+  val actions = action1_transitionToResolution || action2_transitionToCancellation
+  sigmaProp(game_active && actions)
 }

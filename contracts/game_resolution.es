@@ -36,7 +36,7 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val resolutionDeadline = SELF.R4[(Long, Int)].get._1
+  val gameState = SELF.R4[Int].get
 
   val r5Tuple = SELF.R5[(Coll[Byte], Coll[Byte])].get
   val revealedS = r5Tuple._1
@@ -46,6 +46,8 @@
   val numericalParams = SELF.R7[Coll[Long]].get
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
+  val resolutionDeadline = numericalParams(3)
+  val resolvedCounter = numericalParams(4)
 
   val resolverInfo = SELF.R8[(Coll[Byte], Long)].get
   val resolverPK = resolverInfo._1
@@ -103,11 +105,10 @@
 
         val gameBoxIsRecreatedCorrectly = {
           recreatedGameBox.propositionBytes == SELF.propositionBytes &&
-          recreatedGameBox.R4[(Long, Int)].get._1 == resolutionDeadline &&  // The resolution deadline remains the same
-          recreatedGameBox.R4[(Long, Int)].get._2 == SELF.R4[(Long, Int)].get._2 + 1 &&  // Increment the resolved counter
+          recreatedGameBox.R4[Int].get == gameState &&
           recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
           recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
-          recreatedGameBox.R7[Coll[Long]].get == numericalParams &&  // The numerical parameters remain the same
+          recreatedGameBox.R7[Coll[Long]].get == numericalParams.updated(4, resolvedCounter + 1) && // Increment the resolved counter
           recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
           recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get  // The game provenance remains the same
         }
@@ -177,9 +178,11 @@
         val nextCandidateCommitment = foldResult._2
 
         val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
-        val deadlineIsExtended = recreatedGameBox.R4[(Long, Int)].get._1 >= resolutionDeadline + JUDGE_PERIOD
+        val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
         val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
-        fundsReturnedToPool && deadlineIsExtended && candidateIsReset
+        val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState
+        
+        fundsReturnedToPool && deadlineIsExtended && candidateIsReset && gameStateIsPreserved
       } else { false }
     } else { false }
   }
@@ -238,5 +241,7 @@
     } else { false }
   }
 
-  sigmaProp(action1_includeOmittedParticipation || action2_judgesInvalidate || action3_endGame)
+  val game_in_resolution = gameState == 1
+  val actions = action1_includeOmittedParticipation || action2_judgesInvalidate || action3_endGame
+  sigmaProp(game_in_resolution && actions)
 }

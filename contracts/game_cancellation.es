@@ -31,13 +31,15 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val unlockHeight = SELF.R4[Long].get
-  val revealedSecret = SELF.R5[Coll[Byte]].get
-  val currentStake = SELF.R6[Long].get
-  val readOnlyInfo = SELF.R7[Coll[Byte]].get
+  val gameState = SELF.R4[Int].get
+  val unlockHeight = SELF.R5[Long].get
+  val revealedSecret = SELF.R6[Coll[Byte]].get
+  val currentStake = SELF.R7[Long].get
+  val readOnlyInfo = SELF.R8[Coll[Byte]].get
 
   // El ID del NFT original del juego se extrae de los tokens de la propia caja.
   val gameNftId = SELF.tokens(0)._1
+  val gameIsCancelled = gameState == 2
 
   // =================================================================
   // === ACCIONES DE GASTO
@@ -61,14 +63,15 @@
       recreatedCancellationBox.propositionBytes == SELF.propositionBytes &&
       recreatedCancellationBox.value >= remainingStake &&
       recreatedCancellationBox.tokens(0)._1 == gameNftId &&
-      recreatedCancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
-      recreatedCancellationBox.R5[Coll[Byte]].get == revealedSecret &&
-      recreatedCancellationBox.R6[Long].get == remainingStake &&
-      recreatedCancellationBox.R7[Coll[Byte]].get == readOnlyInfo
+      recreatedCancellationBox.R4[Int].get == gameState &&
+      recreatedCancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+      recreatedCancellationBox.R6[Coll[Byte]].get == revealedSecret &&
+      recreatedCancellationBox.R7[Long].get == remainingStake &&
+      recreatedCancellationBox.R8[Coll[Byte]].get == readOnlyInfo
     }
     
-    claimerGetsPortion && boxIsRecreatedCorrectly
+    cooldownIsOver && claimerGetsPortion && boxIsRecreatedCorrectly
   }
 
-  sigmaProp(action1_drainStake)
+  sigmaProp(gameIsCancelled && action1_drainStake)
 }
