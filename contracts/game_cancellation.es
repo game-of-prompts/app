@@ -14,10 +14,18 @@
   // === DEFINICIONES DE REGISTROS (ESTADO DE CANCELACIÓN)
   // =================================================================
 
+  // -- OLD --
   // R4: Long        - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
   // R5: Coll[Byte]  - revealedSecret: El secreto 'S' del juego, ya revelado.
   // R6: Long        - creatorStake: La cantidad actual (y decreciente) del stake del creador.
   // R7: Coll[Byte]  - ReadOnlyInfo: Un JSON (en bytes UTF-8) con datos inmutables del juego (ID del NFT, deadline original, etc.).
+
+  // -- NEW --
+  // R4: Integer     - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R5: Long        - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
+  // R6: Coll[Byte]  - revealedSecret: El secreto 'S' del juego, ya revelado.
+  // R7: Long        - creatorStake: La cantidad actual (y decreciente) del stake del creador.
+  // R8: Coll[Byte]  - ReadOnlyInfo: Un JSON (en bytes UTF-8) con datos inmutables del juego (ID del NFT, deadline original, etc.).
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
