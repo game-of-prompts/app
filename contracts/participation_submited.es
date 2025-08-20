@@ -38,7 +38,7 @@
 
     // Verificación de que la caja del juego es plausible.
     val gameBoxIsPlausible =
-      gameBoxCandidate.tokens.size > 0 &&
+      gameBoxCandidate.tokens.size == 1 &&
       gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
       gameBoxCandidate.R4[(Coll[Byte], Long)].isDefined &&
       gameBoxCandidate.R5[Coll[Byte]].isDefined &&
@@ -73,6 +73,47 @@
   }
 
   // ### Acción 2: Transicion a participacion Resuelta mediante game_resolution.es o game_resolution_no_creator.es, debido a que el creador omitió esta participacion.
+  val spentAsOmitted = {
+    val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_resolution.es' es la primera entrada.
+
+    // Verificación de que la caja del juego es plausible.
+    val gameBoxIsPlausible =
+      gameBoxCandidate.tokens.size == 1 &&
+      gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
+      gameBoxCandidate.R4[(Long, Int)].isDefined &&
+      gameBoxCandidate.R5[(Coll[Byte], Coll[Byte])].isDefined &&
+      gameBoxCandidate.R6[Coll[Coll[Byte]]].isDefined &&
+      gameBoxCandidate.R7[Coll[Long]].isDefined &&
+      gameBoxCandidate.R7[Coll[Long]].get.size == 3 &&
+      gameBoxCandidate.R8[(Coll[Byte], Long)].isDefined &&
+      gameBoxCandidate.R9[(Coll[Byte], Coll[Byte])].isDefined
+
+    if (gameBoxIsPlausible) {
+        val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
+        
+        // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
+        val isAfterDeadline = HEIGHT >= gameDeadline
+        
+        // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
+        val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
+          // La nueva caja debe tener el script de la siguiente fase.
+          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+          // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
+          outBox.value == SELF.value &&
+          outBox.tokens == SELF.tokens &&
+          outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
+          outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
+          outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
+          outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
+          outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
+          outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
+        }
+        
+        isAfterDeadline && isRecreatedCorrectly
+    } else {
+        false
+    }
+  }
 
   // ### Acción 3: Reembolso por Cancelación de Juego
   // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
@@ -98,5 +139,5 @@
   // Lógica futura que permitiría al jugador reclamar sus fondos si el juego queda "atascado".
   val playerReclaimsAfterGracePeriod = false
 
-  sigmaProp(spentInValidGameResolution || spentInValidGameCancellation || playerReclaimsAfterGracePeriod)
+  sigmaProp(spentInValidGameResolution || spentAsOmitted || spentInValidGameCancellation || playerReclaimsAfterGracePeriod)
 }
