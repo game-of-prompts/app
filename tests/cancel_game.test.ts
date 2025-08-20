@@ -10,6 +10,7 @@ import {
 import {
     SByte,
     SColl,
+    SInt,
     SLong,
     SPair
 } from "@fleet-sdk/serializer";
@@ -91,10 +92,8 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         const gameResolutionErgoTree = compile(gameResolutionSource);
         const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
 
-        // 3. Compilar el contrato de cancelación (depende de la PK del creador).
-        const creatorPkHex = uint8ArrayToHex(creator.key.publicKey);
-        const gameCancellationSource = GAME_CANCELLATION_TEMPLATE.replace("`+CREATOR_PK+`", creatorPkHex);
-        gameCancellationErgoTree = compile(gameCancellationSource);
+        // 3. Compilar el contrato de cancelación.
+        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
         const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
 
         // 4. Finalmente, compilar el contrato principal del juego con todos los hashes necesarios.
@@ -113,11 +112,12 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
             assets: [{ tokenId: gameNftId, amount: 1n }],
             creationHeight: mockChain.height,
             additionalRegisters: {
-                R4: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
-                R5: SColl(SByte, hashedSecret).toHex(),
-                R6: SColl(SColl(SByte), []).toHex(),
-                R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R4: SInt(0).toHex(),
+                R5: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+                R6: SColl(SByte, hashedSecret).toHex(),
+                R7: SColl(SColl(SByte), []).toHex(),
+                R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
+                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
             }
         });
 
@@ -136,7 +136,7 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         // Calcular la distribución de fondos esperada según la lógica del contrato.
         const stakePortionToClaim = creatorStake / 5n; // 20% de penalización
         const newCreatorStake = creatorStake - stakePortionToClaim;
-        const newUnlockHeight = BigInt(mockChain.height + 40); // Altura de desbloqueo definida en el contrato
+        const newUnlockHeight = BigInt(mockChain.height + 40); // Cooldown definido en el contrato
 
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
@@ -145,10 +145,11 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
                 new OutputBuilder(newCreatorStake, gameCancellationErgoTree)
                     .addTokens(gameBox.assets)
                     .setAdditionalRegisters({
-                        R4: SLong(newUnlockHeight).toHex(),
-                        R5: SColl(SByte, secret).toHex(), // Se revela el secreto
-                        R6: SLong(newCreatorStake).toHex(),
-                        R7: gameBox.additionalRegisters.R8,
+                        R4: SInt(2).toHex(), // Estado: Cancelado
+                        R5: SLong(newUnlockHeight).toHex(),
+                        R6: SColl(SByte, secret).toHex(), // Se revela el secreto
+                        R7: SLong(newCreatorStake).toHex(),
+                        R8: gameBox.additionalRegisters.R9, // Se transfiere ReadOnlyInfo
                     }),
                 // Salida 1: La penalización pagada al reclamante
                 new OutputBuilder(stakePortionToClaim, claimer.address)
@@ -172,7 +173,7 @@ describe("Game Cancellation (cancel_game_before_deadline)", () => {
         const newCancellationBox = cancellationBoxes[0];
         expect(newCancellationBox.value).to.equal(newCreatorStake);
         expect(newCancellationBox.assets[0].tokenId).to.equal(gameNftId);
-        expect(newCancellationBox.registers.R5).to.equal(SColl(SByte, secret).toHex());
+        expect(newCancellationBox.registers.R6).to.equal(SColl(SByte, secret).toHex());
 
         // Verificar que el reclamante recibió la penalización
         const expectedFinalBalance = claimerInitialBalance + stakePortionToClaim - RECOMMENDED_MIN_FEE_VALUE;
