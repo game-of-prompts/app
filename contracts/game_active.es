@@ -191,10 +191,11 @@
           blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH &&
           cancellationBox.value >= remainingStake &&
           cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
-          cancellationBox.R4[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
-          blake2b256(cancellationBox.R5[Coll[Byte]].get) == secretHash &&
-          cancellationBox.R6[Long].get == remainingStake &&
-          cancellationBox.R7[Coll[Byte]].isDefined
+          cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)
+          cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+          blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
+          cancellationBox.R7[Long].get == remainingStake &&
+          cancellationBox.R8[Coll[Byte]].isDefined
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
