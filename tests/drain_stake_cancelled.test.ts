@@ -10,6 +10,7 @@ import {
 import {
     SByte,
     SColl,
+    SInt,
     SLong
 } from "@fleet-sdk/serializer";
 import * as fs from "fs";
@@ -47,10 +48,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
         // The claimer needs funds to pay the transaction fee.
         claimer.addBalance({ nanoergs: 1_000_000_000n });
 
-        // Compile the cancellation contract with the creator's public key.
-        const creatorPkHex = Buffer.from(creator.key.publicKey).toString("hex");
-        const gameCancellationSource = GAME_CANCELLATION_TEMPLATE.replace("`+CREATOR_PK+`", creatorPkHex);
-        gameCancellationErgoTree = compile(gameCancellationSource);
+        // Compile the cancellation contract.
+        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
         
         gameCancellationContract = mockChain.addParty(gameCancellationErgoTree.toHex(), "GameCancellationContract");
 
@@ -64,10 +63,11 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
             creationHeight: mockChain.height - 50, // created in the past
             assets: [{ tokenId: gameNftId, amount: 1n }],
             additionalRegisters: {
-                R4: SLong(BigInt(unlockHeight)).toHex(),
-                R5: SColl(SByte, revealedSecret).toHex(),
-                R6: SLong(initialCancelledStake).toHex(),
-                R7: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R4: SInt(2).toHex(), // State: Cancelled
+                R5: SLong(BigInt(unlockHeight)).toHex(),
+                R6: SColl(SByte, revealedSecret).toHex(),
+                R7: SLong(initialCancelledStake).toHex(),
+                R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
             }
         });
         
@@ -81,14 +81,16 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
     it("should successfully drain a portion of the stake after the cooldown period", () => {
         // --- Arrange ---
         const claimerInitialBalance = claimer.balance.nanoergs;
-        const unlockHeightFromRegister = parseInt(cancelledGameBox.additionalRegisters.R4.substring(4), 16);
+        const unlockHeightFromRegister = parseInt(cancelledGameBox.additionalRegisters.R5.substring(4), 16);
         expect(mockChain.height).to.be.greaterThan(unlockHeightFromRegister);
 
         // --- Act ---
         // Calculate the expected fund distribution.
         const stakePortionToClaim = initialCancelledStake / 5n;
         const remainingStake = initialCancelledStake - stakePortionToClaim;
-        const newUnlockHeight = BigInt(mockChain.height + 40); // Cooldown for the next drain
+        const cooldownBlocks = 30;
+        const cooldownMargin = 10;
+        const newUnlockHeight = BigInt(mockChain.height + cooldownBlocks + cooldownMargin); // Cooldown for the next drain
 
         const transaction = new TransactionBuilder(mockChain.height)
             .from([cancelledGameBox, ...claimer.utxos.toArray()])
@@ -97,10 +99,11 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 new OutputBuilder(remainingStake, gameCancellationErgoTree)
                     .addTokens(cancelledGameBox.assets)
                     .setAdditionalRegisters({
-                        R4: SLong(newUnlockHeight).toHex(),
-                        R5: SColl(SByte, revealedSecret).toHex(),
-                        R6: SLong(remainingStake).toHex(),
-                        R7: cancelledGameBox.additionalRegisters.R7,
+                        R4: SInt(2).toHex(), // Preserve State
+                        R5: SLong(newUnlockHeight).toHex(),
+                        R6: SColl(SByte, revealedSecret).toHex(),
+                        R7: SLong(remainingStake).toHex(),
+                        R8: cancelledGameBox.additionalRegisters.R8,
                     }),
                 // Output 1: The penalty paid to the claimer
                 new OutputBuilder(stakePortionToClaim, claimer.address)
@@ -121,8 +124,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
         const newCancellationBox = newCancellationBoxes[0];
         expect(newCancellationBox.value).to.equal(remainingStake);
         expect(newCancellationBox.assets[0].tokenId).to.equal(gameNftId);
-        expect(newCancellationBox.additionalRegisters.R4).to.equal(SLong(newUnlockHeight).toHex());
-        expect(newCancellationBox.additionalRegisters.R6).to.equal(SLong(remainingStake).toHex());
+        expect(newCancellationBox.additionalRegisters.R5).to.equal(SLong(newUnlockHeight).toHex());
+        expect(newCancellationBox.additionalRegisters.R7).to.equal(SLong(remainingStake).toHex());
 
         // Verify the claimer received their portion of the stake
         const expectedFinalBalance = claimerInitialBalance + stakePortionToClaim - RECOMMENDED_MIN_FEE_VALUE;
@@ -140,10 +143,11 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
             creationHeight: mockChain.height,
             assets: [{ tokenId: gameNftId, amount: 1n }],
             additionalRegisters: {
-                R4: SLong(BigInt(futureUnlockHeight)).toHex(),
-                R5: SColl(SByte, revealedSecret).toHex(),
-                R6: SLong(initialCancelledStake).toHex(),
-                R7: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R4: SInt(2).toHex(), // State: Cancelled
+                R5: SLong(BigInt(futureUnlockHeight)).toHex(),
+                R6: SColl(SByte, revealedSecret).toHex(),
+                R7: SLong(initialCancelledStake).toHex(),
+                R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
             }
         });
         const futureLockedBox = gameCancellationContract.utxos.toArray()[0];
@@ -159,7 +163,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
             .build();
 
         // --- Assert ---
-        // The contract's guard `HEIGHT >= SELF.R4[Long].get` should prevent this transaction.
+        // The contract's guard `HEIGHT >= SELF.R5[Long].get` should prevent this transaction.
         const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
         expect(executionResult).to.be.false;
 
