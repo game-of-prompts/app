@@ -85,7 +85,7 @@
         val initialFoldState = (-1L, (Coll[Byte](), 0)) // (maxScore, winnerCommitment, validParticipantsCount)
 
         val foldResult = participantInputs.fold(initialFoldState, { 
-          (acc: (Long, (Coll[Byte], Int)), pBox: Box) => {
+          (acc: (Long, (Coll[Byte], Long)), pBox: Box) => {
  
             val pBoxScoreList = pBox.R9[Coll[Long]].get
             val pBoxCommitment = pBox.R5[Coll[Byte]].get
