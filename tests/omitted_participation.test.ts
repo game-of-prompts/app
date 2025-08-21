@@ -56,6 +56,8 @@ describe("Omitted Participation Inclusion", () => {
     const gameNftId = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22";
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
 
+    const game_deadline = 700_700n;
+
     let gameResolutionBox: Box;
     let currentWinnerBox: Box;
     let omittedParticipantBox: Box;
@@ -100,7 +102,6 @@ describe("Omitted Participation Inclusion", () => {
         winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
         omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
         
-        const game_deadline = 700_700n;
         const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
 
         gameResolutionContract.addUTxOs({
@@ -157,7 +158,7 @@ describe("Omitted Participation Inclusion", () => {
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
 
-        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
