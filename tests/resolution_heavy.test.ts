@@ -57,7 +57,7 @@ describe("Game Resolution (resolve_game)", () => {
   let gameNftId: string;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
-  const resolutionDeadline = BigInt(deadlineBlock + 40);
+  const resolutionDeadline = BigInt(deadlineBlock + 30); // JUDGE_PERIOD
   const creatorStake = 2_000_000_000n;
   const creator_commission_percentage = 10n;
 
@@ -90,11 +90,12 @@ describe("Game Resolution (resolve_game)", () => {
       assets: [{ tokenId: gameNftId, amount: 1n }],
       value: creatorStake,
       additionalRegisters: {
-        R4: SPair(SColl(SByte, creatorPkBytes), SLong(creator_commission_percentage)).toHex(),
-        R5: SColl(SByte, hashedSecret).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
-        R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+        R4: SInt(0).toHex(),
+        R5: SPair(SColl(SByte, creatorPkBytes), SLong(creator_commission_percentage)).toHex(),
+        R6: SColl(SByte, hashedSecret).toHex(),
+        R7: SColl(SColl(SByte), []).toHex(),
+        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
+        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
       }
     });
     
@@ -154,16 +155,18 @@ describe("Game Resolution (resolve_game)", () => {
       .setAdditionalRegisters(participation2_registers);
 
     // --- Game Resolution Box Output ---
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
     const gameBox = gameActiveContract.utxos.toArray()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 30), 2n];
     const gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
       .addTokens(gameBox.assets)
       .setAdditionalRegisters({
-        R4: SPair(SLong(resolutionDeadline), SInt(2)).toHex(),
+        R4: SInt(1).toHex(),
         R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(commitment1Hex)!)).toHex(),
-        R6: gameBox.additionalRegisters.R6,
-        R7: gameBox.additionalRegisters.R7,
-        R8: SPair(SColl(SByte, creator.address.getPublicKeys()[0]), SLong(creator_commission_percentage)).toHex(),
-        R9: SPair(SColl(SByte, creator.address.getPublicKeys()[0]), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+        R6: gameBox.additionalRegisters.R7, // invitedJudges
+        R7: SColl(SLong, newNumericalParams).toHex(),
+        R8: gameBox.additionalRegisters.R5, // creatorInfo
+        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
       });
 
     // --- Transaction Building and Execution ---
@@ -198,32 +201,26 @@ describe("Game Resolution (resolve_game)", () => {
   });
 
   it("should successfully resolve the game with 100 dynamic participations", () => {
-    const participationCount = 100; // 1000;   Maximum call stack size exceeded.  In case is because of JS, needed to reimplement with Rust a backend utility.
+    const participationCount = 100;
     const participationOutputs = [];
     
-    // Variables to track the winner
-    let highestScore = -1n; // Use BigInt for comparison, start with a value lower than any possible score
-    let highestScoreCommitmentHex = ""; // This will store the winner's commitment
+    let highestScore = -1n;
+    let highestScoreCommitmentHex = "";
 
     for (let i = 0; i < participationCount; i++) {
         const participant = mockChain.newParty(`DynamicPlayer${i + 1}`);
-        
-        // 1. Generate a random score for the participant
-        const score = BigInt(Math.floor(Math.random() * 10000)); // Random score between 0 and 9999
-        
+        const score = BigInt(Math.floor(Math.random() * 10000));
         const solverStr = `player${i + 1}-solver`;
         const logsStr = `logs${i + 1}`;
         const commitmentHex = uint8ArrayToHex(blake2b256(
             new Uint8Array([...stringToBytes("utf8", solverStr), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logsStr), ...secret])
         ));
         
-        // 2. Check if this participant has the highest score so far and store their commitment
         if (score > highestScore) {
             highestScore = score;
             highestScoreCommitmentHex = commitmentHex;
         }
 
-        // 3. Generate two additional random scores for the R9 register
         const r9_score2 = BigInt(Math.floor(Math.random() * 10000));
         const r9_score3 = BigInt(Math.floor(Math.random() * 10000));
         const r9_score4 = BigInt(Math.floor(Math.random() * 10000));
@@ -251,17 +248,19 @@ describe("Game Resolution (resolve_game)", () => {
         );
     }
     
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
     const participationInputs = participationSubmittedContract.utxos.toArray();
     const gameBox = gameActiveContract.utxos.toArray()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 30), BigInt(participationCount)];
     const gameBoxOutput100 = new OutputBuilder(gameBox.value, gameResolutionContract.address)
       .addTokens(gameBox.assets)
       .setAdditionalRegisters({
-        R4: SPair(SLong(resolutionDeadline), SInt(participationCount)).toHex(),
+        R4: SInt(1).toHex(),
         R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(highestScoreCommitmentHex)!)).toHex(),
-        R6: gameBox.additionalRegisters.R6,
-        R7: gameBox.additionalRegisters.R7,
-        R8: SPair(SColl(SByte, creator.address.getPublicKeys()[0]), SLong(creator_commission_percentage)).toHex(), 
-        R9: SPair(SColl(SByte, creator.address.getPublicKeys()[0]), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+        R6: gameBox.additionalRegisters.R7, // invitedJudges
+        R7: SColl(SLong, newNumericalParams).toHex(),
+        R8: gameBox.additionalRegisters.R5, // creatorInfo
+        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
       });
 
     const currentHeight = mockChain.height;
@@ -287,8 +286,8 @@ describe("Game Resolution (resolve_game)", () => {
     expect(participationResolvedContract.utxos.length, "100 new resolved participation boxes should be created").to.equal(participationCount);
 
     const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
-    const r4 = newResolutionBox.additionalRegisters.R4;
-    expect(r4, "R4 of resolution box should contain the correct participant count").to.equal(SPair(SLong(resolutionDeadline), SInt(participationCount)).toHex());
+    const r7 = newResolutionBox.additionalRegisters.R7;
+    expect(r7, "R7 of resolution box should contain the correct participant count").to.equal(SColl(SLong, newNumericalParams).toHex());
 
     const resolvedBoxes = participationResolvedContract.utxos.toArray();
     for (const inputBox of participationInputs) {
