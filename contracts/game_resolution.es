@@ -133,7 +133,7 @@
   }
 
   // ### Acción 2: Invalidación por Jueces
-  val action2_judgesInvalidate = {
+  /* val action2_judgesInvalidate = {
     if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
       val judgeVotes = CONTEXT.dataInputs
       val requiredVotes =
@@ -185,7 +185,7 @@
         fundsReturnedToPool && deadlineIsExtended && candidateIsReset && gameStateIsPreserved
       } else { false }
     } else { false }
-  }
+  }  */
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
@@ -242,6 +242,6 @@
   }
 
   val game_in_resolution = gameState == 1
-  val actions = action1_includeOmittedParticipation || action2_judgesInvalidate || action3_endGame
+  val actions = action1_includeOmittedParticipation || action3_endGame
   sigmaProp(game_in_resolution && actions)
 }
