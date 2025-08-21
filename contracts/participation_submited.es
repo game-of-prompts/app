@@ -70,7 +70,7 @@
       } 
       else { false }
     } 
-    else {false}
+    else { false }
   }
 
   // ### Acción 2: Transicion a participacion Resuelta mediante game_resolution.es, debido a que el creador omitió esta participacion.
@@ -92,7 +92,7 @@
           val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
           
           // Condición 1: La participación debió ser enviada antes de la fecha límite de resolución.
-          val isBeforeDeadline = SELF.creationInfo._1 < gameDeadline  // TODO ¿Deberia de ser menor o igual?
+          val isBeforeDeadline = SELF.creationInfo._1 < gameDeadline
 
           // No es necesario comprobar que se realiza despues de la fecha límite del juego, ya que se comprueba que el script del juego sea del estado "Resolved" (1).
           

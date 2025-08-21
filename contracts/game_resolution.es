@@ -57,8 +57,8 @@
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
 
-  val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline
   val isAfterResolutionDeadline = HEIGHT >= resolutionDeadline
+  val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline
 
   // =================================================================
   // === ACCIONES DE GASTO
