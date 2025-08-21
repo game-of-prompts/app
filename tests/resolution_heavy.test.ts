@@ -57,7 +57,6 @@ describe("Game Resolution (resolve_game)", () => {
   let gameNftId: string;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
-  const resolutionDeadline = BigInt(deadlineBlock + 30); // JUDGE_PERIOD
   const creatorStake = 2_000_000_000n;
   const creator_commission_percentage = 10n;
 
@@ -157,7 +156,7 @@ describe("Game Resolution (resolve_game)", () => {
     // --- Game Resolution Box Output ---
     const creatorPkBytes = creator.address.getPublicKeys()[0];
     const gameBox = gameActiveContract.utxos.toArray()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 30), 2n];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 40), 2n];
     const gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
       .addTokens(gameBox.assets)
       .setAdditionalRegisters({
@@ -251,7 +250,7 @@ describe("Game Resolution (resolve_game)", () => {
     const creatorPkBytes = creator.address.getPublicKeys()[0];
     const participationInputs = participationSubmittedContract.utxos.toArray();
     const gameBox = gameActiveContract.utxos.toArray()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 30), BigInt(participationCount)];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, BigInt(mockChain.height + 40), BigInt(participationCount)];
     const gameBoxOutput100 = new OutputBuilder(gameBox.value, gameResolutionContract.address)
       .addTokens(gameBox.assets)
       .setAdditionalRegisters({
