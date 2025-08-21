@@ -36,7 +36,7 @@
   val spentInValidGameResolution = {
     val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_active.es' es la primera entrada.
 
-    if (gameBoxCandidate.R4[Int].get == 1) {
+    if (gameBoxCandidate.R4[Int].get == 0) {  // Game state is "Active" (0)
       val gameBoxIsPlausible =
         gameBoxCandidate.tokens.size == 1 &&
         gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
@@ -77,7 +77,7 @@
   val spentAsOmitted = {
     val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_resolution.es' es la primera entrada.
 
-    if (gameBoxCandidate.R4[Int].get == 2) {
+    if (gameBoxCandidate.R4[Int].get == 1) {  // Game state is "Resolved" (1)
       val gameBoxIsPlausible =
         gameBoxCandidate.tokens.size == 1 &&
         gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
