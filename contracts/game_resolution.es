@@ -107,6 +107,8 @@
         val gameBoxIsRecreatedCorrectly = {
           recreatedGameBox.propositionBytes == SELF.propositionBytes &&
           recreatedGameBox.R4[Int].get == gameState &&
+          recreatedGameBox.tokens.size == 1 &&
+          recreatedGameBox.tokens(0)._1 == gameNftId &&
           recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
           recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
           recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&  // The game deadline remains the same
@@ -126,10 +128,7 @@
           outBox.R6[Coll[Byte]].get == submittedPBox.R6[Coll[Byte]].get &&
           outBox.R7[Coll[Byte]].get == submittedPBox.R7[Coll[Byte]].get &&
           outBox.R8[Coll[Byte]].get == submittedPBox.R8[Coll[Byte]].get &&
-          outBox.R9[Coll[Long]].get == submittedPBox.R9[Coll[Long]].get &&
-          outBox.tokens.size == 1 &&
-          outBox.tokens(0)._1 == gameNftId &&
-          outBox.tokens(0)._2 == 1L
+          outBox.R9[Coll[Long]].get == submittedPBox.R9[Coll[Long]].get
         })
         
         gameBoxIsRecreatedCorrectly && participationIsRecreated
