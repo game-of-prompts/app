@@ -33,7 +33,7 @@
     
     // 3. Verificar que el período de resolución/juicio ha terminado.
     //    La fecha límite para la resolución se encuentra en el R4 de las cajas de resolución.
-    val resolutionDeadline = mainGameBox.R4[(Long, Int)].get._1
+    val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
     val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
 
     // Se deben cumplir las dos condiciones para que el gasto sea válido.

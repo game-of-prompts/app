@@ -58,6 +58,7 @@ describe("Game Finalization (end_game)", () => {
   const developer = mockChain.addParty(devErgoTree, "Developer");
 
   // --- Constantes del Juego para la Prueba ---
+  const deadline = 800_050;
   const resolutionDeadline = mockChain.height + 100;
   const creatorStake = 2_000_000n;
   const participationFee = 100_000_000n;
@@ -89,8 +90,7 @@ describe("Game Finalization (end_game)", () => {
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
-    // FIX: Dar fondos al resolver para que pueda pagar las tasas de transacción.
-    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE }); // 1 ERG
+    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
     // Crear y distribuir el Game NFT
     gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
@@ -104,10 +104,10 @@ describe("Game Finalization (end_game)", () => {
         ergoTree: gameResolutionErgoTree.toHex(),
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
-            R4: SPair(SLong(resolutionDeadline), SInt(0)).toHex(),
+            R4: SInt(1).toHex(), // Estado: Resolución
             R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
             R6: SColl(SColl(SByte), []).toHex(),
-            R7: SColl(SLong, [BigInt(resolutionDeadline - 50), creatorStake, participationFee]).toHex(),
+            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
             R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
             R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
@@ -145,8 +145,6 @@ describe("Game Finalization (end_game)", () => {
     const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
-
-    // console.log(`Prize Pool: ${prizePool/1_000_000n}, Resolver Commission: ${resolverCommission/1_000_000n}, Dev Commission: ${devCommission/1_000_000n}, Winner Base Prize: ${winnerBasePrize/1_000_000n}`);
     
     const finalWinnerPrize = winnerBasePrize;
     const finalResolverPayout = creatorStake + resolverCommission;
@@ -166,8 +164,6 @@ describe("Game Finalization (end_game)", () => {
     // --- Assert ---
     expect(mockChain.execute(transaction, { signers: [resolver] })).to.be.true;
 
-    // El balance final del resolver será su fondo inicial + pago - tasa - cambio.
-    // Como el cálculo exacto del cambio es complejo, verificamos los otros balances que son deterministas.
     expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
     expect(creator.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
@@ -186,7 +182,6 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Act ---
     const transaction = new TransactionBuilder(mockChain.height)
-      // FIX: Incluir las UTXOs del resolver para cubrir la tasa de transacción.
       .from([gameBox, ...resolver.utxos.toArray()])
       .to(new OutputBuilder(SAFE_MIN_BOX_VALUE, winner.address))
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
@@ -194,7 +189,6 @@ describe("Game Finalization (end_game)", () => {
       .build();
 
     // --- Assert ---
-    // La ejecución del contrato fallará, pero la construcción de la tx es ahora posible.
     expect(mockChain.execute(transaction, { signers: [resolver], throw: false })).to.be.false;
 
     expect(winner.balance.nanoergs).to.equal(0n);

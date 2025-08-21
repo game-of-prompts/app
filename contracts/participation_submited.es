@@ -36,83 +36,85 @@
   val spentInValidGameResolution = {
     val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_active.es' es la primera entrada.
 
-    // Verificación de que la caja del juego es plausible.
-    val gameBoxIsPlausible =
-      gameBoxCandidate.tokens.size == 1 &&
-      gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
-      gameBoxCandidate.R4[(Coll[Byte], Long)].isDefined &&
-      gameBoxCandidate.R5[Coll[Byte]].isDefined &&
-      gameBoxCandidate.R7[Coll[Long]].isDefined &&
-      gameBoxCandidate.R7[Coll[Long]].get.size == 3
+    if (gameBoxCandidate.R4[Int].get == 1) {
+      val gameBoxIsPlausible =
+        gameBoxCandidate.tokens.size == 1 &&
+        gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
+        gameBoxCandidate.R5[(Coll[Byte], Long)].isDefined &&
+        gameBoxCandidate.R6[Coll[Byte]].isDefined &&
+        gameBoxCandidate.R8[Coll[Long]].isDefined &&
+        gameBoxCandidate.R8[Coll[Long]].get.size == 3
 
-    if (gameBoxIsPlausible) {
-        val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
-        
-        // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
-        val isAfterDeadline = HEIGHT >= gameDeadline
-        
-        // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
-        val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
-          // La nueva caja debe tener el script de la siguiente fase.
-          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-          // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
-          outBox.value == SELF.value &&
-          outBox.tokens == SELF.tokens &&
-          outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
-          outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
-          outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
-          outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
-          outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
-          outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
-        }
-        
-        isAfterDeadline && isRecreatedCorrectly
-    } else {
-        false
-    }
+      if (gameBoxIsPlausible) {
+          val gameDeadline = gameBoxCandidate.R8[Coll[Long]].get(0)
+          
+          // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
+          val isAfterDeadline = HEIGHT >= gameDeadline
+          
+          // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
+          val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
+            // La nueva caja debe tener el script de la siguiente fase.
+            blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+            // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
+            outBox.value == SELF.value &&
+            outBox.tokens == SELF.tokens &&
+            outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
+            outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
+            outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
+            outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
+            outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
+            outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
+          }
+          
+          isAfterDeadline && isRecreatedCorrectly
+      } 
+      else { false }
+    } 
+    else {false}
   }
 
-  // ### Acción 2: Transicion a participacion Resuelta mediante game_resolution.es o game_resolution_no_creator.es, debido a que el creador omitió esta participacion.
+  // ### Acción 2: Transicion a participacion Resuelta mediante game_resolution.es, debido a que el creador omitió esta participacion.
   val spentAsOmitted = {
     val gameBoxCandidate = INPUTS(0) // La caja del juego 'game_resolution.es' es la primera entrada.
 
-    // Verificación de que la caja del juego es plausible.
-    val gameBoxIsPlausible =
-      gameBoxCandidate.tokens.size == 1 &&
-      gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
-      gameBoxCandidate.R4[(Long, Int)].isDefined &&
-      gameBoxCandidate.R5[(Coll[Byte], Coll[Byte])].isDefined &&
-      gameBoxCandidate.R6[Coll[Coll[Byte]]].isDefined &&
-      gameBoxCandidate.R7[Coll[Long]].isDefined &&
-      gameBoxCandidate.R7[Coll[Long]].get.size == 3 &&
-      gameBoxCandidate.R8[(Coll[Byte], Long)].isDefined &&
-      gameBoxCandidate.R9[(Coll[Byte], Coll[Byte])].isDefined
+    if (gameBoxCandidate.R4[Int].get == 2) {
+      val gameBoxIsPlausible =
+        gameBoxCandidate.tokens.size == 1 &&
+        gameBoxCandidate.tokens(0)._1 == gameNftIdInSelf &&
+        gameBoxCandidate.R5[(Coll[Byte], Coll[Byte])].isDefined &&
+        gameBoxCandidate.R6[Coll[Coll[Byte]]].isDefined &&
+        gameBoxCandidate.R7[Coll[Long]].isDefined &&
+        gameBoxCandidate.R7[Coll[Long]].get.size == 5 &&
+        gameBoxCandidate.R8[(Coll[Byte], Long)].isDefined &&
+        gameBoxCandidate.R9[(Coll[Byte], Coll[Byte])].isDefined
 
-    if (gameBoxIsPlausible) {
-        val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
-        
-        // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
-        val isAfterDeadline = HEIGHT >= gameDeadline
-        
-        // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
-        val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
-          // La nueva caja debe tener el script de la siguiente fase.
-          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-          // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
-          outBox.value == SELF.value &&
-          outBox.tokens == SELF.tokens &&
-          outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
-          outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
-          outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
-          outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
-          outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
-          outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
-        }
-        
-        isAfterDeadline && isRecreatedCorrectly
-    } else {
-        false
+      if (gameBoxIsPlausible) {
+          val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
+          
+          // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
+          val isAfterDeadline = HEIGHT >= gameDeadline
+          
+          // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
+          val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
+            // La nueva caja debe tener el script de la siguiente fase.
+            blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+            // Y debe ser idéntica en todo lo demás (valor, registros, tokens).
+            outBox.value == SELF.value &&
+            outBox.tokens == SELF.tokens &&
+            outBox.R4[Coll[Byte]].get == SELF.R4[Coll[Byte]].get &&
+            outBox.R5[Coll[Byte]].get == SELF.R5[Coll[Byte]].get &&
+            outBox.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get &&
+            outBox.R7[Coll[Byte]].get == SELF.R7[Coll[Byte]].get &&
+            outBox.R8[Coll[Byte]].get == SELF.R8[Coll[Byte]].get &&
+            outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
+          }
+          
+          isAfterDeadline && isRecreatedCorrectly
+      } else {
+          false
+      }
     }
+    else { false }
   }
 
   // ### Acción 3: Reembolso por Cancelación de Juego
@@ -123,7 +125,7 @@
 
       val correctGame = gameBoxInData.tokens.size > 0 &&
                         gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
-                        gameBoxInData.R5[Coll[Byte]].isDefined
+                        gameBoxInData.R6[Coll[Byte]].isDefined
 
       val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
         outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
