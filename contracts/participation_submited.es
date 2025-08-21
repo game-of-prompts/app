@@ -91,8 +91,10 @@
       if (gameBoxIsPlausible) {
           val gameDeadline = gameBoxCandidate.R7[Coll[Long]].get(0)
           
-          // Condición 1: La transacción debe ocurrir después de la fecha límite del juego.
-          val isAfterDeadline = HEIGHT >= gameDeadline
+          // Condición 1: La participación debió ser enviada antes de la fecha límite de resolución.
+          val isBeforeDeadline = SELF.creationInfo._1 < gameDeadline  // TODO ¿Deberia de ser menor o igual?
+
+          // No es necesario comprobar que se realiza despues de la fecha límite del juego, ya que se comprueba que el script del juego sea del estado "Resolved" (1).
           
           // Condición 2: La caja debe ser recreada con el nuevo script 'participation_resolved.es'.
           val isRecreatedCorrectly = OUTPUTS.exists { (outBox: Box) =>
@@ -109,7 +111,7 @@
             outBox.R9[Coll[Long]].get == SELF.R9[Coll[Long]].get
           }
           
-          isAfterDeadline && isRecreatedCorrectly
+          isBeforeDeadline && isRecreatedCorrectly
       } else {
           false
       }

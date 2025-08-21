@@ -71,7 +71,7 @@
       val currentCandidateBox = CONTEXT.dataInputs(0)
 
       val pBoxIsValid = blake2b256(submittedPBox.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH &&
-                        submittedPBox.R6[Coll[Byte]].get == gameNftId && submittedPBox.creationInfo._1 < deadline
+                        submittedPBox.R6[Coll[Byte]].get == gameNftId // No se comprueba que fuera creada antes de la resolución, ya que se presupone que lo cubre la acción 2 del script de participación enviada.
 
       val candidateDataInputIsValid = currentCandidateBox.R5[Coll[Byte]].get == winnerCandidateCommitment &&
                                       blake2b256(currentCandidateBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
