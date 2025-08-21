@@ -82,7 +82,7 @@
       val participantOutputs = OUTPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && box.R6[Coll[Byte]].get == gameNftId })
 
       if (sIsCorrectlyRevealed && transitionsToResolutionScript && participantInputs.size == participantOutputs.size) {
-        val initialFoldState = (-1L, (Coll[Byte](), 0)) // (maxScore, winnerCommitment, validParticipantsCount)
+        val initialFoldState = (-1L, (Coll[Byte](), 0L)) // (maxScore, winnerCommitment, validParticipantsCount)
 
         val foldResult = participantInputs.fold(initialFoldState, { 
           (acc: (Long, (Coll[Byte], Long)), pBox: Box) => {
