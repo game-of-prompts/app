@@ -46,6 +46,7 @@
   val numericalParams = SELF.R7[Coll[Long]].get
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
+  val participationFee = numericalParams(2)
   val resolutionDeadline = numericalParams(3)
   val resolvedCounter = numericalParams(4)
 
@@ -108,7 +109,11 @@
           recreatedGameBox.R4[Int].get == gameState &&
           recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
           recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
-          recreatedGameBox.R7[Coll[Long]].get == numericalParams.updated(4, resolvedCounter + 1) && // Increment the resolved counter
+          recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&  // The game deadline remains the same
+          recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&  // The creator's stake remains the same
+          recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&  // The participation fee remains the same
+          recreatedGameBox.R7[Coll[Long]].get(3) == resolutionDeadline && // The resolution deadline remains the same
+          recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter + 1 && // The resolved counter remains the same
           recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
           recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get  // The game provenance remains the same
         }
