@@ -100,7 +100,8 @@ describe("Omitted Participation Inclusion", () => {
         winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
         omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
         
-        const numericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
+        const game_deadline = 700_700n;
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
