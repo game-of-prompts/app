@@ -160,7 +160,7 @@
               resolutionBox.R7[Coll[Long]].get(0) == deadline &&
               resolutionBox.R7[Coll[Long]].get(1) == creatorStake &&
               resolutionBox.R7[Coll[Long]].get(2) == participationFee &&
-              resolutionBox.R7[Coll[Long]].get(3) == HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R7[Coll[Long]].get(3) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R7[Coll[Long]].get(4) == validParticipantsCounter &&
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
