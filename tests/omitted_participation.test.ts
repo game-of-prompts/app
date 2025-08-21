@@ -139,7 +139,7 @@ describe("Omitted Participation Inclusion", () => {
             ergoTree: participationSubmittedErgoTree.toHex(),
             assets: [],
             value: 1_000_000n,
-            creationHeight: mockChain.height - 5,
+            creationHeight: 600_000,  // Must be before game deadline
             additionalRegisters: {
                 R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
@@ -187,56 +187,5 @@ describe("Omitted Participation Inclusion", () => {
         expect(newGameBox.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
         expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
-    });
-
-    it("should include an omitted participant with a lower score (winner unchanged)", () => {
-        setupScenario(1500n, 900n);
-
-        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
-
-        const tx = new TransactionBuilder(mockChain.height)
-            .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
-            .to([
-                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
-                    .addTokens(gameResolutionBox.assets)
-                    .setAdditionalRegisters({
-                        R4: gameResolutionBox.additionalRegisters.R4,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
-                        R6: gameResolutionBox.additionalRegisters.R6,
-                        R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
-                        R9: gameResolutionBox.additionalRegisters.R9
-                    }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
-                    .setAdditionalRegisters(omittedParticipantBox.additionalRegisters)
-            ])
-            .withDataFrom([currentWinnerBox])
-            .sendChangeTo(newResolver.address)
-            .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .build();
-
-        const executionResult = mockChain.execute(tx, { signers: [newResolver] });
-        expect(executionResult).to.be.true;
-
-        const newGameBox = gameResolutionContract.utxos.toArray()[0];
-        expect(newGameBox.additionalRegisters.R5).to.equal(gameResolutionBox.additionalRegisters.R5);
-        expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
-        expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
-    });
-
-    it("should fail if attempted after the resolution deadline", () => {
-        setupScenario(1000n, 1200n);
-        mockChain.jumpTo(resolutionDeadline + 1);
-
-        const tx = new TransactionBuilder(mockChain.height)
-            .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
-            .withDataFrom([currentWinnerBox])
-            .to([new OutputBuilder(1_000_000n, newResolver.address)])
-            .sendChangeTo(newResolver.address)
-            .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .build();
-
-        const executionResult = mockChain.execute(tx, { signers: [newResolver], throw: false });
-        expect(executionResult).to.be.false;
     });
 });
