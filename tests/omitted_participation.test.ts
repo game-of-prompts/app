@@ -57,8 +57,12 @@ describe("Omitted Participation Inclusion", () => {
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
 
     let gameResolutionBox: Box;
-    let currentWinnerBox: Box; // The already resolved box
-    let omittedParticipantBox: Box; // The submitted box to be included
+    let currentWinnerBox: Box;
+    let omittedParticipantBox: Box;
+    
+    // Commitments accesibles globalmente en el test
+    let winnerCommitment: Uint8Array;
+    let omittedCommitment: Uint8Array;
 
     beforeEach(() => {
         mockChain = new MockChain({ height: 800_000 });
@@ -91,20 +95,20 @@ describe("Omitted Participation Inclusion", () => {
         participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
     });
 
-    // Helper function to set up the scenario, allowing scores to be varied
     const setupScenario = (winnerScore: bigint, omittedScore: bigint) => {
-        const winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
-        const omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
-        const numericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n]; // Includes resolvedCounter = 1
+        // Asignar a las variables globales
+        winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
+        omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
+        
+        const numericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
 
-        // 1. Create the GameResolution box
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
             creationHeight: mockChain.height - 10,
             additionalRegisters: {
-                R4: SInt(1).toHex(), // State: Resolved
+                R4: SInt(1).toHex(),
                 R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
                 R6: SColl(SColl(SByte), []).toHex(),
                 R7: SColl(SLong, numericalParams).toHex(),
@@ -114,7 +118,6 @@ describe("Omitted Participation Inclusion", () => {
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
-        // 2. Create the already-resolved box for the current winner (this will be the dataInput)
         participationResolvedContract.addUTxOs({
             ergoTree: participationResolvedErgoTree.toHex(),
             value: 1_000_000n,
@@ -131,7 +134,6 @@ describe("Omitted Participation Inclusion", () => {
         });
         currentWinnerBox = participationResolvedContract.utxos.toArray()[0];
 
-        // 3. Create the submitted (omitted) box
         participationSubmittedContract.addUTxOs({
             ergoTree: participationSubmittedErgoTree.toHex(),
             assets: [],
@@ -152,28 +154,23 @@ describe("Omitted Participation Inclusion", () => {
     };
 
     it("should include an omitted participant who becomes the new winner", () => {
-        setupScenario(1000n, 1200n); // Omitted player has a higher score
+        setupScenario(1000n, 1200n);
 
-        const newWinnerCommitment = omittedParticipantBox.additionalRegisters.R5;
-        if (!newWinnerCommitment) throw new Error("New winner commitment is undefined");
-
-        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n]; // Counter incremented
-
+        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
             .to([
-                // Recreated Game Box
                 new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
-                        R4: gameResolutionBox.additionalRegisters.R4, // State preserved
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(newWinnerCommitment.substring(4)))).toHex(),
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                // Newly Resolved Participant Box
                 new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters)
             ])
@@ -186,34 +183,29 @@ describe("Omitted Participation Inclusion", () => {
         expect(executionResult).to.be.true;
 
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
-        expect(newGameBox.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(newWinnerCommitment!.substring(4)))).toHex());
+        expect(newGameBox.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
         expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
     });
 
     it("should include an omitted participant with a lower score (winner unchanged)", () => {
-        setupScenario(1500n, 900n); // Omitted player has a lower score
+        setupScenario(1500n, 900n);
 
-        const currentWinnerCommitment = currentWinnerBox.additionalRegisters.R5;
-        if (!currentWinnerCommitment) throw new Error("Current winner commitment is undefined");
-        
-        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n]; // Counter incremented
+        const updatedNumericalParams: bigint[] = [800_100n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, omittedParticipantBox, ...newResolver.utxos.toArray()])
             .to([
-                // Recreated Game Box
                 new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
-                        R4: gameResolutionBox.additionalRegisters.R4, // State preserved
-                        R5: gameResolutionBox.additionalRegisters.R5, // Winner unchanged
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                // Newly Resolved Participant Box
                 new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters)
             ])
