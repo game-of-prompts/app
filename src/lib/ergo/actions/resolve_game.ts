@@ -5,14 +5,14 @@ import {
     type Box,
     RECOMMENDED_MIN_FEE_VALUE,
     type InputBox,
-    type Amount
+    type Amount,
+    SConstant
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, SString, uint8ArrayToHex, utf8StringToCollByteHex } from '$lib/ergo/utils';
+import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
-import { stringToBytes } from '@scure/base';
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = 40;
@@ -73,9 +73,10 @@ export async function resolve_game(
         throw new Error("Los tokens de prueba de los jueces no coinciden con los jueces invitados en el contrato.");
     }
 
-    // --- 2. Determinar el ganador y el pozo de premios (lógica off-chain) ---
+    // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
     let winnerCandidateCommitment: string | null = null;
+    const validParticipations: ParticipationSubmitted[] = [];
     const participationErgoTree = getGopParticipationSubmittedErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
     if (!participationErgoTreeBytes) {
@@ -89,17 +90,20 @@ export async function resolve_game(
 
         // Verificación 1: Script de Participación Correcto
         if (uint8ArrayToHex(fleetBlake2b256(hexToBytes(pBox.ergoTree) ?? "")) !== participationScriptHash) {
-            throw new Error(`La participación ${p.boxId} tiene un script incorrecto.`);
+            console.warn(`La participación ${p.boxId} tiene un script incorrecto. Será omitida.`);
+            continue;
         }
 
         // Verificación 2: Referencia al NFT del Juego
         if (p.gameNftId !== game.box.assets[0].tokenId) {
-            throw new Error(`La participación ${p.boxId} no apunta al NFT de este juego.`);
+            console.warn(`La participación ${p.boxId} no apunta al NFT de este juego. Será omitida.`);
+            continue;
         }
 
         // Verificación 3: Pago de la Tarifa de Participación
         if (BigInt(pBox.value) < game.participationFeeNanoErg) {
-            throw new Error(`La participación ${p.boxId} no cumple con la tarifa mínima de ${game.participationFeeNanoErg} nanoERGs.`);
+            console.warn(`La participación ${p.boxId} no cumple con la tarifa mínima. Será omitida.`);
+            continue;
         }
 
         // Simulación de la validación de la puntuación
@@ -122,9 +126,12 @@ export async function resolve_game(
         }
 
         if (!scoreIsValid) {
-            throw new Error(`No se pudo encontrar una puntuación válida para la participación ${p.boxId} con el secreto proporcionado.`);
+            console.warn(`No se pudo encontrar una puntuación válida para la participación ${p.boxId}. Será omitida.`);
+            continue;
         }
         
+        validParticipations.push(p);
+
         // Si la participación es válida, se considera para determinar al ganador.
         if (actualScore > maxScore) {
             maxScore = actualScore;
@@ -133,23 +140,22 @@ export async function resolve_game(
     }
 
     if (!winnerCandidateCommitment) {
-        throw new Error("No se pudo determinar un ganador.");
+        throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
     }
 
     // --- 3. Construir las Salidas de la Transacción ---
 
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
-    const resolvedCounter = participations.length;
+    const resolvedCounter = BigInt(validParticipations.length);
 
-    console.log("Resolved counter: ", resolvedCounter)
-    
-    const judgesColl = participatingJudgesTokens
-        .map(judgeTokenId => {
-            const bytes = hexToBytes(judgeTokenId);
-            return bytes ? [...bytes] : null;
-        })
-        .filter((item): item is number[] => item !== null);
+    const newNumericalParams = [
+        BigInt(game.deadlineBlock), 
+        game.creatorStakeNanoErg, 
+        game.participationFeeNanoErg,
+        resolutionDeadline,
+        resolvedCounter
+    ];
     
     const resolutionBoxOutput = new OutputBuilder(
         game.creatorStakeNanoErg,
@@ -157,32 +163,32 @@ export async function resolve_game(
     )
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
-        R4: SPair(SLong(resolutionDeadline), SInt(resolvedCounter)).toHex(),
+        R4: SInt(1).toHex(), // Estado: Resuelto (1)
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-        R6: SColl(SColl(SByte), judgesColl).toHex(), // R6 contiene los tokens de los jueces
-        R7: SColl(SLong, [BigInt(game.deadlineBlock), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
+        R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
+        R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
-        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
+        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SConstant(game.box.additionalRegisters.R9)).toHex()
     });
     
     const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
-    const resolvedParticipationOutputs = participations.map((p: ParticipationSubmitted) => {
-        const pBox = parseBox(p.box)
-
+    // MODIFICACIÓN: Se usan las participaciones VALIDADAS y se copian los registros con SConstant.
+    const resolvedParticipationOutputs = validParticipations.map((p: ParticipationSubmitted) => {
+        const pBox = parseBox(p.box);
         return new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
             .setAdditionalRegisters({
-                R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
-                R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
-                R6: SColl(SByte, hexToBytes(p.gameNftId) ?? "").toHex(),
-                R7: utf8StringToCollByteHex(p.solverId_String ?? ""), 
-                R8: SColl(SByte, hexToBytes(p.hashLogs_Hex) ?? "").toHex(),
-                R9: SColl(SLong, p.scoreList.map(s => BigInt(s))).toHex()
+                R4: SConstant(pBox.additionalRegisters.R4),
+                R5: SConstant(pBox.additionalRegisters.R5),
+                R6: SConstant(pBox.additionalRegisters.R6),
+                R7: SConstant(pBox.additionalRegisters.R7),
+                R8: SConstant(pBox.additionalRegisters.R8),
+                R9: SConstant(pBox.additionalRegisters.R9),
             });
     });
 
     // --- 4. Construir y Enviar la Transacción ---
     const utxos = await ergo.get_utxos();
-    const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box)), ...utxos];
+    const inputs = [parseBox(game.box), ...validParticipations.map(p => parseBox(p.box)), ...utxos];
     
     try {
         const unsignedTransaction = new TransactionBuilder(currentHeight)
@@ -200,6 +206,7 @@ export async function resolve_game(
         return txId;
         
     } catch (error) {
-        console.warn(error)
+        console.error("Error al construir o enviar la transacción:", error);
+        throw error;
     }
 }
