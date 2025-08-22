@@ -2,18 +2,18 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    SAFE_MIN_BOX_VALUE
+    SAFE_MIN_BOX_VALUE,
+    SConstant
 } from '@fleet-sdk/core';
-import { SColl, SByte, SLong } from '@fleet-sdk/serializer';
-import { hexToBytes, parseBox, SString, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameActive } from '$lib/common/game'; // <-- Tipo de entrada actualizado
+import { SColl, SByte, SLong, SInt } from '@fleet-sdk/serializer';
+import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
+import { type GameActive } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameCancellationErgoTreeHex } from '../contract';
 
 // --- Constantes del contrato game_cancellation.es ---
 const STAKE_DENOMINATOR = 5n; // Usar BigInt para consistencia
-const COOLDOWN_IN_BLOCKS_BASE = 30; // Cooldown definido en el contrato
-const COOLDOWN_IN_BLOCKS_USED = COOLDOWN_IN_BLOCKS_BASE + 10;
+const COOLDOWN_IN_BLOCKS = 30; // Cooldown base definido en el contrato
 
 /**
  * Inicia la cancelación de un juego activo, haciendo la transición de GameActive -> GameCancellation.
@@ -62,7 +62,7 @@ export async function cancel_game_before_deadline(
     
     // La dirección/ErgoTree de la nueva caja será la del script de cancelación.
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS_USED);
+    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
 
     // SALIDA(0): La nueva caja de cancelación (`game_cancellation.es`)
     const cancellationBoxOutput = new OutputBuilder(
@@ -71,11 +71,16 @@ export async function cancel_game_before_deadline(
     )
     .addTokens(gameBoxToSpend.assets) // Preservar el NFT del juego
     .setAdditionalRegisters({
-        // Estructura de registros según `game_cancellation.es`
-        R4: SLong(newUnlockHeight).toHex(),
-        R5: SColl(SByte, secretS_bytes).toHex(),
-        R6: SLong(newCreatorStake).toHex(),
-        R7: SString(game.content.rawJsonString) // Guardar detalles del juego como info de solo lectura
+        // R4: Estado del juego (2: Cancelado)
+        R4: SInt(2).toHex(),
+        // R5: Altura de bloque para el siguiente drenaje
+        R5: SLong(newUnlockHeight).toHex(),
+        // R6: El secreto 'S' revelado
+        R6: SColl(SByte, secretS_bytes).toHex(),
+        // R7: El stake restante del creador
+        R7: SLong(newCreatorStake).toHex(),
+        // R8: Información inmutable del juego (transferida desde R9 de la caja activa)
+        R8: SConstant(gameBoxToSpend.additionalRegisters.R9)
     });
 
     // SALIDA(1): La penalización para el reclamante
@@ -103,7 +108,7 @@ export async function cancel_game_before_deadline(
         return txId;
     }
     catch (error) {
-        console.warn(error)
+        console.warn("Error al firmar o enviar la transacción de cancelación:", error);
         throw error;
     }
 }
