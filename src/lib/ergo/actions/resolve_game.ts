@@ -9,7 +9,7 @@ import {
     SConstant
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
+import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, utf8StringToCollByteHex } from '$lib/ergo/utils';
 import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
@@ -178,12 +178,12 @@ export async function resolve_game(
         const pBox = parseBox(p.box);
         return new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
             .setAdditionalRegisters({
-                R4: SConstant(pBox.additionalRegisters.R4),
-                R5: SConstant(pBox.additionalRegisters.R5),
-                R6: SConstant(pBox.additionalRegisters.R6),
-                R7: SConstant(pBox.additionalRegisters.R7),
-                R8: SConstant(pBox.additionalRegisters.R8),
-                R9: SConstant(pBox.additionalRegisters.R9),
+                R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
+                R6: SColl(SByte, hexToBytes(p.gameNftId) ?? "").toHex(),
+                R7: utf8StringToCollByteHex(p.solverId_String ?? ""), 
+                R8: SColl(SByte, hexToBytes(p.hashLogs_Hex) ?? "").toHex(),
+                R9: SColl(SLong, p.scoreList.map(s => BigInt(s))).toHex()
             });
     });
 
