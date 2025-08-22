@@ -217,8 +217,8 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
         const r7Array = getArrayFromValue(box.additionalRegisters.R7?.renderedValue);
         const numericalParams = parseLongColl(r7Array);
         if (!numericalParams || numericalParams.length < 5) throw new Error("R7 does not contain the 5 expected numerical parameters.");
+        console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
         const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
-        if (isNaN(resolutionDeadline) || isNaN(resolvedCounter)) throw new Error("Could not parse resolution parameters from R7.");
 
         // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
