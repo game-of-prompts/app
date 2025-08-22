@@ -5,8 +5,8 @@ import {
     type InputBox,
     SConstant
 } from '@fleet-sdk/core';
-import { SColl, SByte, SPair, SLong } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address } from '$lib/ergo/utils';
+import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
+import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address, utf8StringToCollByteHex } from '$lib/ergo/utils';
 import { type GameResolution, type ParticipationSubmitted, type ParticipationResolved } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex } from '../contract';
@@ -90,7 +90,7 @@ export async function include_omitted_participation(
     )
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
-        R4: SConstant(game.box.additionalRegisters.R4), // Preservar estado (1: Resolved)
+        R4: SInt(1).toHex(), // Preservar estado (1: Resolved)
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(newWinnerCommitment)!)),
         R6: SConstant(game.box.additionalRegisters.R6), // Preservar jueces
         R7: SColl(SLong, numericalParams).toHex(), // Actualizar contador en R7
@@ -103,9 +103,12 @@ export async function include_omitted_participation(
     const pBox = parseBox(omittedParticipation.box);
     const resolvedParticipationOutput = new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
         .setAdditionalRegisters({
-            R4: SConstant(pBox.additionalRegisters.R4), R5: SConstant(pBox.additionalRegisters.R5),
-            R6: SConstant(pBox.additionalRegisters.R6), R7: SConstant(pBox.additionalRegisters.R7),
-            R8: SConstant(pBox.additionalRegisters.R8), R9: SConstant(pBox.additionalRegisters.R9),
+                R4: SColl(SByte, hexToBytes(omittedParticipation.playerPK_Hex) ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex) ?? "").toHex(),
+                R6: SColl(SByte, hexToBytes(omittedParticipation.gameNftId) ?? "").toHex(),
+                R7: utf8StringToCollByteHex(omittedParticipation.solverId_String ?? ""), 
+                R8: SColl(SByte, hexToBytes(omittedParticipation.hashLogs_Hex) ?? "").toHex(),
+                R9: SColl(SLong, omittedParticipation.scoreList.map(s => BigInt(s))).toHex()
         });
 
     // --- 4. Construir y Enviar la Transacción ---
