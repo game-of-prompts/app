@@ -23,60 +23,69 @@ import {
     getGopGameCancellationErgoTreeHex,
     getGopParticipationSubmittedErgoTreeHex,
     getGopParticipationResolvedErgoTreeHex
-} from "./contract"; // Se asume que este archivo exporta las funciones para obtener los hashes de los scripts
+} from "./contract"; // Assumes this file exports functions to get script hashes
 import {
     hexToUtf8,
     parseCollByteToHex,
     parseLongColl,
     parseGameContent
-} from "./utils"; // Se asume que este archivo contiene las utilidades de parseo
+} from "./utils"; // Assumes this file contains parsing utilities
 
 // =================================================================
-// === ESTADO: GAME ACTIVE
+// === STATE: GAME ACTIVE
 // =================================================================
 
 /**
- * Parsea una Box de la blockchain para convertirla en un objeto `GameActive`.
- * Esta función está diseñada específicamente para cajas que siguen el script `game_active.es`.
- * @param box La caja raw obtenida del explorador.
- * @returns Un objeto `GameActive` o `null` si la caja no tiene el formato esperado.
+ * Parses a blockchain Box into a `GameActive` object.
+ * This function is specifically designed for boxes following the `game_active.es` script.
+ * @param box The raw box obtained from the explorer.
+ * @returns A `GameActive` object or `null` if the box does not match the expected format.
  */
 export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
     try {
         if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
-            console.warn('parseGameActiveBox: invalid contstants');
+            console.warn('parseGameActiveBox: invalid constants');
             return null;
         }
 
         if (!box.assets || box.assets.length === 0) {
-            console.warn(`parseGameActiveBox: Se omitió la caja ${box.boxId} por no tener assets (NFT).`);
+            console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
         const gameId = box.assets[0].tokenId;
 
-        const r4Value = JSON.parse(box.additionalRegisters.R4?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
-        if (!Array.isArray(r4Value) || r4Value.length < 2) throw new Error("R4 no es una tupla válida.");
-        const gameCreatorPK_Hex = parseCollByteToHex(r4Value[0]);
-        const commissionPercentage = parseInt(r4Value[1], 10);
-        if (!gameCreatorPK_Hex || isNaN(commissionPercentage)) throw new Error("No se pudo parsear R4.");
+        // NEW: R4 is now game state, which we can optionally validate.
+        // const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        // if (gameState !== 0) throw new Error("R4 indicates incorrect game state.");
 
-        const secretHash = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
-        if (!secretHash) throw new Error("R5 (secretHash) es inválido o no existe.");
+        // R5 (previously R4): creatorInfo (creator PK, commission)
+        const r5Value = JSON.parse(box.additionalRegisters.R5?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
+        if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
+        const gameCreatorPK_Hex = parseCollByteToHex(r5Value[0]);
+        const commissionPercentage = parseInt(r5Value[1], 10);
+        if (!gameCreatorPK_Hex || isNaN(commissionPercentage)) throw new Error("Could not parse R5.");
 
-        const r6Value = box.additionalRegisters.R6?.renderedValue;
-        const invitedJudges = Array.isArray(r6Value) ? r6Value.map(parseCollByteToHex) : [];
+        // R6 (previously R5): secretHash
+        const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
+        if (!secretHash) throw new Error("R6 (secretHash) is invalid or does not exist.");
 
-        const r7RenderedValue = box.additionalRegisters.R7?.renderedValue;
-        let parsedR7Array: any[] | null = null;
-        if (typeof r7RenderedValue === 'string') {
-            try { parsedR7Array = JSON.parse(r7RenderedValue); } 
-            catch (e) { console.warn(`Could not JSON.parse R7 for ${box.boxId}: ${r7RenderedValue}`); }
-        } else if (Array.isArray(r7RenderedValue)) { parsedR7Array = r7RenderedValue; }
-        const numericalParams = parseLongColl(parsedR7Array);
-        if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
+        // R7 (previously R6): invitedJudges
+        const r7Value = box.additionalRegisters.R7?.renderedValue;
+        const invitedJudges = Array.isArray(r7Value) ? r7Value.map(parseCollByteToHex) : [];
+
+        // R8 (previously R7): numericalParameters
+        const r8RenderedValue = box.additionalRegisters.R8?.renderedValue;
+        let parsedR8Array: any[] | null = null;
+        if (typeof r8RenderedValue === 'string') {
+            try { parsedR8Array = JSON.parse(r8RenderedValue); } 
+            catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
+        } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
+        const numericalParams = parseLongColl(parsedR8Array);
+        if (!numericalParams || numericalParams.length < 3) throw new Error("R8 does not contain the 3 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
 
-        const gameDetailsHex = box.additionalRegisters.R8?.renderedValue;
+        // R9 (previously R8): gameDetailsJsonHex
+        const gameDetailsHex = box.additionalRegisters.R9?.renderedValue;
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
@@ -100,14 +109,15 @@ export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
         return gameActive;
 
     } catch (e) {
-        console.error(`Error al parsear la caja activa ${box.boxId}:`, e);
+        console.error(`Error parsing active game box ${box.boxId}:`, e);
         return null;
     }
 }
 
+
 /**
- * Busca y recupera todos los juegos que se encuentran actualmente en estado "Activo".
- * @returns Un `Promise` que resuelve a un `Map` con los juegos activos, usando el ID del juego como clave.
+ * Searches for and retrieves all games currently in the "Active" state.
+ * @returns A `Promise` that resolves to a `Map` of active games, using the game ID as the key.
  */
 export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
     const games = new Map<string, GameActive>();
@@ -137,7 +147,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
             offset += items.length;
             moreAvailable = items.length === limit;
         } catch (error) {
-            console.error("Excepción al buscar juegos activos:", error);
+            console.error("Exception while fetching active games:", error);
             moreAvailable = false;
         }
     }
@@ -149,97 +159,83 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
 // =================================================================
 
 /**
- * Parsea una Box de la blockchain para convertirla en un objeto `GameResolution`.
- * Esta función está diseñada para ser robusta, manejando `renderedValue` como array,
- * JSON string válido, y string con formato de array pero sin comillas.
- * @param box La caja raw obtenida del explorador.
- * @returns Un objeto `GameResolution` o `null` si la caja no tiene el formato esperado.
+ * Parses a blockchain Box into a `GameResolution` object.
+ * This function is designed to be robust, handling `renderedValue` as an array,
+ * a valid JSON string, or a string formatted as an array without quotes.
+ * @param box The raw box obtained from the explorer.
+ * @returns A `GameResolution` object or `null` if the box does not match the expected format.
  */
 export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null {
     try {
         if (box.ergoTree !== getGopGameResolutionErgoTreeHex()) {
-            console.warn('parseGameResolutionBox: invalid contstants');
+            console.warn('parseGameResolutionBox: invalid constants');
             return null;
         }
 
         if (!box.assets || box.assets.length === 0) {
-            console.warn(`parseGameResolutionBox: Se omitió la caja ${box.boxId} por no tener assets (NFT).`);
+            console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
         const gameId = box.assets[0].tokenId;
 
-        // --- MANEJO ROBUSTO DE REGISTROS ---
 
         const getArrayFromValue = (value: any): any[] | null => {
-            // Caso 1: Ya es un array de JavaScript válido.
-            if (Array.isArray(value)) {
-                return value;
-            }
-
-            // Caso 2: Es un string que necesita ser procesado.
+            if (Array.isArray(value)) return value;
             if (typeof value === 'string') {
                 const trimmed = value.trim();
-
-                // Caso 2a: Maneja strings malformados como `[hex1,hex2]` (sin comillas).
                 if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes('"')) {
                     const inner = trimmed.substring(1, trimmed.length - 1);
-                    if (inner === '') return []; // Maneja el caso de un array vacío "[]"
-                    return inner.split(','); // Devuelve un array de strings, ej: ['hex1', 'hex2']
+                    return inner === '' ? [] : inner.split(',');
                 }
-
-                // Caso 2b: Intenta parsear strings de JSON bien formados.
                 try {
                     return JSON.parse(trimmed);
                 } catch (e) {
-                    console.warn(`No se pudo parsear el string JSON para la caja ${box.boxId}: ${value}`);
+                    console.warn(`Could not parse JSON string for box ${box.boxId}: ${value}`);
                     return null;
                 }
             }
-
-            // Caso 3: No es un array ni un string, por lo tanto es inválido.
             return null;
         };
 
-        // R4: (SLong, SInt) -> resolutionDeadline, resolvedCounter
-        const r4Value = getArrayFromValue(box.additionalRegisters.R4?.renderedValue);
-        if (!r4Value || r4Value.length < 2) throw new Error("R4 no es una tupla válida.");
-        const [resolutionDeadline, resolvedCounter] = [Number(r4Value[0]), Number(r4Value[1])];
-        if (isNaN(resolutionDeadline) || isNaN(resolvedCounter)) throw new Error("No se pudo parsear R4.");
+        // NEW: R4 is game state.
+        // const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        // if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
         
         // R5: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
         const r5Value = getArrayFromValue(box.additionalRegisters.R5?.renderedValue);
-        if (!r5Value || r5Value.length < 2) throw new Error("R5 no es una tupla válida.");
+        if (!r5Value || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
         const revealedS_Hex = parseCollByteToHex(r5Value[0]);
         const winnerCandidateCommitment = parseCollByteToHex(r5Value[1]);
-        if (!revealedS_Hex || !winnerCandidateCommitment) throw new Error("No se pudo parsear R5.");
+        if (!revealedS_Hex || !winnerCandidateCommitment) throw new Error("Could not parse R5.");
         
         // R6: Coll[Coll[Byte]] -> participatingJudges
         const participatingJudges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
             .map(parseCollByteToHex)
             .filter((judge): judge is string => judge !== null && judge !== undefined);
 
-        // R7: Coll[SLong] -> originalDeadline, creatorStakeNanoErg, participationFeeNanoErg
+        // R7: Coll[Long] -> [deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter]
         const r7Array = getArrayFromValue(box.additionalRegisters.R7?.renderedValue);
         const numericalParams = parseLongColl(r7Array);
-        if (!numericalParams || numericalParams.length < 3) throw new Error("R7 no contiene los 3 parámetros numéricos esperados.");
-        const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
+        if (!numericalParams || numericalParams.length < 5) throw new Error("R7 does not contain the 5 expected numerical parameters.");
+        const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
+        if (isNaN(resolutionDeadline) || isNaN(resolvedCounter)) throw new Error("Could not parse resolution parameters from R7.");
 
-        // R8: (Coll[Byte], SLong) -> resolverPK_Hex, resolverCommission
+        // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
-        if (!r8Value || r8Value.length < 2) throw new Error("R8 no es una tupla válida.");
+        if (!r8Value || r8Value.length < 2) throw new Error("R8 is not a valid tuple.");
         const resolverPK_Hex = parseCollByteToHex(r8Value[0]);
         const resolverCommission = parseInt(r8Value[1], 10);
-        if (!resolverPK_Hex || isNaN(resolverCommission)) throw new Error("No se pudo parsear R8.");
+        if (!resolverPK_Hex || isNaN(resolverCommission)) throw new Error("Could not parse R8.");
 
         // R9: (Coll[Byte], Coll[Byte]) -> originalCreatorPK_Hex, gameDetailsHex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
-        if (!r9Value || r9Value.length < 2) throw new Error("R9 no es una tupla válida.");
+        if (!r9Value || r9Value.length < 2) throw new Error("R9 is not a valid tuple.");
         const originalCreatorPK_Hex = parseCollByteToHex(r9Value[0]);
         const gameDetailsHex = r9Value[1];
-        if (!originalCreatorPK_Hex || !gameDetailsHex) throw new Error("No se pudo parsear R9.");
+        if (!originalCreatorPK_Hex || !gameDetailsHex) throw new Error("Could not parse R9.");
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
 
-        // --- CONSTRUCCIÓN DEL OBJETO FINAL ---
+        // --- FINAL OBJECT CONSTRUCTION ---
         
         return {
             platform: new ErgoPlatform(), 
@@ -247,8 +243,8 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
             box, 
             status: GameState.Resolution, 
             gameId,
-            resolutionDeadline, 
-            resolvedCounter, 
+            resolutionDeadline: Number(resolutionDeadline), 
+            resolvedCounter: Number(resolvedCounter), 
             revealedS_Hex, 
             winnerCandidateCommitment, 
             participatingJudges,
@@ -262,28 +258,27 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
             value: BigInt(box.value)
         };
     } catch (e) {
-        console.error(`Error al parsear la caja en resolución ${box.boxId}:`, e);
+        console.error(`Error parsing resolution game box ${box.boxId}:`, e);
         return null;
     }
 }
 
+
 /**
- * Busca y recupera todos los juegos que se encuentran actualmente en estado "Resolución".
- * @returns Un `Promise` que resuelve a un `Map` con los juegos en resolución, usando el ID del juego como clave.
+ * Searches for and retrieves all games currently in the "Resolution" state.
+ * @returns A `Promise` that resolves to a `Map` of games in resolution, using the game ID as the key.
  */
 export async function fetchResolutionGames(): Promise<Map<string, GameResolution>> {
     const games = new Map<string, GameResolution>();
-    // Usamos el TemplateHash para buscar en el explorador de la API.
     const scriptHash = getGopGameResolutionTemplateHash(); 
     
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
-    console.log("Buscando juegos en resolución con el hash de plantilla:", scriptHash);
+    console.log("Searching for resolution games with template hash:", scriptHash);
 
     while (moreAvailable) {
-        // Buscamos cajas no gastadas ('unspent') que coincidan con el script.
         const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
@@ -293,13 +288,12 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
             });
 
             if (!response.ok) {
-                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+                throw new Error(`API response was not OK: ${response.status}`);
             }
             
             const data = await response.json();
             const items: Box[] = data.items || [];
 
-            // Parseamos cada caja encontrada y la añadimos al mapa.
             items.forEach(box => {
                 const game = parseGameResolutionBox(box);
                 if (game) {
@@ -308,15 +302,15 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
             });
 
             offset += items.length;
-            moreAvailable = items.length === limit; // Si obtenemos menos del límite, es la última página.
+            moreAvailable = items.length === limit;
 
         } catch (error) {
-            console.error("Ocurrió una excepción al buscar juegos en resolución:", error);
-            moreAvailable = false; // Detenemos el bucle en caso de error.
+            console.error("An exception occurred while fetching resolution games:", error);
+            moreAvailable = false;
         }
     }
 
-    console.log(`Se encontraron ${games.size} juegos en resolución.`);
+    console.log(`Found ${games.size} games in resolution.`);
     return games;
 }
 
@@ -325,54 +319,54 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
 // =================================================================
 
 /**
- * Parsea una Box para convertirla en un objeto `GameCancellation`.
- * @param box La caja raw del explorador.
- * @returns Un objeto `GameCancellation` o `null`.
+ * Parses a Box into a `GameCancellation` object.
+ * @param box The raw box from the explorer.
+ * @returns A `GameCancellation` object or `null`.
  */
 export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | null {
     try {
         if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
-            console.warn('parseGameCancellationBox: invalid contstants');
+            console.warn('parseGameCancellationBox: invalid constants');
             return null;
         }
 
         if (!box.assets || box.assets.length === 0) return null;
         const gameId = box.assets[0].tokenId;
 
-        const unlockHeight = Number(parseLongColl(box.additionalRegisters.R4?.renderedValue)[0]);
-        const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
-        const currentStakeNanoErg = parseLongColl(box.additionalRegisters.R6?.renderedValue)[0];
-        const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R7?.renderedValue) || ""), box.boxId, box.assets[0]);
 
-        if (unlockHeight === undefined || !revealedS_Hex || currentStakeNanoErg === undefined) throw new Error("Registros inválidos.");
+        const unlockHeight = Number(parseLongColl(box.additionalRegisters.R5?.renderedValue)[0]);
+        const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
+        const currentStakeNanoErg = parseLongColl(box.additionalRegisters.R7?.renderedValue)[0];
+        const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R8?.renderedValue) || ""), box.boxId, box.assets[0]);
+
+        if (unlockHeight === undefined || !revealedS_Hex || currentStakeNanoErg === undefined) throw new Error("Invalid registers.");
 
         return {
             platform: new ErgoPlatform(), boxId: box.boxId, box, status: GameState.Cancelled_Draining,
             gameId, unlockHeight, revealedS_Hex, currentStakeNanoErg, content, value: BigInt(box.value)
         };
     } catch (e) {
-        console.error(`Error al parsear la caja de cancelación ${box.boxId}:`, e);
+        console.error(`Error parsing cancellation box ${box.boxId}:`, e);
         return null;
     }
 }
 
+
 /**
- * Busca y recupera todos los juegos que se encuentran actualmente en estado "Cancelación".
- * @returns Un `Promise` que resuelve a un `Map` con los juegos en cancelación, usando el ID del juego como clave.
+ * Searches for and retrieves all games currently in the "Cancellation" state.
+ * @returns A `Promise` that resolves to a `Map` of games in cancellation, using the game ID as the key.
  */
 export async function fetchCancellationGames(): Promise<Map<string, GameCancellation>> {
     const games = new Map<string, GameCancellation>();
-    // Usamos el TemplateHash para buscar en el explorador de la API.
     const scriptHash = getGopGameCancellationTemplateHash();
     
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
-    console.log("Buscando juegos en cancelación con el hash de plantilla:", scriptHash);
+    console.log("Searching for cancellation games with template hash:", scriptHash);
 
     while (moreAvailable) {
-        // Buscamos cajas no gastadas ('unspent') que coincidan con el script.
         const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
@@ -382,13 +376,12 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
             });
 
             if (!response.ok) {
-                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+                throw new Error(`API response was not OK: ${response.status}`);
             }
             
             const data = await response.json();
             const items: Box[] = data.items || [];
 
-            // Parseamos cada caja encontrada y la añadimos al mapa.
             items.forEach(box => {
                 const game = parseGameCancellationBox(box);
                 if (game) {
@@ -397,15 +390,15 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
             });
 
             offset += items.length;
-            moreAvailable = items.length === limit; // Si obtenemos menos del límite, es la última página.
+            moreAvailable = items.length === limit;
 
         } catch (error) {
-            console.error("Ocurrió una excepción al buscar juegos en cancelación:", error);
-            moreAvailable = false; // Detenemos el bucle en caso de error.
+            console.error("An exception occurred while fetching cancellation games:", error);
+            moreAvailable = false;
         }
     }
 
-    console.log(`Se encontraron ${games.size} juegos en cancelación.`);
+    console.log(`Found ${games.size} games in cancellation.`);
     return games;
 }
 
@@ -424,10 +417,9 @@ function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
         const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
 
         if (!playerPK_Hex || !commitmentC_Hex || !gameNftId || !solverId_RawBytesHex || !hashLogs_Hex) {
-            throw new Error("Registros de participación inválidos.");
+            throw new Error("Invalid participation registers.");
         }
 
-        // Ahora esta función devuelve el tipo base, que es más simple y claro.
         const participationBase: ParticipationBase = {
             boxId: box.boxId,
             box,
@@ -445,15 +437,15 @@ function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
         return participationBase;
 
     } catch(e) {
-        console.error(`Error al parsear caja de participación ${box.boxId}:`, e);
+        console.error(`Error parsing participation box ${box.boxId}:`, e);
         return null;
     }
 }
 
 /**
- * Busca participaciones en estado "Submitted" para un juego.
- * @param gameNftId ID del NFT del juego.
- * @returns Un `Promise` con un array de `ParticipationSubmitted`.
+ * Searches for "Submitted" participations for a specific game.
+ * @param gameNftId The NFT ID of the game.
+ * @returns A `Promise` with an array of `ParticipationSubmitted`.
  */
 export async function fetchSubmittedParticipations(gameNftId: string): Promise<ParticipationSubmitted[]> {
     const participations: ParticipationSubmitted[] = [];
@@ -463,10 +455,9 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
     const limit = 100;
     let moreAvailable = true;
 
-    console.log(`Buscando participaciones enviadas para el juego ${gameNftId}`);
+    console.log(`Searching for submitted participations for game ${gameNftId}`);
 
     while (moreAvailable) {
-        // Buscamos cajas no gastadas ('unspent') que coincidan con el script y el R6.
         const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
@@ -481,7 +472,7 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
             });
 
             if (!response.ok) {
-                throw new Error(`La respuesta de la API no fue exitosa: ${response.status}`);
+                throw new Error(`API response was not OK: ${response.status}`);
             }
 
             const data = await response.json();
@@ -489,7 +480,7 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
 
             for (const box of items) {
                 if (box.ergoTree !== getGopParticipationSubmittedErgoTreeHex()) {
-                    console.warn('parseParticipationSubmittedBox: invalid contstants');
+                    console.warn('parseParticipationSubmittedBox: invalid constants');
                     continue;
                 }
                 const p_base = _parseParticipationBox(box);
@@ -505,17 +496,17 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
             moreAvailable = items.length === limit;
 
         } catch (error) {
-            console.error(`Ocurrió una excepción al buscar participaciones enviadas para ${gameNftId}:`, error);
+            console.error(`An exception occurred while fetching submitted participations for ${gameNftId}:`, error);
             moreAvailable = false;
         }
     }
 
-    console.log(`Se encontraron ${participations.length} participaciones enviadas para el juego ${gameNftId}.`);
+    console.log(`Found ${participations.length} submitted participations for game ${gameNftId}.`);
     return participations;
 }
 
 /**
- * Busca participaciones en estado "Resolved" para un juego (gastadas y no gastadas).
+ * Searches for "Resolved" participations for a game (both spent and unspent).
  */
 export async function fetchResolvedParticipations(gameNftId: string): Promise<ParticipationResolved[]> {
     const participations: ParticipationResolved[] = [];
@@ -525,10 +516,9 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
     const limit = 100;
     let moreAvailable = true;
 
-    console.log(`Buscando participaciones resueltas para el juego ${gameNftId}`);
+    console.log(`Searching for resolved participations for game ${gameNftId}`);
 
     while (moreAvailable) {
-        // Usamos el endpoint de búsqueda general para incluir cajas ya gastadas.
         const url = `${explorer_uri}/api/v1/boxes/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
@@ -547,7 +537,7 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
 
             for (const box of items) {
                 if (box.ergoTree !== getGopParticipationResolvedErgoTreeHex()) {
-                    console.warn('parseParticipationResolvedBox: invalid contstants');
+                    console.warn('parseParticipationResolvedBox: invalid constants');
                     continue;
                 }
                 const p_base = _parseParticipationBox(box);
@@ -563,12 +553,13 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
             offset += items.length;
             moreAvailable = items.length === limit;
 
-        } catch (error) {
-            console.error(`Ocurrió una excepción al buscar participaciones resueltas para ${gameNftId}:`, error);
+        } catch (error)
+        {
+            console.error(`An exception occurred while fetching resolved participations for ${gameNftId}:`, error);
             moreAvailable = false;
         }
     }
-
-    console.log(`Se encontraron ${participations.length} participaciones resueltas para el juego ${gameNftId}.`);
+    
+    console.log(`Found ${participations.length} resolved participations for game ${gameNftId}.`);
     return participations;
 }
