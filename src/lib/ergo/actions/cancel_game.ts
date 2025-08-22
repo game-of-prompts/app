@@ -10,6 +10,7 @@ import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type GameActive } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameCancellationErgoTreeHex } from '../contract';
+import { stringToBytes } from '@scure/base';
 
 // --- Constantes del contrato game_cancellation.es ---
 const STAKE_DENOMINATOR = 5n; // Usar BigInt para consistencia
@@ -80,7 +81,7 @@ export async function cancel_game(
         // R7: El stake restante del creador
         R7: SLong(newCreatorStake).toHex(),
         // R8: Información inmutable del juego (transferida desde R9 de la caja activa)
-        R8: SConstant(gameBoxToSpend.additionalRegisters.R9)
+        R8: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
     });
 
     // SALIDA(1): La penalización para el reclamante
