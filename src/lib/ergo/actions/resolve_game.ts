@@ -13,6 +13,7 @@ import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$l
 import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
+import { stringToBytes } from '@scure/base';
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = 40;
@@ -168,7 +169,7 @@ export async function resolve_game(
         R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
-        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SConstant(game.box.additionalRegisters.R9)).toHex()
+        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
     
     const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
