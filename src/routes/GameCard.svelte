@@ -167,10 +167,10 @@
 </script>
 
 <div
-    class="game-row flex flex-col md:flex-row items-start gap-8 md:gap-24"
+    class="game-row flex flex-col md:flex-row items-start gap-8 md:gap-24 lg:gap-32 lg:px-16 xl:gap-40 xl:px-24"
     class:md:flex-row-reverse={!isEven}
 >
-    <div class="image-wrapper w-full md:w-6/12 flex-shrink-0">
+    <div class="image-wrapper w-full md:w-5/12 flex-shrink-0">
         {#if game?.content?.imageURL}
             <img
                 src={game.content.imageURL}
@@ -181,7 +181,7 @@
         {/if}
     </div>
 
-    <div class="content-wrapper w-full md:w-6/12 text-center md:text-left">
+    <div class="content-wrapper w-full md:w-7/12 text-center md:text-left">
         <Badge variant="secondary" class="mb-3">
             {game.participations?.length || 0} Participants
         </Badge>
