@@ -238,7 +238,7 @@
             on:click={handleViewDetails}
             disabled={!game}
         >
-            View Game Details
+            View Details
         </Button>
     </div>
 </div>

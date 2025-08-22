@@ -528,12 +528,12 @@ async function handleEndGame() {
 
         <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
-                <h2 class="text-2xl font-semibold mb-6">Game Details</h2>
+                <h2 class="text-2xl font-semibold mb-6">Details</h2>
                 {#if game}
                     {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                         <div class="info-block">
-                            <span class="info-label">Game ID (NFT)</span>
+                            <span class="info-label">Competition ID (NFT)</span>
                             <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
                                 {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
                             </a>
@@ -560,7 +560,7 @@ async function handleEndGame() {
 
             <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
                 <div class="status-side">
-                    <h2 class="text-2xl font-semibold mb-3">Game Status</h2>
+                    <h2 class="text-2xl font-semibold mb-3">Status</h2>
                     {#if game.status === 'Active' && !participationIsEnded}
                         <p class="text-xl font-medium text-green-500">Open for Participation</p>
                     {:else if game.status === 'Active' && participationIsEnded}
@@ -584,13 +584,13 @@ async function handleEndGame() {
                                     <Edit class="mr-2 h-4 w-4"/>Submit My Score
                                 </Button>
                                 <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
-                                    <XCircle class="mr-2 h-4 w-4"/>Cancel Game
+                                    <XCircle class="mr-2 h-4 w-4"/>Cancel Competition
                                 </Button>
                             {/if}
 
                             {#if game.status === 'Active' && participationIsEnded && isOwner}
                                 <Button on:click={() => setupActionModal('resolve_game')} class="w-full">
-                                    <CheckSquare class="mr-2 h-4 w-4"/>Resolve Game
+                                    <CheckSquare class="mr-2 h-4 w-4"/>Resolve Competition
                                 </Button>
                             {/if}
 
@@ -599,7 +599,7 @@ async function handleEndGame() {
                                 
                                 {#if isResolver}
                                     <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline} class="w-full">
-                                        <Trophy class="mr-2 h-4 w-4"/> End Game & Distribute Prizes
+                                        <Trophy class="mr-2 h-4 w-4"/> End Competition & Distribute Prizes
                                     </Button>
                                 {/if}
 
@@ -632,7 +632,7 @@ async function handleEndGame() {
                             
 
                         {:else}
-                            <p class="info-box">Connect your wallet to interact with the game.</p>
+                            <p class="info-box">Connect your wallet to interact with the game competition.</p>
                         {/if}
                     </div>
                 </div>
