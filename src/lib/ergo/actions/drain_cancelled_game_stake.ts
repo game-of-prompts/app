@@ -3,75 +3,79 @@ import {
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     SAFE_MIN_BOX_VALUE,
-    type InputBox
+    type InputBox,
+    SConstant
 } from '@fleet-sdk/core';
-import { SColl, SByte, SLong } from '@fleet-sdk/serializer';
-import { parseBox, SString } from '$lib/ergo/utils';
+import { SColl, SByte, SLong, SInt } from '@fleet-sdk/serializer';
+import { parseBox, hexToBytes } from '$lib/ergo/utils';
 import { type GameCancellation } from '$lib/common/game';
 import { getGopGameCancellationErgoTreeHex } from '../contract';
 
 // Constantes del contrato game_cancellation.es
 const STAKE_DENOMINATOR = 5n;
-const COOLDOWN_IN_BLOCKS_BASE = 30; // Cooldown definido en el contrato
-const COOLDOWN_IN_BLOCKS_USED = COOLDOWN_IN_BLOCKS_BASE + 10;
+const COOLDOWN_IN_BLOCKS = 30; // Cooldown definido en el contrato
 
 /**
- * Ejecuta la acción de drenaje sobre una caja de juego en estado "Cancelación".
- * Cualquiera puede llamar a esta función después de que el período de enfriamiento haya terminado
- * para reclamar una porción del stake del creador y recrear la caja para el siguiente ciclo.
+ * Executes the drain action on a game box in the "Cancellation" state.
+ * Anyone can call this function after the cooldown period has ended
+ * to claim a portion of the creator's stake and recreate the box for the next cycle.
  *
- * @param game El objeto GameCancellation sobre el que se va a actuar.
- * @param claimerAddressString La dirección del usuario que ejecuta la acción y recibirá la porción del stake.
- * @returns Una promesa que se resuelve con el ID de la transacción si tiene éxito.
+ * @param game The GameCancellation object to act upon.
+ * @param claimerAddressString The address of the user executing the action, who will receive the stake portion.
+ * @returns A promise that resolves with the transaction ID if successful.
  */
 export async function drain_cancelled_game_stake(
     game: GameCancellation,
     claimerAddressString: string
 ): Promise<string | null> {
 
-    console.log(`Intentando drenar el stake del juego cancelado: ${game.boxId}`);
+    console.log(`Attempting to drain the stake of the cancelled game: ${game.boxId}`);
 
-    // --- 1. Verificaciones preliminares ---
+    // --- 1. Preliminary Checks ---
     const currentHeight = await ergo.get_current_height();
     if (currentHeight < game.unlockHeight) {
-        throw new Error(`El período de enfriamiento no ha terminado. Solo se puede drenar después del bloque ${game.unlockHeight}.`);
+        throw new Error(`The cooldown period has not ended. Draining is only possible after block ${game.unlockHeight}.`);
     }
 
     const stakeToDrain = game.currentStakeNanoErg;
     const stakePortionToClaim = stakeToDrain / STAKE_DENOMINATOR;
     const remainingStake = stakeToDrain - stakePortionToClaim;
 
-    // El contrato previene que esta acción se ejecute si no queda suficiente stake.
+    // The contract prevents this action from running if not enough stake is left.
     if (remainingStake < SAFE_MIN_BOX_VALUE) {
-        // En este caso, se debería usar una acción diferente para finalizar el drenaje y mintear el NFT de prueba.
-        // Por ahora, lanzamos un error para indicar que esta acción ya no es válida.
-        throw new Error(`El stake restante (${remainingStake}) es demasiado bajo para continuar el drenaje. Se debe usar la acción de finalización.`);
+        // In this case, a different action should be used to finalize the drain.
+        // For now, we throw an error to indicate this action is no longer valid.
+        throw new Error(`The remaining stake (${remainingStake}) is too low to continue the drain. The finalization action should be used.`);
     }
 
-    // --- 2. Construir Salidas ---
+    // --- 2. Build Outputs ---
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS_USED);
+    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
+    const revealedSecretBytes = hexToBytes(game.revealedS_Hex);
+    if (!revealedSecretBytes) throw new Error("Could not convert revealed secret hex to bytes.");
 
-    // SALIDA(0): La caja de cancelación recreada con valores actualizados
+    // OUTPUT(0): The recreated cancellation box with updated values
     const recreatedCancellationBox = new OutputBuilder(
         remainingStake,
         cancellationContractErgoTree
     )
-    .addTokens(game.box.assets) // Mantener el NFT del juego
+    .addTokens(game.box.assets) // Keep the game NFT
     .setAdditionalRegisters({
-        R4: SLong(newUnlockHeight).toHex(),
-        R5: SColl(SByte, game.revealedS_Hex).toHex(),
-        R6: SLong(remainingStake).toHex(),
-        R7: SString(game.content.rawJsonString) // Mantener la info inmutable
+        // Correct register structure from the test
+        R4: SInt(2).toHex(), // State: Cancelled
+        R5: SLong(newUnlockHeight).toHex(),
+        R6: SColl(SByte, revealedSecretBytes).toHex(),
+        R7: SLong(remainingStake).toHex(),
+        R8: SConstant(game.box.additionalRegisters.R8) // Preserve immutable info
     });
 
-    // SALIDA(1): La porción del stake para el reclamante
+    // OUTPUT(1): The portion of the stake for the claimer
     const claimerOutput = new OutputBuilder(
         stakePortionToClaim,
         claimerAddressString
     );
 
-    // --- 3. Construir y Enviar la Transacción ---
+    // --- 3. Build and Send the Transaction ---
     const utxos: InputBox[] = await ergo.get_utxos();
     const inputs = [parseBox(game.box), ...utxos];
 
@@ -86,7 +90,7 @@ export async function drain_cancelled_game_stake(
         const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
         const txId = await ergo.submit_tx(signedTransaction);
 
-        console.log(`Transacción de drenaje de stake enviada con éxito. ID: ${txId}`);
+        console.log(`Stake drain transaction sent successfully. ID: ${txId}`);
         return txId;
     }
     catch (error) {
