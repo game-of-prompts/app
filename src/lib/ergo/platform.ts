@@ -13,7 +13,7 @@ import { address, connected, network, balance } from "../common/store";
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
-import { cancel_game_before_deadline } from './actions/cancel_game_before_deadline';
+import { cancel_game } from './actions/cancel_game';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 import { end_game } from './actions/end_game';
 import { judges_invalidate } from './actions/judges_invalidate';
@@ -148,14 +148,14 @@ export class ErgoPlatform implements Platform {
         return await resolve_game(game, participations, secretS_hex, []);
     }
 
-    async cancel_game_before_deadline(
+    async cancel_game(
         game: GameActive, // Tipo específico: solo se puede cancelar un juego activo.
         secretS_hex: string,
         claimerAddressString: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
         
-        return await cancel_game_before_deadline(game, secretS_hex, claimerAddressString);
+        return await cancel_game(game, secretS_hex, claimerAddressString);
     }
 
     async drain_cancelled_game_stake(

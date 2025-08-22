@@ -43,7 +43,7 @@ const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "p
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
 
-describe("Game Cancellation (cancel_game_before_deadline)", () => {
+describe("Game Cancellation (cancel_game)", () => {
     let mockChain: MockChain;
 
     // --- Actores ---

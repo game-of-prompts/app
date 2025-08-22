@@ -24,7 +24,7 @@ const COOLDOWN_IN_BLOCKS = 30; // Cooldown base definido en el contrato
  * @param claimerAddressString La dirección del usuario que inicia la cancelación y reclama la penalización.
  * @returns Una promesa que se resuelve con el ID de la transacción si tiene éxito.
  */
-export async function cancel_game_before_deadline(
+export async function cancel_game(
     game: GameActive,
     secretS_hex: string,
     claimerAddressString: string

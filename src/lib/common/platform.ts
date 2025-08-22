@@ -76,7 +76,7 @@ export interface Platform {
      * @param claimerAddressString La dirección del usuario que inicia la cancelación.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      */
-    cancel_game_before_deadline(
+    cancel_game(
         game: GameActive,
         secretS_hex: string,
         claimerAddressString: string

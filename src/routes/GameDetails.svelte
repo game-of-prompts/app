@@ -187,7 +187,7 @@
         if (game?.status !== 'Active') return;
         errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.cancel_game_before_deadline(game, secret_S_input_cancel, get(address) ?? "");
+            transactionId = await platform.cancel_game(game, secret_S_input_cancel, get(address) ?? "");
         } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
     }
 
