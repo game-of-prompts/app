@@ -32,7 +32,7 @@ export async function end_game(
         throw new Error("No se pudo encontrar la caja de participación del ganador declarado.");
     }
 
-    // --- 2. Lógica de Cálculo de Pagos (NUEVA POLÍTICA) ---
+    // --- 2. Lógica de Cálculo de Pagos ---
     const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
     
     // 2.1. Calcular los componentes base del pago
