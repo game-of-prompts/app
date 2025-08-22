@@ -175,7 +175,7 @@
 
 <div class="create-game-container">
     <div class="hero-section text-center">
-        <h2 class="project-title">Create a New Game</h2>
+        <h2 class="project-title">Create a New Competition</h2>
         <p class="subtitle">Fill in the details to launch your game.</p>
     </div>
 

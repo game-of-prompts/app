@@ -94,7 +94,7 @@
 
 <div class="items-container">
     <div class="hero-section">
-        <h2 class="items-title"><slot>Explore Games</slot></h2>
+        <h2 class="items-title">Explore Competitions</h2>
         <p class="subtitle">Compete, demonstrate your skill, and win prizes.</p>
     </div>
 
@@ -141,7 +141,7 @@
         </div>
     {:else}
         <div class="no-items-container">
-            <p class="no-items-text">No games found.</p>
+            <p class="no-items-text">No competitions found.</p>
         </div>
     {/if}
 </div>
