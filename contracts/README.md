@@ -153,3 +153,52 @@ This is a penalty state triggered if the secret is revealed prematurely.
           * **Output**:
               * **Output 1 (`claimerOutput`)**: A box that delivers the claimed portion of the stake to the address of the transaction executor.
               * **Output 0 (`recreatedCancellationBox`)**: The box recreates itself with the reduced `creatorStake` and a new future `unlockHeight` (`HEIGHT + COOLDOWN_IN_BLOCKS`), continuing the cycle until the stake is depleted.
+
+
+### **Player Participation Contracts**
+
+These two contracts manage the state of an individual player's entry throughout the game's lifecycle. They transition from a "submitted" state, where actions are flexible, to a "resolved" state, where the entry simply waits for the final outcome.
+
+#### **1. Contract: `participation_submited.es`**
+
+This is the initial state for a player's entry. A box protected by this script is created when a player pays the fee to join the game.
+
+* **Purpose**: To securely lock a player's entry fee, their identity (public key), and their cryptographic commitment to their score until the game's deadline is reached.
+
+* **Registers**:
+    * **R4: `Coll[Byte]`**: `playerPKBytes` - The public key of the player, used for refunds or prize distribution.
+    * **R5: `Coll[Byte]`**: `commitmentC` - The cryptographic commitment that securely hides the player's true score until the secret 'S' is revealed.
+    * **R6: `Coll[Byte]`**: `gameNftId` - The token ID of the game's unique NFT, linking this entry to a specific game.
+    * **R7: `Coll[Byte]`**: `solverId` - An identifier for the player's solver or method.
+    * **R8: `Coll[Byte]`**: `hashLogs` - A hash of the player's game logs.
+    * **R9: `Coll[Long]`**: `scoreList` - A list of scores, only one of which is genuine, to obfuscate the player's result.
+
+* **Spending Conditions (Actions)**: This box can be spent in one of three primary ways:
+
+    1.  **`spentInValidGameResolution` (Normal Transition)**: This is the standard path. The box is spent when the `game_active.es` contract initiates the resolution phase.
+        * **Requirement**: The transaction must occur after the game's `deadline` has passed. The first input of the transaction must be the main game box in the "Active" state (0).
+        * **Output**: The box must be recreated with the identical value, tokens, and registers, but with its script changed to `participation_resolved.es`.
+
+    2.  **`spentAsOmitted` (Corrective Transition)**: This allows a player to force their entry into the resolution phase if the creator failed to include it in the initial resolution transaction.
+        * **Requirement**: The main game box must already be in the "Resolved" state (1). The player's participation box must have been created *before* the original game `deadline`.
+        * **Output**: The box is transitioned to the `participation_resolved.es` script to be included in the final tally.
+
+    3.  **`spentInValidGameCancellation` (Refund)**: This allows the player to claim a full refund if the game is canceled.
+        * **Requirement**: The `game_cancellation.es` box, identified by the game's NFT, must be provided as a `data-input` for the transaction.
+        * **Output**: A new box must be created that sends the full value of this participation box back to the player's public key (`playerPKBytes`).
+
+    *A fourth action, `playerReclaimsAfterGracePeriod`, is included but hardcoded to `false`, acting as a placeholder for potential future functionality*.
+
+#### **2. Contract: `participation_resolved.es`**
+
+This is the final, passive state of a valid participation entry. Once the game enters the resolution phase, all `participation_submited.es` boxes are transitioned to this script.
+
+* **Purpose**: To hold the player's entry data securely after the game's secret has been revealed, waiting to be consumed in the final prize distribution transaction.
+
+* **Registers**: The register structure (R4-R9) is identical to `participation_submited.es`, preserving all the original entry data.
+
+* **Spending Conditions (Actions)**: This box has only one possible spending path.
+
+    1.  **`isValidEndGame`**: The box must be part of the final `endGame` transaction triggered by the `game_resolution.es` contract.
+        * **Requirement 1**: The first input of the transaction (`INPUTS(0)`) must be the main game box. This is verified by matching the `gameNftId` in this box's R6 register with the NFT held by the main game box.
+        * **Requirement 2**: The transaction must occur after the `resolutionDeadline` has passed. This deadline is read from register R7 of the main game box.
