@@ -14,7 +14,7 @@ import { stringToBytes } from '@scure/base';
 
 // --- Constantes del contrato game_cancellation.es ---
 const STAKE_DENOMINATOR = 5n; // Usar BigInt para consistencia
-const COOLDOWN_IN_BLOCKS = 30; // Cooldown base definido en el contrato
+const COOLDOWN_IN_BLOCKS = 40; // Cooldown base definido en el contrato
 
 /**
  * Inicia la cancelación de un juego activo, haciendo la transición de GameActive -> GameCancellation.
