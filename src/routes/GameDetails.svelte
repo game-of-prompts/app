@@ -631,7 +631,7 @@
                         {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
 
                         {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                        {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant && !p.spent}
+                        {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining' || game.status === 'Cancelled_Finalized') && isCurrentUserParticipant && !p.spent}
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
 
@@ -734,7 +734,7 @@
                                     </div>
                                 {/if}
 
-                                {#if canClaimRefund}
+                                {#if canClaimCancellationRefund}
                                     <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                                         <p class="text-xs mb-2 {$mode === 'dark' ? 'text-blue-400' : 'text-blue-600'}">
                                             With the secret now revealed, the game has been canceled. Please claim a refund of your participation fee.
