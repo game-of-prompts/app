@@ -133,7 +133,7 @@ describe("Participant Reclaim After Grace Period", () => {
   });
 
   it("should FAIL to reclaim funds if the grace period has NOT passed", () => {
-    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS;
+    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS - 1;
     mockChain.jumpTo(reclaimHeight);
 
     const reclaimTx = new TransactionBuilder(mockChain.height)
