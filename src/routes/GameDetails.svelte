@@ -205,12 +205,12 @@
         } finally { isSubmitting = false; }
     }
 
-    async function handleClaimRefund(participation: AnyParticipation) {
+    async function handleClaimRefund(participation: ParticipationSubmitted) {
         if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return;
         isClaimingRefundFor = participation.boxId;
         claimRefundError[participation.boxId] = null;
         try {
-            const result = await platform.claim_refund(participation);
+            const result = await platform.claimAfterCancellation(game as GameCancellation, participation);
             claimRefundSuccessTxId[participation.boxId] = result;
         } catch (e: any) {
             claimRefundError[participation.boxId] = e.message || "Error claiming refund.";
@@ -227,7 +227,7 @@
         reclaimGraceSuccessTxId[participation.boxId] = null;
 
         try {
-            const result = await platform.reclaim_after_grace(game as GameActive, participation);
+            const result = await platform.reclaimAfterGrace(game as GameActive, participation);
             reclaimGraceSuccessTxId[participation.boxId] = result;
         } catch (e: any) {
             reclaimGraceError[participation.boxId] = e.message || "Error reclaiming participation fee.";

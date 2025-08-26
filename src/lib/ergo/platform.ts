@@ -207,6 +207,51 @@ export class ErgoPlatform implements Platform {
     }
 
     /**
+     * Reclama el reembolso de una participación en un juego cancelado.
+     * @param game El objeto Game en estado 'GameCancellation'.
+     * @param participation La participación ('ParticipationSubmitted') que se va a reembolsar.
+     * @param claimerAddressString La dirección del usuario que reclama.
+     * @returns Una promesa que se resuelve con el ID de la transacción.
+     */
+    async claimAfterCancellation(
+        game: GameCancellation,
+        participation: ParticipationSubmitted
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Billetera no conectada.");
+        if (game.status !== 'Cancelled_Draining' && game.status !== 'Cancelled_Finalized') {
+            throw new Error("El juego no está en un estado que permita reembolsos.");
+        }
+        if (participation.status !== 'Submitted') {
+            throw new Error("Solo se pueden reclamar reembolsos para participaciones no gastadas.");
+        }
+        return await claim_after_cancellation(game, participation);
+    }
+
+    /** 
+     * Permite al creador de una participación reclamar su stake después de que el período de gracia haya terminado.
+     * @param game El objeto Game en estado 'GameActive'.
+     * @param participation La participación ('ParticipationSubmitted') que se va a reclamar.
+     * @returns Una promesa que se resuelve con el ID de la transacción.
+     *   */
+    async reclaimAfterGrace(
+        game: GameActive,
+        participation: ParticipationSubmitted
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Billetera no conectada.");
+        if (game.status !== 'Active') {
+            throw new Error("El juego no está en estado activo.");
+        }
+        if (participation.status !== 'Submitted') {
+            throw new Error("Solo se pueden reclamar participaciones no gastadas.");
+        }
+        const currentHeight = await this.get_current_height();
+        if (currentHeight <= game.deadlineBlock + 720) { // 720 bloques = 24 horas
+            throw new Error("El período de gracia aún no ha terminado.");
+        }
+        return await reclaim_after_grace(game, participation);
+    }
+
+    /**
      * Busca todos los juegos en la blockchain, combinando los resultados de cada estado posible.
      * @returns Un `Promise` que resuelve a un `Map` que contiene todos los juegos, usando el ID del juego como clave.
      */

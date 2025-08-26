@@ -120,6 +120,26 @@ export interface Platform {
         newResolverPkHex: string
     ): Promise<string | null>
 
+
+    /*
+    * Permite a un jugador reclamar su participación después de que el juego haya sido cancelado.
+    * Solo es posible si el jugador no ha reclamado aún y el juego está en estado 'Cancelled_Draining' o 'Cancelled_Finalized'.
+    */
+    claimAfterCancellation(
+        game: GameCancellation,
+        participation: ParticipationSubmitted
+    ): Promise<string | null>;
+
+    /*
+    * Permite a un jugador reclamar su participación después de que el período de gracia haya terminado.
+    * Solo es posible si el jugador no ha reclamado aún y el juego está en estado 'Active' pero el período de participación ha terminado y el período de gracia ha pasado.
+    */
+    reclaimAfterGrace(
+        game: GameActive,
+        participation: ParticipationSubmitted
+    ): Promise<string | null>;
+
+
     /**
      * Obtiene todos los juegos "Game of Prompts" de la blockchain en todos sus estados.
      * @returns Un Map con todos los juegos, usando el ID del juego como clave.
