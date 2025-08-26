@@ -14,7 +14,7 @@ import { stringToBytes } from '@scure/base';
 
 // Constantes del contrato game_cancellation.es
 const STAKE_DENOMINATOR = 5n;
-const COOLDOWN_IN_BLOCKS = 30; // Cooldown definido en el contrato
+const COOLDOWN_IN_BLOCKS = 40; // Cooldown definido en el contrato
 
 /**
  * Executes the drain action on a game box in the "Cancellation" state.
