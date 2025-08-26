@@ -8,6 +8,9 @@
 
   // Prefijo P2PK para la validación de direcciones.
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
+  
+  // Período de gracia en bloques para que el jugador reclame si el juego se atasca.
+  val GRACE_PERIOD_IN_BLOCKS = 720L // Aprox. 24 horas
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
@@ -139,9 +142,39 @@
     else { false }
   }
 
-  // ### Acción 4: Reclamo por Período de Gracia (Placeholder)
-  // Lógica futura que permitiría al jugador reclamar sus fondos si el juego queda "atascado".
-  val playerReclaimsAfterGracePeriod = false
+  // ### Acción 4: Reclamo por Período de Gracia
+  // Permite al jugador reclamar sus fondos si el juego queda "atascado"
+  // (no se ha resuelto después de un período de gracia tras la fecha límite).
+  val playerReclaimsAfterGracePeriod = {
+    if (CONTEXT.dataInputs.size > 0) {
+      val gameBoxInData = CONTEXT.dataInputs(0) // Caja del juego game_active.es como Data Input.
+
+      // Condición 1: El Data Input debe ser la caja del juego correcto y estar en estado "Activo".
+      val gameBoxIsCorrectAndActive =
+        gameBoxInData.tokens.size > 0 &&
+        gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
+        gameBoxInData.R4[Int].get == 0 // Estado "Activo" es 0
+
+      if (gameBoxIsCorrectAndActive) {
+        val gameDeadline = gameBoxInData.R8[Coll[Long]].get(0)
+        
+        // Condición 2: El período de gracia después de la fecha límite debe haber pasado.
+        val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
+
+        // Condición 3: El jugador debe recibir un reembolso completo.
+        val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
+          outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
+          outBox.value >= SELF.value
+        }
+        
+        gracePeriodIsOver && playerGetsRefund
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  }
 
   sigmaProp(spentInValidGameResolution || spentAsOmitted || spentInValidGameCancellation || playerReclaimsAfterGracePeriod)
 }

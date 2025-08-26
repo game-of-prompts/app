@@ -133,6 +133,12 @@ export async function resolve_game(
         
         validParticipations.push(p);
 
+        // Omitir la participación de 100, a modo de prueba
+        if (actualScore === 100n) {
+            console.warn(`La participación ${p.boxId} tiene una puntuación de 100 y será omitida (prueba).`);
+            continue;
+        }
+
         // Si la participación es válida, se considera para determinar al ganador.
         if (actualScore > maxScore) {
             maxScore = actualScore;
@@ -143,6 +149,9 @@ export async function resolve_game(
     if (!winnerCandidateCommitment) {
         throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
     }
+
+    console.log(`Número de participaciones válidas: ${validParticipations.length}`);
+    console.log(`Ganador candidato determinado con compromiso: ${winnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Construir las Salidas de la Transacción ---
 
