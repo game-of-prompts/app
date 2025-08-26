@@ -11,7 +11,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 - Estado 2 (juicio)
     - [x] Finalización
-    - [] Omisión de participación
+    - [x] Omisión de participación
     - [] Invalidación por jueces
 
 - Estado 3 (cancelacion)
@@ -24,32 +24,16 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 ### Otros
 
 [x] Todas las votaciones deben validarse.
-- Los jueces deben opinar tambien en positivo, aunque en el contrato la omisión significa que acceden.   <--- ESTO ES SOLO DE FRONT.
-- Votación con peso.
+[] Los jueces deben opinar tambien en positivo, aunque en el contrato la omisión significa que acceden.   <--- ESTO ES SOLO DE FRONT.
+[] Votación con peso.
 
-- GameInfo without JSON
-- Allow for P2SH
-- Check constants on fetch.
+[] GameInfo without JSON
+[] Allow for P2SH
+[] Check constants on fetch.
 
-- Poker
+[] Poker
 
 ##### game-service-factory
-- Game obfuscated
-- Señuelos
-- Limited resources
-
-
-
-
-=======
-
-
-Test de prueba
-https://scastie.scala-lang.org/DYmWz9EcSd2ZISfb2teC6w
-
-
-Mismo test pero compilando
-https://scastie.scala-lang.org/hntoyWvcSDazaxap0zqeag
-
-
-Test actual: https://scastie.scala-lang.org/jI0FqvEMT5i2OrsJIETqEA
+[] Game obfuscated
+[] Señuelos
+[] Limited resources
