@@ -52,11 +52,19 @@ export async function cancel_game(
     }
 
     // --- 2. Calcular valores para la nueva caja de cancelación y la penalización ---
-    const stakePortionToClaim = game.creatorStakeNanoErg / STAKE_DENOMINATOR;
-    const newCreatorStake = game.creatorStakeNanoErg - stakePortionToClaim;
+    let stakePortionToClaim = game.creatorStakeNanoErg / STAKE_DENOMINATOR;
+    let newCreatorStake = game.creatorStakeNanoErg - stakePortionToClaim;
 
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
-        throw new Error(`No se puede cancelar. El stake restante (${newCreatorStake}) sería menor que el mínimo seguro (${SAFE_MIN_BOX_VALUE}).`);
+        console.warn(`Ajuste de stake: El valor restante calculado (${newCreatorStake}) es menor que SAFE_MIN_BOX_VALUE (${SAFE_MIN_BOX_VALUE}).`);
+        
+        // El stake para la nueva caja se fija en el mínimo seguro.
+        newCreatorStake = SAFE_MIN_BOX_VALUE;
+        
+        // La porción a reclamar es el resto, para que el total se conserve.
+        stakePortionToClaim = game.creatorStakeNanoErg - newCreatorStake;
+
+        console.log(`Valores ajustados -> newCreatorStake: ${newCreatorStake}, stakePortionToClaim: ${stakePortionToClaim}`);
     }
 
     // --- 3. Construir Salidas de la Transacción ---
