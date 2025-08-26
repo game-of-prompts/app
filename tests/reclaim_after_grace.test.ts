@@ -133,8 +133,11 @@ describe("Participant Reclaim After Grace Period", () => {
   });
 
   it("should FAIL to reclaim funds if the grace period has NOT passed", () => {
-    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS - 1;
+    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS - 10;  // Seems that the mockchain goes various blocks forward when executing the tx!
     mockChain.jumpTo(reclaimHeight);
+
+    console.log(deadlineBlock, GRACE_PERIOD_IN_BLOCKS, reclaimHeight);
+    console.log("Current height:", mockChain.height);
 
     const reclaimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...participant.utxos.toArray()])

@@ -61,7 +61,7 @@ describe("Game Resolution (resolve_game)", () => {
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
   const creatorStake = 2_000_000_000n;
-  const resolutionDeadline = BigInt(deadlineBlock + 40);
+  const resolutionDeadline = BigInt(deadlineBlock + 40);  // Seems that the mockchain goes various blocks forward when executing the tx!
   const resolvedCounter = 2;
   let commitment1Hex: string;
   let commitment2Hex: string;

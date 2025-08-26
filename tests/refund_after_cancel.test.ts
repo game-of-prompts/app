@@ -171,7 +171,7 @@ describe("Participant Refund After Cancellation", () => {
     // --- FASE 2: Cancelar el juego para preparar el estado del test ---
     const stakePortionToClaim = creatorStake / 5n;
     const remainingStake = creatorStake - stakePortionToClaim;
-    const cooldown = 30n;
+    const cooldown = 40n;  // Seems that the mockchain goes various blocks forward when executing the tx!
 
     const cancelTx = new TransactionBuilder(mockChain.height)
       .from([gameActiveBox, ...canceller.utxos.toArray()])

@@ -89,7 +89,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
         const stakePortionToClaim = initialCancelledStake / 5n;
         const remainingStake = initialCancelledStake - stakePortionToClaim;
         const cooldownBlocks = 30;
-        const cooldownMargin = 10;
+        const cooldownMargin = 10;  // Seems that the mockchain goes various blocks forward when executing the tx!
         const newUnlockHeight = BigInt(mockChain.height + cooldownBlocks + cooldownMargin); // Cooldown for the next drain
 
         const transaction = new TransactionBuilder(mockChain.height)
