@@ -136,7 +136,8 @@
 
       val correctGame = gameBoxInData.tokens.size > 0 &&
                         gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
-                        gameBoxInData.R6[Coll[Byte]].isDefined
+                        gameBoxInData.R6[Coll[Byte]].isDefined &&
+                        gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
 
       val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
         outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
