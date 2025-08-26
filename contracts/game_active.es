@@ -18,6 +18,7 @@
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
   val JUDGE_PERIOD = 30L
+  val MIN_BOX_VALUE = 1000000L
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
@@ -184,9 +185,22 @@
       val cancellationBox = OUTPUTS(0)
       val claimerOutput = OUTPUTS(1)
 
-      // Calcular los valores esperados para las comprobaciones.
-      val stakePortionToClaim = creatorStake / STAKE_DENOMINATOR
-      val remainingStake = creatorStake - stakePortionToClaim
+      // Calcular los valores iniciales.
+      val initialStakePortionToClaim = creatorStake / STAKE_DENOMINATOR
+      val initialRemainingStake = creatorStake - initialStakePortionToClaim
+
+      // Asegurarse de que la caja de cancelación tenga al menos el valor mínimo requerido.
+      val stakePortionToClaim = if (initialRemainingStake < MIN_BOX_VALUE) {
+        creatorStake - MIN_BOX_VALUE
+      } else {
+        initialStakePortionToClaim
+      }
+
+      val remainingStake = if (initialRemainingStake < MIN_BOX_VALUE) {
+        MIN_BOX_VALUE
+      } else {
+        initialRemainingStake
+      }
 
       // --- 1. Validar la caja de cancelación (OUTPUTS(0)) ---
       val cancellationBoxIsValid = {

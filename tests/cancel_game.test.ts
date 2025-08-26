@@ -204,3 +204,113 @@ describe("Game Cancellation (cancel_game)", () => {
         // expect(mockChain.boxes.at(gameActiveErgoTree.toHex())).to.have.length(1);
     });
 });
+
+
+describe("Game Cancellation (Low Stake)", () => {
+    let mockChain: MockChain;
+    let game: ReturnType<MockChain["newParty"]>;
+    let creator: ReturnType<MockChain["newParty"]>;
+    let claimer: ReturnType<MockChain["newParty"]>;
+    let gameActiveErgoTree: ReturnType<typeof compile>;
+    let gameCancellationErgoTree: ReturnType<typeof compile>;
+
+    // --- Parámetros del Juego para la Prueba ---
+    // El stake es < 1.25 ERG, por lo que el 80% restante es < 1 ERG (MIN_BOX_VALUE)
+    const creatorStake = 1_200_000n; 
+    const deadlineBlock = 800_200;
+    const secret = stringToBytes("utf8", "this-is-the-revealed-secret");
+    const hashedSecret = blake2b256(secret);
+    const gameNftId = "00aadd0000aadd0000aadd0000aadd0000aadd0000aadd0000aadd0000aadd00";
+    let gameBox: Box;
+
+    beforeEach(() => {
+        mockChain = new MockChain({ height: 800_000 });
+        game = mockChain.newParty("Game");
+        creator = mockChain.newParty("GameCreator");
+        claimer = mockChain.newParty("Claimer");
+        claimer.addBalance({ nanoergs: 1_000_000_000n });
+
+        // --- Compilación de Contratos ---
+        // (La compilación es idéntica a la del bloque describe anterior)
+        const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
+        const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
+        const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+        const participationSubmittedErgoTree = compile(participationSubmittedSource);
+        const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+        const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
+            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
+            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
+        const gameResolutionErgoTree = compile(gameResolutionSource);
+        const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
+        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
+        const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
+        const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
+            .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
+            .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+            .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+        gameActiveErgoTree = compile(finalGameActiveSource);
+
+        // --- Creación de la Caja del Juego con Stake Bajo ---
+        game.addUTxOs({
+            value: creatorStake,
+            ergoTree: gameActiveErgoTree.toHex(),
+            assets: [{ tokenId: gameNftId, amount: 1n }],
+            creationHeight: mockChain.height,
+            additionalRegisters: {
+                R4: SInt(0).toHex(),
+                R5: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+                R6: SColl(SByte, hashedSecret).toHex(),
+                R7: SColl(SColl(SByte), []).toHex(),
+                R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
+                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+            }
+        });
+        gameBox = game.utxos.toArray()[0];
+    });
+
+    afterEach(() => {
+        mockChain.reset();
+    });
+
+    it("should fail to cancel if remaining stake is less than MIN_BOX_VALUE", () => {
+        // --- Arrange ---
+        // Calcular la distribución de fondos.
+        const stakePortionToClaim = creatorStake / 5n; // 240,000 nanoergs
+        const newCreatorStake = creatorStake - stakePortionToClaim; // 960,000 nanoergs
+        const newUnlockHeight = BigInt(mockChain.height + 40);
+
+        // Verificar que el stake restante es menor que el valor mínimo de una caja.
+        expect(newCreatorStake).to.be.lessThan(1_000_000);
+
+        // --- Act ---
+        // Intentar construir la transacción. La creación de la salida 0 fallará
+        // a nivel de nodo/protocolo porque su valor es demasiado bajo.
+        const transaction = new TransactionBuilder(mockChain.height)
+            .from([gameBox, ...claimer.utxos.toArray()])
+            .to([
+                // Salida 0: Esta caja tiene un valor < MIN_BOX_VALUE, lo que debería invalidar la tx.
+                new OutputBuilder(newCreatorStake, gameCancellationErgoTree)
+                    .addTokens(gameBox.assets)
+                    .setAdditionalRegisters({
+                        R4: SInt(2).toHex(),
+                        R5: SLong(newUnlockHeight).toHex(),
+                        R6: SColl(SByte, secret).toHex(),
+                        R7: SLong(newCreatorStake).toHex(),
+                        R8: gameBox.additionalRegisters.R9,
+                    }),
+                // Salida 1: La penalización para el reclamante.
+                new OutputBuilder(stakePortionToClaim, claimer.address)
+            ])
+            .sendChangeTo(claimer.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        // --- Assert ---
+        // La ejecución de la transacción debe fallar porque una de las salidas
+        // no cumple con el valor mínimo requerido por el protocolo de Ergo.
+        const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
+        expect(executionResult, "La cancelación debería fallar si el stake restante es demasiado bajo").to.be.false;
+    });
+});
