@@ -134,6 +134,7 @@ export interface ParticipationBase {
  */
 export interface ParticipationSubmitted extends ParticipationBase {
     status: 'Submitted';
+    spent: false;
 }
 
 /**

@@ -19,16 +19,13 @@
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
     import { fetchSubmittedParticipations, fetchResolvedParticipations } from "$lib/ergo/fetch";
-
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
-    
     // ICONS
     import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
-    
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { enUS } from 'date-fns/locale/en-US';
@@ -39,11 +36,13 @@
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
-
+    
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
+    let currentHeight: number = 0; 
+    const GRACE_PERIOD_IN_BLOCKS = 720; 
 
     // UI State
     let transactionId: string | null = null;
@@ -66,18 +65,21 @@
     let claimRefundError: { [boxId: string]: string | null } = {};
     let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
     
+    // Reclaim after Grace Period State
+    let isReclaimingGraceFor: string | null = null;
+    let reclaimGraceError: { [boxId: string]: string | null } = {};
+    let reclaimGraceSuccessTxId: { [boxId: string]: string | null } = {};
+    
     // Countdown Clock State
     let daysValue = 0, hoursValue = 0, minutesValue = 0, secondsValue = 0;
     let targetDate: number;
     let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
-
+    
     // Modal State
     let showActionModal = false;
-    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" |
-                         "end_game" | "invalidate_winner" | "include_omitted" |
-                         null = null;
+    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | "end_game" | "invalidate_winner" | "include_omitted" | null = null;
     let modalTitle = "";
-
+    
     // Form Inputs
     let commitmentC_input = "";
     let solverId_input = "";
@@ -85,9 +87,8 @@
     let scores_input = "";
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
-
-    // --- LOGIC ---
     
+    // --- LOGIC ---
     const unsubscribeGameDetail = game_detail.subscribe(value => {
         const typedValue = value as AnyGame | null;
         if (typedValue && (!game || typedValue.boxId !== game.boxId)) {
@@ -108,11 +109,10 @@
         isSubmitting = false;
         transactionId = null; 
         errorMessage = null;
-
         try {
+            currentHeight = await platform.get_current_height();
             participationIsEnded = await isGameParticipationEnded(game);
             gameEnded = isGameEnded(game);
-            
             if (game.status === GameState.Active) {
                 participations = await fetchSubmittedParticipations(game.gameId);
             } else if (game.status === GameState.Resolution) {
@@ -176,7 +176,8 @@
         try {
             const parsedScores = scores_input.split(',').map(s => BigInt(s.trim()));
             transactionId = await platform.submitScoreToGopGame(game, parsedScores, commitmentC_input, solverId_input, hashLogs_input);
-        } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
     }
 
     async function handleResolveGame() {
@@ -218,84 +219,69 @@
         }
     }
 
-async function handleEndGame() {
-        // Asegura que el juego está en el estado correcto y hay participaciones que procesar.
-        if (game?.status !== 'Resolution' || !participations.length) return;
+    async function handleReclaimAfterGrace(participation: ParticipationSubmitted) {
+        if (game?.status !== 'Active' || participation.status !== 'Submitted') return;
 
+        isReclaimingGraceFor = participation.boxId;
+        reclaimGraceError[participation.boxId] = null;
+        reclaimGraceSuccessTxId[participation.boxId] = null;
+
+        try {
+            const result = await platform.reclaim_after_grace(game as GameActive, participation);
+            reclaimGraceSuccessTxId[participation.boxId] = result;
+        } catch (e: any) {
+            reclaimGraceError[participation.boxId] = e.message || "Error reclaiming participation fee.";
+        } finally {
+            isReclaimingGraceFor = null;
+        }
+    }
+
+    async function handleEndGame() {
+        if (game?.status !== 'Resolution' || !participations.length) return;
         errorMessage = null; 
         isSubmitting = true;
         try {
-            // Llama al método de la plataforma para finalizar el juego.
-            // Se le pasa el objeto del juego y todas las participaciones ya resueltas
-            // para que la plataforma construya la transacción final de pago.
-            transactionId = await platform.endGame(
-                game,
-                participations as ParticipationResolved[]
-            );
+            transactionId = await platform.endGame(game, participations as ParticipationResolved[]);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
-            isSubmitting = false; 
+            isSubmitting = false;
         }
     }
 
     async function handleJudgesInvalidate() {
-        // Asegura que el juego está en el estado correcto para la invalidación.
         if (game?.status !== 'Resolution') return;
-
         errorMessage = null; 
         isSubmitting = true;
         try {
-            // Llama al método para que un juez invalide al candidato a ganador.
-            // La plataforma usará el objeto 'game' para saber a quién invalidar y la lista de
-            // 'participations' para encontrar un nuevo candidato. También buscará las "cajas de voto"
-            // del juez conectado para usarlas como data-inputs.
-            transactionId = await platform.judgesInvalidate(
-                game,
-                participations as ParticipationResolved[]
-            );
+            transactionId = await platform.judgesInvalidate(game, participations as ParticipationResolved[]);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
-            isSubmitting = false; 
+            isSubmitting = false;
         }
     }
 
     async function handleIncludeOmitted() {
-        const selectedOmittedBoxId = "";  // TODO
-        // Verifica el estado del juego y que se haya seleccionado una participación del modal.
+        const selectedOmittedBoxId = "";
         if (game?.status !== 'Resolution' || !selectedOmittedBoxId) return;
-
         errorMessage = null; 
         isSubmitting = true;
         try {
-            // Busca el objeto completo de la participación omitida seleccionada.
             const omittedParticipation = participations.find(p => p.boxId === selectedOmittedBoxId);
             if (!omittedParticipation) {
                 throw new Error("La participación seleccionada no se ha encontrado.");
             }
-
             const userAddress = get(address);
             if (!userAddress) {
                 throw new Error("Cartera no conectada.");
             }
-            
-            // Obtiene la clave pública del usuario actual para designarlo como el nuevo "resolver".
             const newResolverPkHex = uint8ArrayToHex(ErgoAddress.fromBase58(userAddress).getPublicKeys()[0]);
-            
-            // Llama al método de la plataforma para incluir la participación.
-            // Se necesita el juego, la participación a incluir, las ya resueltas y la clave
-            // pública del usuario que ejecuta la acción.
-            transactionId = await platform.includeOmittedParticipations(
-                game,
-                [], // omittedParticipations as ParticipationSubmitted[],
-                participations as ParticipationResolved[],
-                newResolverPkHex
-            );
+            transactionId = await platform.includeOmittedParticipations(game, [], participations as ParticipationResolved[], newResolverPkHex);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
-            isSubmitting = false; 
+            isSubmitting = false;
         }
     }
 
@@ -379,7 +365,6 @@ async function handleEndGame() {
         return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
 
-    // Validates and returns the actual score from a participation's score list
     function getActualScore(p: AnyParticipation, secretHex: Uint8Array | undefined): bigint | null {
         if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
         const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
@@ -388,16 +373,15 @@ async function handleEndGame() {
         let r9ParsedArray: any[] | null = null;
         const r9ScoreListRaw = p.box.additionalRegisters.R9?.renderedValue;
         if (typeof r9ScoreListRaw === 'string') {
-            try { r9ParsedArray = JSON.parse(r9ScoreListRaw); } catch (e) { /* silent fail */ }
+            try { r9ParsedArray = JSON.parse(r9ScoreListRaw);
+            } catch (e) { /* silent fail */ }
         } else if (Array.isArray(r9ScoreListRaw)) { r9ParsedArray = r9ScoreListRaw; }
         const pBox_scoreList = parseLongColl(r9ParsedArray);
-
         if (!pBox_R5_commitmentHex || !pBox_R7_solverIdHex_raw || !pBox_R8_hashLogsHex_raw || !pBox_scoreList || pBox_scoreList.length === 0) return null;
 
         const pBoxSolverId_directBytes = hexToBytes(pBox_R7_solverIdHex_raw);
         const pBoxHashLogs_directBytes = hexToBytes(pBox_R8_hashLogsHex_raw);
         if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) return null;
-
         for (const scoreAttempt of pBox_scoreList) {
             const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
             const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...secretHex]);
@@ -412,366 +396,388 @@ async function handleEndGame() {
         cleanupTimers();
         unsubscribeGameDetail();
     });
-
 </script>
 
 {#if game}
 <div class="game-detail-page min-h-screen {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'}">
-        <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">    
-            <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
-                <div class="hero-bg-image">
-                    {#if game.content.imageURL}
-                        <img src={game.content.imageURL} alt="" class="absolute inset-0 w-full h-full object-cover blur-md scale-110" />
-                    {/if}
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/60 to-transparent"></div>
-                </div>
-                <div class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
-                    {#if game.content.imageURL}
-                    <div class="md:w-1/3 flex-shrink-0">
-                        <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg">
-                    </div>
-                    {/if}
-                    <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
-                        <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
-                        <div class="prose prose-sm text-slate-300 max-w-none mb-6">
-                            {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
-                        </div>
-
-                        <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
-                            <div class="stat-block">
-                                <Edit class="stat-icon"/>
-                                <span>{formatErg(getParticipationFee(game))} ERG</span>
-                                <span class="stat-label">Fee per Player</span>
-                            </div>
-                            <div class="stat-block">
-                                <Users class="stat-icon"/>
-                                <span>{participations.length}</span>
-                                <span class="stat-label">Participants</span>
-                            </div>
-                            <div class="stat-block">
-                                <Trophy class="stat-icon"/>
-                                <span>{formatErg(getParticipationFee(game) * BigInt(participations.length))} ERG</span>
-                                <span class="stat-label">Prize Pool</span>
-                            </div>
-                            <div class="stat-block">
-                                <ShieldCheck class="stat-icon"/>
-                                <span>{formatErg(getDisplayStake(game))} ERG</span>
-                                <span class="stat-label">Creator Stake</span>
-                            </div>
-                            <div class="stat-block">
-                                <CheckSquare class="stat-icon"/>
-                                <span>{game.status == "Active" ? game.commissionPercentage : ( game.status == "Resolution" ? game.resolverCommission : "N/A")}%</span>
-                                <span class="stat-label">Creator Commission</span>
-                            </div>
-                            <div class="stat-block">
-                                <Calendar class="stat-icon"/>
-                                <span>{deadlineDateDisplay.split(' at ')[0]}</span>
-                                <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : ( game.status == "Cancelled_Draining" ? game.unlockHeight : "N/A"))}</a>
-                                <span class="stat-label">Deadline</span>
-                            </div>
-                        </div>
-
-                        {#if !participationIsEnded && targetDate}
-                            <div class="countdown-container">
-                                <div class="timeleft {participationIsEnded ? 'ended' : ''}">
-                                    <span class="timeleft-label">
-                                        {#if participationIsEnded}
-                                            TIME'S UP!
-                                            <small class="secondary-text">Awaiting resolution...</small>
-                                        {:else}
-                                            TIME LEFT
-                                            <small class="secondary-text">until participation ends</small>
-                                        {/if}
-                                    </span>
-                                    <div class="countdown-items">
-                                        <div class="item">
-                                            <div>{daysValue}</div>
-                                            <div><h3>Days</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{hoursValue}</div>
-                                            <div><h3>Hours</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{minutesValue}</div>
-                                            <div><h3>Minutes</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{secondsValue}</div>
-                                            <div><h3>Seconds</h3></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {/if}
-
-                        <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
-                            {#if game.content.webLink}
-                                <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
-                                    <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                                        <ExternalLink class="mr-2 h-4 w-4"/>
-                                        Visit Game Site
-                                    </Button>
-                                </a>
-                            {/if}
-
-                            <!-- Share Game Button -->
-                            <Button on:click={shareGame} class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg">
-                                <Share2 class="mr-2 h-4 w-4"/>
-                                Share Game
-                            </Button>
-                            {#if showCopyMessage}
-                                <span class="text-xs text-green-400 ml-2 transition-opacity duration-300">Link Copied!</span>
-                            {/if}
-
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
-                <h2 class="text-2xl font-semibold mb-6">Details</h2>
-                {#if game}
-                    {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                        <div class="info-block">
-                            <span class="info-label">Competition ID (NFT)</span>
-                            <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
-                                {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
-                            </a>
-                        </div>
-                        <div class="info-block">
-                            <span class="info-label">Service ID</span>
-                            <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
-                        </div>
-                        <div class="info-block">
-                            <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
-                            <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
-                                {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
-                            </a>
-                        </div>
-                        {#if game.hashS}
-                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                            <span class="info-label">Hashed Secret (S)</span>
-                            <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
-                        </div>
-                        {/if}
-                    </div>
+    <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">    
+        <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
+            <div class="hero-bg-image">
+                {#if game.content.imageURL}
+                    <img src={game.content.imageURL} alt="" class="absolute inset-0 w-full h-full object-cover blur-md scale-110" />
                 {/if}
-            </section>
-
-            <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
-                <div class="status-side">
-                    <h2 class="text-2xl font-semibold mb-3">Status</h2>
-                    {#if game.status === 'Active' && !participationIsEnded}
-                        <p class="text-xl font-medium text-green-500">Open for Participation</p>
-                    {:else if game.status === 'Active' && participationIsEnded}
-                        <p class="text-xl font-medium text-yellow-500">Awaiting Resolution</p>
-                    {:else if game.status === 'Resolution'}
-                        <p class="text-xl font-medium text-blue-500">Resolving Winner</p>
-                    {:else if game.status === 'Cancelled_Draining'}
-                        <p class="text-xl font-medium text-red-500">Cancelled - Draining Stake</p>
-                    {:else}
-                        <p class="text-xl font-medium text-gray-500">Game Over</p>
-                    {/if}
-                    <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/60 to-transparent"></div>
+            </div>
+            <div class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
+                {#if game.content.imageURL}
+                <div class="md:w-1/3 flex-shrink-0">
+                    <img src={game.content.imageURL} alt="{game.content.title} banner" class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg">
+                </div>
+                {/if}
+                <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
+                    <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
+                    <div class="prose prose-sm text-slate-300 max-w-none mb-6">
+                        {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
                     </div>
-            
-                <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
-                    <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
-                    <div class="space-y-4">
-                        {#if $connected}
-                            {#if game.status === 'Active' && !participationIsEnded}
-                                <Button on:click={() => setupActionModal('submit_score')} class="w-full">
-                                    <Edit class="mr-2 h-4 w-4"/>Submit My Score
-                                </Button>
-                                <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
-                                    <XCircle class="mr-2 h-4 w-4"/>Cancel Competition
-                                </Button>
-                            {/if}
 
-                            {#if game.status === 'Active' && participationIsEnded && isOwner}
-                                <Button on:click={() => setupActionModal('resolve_game')} class="w-full">
-                                    <CheckSquare class="mr-2 h-4 w-4"/>Resolve Competition
-                                </Button>
-                            {/if}
+                    <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
+                        <div class="stat-block">
+                            <Edit class="stat-icon"/>
+                            <span>{formatErg(getParticipationFee(game))} ERG</span>
+                            <span class="stat-label">Fee per Player</span>
+                        </div>
+                        <div class="stat-block">
+                            <Users class="stat-icon"/>
+                            <span>{participations.length}</span>
+                            <span class="stat-label">Participants</span>
+                        </div>
+                        <div class="stat-block">
+                            <Trophy class="stat-icon"/>
+                            <span>{formatErg(getParticipationFee(game) * BigInt(participations.length))} ERG</span>
+                            <span class="stat-label">Prize Pool</span>
+                        </div>
+                        <div class="stat-block">
+                            <ShieldCheck class="stat-icon"/>
+                            <span>{formatErg(getDisplayStake(game))} ERG</span>
+                            <span class="stat-label">Creator Stake</span>
+                        </div>
+                        <div class="stat-block">
+                            <CheckSquare class="stat-icon"/>
+                            <span>{game.status == "Active" ? game.commissionPercentage : ( game.status == "Resolution" ? game.resolverCommission : "N/A")}%</span>
+                            <span class="stat-label">Creator Commission</span>
+                        </div>
+                        <div class="stat-block">
+                            <Calendar class="stat-icon"/>
+                            <span>{deadlineDateDisplay.split(' at ')[0]}</span>
+                            <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : ( game.status == "Cancelled_Draining" ? game.unlockHeight : "N/A"))}</a>
+                            <span class="stat-label">Deadline</span>
+                        </div>
+                    </div>
 
-                            {#if game.status === 'Resolution'}
-                                {@const isBeforeDeadline = new Date().getTime() < targetDate}
-                                
-                                {#if isResolver}
-                                    <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline} class="w-full">
-                                        <Trophy class="mr-2 h-4 w-4"/> End Competition & Distribute Prizes
-                                    </Button>
-                                {/if}
-
-                                <Button 
-                                    on:click={() => setupActionModal('include_omitted')} 
-                                    disabled={!isBeforeDeadline} 
-                                    variant="outline" 
-                                    class="w-full"
-                                    title="Cualquiera puede ejecutar esta acción para reclamar la comisión del resolver.">
-                                    <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
-                                </Button>
-
-                                {#if isJudge}
-                                    <Button on:click={() => setupActionModal('invalidate_winner')} disabled={!isBeforeDeadline} variant="destructive" class="w-full">
-                                        <XCircle class="mr-2 h-4 w-4"/> Judges: Invalidate Winner
-                                    </Button>
-                                {/if}
-                            {/if}
-
-                            {#if iGameDrainingStaking(game)}
-                                <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
-                                    {#await isGameDrainingAllowed(game) then isAllowed}
-                                        <Button on:click={() => setupActionModal('drain_stake')} disabled={!isAllowed} class="w-full">
-                                            <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
-                                        </Button>
-                                    {/await}
+                    {#if !participationIsEnded && targetDate}
+                        <div class="countdown-container">
+                            <div class="timeleft {participationIsEnded ? 'ended' : ''}">
+                                <span class="timeleft-label">
+                                    {#if participationIsEnded}
+                                        TIME'S UP!
+                                        <small class="secondary-text">Awaiting resolution...</small>
+                                    {:else}
+                                        TIME LEFT
+                                        <small class="secondary-text">until participation ends</small>
+                                    {/if}
+                                </span>
+                                <div class="countdown-items">
+                                    <div class="item">
+                                        <div>{daysValue}</div>
+                                        <div><h3>Days</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{hoursValue}</div>
+                                        <div><h3>Hours</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{minutesValue}</div>
+                                        <div><h3>Minutes</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{secondsValue}</div>
+                                        <div><h3>Seconds</h3></div>
+                                    </div>
                                 </div>
-                            {/if}
+                            </div>
+                        </div>
+                    {/if}
 
-                            
+                    <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
+                        {#if game.content.webLink}
+                            <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
+                                <Button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                    <ExternalLink class="mr-2 h-4 w-4"/>
+                                    Visit Game Site
+                                </Button>
+                            </a>
+                        {/if}
 
-                        {:else}
-                            <p class="info-box">Connect your wallet to interact with the game competition.</p>
+                        <Button on:click={shareGame} class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg">
+                            <Share2 class="mr-2 h-4 w-4"/>
+                            Share Game
+                        </Button>
+                        {#if showCopyMessage}
+                            <span class="text-xs text-green-400 ml-2 transition-opacity duration-300">Link Copied!</span>
                         {/if}
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
+    </div>
 
-            {#if participations && participations.length > 0}
-                <section class="participations-section">
-                    <h2 class="text-3xl font-semibold mb-8 text-center">
-                        Participations <span class="text-lg font-normal {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'}">({participations.length})</span>
-                    </h2>
-                    <div class="flex flex-col gap-6">
-                        {#each participations as p (p.boxId)}
-                            {@const isCurrentParticipationWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === p.commitmentC_Hex}
-                            {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
+    <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
+            <h2 class="text-2xl font-semibold mb-6">Details</h2>
+            {#if game}
+                {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                    <div class="info-block">
+                        <span class="info-label">Competition ID (NFT)</span>
+                        <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
+                            {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
+                        </a>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Service ID</span>
+                        <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
+                        <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
+                            {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
+                        </a>
+                    </div>
+                    {#if game.hashS}
+                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                        <span class="info-label">Hashed Secret (S)</span>
+                        <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
+                    </div>
+                    {/if}
+                </div>
+            {/if}
+        </section>
 
-                            <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
-                                {isCurrentParticipationWinner
-                                    ? 'winner-card border-green-500/50'
-                                    : ($mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200')}">
+        <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
+            <div class="status-side">
+                <h2 class="text-2xl font-semibold mb-3">Status</h2>
+                {#if game.status === 'Active' && !participationIsEnded}
+                    <p class="text-xl font-medium text-green-500">Open for Participation</p>
+                {:else if game.status === 'Active' && participationIsEnded}
+                    <p class="text-xl font-medium text-yellow-500">Awaiting Resolution</p>
+                {:else if game.status === 'Resolution'}
+                    <p class="text-xl font-medium text-blue-500">Resolving Winner</p>
+                {:else if game.status === 'Cancelled_Draining'}
+                    <p class="text-xl font-medium text-red-500">Cancelled - Draining Stake</p>
+                {:else}
+                    <p class="text-xl font-medium text-gray-500">Game Over</p>
+                {/if}
+                <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
+                </div>
+        
+            <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
+                <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
+                <div class="space-y-4">
+                    {#if $connected}
+                        {#if game.status === 'Active' && !participationIsEnded}
+                            <Button on:click={() => setupActionModal('submit_score')} class="w-full">
+                                <Edit class="mr-2 h-4 w-4"/>Submit My Score
+                            </Button>
+                            <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
+                                <XCircle class="mr-2 h-4 w-4"/>Cancel Competition
+                            </Button>
+                        {/if}
 
-                                {#if isCurrentParticipationWinner}
-                                    <div class="winner-badge">
-                                        <Trophy class="w-4 h-4 mr-2" />
-                                        <span>WINNER CANDIDATE</span>
-                                    </div>
-                                {/if}
+                        {#if game.status === 'Active' && participationIsEnded && isOwner}
+                            <Button on:click={() => setupActionModal('resolve_game')} class="w-full">
+                                <CheckSquare class="mr-2 h-4 w-4"/>Resolve Competition
+                            </Button>
+                        {/if}
 
-                                <div class="card-header p-4 border-b {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <div class="text-xs uppercase text-slate-500 dark:text-slate-400">Player Address</div>
-                                            <a href="{web_explorer_uri_addr + pkHexToBase58Address(p.playerPK_Hex)}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm break-all {$mode === 'dark' ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-black'}" title={pkHexToBase58Address(p.playerPK_Hex)}>
-                                                {pkHexToBase58Address(p.playerPK_Hex)}
-                                            </a>
-                                        </div>
-                                        {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                                            <span class="
-                                                text-xs font-semibold ml-4 px-2 py-1 rounded-full
-                                                {$mode === 'dark' ? 'bg-blue-500 text-white' : 'bg-blue-200 text-blue-800'}
-                                                {isCurrentParticipationWinner ? 'inline-block mt-6' : ''}
-                                                ">
-                                                You
-                                            </span>
-                                        {/if}
-                                    </div>
+                        {#if game.status === 'Resolution'}
+                            {@const isBeforeDeadline = new Date().getTime() < targetDate}
+                            
+                            {#if isResolver}
+                                <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline} class="w-full">
+                                    <Trophy class="mr-2 h-4 w-4"/> End Competition & Distribute Prizes
+                                </Button>
+                            {/if}
+
+                            <Button 
+                                on:click={() => setupActionModal('include_omitted')} 
+                                disabled={!isBeforeDeadline} 
+                                variant="outline" 
+                                class="w-full"
+                                title="Cualquiera puede ejecutar esta acción para reclamar la comisión del resolver.">
+                                <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
+                            </Button>
+
+                            {#if isJudge}
+                                <Button on:click={() => setupActionModal('invalidate_winner')} disabled={!isBeforeDeadline} variant="destructive" class="w-full">
+                                    <XCircle class="mr-2 h-4 w-4"/> Judges: Invalidate Winner
+                                </Button>
+                            {/if}
+                        {/if}
+
+                        {#if iGameDrainingStaking(game)}
+                            <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
+                                {#await isGameDrainingAllowed(game) then isAllowed}
+                                    <Button on:click={() => setupActionModal('drain_stake')} disabled={!isAllowed} class="w-full">
+                                        <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
+                                    </Button>
+                                {/await}
+                            </div>
+                        {/if}
+                    {:else}
+                        <p class="info-box">Connect your wallet to interact with the game competition.</p>
+                    {/if}
+                </div>
+            </div>
+        </section>
+
+        {#if participations && participations.length > 0}
+            <section class="participations-section">
+                <h2 class="text-3xl font-semibold mb-8 text-center">
+                    Participations <span class="text-lg font-normal {$mode === 'dark' ? 'text-slate-400' : 'text-slate-500'}">({participations.length})</span>
+                </h2>
+                <div class="flex flex-col gap-6">
+                    {#each participations as p (p.boxId)}
+                        {@const isCurrentParticipationWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === p.commitmentC_Hex}
+                        {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
+
+                        {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
+                        {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant && !p.spent}
+                        {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
+                        {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
+
+                        <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
+                            {isCurrentParticipationWinner
+                                ? 'winner-card border-green-500/50'
+                                : ($mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200')}">
+
+                            {#if isCurrentParticipationWinner}
+                                <div class="winner-badge">
+                                    <Trophy class="w-4 h-4 mr-2" />
+                                    <span>WINNER CANDIDATE</span>
                                 </div>
-
-                                <div class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                                    <div class="info-block">
-                                        <span class="info-label">Fee Paid</span>
-                                        <span class="info-value">{formatErg(p.value)} ERG</span>
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label">Solver ID</span>
-                                        <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
-                                            {p.solverId_String ? (p.solverId_String.length > 25 ? p.solverId_String.slice(0,25)+'...' : p.solverId_String) : (p.solverId_RawBytesHex.slice(0,20) + '...')}
-                                        </span>
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label">Transaction ID</span>
-                                        <a href="{web_explorer_uri_tx + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
-                                            {p.transactionId.slice(0, 10)}...{p.transactionId.slice(-4)}
+                            {/if}
+                            
+                            <div class="card-header p-4 border-b {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs uppercase text-slate-500 dark:text-slate-400">Player Address</div>
+                                        <a href="{web_explorer_uri_addr + pkHexToBase58Address(p.playerPK_Hex)}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm break-all {$mode === 'dark' ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-black'}" title={pkHexToBase58Address(p.playerPK_Hex)}>
+                                            {pkHexToBase58Address(p.playerPK_Hex)}
                                         </a>
                                     </div>
-                                    <div class="info-block sm:col-span-2 lg:col-span-3">
-                                        <span class="info-label">Score List</span>
-                                        <div class="font-mono text-xs {$mode === 'dark' ? 'text-lime-400' : 'text-lime-600'}">
-                                            {#if p.scoreList && p.scoreList.length > 0}
-                                                {#each p.scoreList as score, i}
-                                                    <span class:font-bold={actualScoreForThisParticipation !== null && score === actualScoreForThisParticipation}
-                                                        class:opacity-50={actualScoreForThisParticipation !== null && score !== actualScoreForThisParticipation}>
-                                                        {score.toString()}
-                                                    </span>{#if i < p.scoreList.length - 1}<span class="{$mode === 'dark' ? 'text-slate-500' : 'text-gray-400'}">, </span>{/if}
-                                                {/each}
-                                                {#if actualScoreForThisParticipation !== null}
-                                                    <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
-                                                        (Real Score: {actualScoreForThisParticipation})
-                                                    </span>
-                                                {/if}
-                                            {/if}
-                                        </div>
-                                    </div>
-                                    {#each participations as p (p.boxId)}
-                                        {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                                        {@const canClaimRefund = (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) && isCurrentUserParticipant && !p.spent}
-
-                                        <div class="participation-card ...">
-                                            <div class="card-body ...">
-                                                {#if canClaimRefund}
-                                                    <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
-                                                        <p class="text-xs mb-2 {$mode === 'dark' ? 'text-blue-400' : 'text-blue-600'}">
-                                                            With the secret now revealed, the game has been canceled. Please claim a refund of your participation fee.
-                                                        </p>
-                                                        <Button 
-                                                            on:click={() => handleClaimRefund(p)} 
-                                                            disabled={isClaimingRefundFor === p.boxId}
-                                                            class="w-full text-base bg-blue-600 hover:bg-blue-700">
-                                                            {#if isClaimingRefundFor === p.boxId}
-                                                                Processing...
-                                                            {:else}
-                                                                <Trophy class="mr-2 h-4 w-4"/> Claim Refund
-                                                            {/if}
-                                                        </Button>
-                                                    
-
-                                                        {#if claimRefundSuccessTxId[p.boxId]}
-                                                            <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
-                                                                <strong>Success! Transaction ID:</strong><br/>
-                                                                <a href="{web_explorer_uri_tx + claimRefundSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
-                                                                    {claimRefundSuccessTxId[p.boxId]}
-                                                                </a>
-                                                            </div>
-                                                        {/if}
-
-                                                        {#if claimRefundError[p.boxId]}
-                                                            <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
-                                                        {/if}
-                                                    </div>
-                                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)}       <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
-                                                        <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
-                                                            <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
-                                                            A refund has already been requested.
-                                                        </div>
-                                                    </div>
-                                                {/if}
-                                            </div>
-                                        </div>
-                                    {/each}
+                                    {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
+                                        <span class="
+                                            text-xs font-semibold ml-4 px-2 py-1 rounded-full
+                                            {$mode === 'dark' ? 'bg-blue-500 text-white' : 'bg-blue-200 text-blue-800'}
+                                            {isCurrentParticipationWinner ? 'inline-block mt-6' : ''}
+                                            ">
+                                            You
+                                        </span>
+                                    {/if}
                                 </div>
                             </div>
-                        {/each}
-                    </div>
-                </section>
-            {/if}
-        </div>
+
+                            <div class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                                <div class="info-block">
+                                    <span class="info-label">Fee Paid</span>
+                                    <span class="info-value">{formatErg(p.value)} ERG</span>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Solver ID</span>
+                                    <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
+                                        {p.solverId_String ? (p.solverId_String.length > 25 ? p.solverId_String.slice(0,25)+'...' : p.solverId_String) : (p.solverId_RawBytesHex.slice(0,20) + '...')}
+                                    </span>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Transaction ID</span>
+                                    <a href="{web_explorer_uri_tx + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
+                                        {p.transactionId.slice(0, 10)}...{p.transactionId.slice(-4)}
+                                    </a>
+                                </div>
+                                <div class="info-block sm:col-span-2 lg:col-span-3">
+                                    <span class="info-label">Score List</span>
+                                    <div class="font-mono text-xs {$mode === 'dark' ? 'text-lime-400' : 'text-lime-600'}">
+                                        {#if p.scoreList && p.scoreList.length > 0}
+                                            {#each p.scoreList as score, i}
+                                                <span class:font-bold={actualScoreForThisParticipation !== null && score === actualScoreForThisParticipation}
+                                                    class:opacity-50={actualScoreForThisParticipation !== null && score !== actualScoreForThisParticipation}>
+                                                    {score.toString()}
+                                                </span>{#if i < p.scoreList.length - 1}<span class="{$mode === 'dark' ? 'text-slate-500' : 'text-gray-400'}">, </span>{/if}
+                                            {/each}
+                                            {#if actualScoreForThisParticipation !== null}
+                                                <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
+                                                    (Real Score: {actualScoreForThisParticipation})
+                                                </span>
+                                            {/if}
+                                        {/if}
+                                    </div>
+                                </div>
+
+                                {#if canReclaimAfterGrace}
+                                    <div class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
+                                        <p class="text-xs mb-2 {$mode === 'dark' ? 'text-orange-400' : 'text-orange-600'}">
+                                            The game creator failed to resolve the game in time. You can now reclaim your participation fee.
+                                        </p>
+                                        <Button 
+                                            on:click={() => handleReclaimAfterGrace(p)} 
+                                            disabled={isReclaimingGraceFor === p.boxId}
+                                            class="w-full text-base bg-orange-600 hover:bg-orange-700">
+                                            {#if isReclaimingGraceFor === p.boxId}
+                                                Reclaiming...
+                                            {:else}
+                                                <ShieldCheck class="mr-2 h-4 w-4"/> Reclaim Participation Fee
+                                            {/if}
+                                        </Button>
+
+                                        {#if reclaimGraceSuccessTxId[p.boxId]}
+                                            <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
+                                                <strong>Success! Transaction ID:</strong><br/>
+                                                <a href="{web_explorer_uri_tx + reclaimGraceSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
+                                                    {reclaimGraceSuccessTxId[p.boxId]}
+                                                </a>
+                                            </div>
+                                        {/if}
+
+                                        {#if reclaimGraceError[p.boxId]}
+                                            <p class="text-xs mt-1 text-red-400">{reclaimGraceError[p.boxId]}</p>
+                                        {/if}
+                                    </div>
+                                {/if}
+
+                                {#if canClaimRefund}
+                                    <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                        <p class="text-xs mb-2 {$mode === 'dark' ? 'text-blue-400' : 'text-blue-600'}">
+                                            With the secret now revealed, the game has been canceled. Please claim a refund of your participation fee.
+                                        </p>
+                                        <Button 
+                                            on:click={() => handleClaimRefund(p)} 
+                                            disabled={isClaimingRefundFor === p.boxId}
+                                            class="w-full text-base bg-blue-600 hover:bg-blue-700">
+                                            {#if isClaimingRefundFor === p.boxId}
+                                                Processing...
+                                            {:else}
+                                                <Trophy class="mr-2 h-4 w-4"/> Claim Refund
+                                            {/if}
+                                        </Button>
+                                        
+                                        {#if claimRefundSuccessTxId[p.boxId]}
+                                            <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
+                                                <strong>Success! Transaction ID:</strong><br/>
+                                                <a href="{web_explorer_uri_tx + claimRefundSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
+                                                    {claimRefundSuccessTxId[p.boxId]}
+                                                </a>
+                                            </div>
+                                        {/if}
+
+                                        {#if claimRefundError[p.boxId]}
+                                            <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
+                                        {/if}
+                                    </div>
+                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)}
+                                    <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
+                                        <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
+                                            <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
+                                            A refund has already been requested.
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+            </section>
+        {/if}
+    </div>
 
     {#if showActionModal && game}
     <div class="modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" on:click|self={closeModal} role="presentation">
@@ -784,7 +790,7 @@ async function handleEndGame() {
             </div>
 
              <div class="modal-form-body">
-                 {#if currentActionType === 'submit_score'}
+                {#if currentActionType === 'submit_score'}
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                              <div class="lg:col-span-2">
@@ -844,7 +850,6 @@ async function handleEndGame() {
                             {isSubmitting ? 'Processing...' : 'Confirm & Drain Stake'}
                         </Button>
                     </div>
-
                 {:else if currentActionType === 'end_game'}
                     <div class="space-y-4">
                         <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
@@ -900,7 +905,6 @@ async function handleEndGame() {
 {/if}
 
 <style lang="postcss">
-    /* General styles for the detail page */
     .game-detail-page {
         background-color: var(--background);
         padding-top: 2rem;
@@ -915,7 +919,6 @@ async function handleEndGame() {
         background-color: var(--card);
     }
 
-    /* Hero Section Styles */
     .hero-section {
         min-height: 350px;
         display: flex;
@@ -928,7 +931,6 @@ async function handleEndGame() {
         margin-bottom: 0.75em;
     }
 
-    /* Stat Blocks Styles */
     .stat-block {
         background-color: rgba(255, 255, 255, 0.1);
         -webkit-backdrop-filter: blur(4px);
@@ -962,7 +964,6 @@ async function handleEndGame() {
         font-weight: 400;
     }
 
-    /* Info box for status messages */
     .info-box {
         @apply text-sm text-center p-3 rounded-md bg-slate-500/50;
     }
@@ -970,8 +971,6 @@ async function handleEndGame() {
         @apply bg-gray-100 text-black;
     }
 
-
-    /* --- STYLES FOR PARTICIPATION CARD & INFO SECTIONS --- */
     .info-block {
         display: flex;
         flex-direction: column;
@@ -1036,7 +1035,6 @@ async function handleEndGame() {
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    /* --- Styles for Countdown Clock --- */
     .countdown-container {
         padding-top: 1.5rem;
     }
@@ -1044,7 +1042,7 @@ async function handleEndGame() {
     .timeleft {
         display: flex;
         flex-direction: row;
-        flex-wrap: wrap;  
+        flex-wrap: wrap;
         align-items: center; 
         gap: 2rem; 
         color: #fff;
@@ -1085,7 +1083,7 @@ async function handleEndGame() {
         background-color: rgba(255, 255, 255, 0.1);
         -webkit-backdrop-filter: blur(4px);
         backdrop-filter: blur(4px);
-        border-radius: 0.5rem; 
+        border-radius: 0.5rem;
         border: none; 
         transition: all 0.3s ease;
     }
