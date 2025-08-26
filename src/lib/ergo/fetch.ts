@@ -319,37 +319,67 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
 // =================================================================
 
 /**
- * Parses a Box into a `GameCancellation` object.
+ * Parses a Box into a `GameCancellation` object, adapted for the new register structure.
  * @param box The raw box from the explorer.
  * @returns A `GameCancellation` object or `null`.
  */
 export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | null {
     try {
         if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
-            console.warn('parseGameCancellationBox: invalid constants');
+            console.warn('parseGameCancellationBox: invalid constants (ErgoTree mismatch)');
             return null;
         }
 
-        if (!box.assets || box.assets.length === 0) return null;
+        if (!box.assets || box.assets.length === 0) {
+            console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
+            return null;
+        }
         const gameId = box.assets[0].tokenId;
 
+        // --- LECTURA DE REGISTROS ADAPTADA A LA NUEVA ESTRUCTURA ---
 
-        const unlockHeight = Number(parseLongColl(box.additionalRegisters.R5?.renderedValue)[0]);
+        // R4: Game state (Integer). Debe ser 2 para 'Cancelled'.
+        const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        if (isNaN(gameState) || gameState !== 2) {
+            console.warn(`parseGameCancellationBox: Box ${box.boxId} has incorrect game state in R4. Expected '2', got '${box.additionalRegisters.R4?.renderedValue}'.`);
+            return null;
+        }
+
+        // R5: unlockHeight (Long). Se convierte directamente a número.
+        const unlockHeight = parseInt(box.additionalRegisters.R5?.renderedValue, 10);
+        
+        // R6: revealedSecret (Coll[Byte]). El secreto 'S' revelado.
         const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
-        const currentStakeNanoErg = parseLongColl(box.additionalRegisters.R7?.renderedValue)[0];
+        
+        // R7: creatorStake (Long). El stake actual del creador.
+        const currentStakeNanoErg = parseInt(box.additionalRegisters.R7?.renderedValue, 10);
+        
+        // R8: ReadOnlyInfo (Coll[Byte]). JSON con datos inmutables.
         const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R8?.renderedValue) || ""), box.boxId, box.assets[0]);
 
-        if (unlockHeight === undefined || !revealedS_Hex || currentStakeNanoErg === undefined) throw new Error("Invalid registers.");
+        // Valida que los registros esenciales se hayan parseado correctamente
+        if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
+            throw new Error("Invalid or missing registers R5, R6, or R7.");
+        }
 
         return {
-            platform: new ErgoPlatform(), boxId: box.boxId, box, status: GameState.Cancelled_Draining,
-            gameId, unlockHeight, revealedS_Hex, currentStakeNanoErg, content, value: BigInt(box.value)
+            platform: new ErgoPlatform(),
+            boxId: box.boxId,
+            box,
+            status: GameState.Cancelled_Draining,
+            gameId,
+            unlockHeight,
+            revealedS_Hex,
+            currentStakeNanoErg,
+            content,
+            value: BigInt(box.value)
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
         return null;
     }
 }
+
 
 
 /**
