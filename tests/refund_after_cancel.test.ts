@@ -133,7 +133,7 @@ describe("Participant Refund After Cancellation", () => {
     );
 
     // --- FASE 1: Crear el estado inicial (Juego Activo + Participación) ---
-    const gameActiveBox = gameActiveContract.addUTxOs({
+   gameActiveContract.addUTxOs({
       value: creatorStake,
       ergoTree: gameActiveErgoTree.toHex(),
       assets: [{ tokenId: gameNftId, amount: 1n }],
@@ -150,11 +150,13 @@ describe("Participant Refund After Cancellation", () => {
         ]).toHex(),
         R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
       },
-    })[0];
+    });
+     const gameActiveBox = gameActiveContract.utxos.toArray()[0];
 
     participationSubmittedContract.addUTxOs({
       value: participationFee,
       ergoTree: participationSubmittedErgoTree.toHex(),
+      assets: [],
       creationHeight: mockChain.height,
       additionalRegisters: {
         R4: SColl(SByte, participant.key.publicKey).toHex(),
