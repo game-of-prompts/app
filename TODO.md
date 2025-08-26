@@ -18,8 +18,8 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
     - [x] Drenar staking
 
 - Acciones individuales de participacion:
-    - [] cancelar por inactividad en estado 1
-    - [] retirar fondos por cancelacion en estado 3
+    - [x] Cancelar por inactividad en estado 1
+    - [x] Retirar fondos por cancelacion en estado 3
 
 ### Otros
 
