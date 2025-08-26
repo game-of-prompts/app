@@ -36,8 +36,8 @@
     $: playerAddr = pkHexToBase58Address(participation.playerPK_Hex); // <-- FIX IS HERE
     $: isWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === participation.commitmentC_Hex;
     $: isCurrentUser = connectedAddress && connectedAddress === playerAddr;
-    $: canClaimRefund = (game.status === 'Cancelled_Draining' || game.status === 'Cancelled_Finalized') && isCurrentUser && !participation.spent;
-    $: isGracePeriodOver = game.status === GameState.Active && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS;
+    $: canClaimRefund = (game.status === 'Cancelled_Draining') && isCurrentUser && !participation.spent;
+    $: isGracePeriodOver = game.status === 'Active' && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS;
     $: canReclaim = isGracePeriodOver && isCurrentUser && !participation.spent;
     $: actualScore = getActualScore(participation, game);
 
@@ -204,7 +204,7 @@
                     <p class="text-xs mt-1 text-red-400">{claimRefundError}</p>
                 {/if}
             </div>
-        {:else if participation.spent && isCurrentUser && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)}
+        {:else if participation.spent && isCurrentUser && (game.status === 'Cancelled_Draining')}
             <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                 <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
                     <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>

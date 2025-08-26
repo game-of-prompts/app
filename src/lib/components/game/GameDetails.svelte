@@ -78,7 +78,7 @@
                 participations = await fetchSubmittedParticipations(game.gameId);
             } else if (game.status === GameState.Resolution || game.status === GameState.Ended) {
                 participations = await fetchResolvedParticipations(game.gameId);
-            } else if (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized) {
+            } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchSubmittedParticipations(game.gameId);
             } else {
                 participations = []; // Asegurarse de limpiar si no hay estado conocido

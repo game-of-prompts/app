@@ -13,8 +13,7 @@ export const GameState = {
     Cancelled_Draining: 'Cancelled_Draining', // Corresponde a game_cancellation.es
     
     // Estados derivados (no representan un script, sino el final del ciclo de vida)
-    Finalized: 'Finalized',             // Juego terminado y pagado
-    Cancelled_Finalized: 'Cancelled_Finalized' // Juego cancelado y stake completamente drenado
+    Finalized: 'Finalized',             // Juego terminado y pagado (obtenido mediante token NFT)
 } as const;
 
 /**
@@ -110,6 +109,21 @@ export interface GameCancellation {
 }
 
 /**
+ * Representa la estructura de datos de una caja de juego en estado "Finalizado".
+ * Este estado no tiene un script asociado, ya que representa el final del ciclo de vida del juego.
+ */
+export interface GameFinalized {
+    boxId: string;
+    box: Box<Amount>;
+    platform: ErgoPlatform;
+    status: 'Finalized';
+    gameId: string;
+    winnerInfo: WinnerInfo | null; // Puede ser null si el juego fue cancelado
+    content: GameContent;
+    value: bigint;
+}
+
+/**
  * Contiene todas las propiedades comunes compartidas entre los diferentes
  * estados de una caja de participación.
  */
@@ -151,7 +165,7 @@ export interface ParticipationResolved extends ParticipationBase {
 // =================================================================
 
 /** Un tipo de unión que puede representar un juego en cualquier estado de contrato. */
-export type AnyGame = GameActive | GameResolution | GameCancellation;
+export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
 export type AnyParticipation = ParticipationSubmitted | ParticipationResolved;
@@ -168,7 +182,7 @@ export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> 
  * Determina si un juego ha llegado a su estado final definitivo.
  */
 export function isGameEnded(game: AnyGame): boolean {
-    return game.status === GameState.Finalized || game.status === GameState.Cancelled_Finalized;
+    return game.status === "Finalized";
 }
 
 /**

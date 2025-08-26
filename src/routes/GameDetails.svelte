@@ -631,7 +631,7 @@
                         {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
 
                         {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                        {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining' || game.status === 'Cancelled_Finalized') && isCurrentUserParticipant && !p.spent}
+                        {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && !p.spent}
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
 
@@ -763,7 +763,7 @@
                                             <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
                                         {/if}
                                     </div>
-                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Cancelled_Finalized)}
+                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining)}
                                     <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                                         <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
                                             <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>

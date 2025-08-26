@@ -65,7 +65,6 @@
                 break;
 
             case GameState.Cancelled_Draining:
-            case GameState.Cancelled_Finalized:
                 statusMessage = "Game Cancelled";
                 statusColor = STATUS_COLORS.CANCELLED;
                 remainingTimeCountdown = "Ended";

@@ -220,7 +220,7 @@ export class ErgoPlatform implements Platform {
         participation: ParticipationSubmitted
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
-        if (game.status !== 'Cancelled_Draining' && game.status !== 'Cancelled_Finalized') {
+        if (game.status !== 'Cancelled_Draining') {
             throw new Error("El juego no está en un estado que permita reembolsos.");
         }
         if (participation.status !== 'Submitted') {

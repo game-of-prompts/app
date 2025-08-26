@@ -123,7 +123,7 @@ export interface Platform {
 
     /*
     * Permite a un jugador reclamar su participación después de que el juego haya sido cancelado.
-    * Solo es posible si el jugador no ha reclamado aún y el juego está en estado 'Cancelled_Draining' o 'Cancelled_Finalized'.
+    * Solo es posible si el jugador no ha reclamado aún y el juego está en estado 'Cancelled_Draining'.
     */
     claimAfterCancellation(
         game: GameCancellation,

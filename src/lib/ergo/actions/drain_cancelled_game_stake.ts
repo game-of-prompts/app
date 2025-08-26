@@ -46,7 +46,7 @@ export async function drain_cancelled_game_stake(
     if (remainingStake < SAFE_MIN_BOX_VALUE) {
         // In this case, a different action should be used to finalize the drain.
         // For now, we throw an error to indicate this action is no longer valid.
-        throw new Error(`The remaining stake (${remainingStake}) is too low to continue the drain. The finalization action should be used.`);
+        throw new Error(`The remaining stake (${remainingStake}) is too low to continue the drain. Cannot proceed.`);
     }
 
     // --- 2. Build Outputs ---
