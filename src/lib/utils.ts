@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { cubicOut } from "svelte/easing";
 import type { TransitionConfig } from "svelte/transition";
+import type { AnyGame, GameCancellation } from '$lib/common/game';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -60,3 +61,19 @@ export const flyAndScale = (
 		easing: cubicOut
 	};
 };
+
+// Devuelve el stake, sin importar el estado del juego
+export function getDisplayStake(game: AnyGame): bigint {
+    if (game.status === 'Cancelled_Draining') {
+        return (game as GameCancellation).currentStakeNanoErg;
+    }
+    return game.creatorStakeNanoErg;
+}
+
+// Devuelve la tarifa de participación o 0 si el juego está cancelado
+export function getParticipationFee(game: AnyGame): bigint {
+    if (game.status === 'Cancelled_Draining') {
+        return 0n; // 0 BigInt
+    }
+    return game.participationFeeNanoErg;
+}

@@ -38,6 +38,7 @@
     import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
+    import { getDisplayStake, getParticipationFee } from "$lib/utils";
 
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
@@ -436,7 +437,7 @@ async function handleEndGame() {
                         <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
                             <div class="stat-block">
                                 <Edit class="stat-icon"/>
-                                <span>{formatErg(game.participationFeeNanoErg)} ERG</span>
+                                <span>{formatErg(getParticipationFee(game))} ERG</span>
                                 <span class="stat-label">Fee per Player</span>
                             </div>
                             <div class="stat-block">
@@ -446,12 +447,12 @@ async function handleEndGame() {
                             </div>
                             <div class="stat-block">
                                 <Trophy class="stat-icon"/>
-                                <span>{formatErg(game.participationFeeNanoErg * BigInt(participations.length))} ERG</span>
-                                <span class="stat-label">Price</span>
+                                <span>{formatErg(getParticipationFee(game) * BigInt(participations.length))} ERG</span>
+                                <span class="stat-label">Prize Pool</span>
                             </div>
                             <div class="stat-block">
                                 <ShieldCheck class="stat-icon"/>
-                                <span>{formatErg(game.creatorStakeNanoErg)} ERG</span>
+                                <span>{formatErg(getDisplayStake(game))} ERG</span>
                                 <span class="stat-label">Creator Stake</span>
                             </div>
                             <div class="stat-block">
