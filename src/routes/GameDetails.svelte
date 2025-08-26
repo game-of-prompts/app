@@ -127,6 +127,9 @@
             } else if (game.status === 'Resolution') {
                 targetDate = await block_height_to_timestamp(game.resolutionDeadline, platform);
                 deadlineDateDisplay = `Judge period ends ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
+            } else if (game.status === 'Cancelled_Draining') {
+                targetDate = await block_height_to_timestamp(game.unlockHeight, platform);
+                deadlineDateDisplay = `Stake unlocks ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
             } else {
                 deadlineDateDisplay = "N/A";
             }
@@ -463,7 +466,7 @@ async function handleEndGame() {
                             <div class="stat-block">
                                 <Calendar class="stat-icon"/>
                                 <span>{deadlineDateDisplay.split(' at ')[0]}</span>
-                                <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : "N/A")}</a>
+                                <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : ( game.status == "Cancelled_Draining" ? game.unlockHeight : "N/A"))}</a>
                                 <span class="stat-label">Deadline</span>
                             </div>
                         </div>
