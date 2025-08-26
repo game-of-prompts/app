@@ -10,6 +10,7 @@ import { SColl, SByte, SLong, SInt } from '@fleet-sdk/serializer';
 import { parseBox, hexToBytes } from '$lib/ergo/utils';
 import { type GameCancellation } from '$lib/common/game';
 import { getGopGameCancellationErgoTreeHex } from '../contract';
+import { stringToBytes } from '@scure/base';
 
 // Constantes del contrato game_cancellation.es
 const STAKE_DENOMINATOR = 5n;
@@ -37,7 +38,7 @@ export async function drain_cancelled_game_stake(
         throw new Error(`The cooldown period has not ended. Draining is only possible after block ${game.unlockHeight}.`);
     }
 
-    const stakeToDrain = game.currentStakeNanoErg;
+    const stakeToDrain = BigInt(game.currentStakeNanoErg);
     const stakePortionToClaim = stakeToDrain / STAKE_DENOMINATOR;
     const remainingStake = stakeToDrain - stakePortionToClaim;
 
@@ -66,7 +67,7 @@ export async function drain_cancelled_game_stake(
         R5: SLong(newUnlockHeight).toHex(),
         R6: SColl(SByte, revealedSecretBytes).toHex(),
         R7: SLong(remainingStake).toHex(),
-        R8: SConstant(game.box.additionalRegisters.R8) // Preserve immutable info
+        R8: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
     });
 
     // OUTPUT(1): The portion of the stake for the claimer
