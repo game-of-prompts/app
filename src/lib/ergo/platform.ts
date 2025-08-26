@@ -19,6 +19,7 @@ import { end_game } from './actions/end_game';
 import { judges_invalidate } from './actions/judges_invalidate';
 import { type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
+import { claim_after_cancellation } from './actions/claim_after_cancellation';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation;
