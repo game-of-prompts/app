@@ -92,11 +92,6 @@ export async function cancel_game(
         R8: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
     });
 
-    // SALIDA(1): La penalización para el reclamante
-    const claimerOutput = new OutputBuilder(
-        stakePortionToClaim,
-        claimerAddressString
-    );
 
     // --- 4. Construir y Enviar la Transacción ---
     const utxos = await ergo.get_utxos();
@@ -104,7 +99,16 @@ export async function cancel_game(
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
-        .to([cancellationBoxOutput, claimerOutput])
+        .to(stakePortionToClaim >= SAFE_MIN_BOX_VALUE ? 
+            [
+                cancellationBoxOutput, 
+                new OutputBuilder(
+                    stakePortionToClaim,
+                    claimerAddressString
+                )
+            ] : 
+            [cancellationBoxOutput]
+        )
         .sendChangeTo(claimerAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
