@@ -12,6 +12,7 @@ import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation_submited.es?raw';
 import PARTICIPATION_RESOLVED_SOURCE from '../../../contracts/participation_resolved.es?raw';
+import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_proof.es?raw';
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -56,8 +57,10 @@ function ensureGameResolutionCompiled(): void {
     ensureParticipationSubmittedCompiled(); // Dependencia transitiva
     const submittedHash = getGopParticipationSubmittedScriptHash();
     const resolvedHash = getGopParticipationResolvedScriptHash();
+    const reputationHash = getReputationProofScriptHash();
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
+        .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SUBMITTED_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
@@ -134,3 +137,14 @@ export const getGopParticipationResolvedTemplateHash = () => getTemplateHash(_pa
 export const getGopParticipationResolvedScriptHash = () => getScriptHash(_participationResolved, ensureParticipationResolvedCompiled);
 export function getGopParticipationResolvedAddress(): Address { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toAddress(networkType); }
 export function getGopParticipationResolvedErgoTreeHex(): string { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toHex(); }
+
+// --- Reputation Proof ---
+let _reputationProof: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+function ensureReputationProofCompiled(): void {
+    if (_reputationProof.ergoTree) return;
+    _reputationProof.ergoTree = compile(REPUTATION_PROOF_SOURCE, { version: ergoTreeVersion });
+}
+export const getReputationProofTemplateHash = () => getTemplateHash(_reputationProof, ensureReputationProofCompiled);
+export const getReputationProofScriptHash = () => getScriptHash(_reputationProof, ensureReputationProofCompiled);
+export function getReputationProofAddress(): Address { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toAddress(networkType); }
+export function getReputationProofErgoTreeHex(): string { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toHex(); } 
