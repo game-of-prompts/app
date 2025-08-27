@@ -12,7 +12,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 - Estado 2 (juicio)
     - [x] Finalización
     - [x] Omisión de participación
-    - [] Invalidación por jueces
+    - [x] Invalidación por jueces
 
 - Estado 3 (cancelacion)
     - [x] Drenar staking
