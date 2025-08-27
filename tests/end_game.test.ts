@@ -71,6 +71,7 @@ describe("Game Finalization (end_game)", () => {
   const gameResolutionSourceWithHash = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
     .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", "00".repeat(32))
+    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     
   const gameResolutionErgoTree = compile(gameResolutionSourceWithHash);

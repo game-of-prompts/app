@@ -88,6 +88,7 @@ describe("Game Cancellation (cancel_game)", () => {
         const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
             .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
             .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         const gameResolutionErgoTree = compile(gameResolutionSource);
         const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
@@ -240,6 +241,7 @@ describe("Game Cancellation (Low Stake)", () => {
         const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
             .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
             .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         const gameResolutionErgoTree = compile(gameResolutionSource);
         const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));

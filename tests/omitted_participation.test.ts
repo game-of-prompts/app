@@ -88,6 +88,7 @@ describe("Omitted Participation Inclusion", () => {
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
             .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
             .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
+            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         gameResolutionErgoTree = compile(resolutionSource);
 

@@ -23,6 +23,7 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 ### Otros
 
+[] Cubrir el caso sin participaciones validas.
 [x] Todas las votaciones deben validarse.
 [] Los jueces deben opinar tambien en positivo, aunque en el contrato la omisión significa que acceden.   <--- ESTO ES SOLO DE FRONT.
 [] Votación con peso.

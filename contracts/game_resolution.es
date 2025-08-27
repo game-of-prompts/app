@@ -8,6 +8,7 @@
   val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
   val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
+  val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
 
@@ -139,7 +140,7 @@
   // ### Acción 2: Invalidación por Jueces
   val action2_judgesInvalidate = {
     if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
-      val judgeVotes = CONTEXT.dataInputs
+      val judgeVotes = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH})
       val requiredVotes =
         if (participatingJudges.size == 0) 0
         else participatingJudges.size / 2 + 1
@@ -163,12 +164,12 @@
       
       if (votesAreValid) {
         val recreatedGameBox = OUTPUTS(0)
-        val participantInputs = INPUTS.slice(1, INPUTS.size)
-        val invalidatedCandidateBox = INPUTS.filter({(b:Box) => b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
+        val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH})
+        val invalidatedCandidateBox = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
 
         val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
         val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
-            if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {
+            if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
                 val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
                     if (scoreAcc._2) { scoreAcc } else {
                         val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)

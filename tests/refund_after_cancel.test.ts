@@ -99,11 +99,10 @@ describe("Participant Refund After Cancellation", () => {
     const cancellationHash = uint8ArrayToHex(
       blake2b256(gameCancellationErgoTree.bytes)
     );
-    const resolutionSource = GAME_RESOLUTION_TEMPLATE.replace(
-      "`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`",
-      resolvedHash
-    )
+    const resolutionSource = GAME_RESOLUTION_TEMPLATE
+      .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
       .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
+      .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     const gameResolutionErgoTree = compile(resolutionSource);
     const resolutionHash = uint8ArrayToHex(

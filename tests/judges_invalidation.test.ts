@@ -94,8 +94,9 @@ describe("Game Resolution Invalidation by Judges", () => {
         const dummySubmittedHash = "0".repeat(64);
 
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
+            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes)))
             .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", dummySubmittedHash)
+            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(compile(REPUTATION_PROOF_SOURCE).bytes)))
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         gameResolutionErgoTree = compile(resolutionSource);
         reputationProofErgoTree = compile(REPUTATION_PROOF_SOURCE);
@@ -218,7 +219,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
         
         const tx = new TransactionBuilder(currentHeight)
-            .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
+            .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
                 new OutputBuilder(newFunds, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
@@ -228,7 +229,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                         R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
                     })
             ])
-            .withDataFrom([judge1ReputationBox, judge2ReputationBox]) // Los votos de los jueces
+            .withDataFrom([judge1ReputationBox, judge2ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
