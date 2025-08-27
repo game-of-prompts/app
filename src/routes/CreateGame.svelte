@@ -284,7 +284,7 @@
                     <div class="form-group lg:col-span-2">
                         <div class="repeater-container">
                              <button type="button" class="repeater-header" on:click={() => mirrorsExpanded = !mirrorsExpanded}>
-                                <Label>Mirror Download URLs</Label>
+                                <Label>Alternative Downloads (Game Service)</Label>
                                 {#if mirrorsExpanded} <ChevronUp class="w-5 h-5"/> {:else} <ChevronDown class="w-5 h-5"/> {/if}
                             </button>
                             {#if mirrorsExpanded}
