@@ -171,7 +171,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
-        const dummyTypeNftId = randomBytes(32);
+        const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
         reputationProofContract.addUTxOs(
             { // Voto del Juez 1
                 creationHeight: mockChain.height - 150,

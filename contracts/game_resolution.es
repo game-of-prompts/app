@@ -11,6 +11,7 @@
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
+  val PARTICIPATION_TYPE_ID = fromBase16("f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8")
 
 
   // =================================================================
@@ -156,9 +157,10 @@
 
         allVotesAreUnique && judgeVotes.forall( { (voteBox: Box) =>
           val judgeTokenId = voteBox.tokens(0)._1
+          val isGoProofType = voteBox.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID
           val voteTargetCommitment = voteBox.R5[Coll[Byte]].get
           val allJudgesParticipate = participatingJudges.exists({ (pJudge: Coll[Byte]) => pJudge == judgeTokenId })
-          allJudgesParticipate && voteTargetCommitment == winnerCandidateCommitment
+          allJudgesParticipate && isGoProofType && voteTargetCommitment == winnerCandidateCommitment
         })
       }
       
