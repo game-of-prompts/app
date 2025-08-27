@@ -247,6 +247,6 @@
   }
 
   val game_in_resolution = gameState == 1
-  val actions = action1_includeOmittedParticipation || action3_endGame
+  val actions = action1_includeOmittedParticipation || action2_judgesInvalidate || action3_endGame
   sigmaProp(game_in_resolution && actions)
 }
