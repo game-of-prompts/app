@@ -24,14 +24,6 @@
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
   // =================================================================
 
-  // -- OLD --
-  // R4: (Coll[Byte], Long) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
-  // R5: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
-  // R6: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R7: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee].
-  // R8: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
-
-  // -- NEW --
   // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Long) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
