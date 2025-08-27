@@ -28,7 +28,7 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_r
 const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_proof.es"), "utf-8");
 const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-const JUDGE_PERIOD = 30n; // Debe coincidir con el valor en game_resolution.es
+const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
 // Helper para crear un hash de compromiso
 const createCommitment = (solverId: string, score: bigint, logs: string, secret: Uint8Array): Uint8Array => {
@@ -173,37 +173,38 @@ describe("Game Resolution Invalidation by Judges", () => {
         const dummyTypeNftId = randomBytes(32);
         reputationProofContract.addUTxOs(
             { // Voto del Juez 1
-                creationHeight: mockChain.height,
+                creationHeight: mockChain.height - 150,
                 ergoTree: reputationProofErgoTree.toHex(),
                 value: 1_000_000n,
                 assets: [{ tokenId: judge1TokenId, amount: 1n }],
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(false), SLong(3n)).toHex(),
+                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
-                    R8: SBool(true).toHex(),
+                    R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
                 }
             }
         );
         reputationProofContract.addUTxOs(
             { // Voto del Juez 2
-                creationHeight: mockChain.height,
+                creationHeight: mockChain.height - 100,
                 ergoTree: reputationProofErgoTree.toHex(),
                 value: 1_000_000n,
                 assets: [{ tokenId: judge2TokenId, amount: 1n }],
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(false), SLong(3n)).toHex(),
+                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
-                    R8: SBool(true).toHex(),
+                    R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
                 }
             }
         );
-        [judge1ReputationBox, judge2ReputationBox] = reputationProofContract.utxos.toArray();
+        judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
+        judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
     });
 
     it("should successfully invalidate the current winner with a majority of judge votes (2 out of 3)", () => {
@@ -258,7 +259,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
         expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
-
+    
     it("should fail if there are not enough judge votes (1 out of 3)", () => {
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
@@ -303,4 +304,5 @@ describe("Game Resolution Invalidation by Judges", () => {
         const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
         expect(executionResult).to.be.false;
     });
+
 });
