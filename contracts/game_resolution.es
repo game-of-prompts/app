@@ -137,7 +137,7 @@
   }
 
   // ### Acción 2: Invalidación por Jueces
-  /* val action2_judgesInvalidate = {
+  val action2_judgesInvalidate = {
     if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
       val judgeVotes = CONTEXT.dataInputs
       val requiredVotes =
@@ -183,13 +183,14 @@
 
         val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
         val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
+        val resolvedCounterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter - 1
         val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
-        val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState
+        val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
         
-        fundsReturnedToPool && deadlineIsExtended && candidateIsReset && gameStateIsPreserved
+        fundsReturnedToPool && deadlineIsExtended && resolvedCounterIsDecreased && candidateIsReset && gameStateIsPreserved
       } else { false }
     } else { false }
-  }  */
+  }
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
