@@ -25,12 +25,16 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 [] Cubrir el caso sin participaciones validas.
 [x] Todas las votaciones deben validarse.
-[] Los jueces deben opinar tambien en positivo, aunque en el contrato la omisión significa que acceden.   <--- ESTO ES SOLO DE FRONT.
-[] Votación con peso.
+[] Jueces
+    [] Fetch
+    [] Creación de juez
+    [] Opinar sobre otro juez
+    [] Opionar sobre un juego
+    [] Opinar sobre participación
 
 [] GameInfo without JSON
 [] Allow for P2SH
-[] Check constants on fetch.
+[x] Check constants on fetch.
 
 [] Poker
 
