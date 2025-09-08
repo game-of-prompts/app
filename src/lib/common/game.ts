@@ -1,6 +1,7 @@
 // src/lib/common/game.ts
 
 import { ErgoPlatform } from "$lib/ergo/platform";
+import { type ReputationOpinion } from "$lib/ergo/reputation/objects";
 import type { Amount, Box, TokenEIP4 } from "@fleet-sdk/core";
 
 /**
@@ -64,6 +65,7 @@ export interface GameActive {
     participationFeeNanoErg: bigint;
     content: GameContent;
     value: bigint;
+    reputationOpinions: ReputationOpinion[];
 }
 
 /**
@@ -89,6 +91,7 @@ export interface GameResolution {
     originalCreatorPK_Hex: string;
     content: GameContent;
     value: bigint;
+    reputationOpinions: ReputationOpinion[];
 }
 
 /**
@@ -106,6 +109,7 @@ export interface GameCancellation {
     currentStakeNanoErg: bigint;
     content: GameContent;
     value: bigint;
+    reputationOpinions: ReputationOpinion[];
 }
 
 /**
@@ -121,6 +125,7 @@ export interface GameFinalized {
     winnerInfo: WinnerInfo | null; // Puede ser null si el juego fue cancelado
     content: GameContent;
     value: bigint;
+    reputationOpinions: ReputationOpinion[];
 }
 
 /**
@@ -140,6 +145,7 @@ export interface ParticipationBase {
     solverId_String?: string;
     hashLogs_Hex: string;
     scoreList: bigint[];
+    reputationOpinions: ReputationOpinion[];
 }
 
 /**

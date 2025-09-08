@@ -24,6 +24,21 @@ export function hexToUtf8(hexString: string): string | null {
     }
   }
 
+/**
+ * A utility function to convert a serialized value to its "rendered" format (for debugging/display).
+ * This is a simplification and may not cover all Ergo types.
+ * @param serializedValue The full serialized hex string.
+ * @returns A simplified hex string.
+ */
+export function serializedToRendered(serializedValue: string): string {
+    if (serializedValue.startsWith('0e')) {
+        return serializedValue.substring(4);
+    } else if (serializedValue.startsWith('04')) {
+        return serializedValue.substring(2);
+    }
+    return serializedValue;
+}
+
 export function generate_pk_proposition(wallet_pk: string): string {
     const pk = ErgoAddress.fromBase58(wallet_pk).getPublicKeys()[0];
     const encodedProp = SGroupElement(pk);

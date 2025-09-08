@@ -25,7 +25,7 @@ let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?
 let _participationSubmitted: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participationResolved: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
-
+// --- Dev fee/config ---
 export const dev_addr_base58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD"
 export const dev_fee = 5n;
 
@@ -95,7 +95,7 @@ function ensureGameActiveCompiled(): void {
 function getTemplateHash(stateObject: { ergoTree?: ErgoTree, templateHash?: string }, ensureCompiled: () => void): string {
     if (!stateObject.templateHash) {
         ensureCompiled();
-        const templateBytes = stateObject.ergoTree.template;
+        const templateBytes = stateObject.ergoTree!.template;
         stateObject.templateHash = uint8ArrayToHex(sha256(templateBytes)); // SHA256 para búsqueda en explorador
     }
     return stateObject.templateHash;
@@ -104,7 +104,7 @@ function getTemplateHash(stateObject: { ergoTree?: ErgoTree, templateHash?: stri
 function getScriptHash(stateObject: { ergoTree?: ErgoTree, scriptHash?: string }, ensureCompiled: () => void): string {
     if (!stateObject.scriptHash) {
         ensureCompiled();
-        const ergoTreeBytes = stateObject.ergoTree.bytes;
+        const ergoTreeBytes = stateObject.ergoTree!.bytes;
         stateObject.scriptHash = uint8ArrayToHex(blake2b256(ergoTreeBytes)); // BLAKE2B256 para constantes en scripts
     }
     return stateObject.scriptHash;
@@ -139,16 +139,31 @@ export const getGopParticipationResolvedScriptHash = () => getScriptHash(_partic
 export function getGopParticipationResolvedAddress(): Address { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toAddress(networkType); }
 export function getGopParticipationResolvedErgoTreeHex(): string { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toHex(); }
 
-// --- Reputation Proof ---
-const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version: 1 });
-const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
+// =============================================================================
+// === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)
+// =============================================================================
 
+// --- Digital Public Good ---
+let _digitalPublicGood: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+function ensureDigitalPublicGoodCompiled(): void {
+    if (_digitalPublicGood.ergoTree) return;
+    _digitalPublicGood.ergoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version: ergoTreeVersion });
+}
+export const getDigitalPublicGoodTemplateHash = () => getTemplateHash(_digitalPublicGood, ensureDigitalPublicGoodCompiled);
+export const getDigitalPublicGoodScriptHash = () => getScriptHash(_digitalPublicGood, ensureDigitalPublicGoodCompiled);
+export function getDigitalPublicGoodAddress(): Address { ensureDigitalPublicGoodCompiled(); return _digitalPublicGood.ergoTree!.toAddress(networkType); }
+export function getDigitalPublicGoodErgoTreeHex(): string { ensureDigitalPublicGoodCompiled(); return _digitalPublicGood.ergoTree!.toHex(); }
+
+// --- Reputation Proof ---
 let _reputationProof: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 function ensureReputationProofCompiled(): void {
     if (_reputationProof.ergoTree) return;
-    _reputationProof.ergoTree = compile(REPUTATION_PROOF_SOURCE.replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash), { version: ergoTreeVersion });
+    // Dependencia: inyectar el hash de script de Digital Public Good
+    const dpgScriptHash = getDigitalPublicGoodScriptHash();
+    const source = REPUTATION_PROOF_SOURCE.replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, dpgScriptHash);
+    _reputationProof.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 export const getReputationProofTemplateHash = () => getTemplateHash(_reputationProof, ensureReputationProofCompiled);
 export const getReputationProofScriptHash = () => getScriptHash(_reputationProof, ensureReputationProofCompiled);
 export function getReputationProofAddress(): Address { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toAddress(networkType); }
-export function getReputationProofErgoTreeHex(): string { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toHex(); } 
+export function getReputationProofErgoTreeHex(): string { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toHex(); }

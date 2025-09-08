@@ -30,6 +30,81 @@ import {
     parseLongColl,
     parseGameContent
 } from "./utils"; // Assumes this file contains parsing utilities
+import { fetchReputationProofs } from "./reputation/fetch";
+import { type ReputationOpinion, type RPBox } from "./reputation/objects";
+import { get } from "svelte/store";
+import { proofs } from "$lib/common/store";
+
+// =================================================================
+// === REPUTATION PROOF UTILITIES
+// =================================================================
+
+/**
+ * Fetches reputation opinions for a specific target (game or participation)
+ * @param targetId The ID of the target (gameId or participationBoxId)
+ * @param ergo Ergo wallet instance (optional)
+ * @returns Array of reputation opinions
+ */
+async function fetchReputationOpinionsForTarget(
+    targetId: string, 
+    ergo: any = null
+): Promise<ReputationOpinion[]> {
+    try {
+        // Fetch all reputation proofs that reference this target
+        await fetchReputationProofs(ergo, true, targetId);
+        const reputationProofs = get(proofs);
+        const opinions: ReputationOpinion[] = [];
+
+        for (const [tokenId, proof] of reputationProofs) {
+            // Find boxes that reference our target
+            const relevantBoxes = proof.current_boxes.filter((box: RPBox) => 
+                box.object_pointer === targetId
+            );
+
+            for (const box of relevantBoxes) {
+                opinions.push({
+                    tokenId,
+                    boxId: box.box_id,
+                    type: {
+                        tokenId: box.type.tokenId,
+                        typeName: box.type.typeName,
+                        description: box.type.description
+                    },
+                    isPositive: !box.polarization, // Assuming false = positive, true = negative
+                    content: box.content,
+                    ownerAddress: proof.owner_address
+                });
+            }
+        }
+
+        return opinions;
+    } catch (error) {
+        console.error(`Error fetching reputation opinions for target ${targetId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Adds reputation information to any object
+ * @param target The target object to enhance
+ * @param opinions Array of reputation opinions
+ * @returns Enhanced object with reputation data
+ */
+function addReputationInfo<T>(target: T, opinions: ReputationOpinion[]): T & {
+    reputationOpinions: ReputationOpinion[];
+    positiveReputations: number;
+    negativeReputations: number;
+} {
+    const positiveReputations = opinions.filter(op => op.isPositive).length;
+    const negativeReputations = opinions.filter(op => !op.isPositive).length;
+
+    return {
+        ...target,
+        reputationOpinions: opinions,
+        positiveReputations,
+        negativeReputations
+    };
+}
 
 // =================================================================
 // === STATE: GAME ACTIVE
