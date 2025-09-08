@@ -32,8 +32,6 @@ import {
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
-import { get } from "svelte/store";
-import { proofs } from "$lib/common/store";
 
 // =================================================================
 // === REPUTATION PROOF UTILITIES
@@ -52,8 +50,7 @@ async function fetchReputationOpinionsForTarget(
 ): Promise<ReputationOpinion[]> {
     try {
         // Fetch all reputation proofs that reference this target
-        await fetchReputationProofs(ergo, true, type, targetId);
-        const reputationProofs = get(proofs);
+        const reputationProofs = await fetchReputationProofs(ergo, true, type, targetId);
         const opinions: ReputationOpinion[] = [];
 
         for (const [tokenId, proof] of reputationProofs) {

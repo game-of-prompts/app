@@ -1,7 +1,7 @@
 import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/ergo/reputation/objects";
 import { hexToBytes, hexToUtf8, serializedToRendered, SString } from "$lib/ergo/utils";
 import { get } from "svelte/store";
-import { proofs as cached_proofs, types, connected } from "$lib/common/store";
+import { types, connected } from "$lib/common/store";
 import { explorer_uri } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofScriptHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
 import { ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
@@ -95,7 +95,7 @@ export async function fetchReputationProofs(
     all: boolean, 
     type: "game" | "participation",
     value: string | null
-) {
+): Promise<Map<string, ReputationProof>> {
 
     await fetchTypeNfts();
     const availableTypes = get(types);
@@ -228,7 +228,7 @@ export async function fetchReputationProofs(
                 offset += limit;
             }
         }
-        cached_proofs.set(proofs);
+        return proofs;
     } catch (error) {
         console.error('An error occurred during the reputation proof search:', error);
         return new Map();
