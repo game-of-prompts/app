@@ -1,0 +1,6 @@
+
+export const JUDGE = "be145b4248aae2535d4e0c39355e5e7ef7be703a2a3831ce58f02130c503b389";
+
+export const GAME: string = "8299d98e15ebee7fa39ad716de7c8bb191790a1bf4b7c3f91af35a0e36187706";  // <-- TEST
+
+export const PARTICIPATION: string = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";  // <-- TEST

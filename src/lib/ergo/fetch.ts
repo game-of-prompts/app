@@ -46,12 +46,13 @@ import { proofs } from "$lib/common/store";
  * @returns Array of reputation opinions
  */
 async function fetchReputationOpinionsForTarget(
+    type: "game" | "participation",
     targetId: string, 
     ergo: any = null
 ): Promise<ReputationOpinion[]> {
     try {
         // Fetch all reputation proofs that reference this target
-        await fetchReputationProofs(ergo, true, targetId);
+        await fetchReputationProofs(ergo, true, type, targetId);
         const reputationProofs = get(proofs);
         const opinions: ReputationOpinion[] = [];
 
@@ -84,28 +85,6 @@ async function fetchReputationOpinionsForTarget(
     }
 }
 
-/**
- * Adds reputation information to any object
- * @param target The target object to enhance
- * @param opinions Array of reputation opinions
- * @returns Enhanced object with reputation data
- */
-function addReputationInfo<T>(target: T, opinions: ReputationOpinion[]): T & {
-    reputationOpinions: ReputationOpinion[];
-    positiveReputations: number;
-    negativeReputations: number;
-} {
-    const positiveReputations = opinions.filter(op => op.isPositive).length;
-    const negativeReputations = opinions.filter(op => !op.isPositive).length;
-
-    return {
-        ...target,
-        reputationOpinions: opinions,
-        positiveReputations,
-        negativeReputations
-    };
-}
-
 // =================================================================
 // === STATE: GAME ACTIVE
 // =================================================================
@@ -116,7 +95,7 @@ function addReputationInfo<T>(target: T, opinions: ReputationOpinion[]): T & {
  * @param box The raw box obtained from the explorer.
  * @returns A `GameActive` object or `null` if the box does not match the expected format.
  */
-export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
+async function parseGameActiveBox(box: Box<Amount>, reputationOptions: ReputationOpinion[] = []): Promise<GameActive | null> {
     try {
         if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
             console.warn('parseGameActiveBox: invalid constants');
@@ -179,6 +158,7 @@ export function parseGameActiveBox(box: Box<Amount>): GameActive | null {
             participationFeeNanoErg,
             content,
             value: BigInt(box.value),
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
         };
         
         return gameActive;
@@ -214,10 +194,10 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
             
             const data = await response.json();
             const items: Box[] = data.items || [];
-            items.forEach(box => {
-                const game = parseGameActiveBox(box);
+            for (const box of items) {
+                const game = await parseGameActiveBox(box);
                 if (game) games.set(game.gameId, game);
-            });
+            }
 
             offset += items.length;
             moreAvailable = items.length === limit;
@@ -240,7 +220,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
  * @param box The raw box obtained from the explorer.
  * @returns A `GameResolution` object or `null` if the box does not match the expected format.
  */
-export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null {
+export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameResolution | null> {
     try {
         if (box.ergoTree !== getGopGameResolutionErgoTreeHex()) {
             console.warn('parseGameResolutionBox: invalid constants');
@@ -330,7 +310,8 @@ export function parseGameResolutionBox(box: Box<Amount>): GameResolution | null 
             resolverCommission, 
             originalCreatorPK_Hex, 
             content, 
-            value: BigInt(box.value)
+            value: BigInt(box.value),
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
         };
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);
@@ -369,12 +350,10 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
             const data = await response.json();
             const items: Box[] = data.items || [];
 
-            items.forEach(box => {
-                const game = parseGameResolutionBox(box);
-                if (game) {
-                    games.set(game.gameId, game);
-                }
-            });
+            for (const box of items) {
+                const game = await parseGameResolutionBox(box);
+                if (game) games.set(game.gameId, game);
+            }
 
             offset += items.length;
             moreAvailable = items.length === limit;
@@ -398,7 +377,7 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
  * @param box The raw box from the explorer.
  * @returns A `GameCancellation` object or `null`.
  */
-export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | null {
+export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCancellation | null> {
     try {
         if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
             console.warn('parseGameCancellationBox: invalid constants (ErgoTree mismatch)');
@@ -410,8 +389,6 @@ export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | n
             return null;
         }
         const gameId = box.assets[0].tokenId;
-
-        // --- LECTURA DE REGISTROS ADAPTADA A LA NUEVA ESTRUCTURA ---
 
         // R4: Game state (Integer). Debe ser 2 para 'Cancelled'.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
@@ -447,7 +424,8 @@ export function parseGameCancellationBox(box: Box<Amount>): GameCancellation | n
             revealedS_Hex,
             currentStakeNanoErg,
             content,
-            value: BigInt(box.value)
+            value: BigInt(box.value),
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
@@ -487,12 +465,10 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
             const data = await response.json();
             const items: Box[] = data.items || [];
 
-            items.forEach(box => {
-                const game = parseGameCancellationBox(box);
-                if (game) {
-                    games.set(game.gameId, game);
-                }
-            });
+            for (const box of items) {
+                const game = await parseGameCancellationBox(box);
+                if (game) games.set(game.gameId, game);
+            }
 
             offset += items.length;
             moreAvailable = items.length === limit;
@@ -512,7 +488,7 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
 // =================================================================
 
 
-function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
+async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBase | null> {
     try {
         const playerPK_Hex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
         const commitmentC_Hex = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
@@ -537,7 +513,8 @@ function _parseParticipationBox(box: Box<Amount>): ParticipationBase | null {
             solverId_RawBytesHex,
             solverId_String: hexToUtf8(solverId_RawBytesHex) || undefined, 
             hashLogs_Hex,
-            scoreList
+            scoreList,
+            reputationOpinions: await fetchReputationOpinionsForTarget("participation", box.boxId)
         };
         return participationBase;
 
@@ -588,11 +565,12 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
                     console.warn('parseParticipationSubmittedBox: invalid constants');
                     continue;
                 }
-                const p_base = _parseParticipationBox(box);
+                const p_base = await _parseParticipationBox(box);
                 if (p_base) {
                     participations.push({
                         ...p_base,
-                        status: 'Submitted'
+                        status: 'Submitted',
+                        spent: false
                     });
                 }
             }
@@ -645,12 +623,12 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
                     console.warn('parseParticipationResolvedBox: invalid constants');
                     continue;
                 }
-                const p_base = _parseParticipationBox(box);
+                const p_base = await _parseParticipationBox(box);
                 if (p_base) {
                     participations.push({
                         ...p_base,
                         status: 'Resolved',
-                        spent: box.spentTransactionId !== null
+                        spent: box.transactionId !== null
                     });
                 }
             }

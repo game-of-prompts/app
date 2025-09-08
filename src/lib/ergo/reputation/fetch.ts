@@ -6,6 +6,7 @@ import { explorer_uri } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofScriptHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
 import { ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
 import { blake2b256 } from "@fleet-sdk/crypto";
+import { GAME, PARTICIPATION } from "./types";
 
 const ergo_tree = getReputationProofErgoTreeHex();
 const ergo_tree_hash = getReputationProofScriptHash();
@@ -84,10 +85,16 @@ export async function fetchTypeNfts() {
     }
 }
 
+const ProofType = {
+    game: GAME,
+    participation: PARTICIPATION
+}
+
 export async function fetchReputationProofs(
     ergo: any, 
     all: boolean, 
-    search: string | null
+    type: "game" | "participation",
+    value: string | null
 ) {
 
     await fetchTypeNfts();
@@ -114,14 +121,11 @@ export async function fetchReputationProofs(
         }
     }
 
-    if (search) {
-        // Search by asset (token ID)
-        search_bodies.push({ assets: [search] });
-        // Search by R5 (string content)
-        search_bodies.push({ registers: { "R5": SString(search) } });
-        // If search term is a valid token ID, search by R4 (Coll[Byte])
-        if (search.length === 64 && /^[0-9a-fA-F]+$/.test(search)) {
-            search_bodies.push({ registers: { "R4": SColl(SByte, hexToBytes(search) ?? "").toHex() }});
+    if (type || value) {
+        const type_id = ProofType[type];
+        search_bodies.push({ registers: { "R4": SColl(SByte, hexToBytes(type_id) ?? "").toHex() }});
+        if (value) { 
+            search_bodies.push({ registers: { "R5": SString(value) } });
         }
     } else {
         search_bodies.push({});
