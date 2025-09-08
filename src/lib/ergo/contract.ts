@@ -12,7 +12,8 @@ import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation_submited.es?raw';
 import PARTICIPATION_RESOLVED_SOURCE from '../../../contracts/participation_resolved.es?raw';
-import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_proof.es?raw';
+import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
+import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -139,10 +140,13 @@ export function getGopParticipationResolvedAddress(): Address { ensureParticipat
 export function getGopParticipationResolvedErgoTreeHex(): string { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toHex(); }
 
 // --- Reputation Proof ---
+const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version: 1 });
+const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
+
 let _reputationProof: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 function ensureReputationProofCompiled(): void {
     if (_reputationProof.ergoTree) return;
-    _reputationProof.ergoTree = compile(REPUTATION_PROOF_SOURCE, { version: ergoTreeVersion });
+    _reputationProof.ergoTree = compile(REPUTATION_PROOF_SOURCE.replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash), { version: ergoTreeVersion });
 }
 export const getReputationProofTemplateHash = () => getTemplateHash(_reputationProof, ensureReputationProofCompiled);
 export const getReputationProofScriptHash = () => getScriptHash(_reputationProof, ensureReputationProofCompiled);

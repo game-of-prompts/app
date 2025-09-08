@@ -25,7 +25,7 @@ import { bigintToLongByteArray, generate_pk_proposition, uint8ArrayToHex } from 
 // --- Configuración de Constantes y Carga de Contratos ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_proof.es"), "utf-8");
+const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8");
 const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
