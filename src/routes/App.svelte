@@ -101,8 +101,9 @@
             if (proofs.size > 0)
             {
                 const pair = proofs.entries().next();
-                if (pair && pair.value) {
-                    reputation_proof.set(pair.value[1]);
+                if (pair && pair.value) { // In case that contains more than one judge. TODO Select it.
+                    const proof = pair.value[1];
+                    reputation_proof.set(proof);
                     console.log("Added judge proof!")
                 }
             }
