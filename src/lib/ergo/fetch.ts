@@ -70,7 +70,7 @@ async function fetchReputationOpinionsForTarget(
                     },
                     isPositive: !box.polarization, // Assuming false = positive, true = negative
                     content: box.content,
-                    ownerAddress: proof.owner_address
+                    ownerAddress: proof.blake_owner_script
                 });
             }
         }

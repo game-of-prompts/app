@@ -21,7 +21,7 @@
                 <li><strong>Token ID:</strong> {proof.token_id}</li>
                 <li><strong>Type:</strong> {proof.type.typeName} ({proof.type.description})</li>
                 <li><strong>Total Amount:</strong> {proof.total_amount}</li>
-                <li><strong>Owner Address:</strong> {proof.owner_address}</li>
+                <li><strong>Owner Address:</strong> {proof.blake_owner_script}</li>
                 <li><strong>Owner Hash (Serialized):</strong> {proof.owner_hash_serialized}</li>
                 <li><strong>Can Be Spent:</strong> {proof.can_be_spend ? 'Yes' : 'No'}</li>
                 <li><strong>Network:</strong> {proof.network}</li>

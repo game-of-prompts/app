@@ -165,7 +165,7 @@ export async function fetchReputationProofs(
                         token_id: rep_token_id,
                         type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false },
                         total_amount: r6_parsed.totalSupply,
-                        owner_address: serializedToRendered(owner_hash_serialized),
+                        blake_owner_script: serializedToRendered(owner_hash_serialized),
                         owner_hash_serialized: owner_hash_serialized,
                         can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
                         current_boxes: [],
