@@ -1,5 +1,5 @@
 import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/ergo/reputation/objects";
-import { hexToBytes, hexToUtf8, serializedToRendered, SString } from "$lib/ergo/utils";
+import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex } from "$lib/ergo/utils";
 import { get } from "svelte/store";
 import { types, connected } from "$lib/common/store";
 import { explorer_uri } from "$lib/ergo/envs";
@@ -109,9 +109,9 @@ export async function fetchReputationProofs(
 
     if (type || value) {
         const type_id = ProofType[type];
-        registers["R4"] = SColl(SByte, hexToBytes(type_id) ?? "").toHex()
+        registers["R4"] = type_id
         if (value) { 
-            registers["R5"] = SString(value);
+           registers["R5"] = value;
         }
     }
 
@@ -124,7 +124,7 @@ export async function fetchReputationProofs(
             const hashedProposition = blake2b256(propositionBytes);
             userR7SerializedHex = SColl(SByte, hashedProposition).toHex();
             if (!all) {
-                registers["R7"] =userR7SerializedHex;
+                registers["R7"] = uint8ArrayToHex(hashedProposition);
             }
         }
     }
@@ -138,7 +138,6 @@ export async function fetchReputationProofs(
 
             if (!response.ok) { moreDataAvailable = false; continue; }
             const json_data = await response.json();
-            console.log("JSON DATA ", json_data)
             if (json_data.items.length === 0) { moreDataAvailable = false; continue; }
 
             for (const box of json_data.items as ApiBox[]) {
