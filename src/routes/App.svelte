@@ -168,10 +168,7 @@
 {#if mobileMenuOpen}
     <div class="mobile-nav" transition:fade={{ duration: 200 }}>
         <ul class="mobile-nav-links">
-             <li class:active={activeTab === 'participateGame'}><a href="#" on:click|preventDefault={() => changeTab('participateGame')}>Competitions</a></li>
-             <li class:active={activeTab === 'myParticipations'}><a href="#" on:click|preventDefault={() => changeTab('myParticipations')}>My Participations</a></li>
-             <li class:active={activeTab === 'myGames'}><a href="#" on:click|preventDefault={() => changeTab('myGames')}>My Competitions</a></li>
-             <li class:active={activeTab === 'createGame'}><a href="#" on:click|preventDefault={() => changeTab('createGame')}>Create Competition</a></li>
+            
         </ul>
     </div>
 {/if}
