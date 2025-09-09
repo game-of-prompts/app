@@ -18,6 +18,7 @@
     import CreateJudge from './CreateJudge.svelte';
     import { reputation_proof } from '$lib/common/store';
     import ShowJudge from './ShowJudge.svelte';
+    import { fetchReputationProofs } from '$lib/ergo/reputation/fetch';
 
     let activeTab = 'participateGame';
     let showCopyMessage = false;
@@ -95,6 +96,16 @@
         try {
             await platform.get_balance();
             current_height = await platform.get_current_height();
+
+            const proofs = await fetchReputationProofs(ergo, false, "judge", null);
+            if (proofs.size > 0)
+            {
+                const pair = proofs.entries().next();
+                if (pair && pair.value) {
+                    reputation_proof.set(pair.value[1]);
+                    console.log("Added judge proof!")
+                }
+            }
         } catch (error) {
             console.error("Error updating wallet info:", error);
         }
@@ -222,7 +233,7 @@
         <div bind:this={scrollingTextElement} class="scrolling-text-wrapper">
             {footerMessages[activeMessageIndex]}
         </div>
-        </div>
+    </div>
 
     <div class="footer-right">
         <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.502 2.999L6 0L11.495 3.03L6.0025 5.96L0.502 2.999V2.999ZM6.5 6.8365V12L11.5 9.319V4.156L6.5 6.8365V6.8365ZM5.5 6.8365L0.5 4.131V9.319L5.5 12V6.8365Z" fill="currentColor"></path></svg>
