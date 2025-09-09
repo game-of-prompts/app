@@ -16,7 +16,7 @@ import { type RPBox } from '$lib/ergo/reputation/objects';
 import { getReputationProofAddress }  from "$lib/ergo/contract";
 import { SString, hexToBytes } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
-import { SConstant, SBoolType, SLongType } from '@fleet-sdk/serializer';
+import { SConstant, SBoolType, SLongType, SPair } from '@fleet-sdk/serializer';
 import { reputation_proof } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { GAME, JUDGE, PARTICIPATION } from './types';
@@ -43,15 +43,14 @@ export function booleanToSerializer(value: boolean): string {
     return SConstant(SBool(value));
 }
 
-export async function generate_reputation_proof(
-    polarization: boolean,
-    content: object|string|null
-): Promise<string | null> {
+export async function generate_reputation_proof(): Promise<string | null> {
     const proof = get(reputation_proof);
     const token_amount = REPUTATION_PROOF_TOTAL_SUPPLY;
     const total_supply = REPUTATION_PROOF_TOTAL_SUPPLY;
     const is_locked = false;
     const type_nft_id = JUDGE;
+    const polarization = true;
+    const content = "";
 
     console.log("Generating reputation proof with parameters:", {
         token_amount,
@@ -262,8 +261,4 @@ export async function update_reputation_proof(
         alert(`Transaction failed: ${e.message}`);
         return null;
     }
-}
-
-function SPair(arg0: SConstant<boolean, SBoolType>, arg1: SConstant<bigint, SLongType> & SLongType) {
-    throw new Error('Function not implemented.');
 }
