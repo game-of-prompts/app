@@ -30,8 +30,7 @@ const ergo_tree_address = getReputationProofAddress();
  * @returns The serialized hex string for the tuple.
  */
 function tupleToSerialized(isLocked: boolean, totalSupply: number): string {
-    const tuple = SPair(SBool(isLocked), SLong(totalSupply));
-    return SConstant(tuple);
+    return SPair(SBool(isLocked), SLong(totalSupply)).toHex();
 }
 
 /**
@@ -40,7 +39,7 @@ function tupleToSerialized(isLocked: boolean, totalSupply: number): string {
  * @returns The serialized hex string.
  */
 export function booleanToSerializer(value: boolean): string {
-    return SConstant(SBool(value));
+    return SBool(value).toHex();
 }
 
 export async function generate_reputation_proof(): Promise<string | null> {
