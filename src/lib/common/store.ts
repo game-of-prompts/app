@@ -11,3 +11,4 @@ export const timer = writable<{countdownInterval: number, target: number}>({coun
 export const games = writable<Map<string, Game>>(new Map());
 export const user_tokens = writable<Map<string, number>>(new Map());
 export const types = writable<Map<string, TypeNFT>>(new Map());
+export const reputation_proof = writable<ReputationProof|null>(null);

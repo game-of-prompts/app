@@ -14,6 +14,7 @@ import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation_sub
 import PARTICIPATION_RESOLVED_SOURCE from '../../../contracts/participation_resolved.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
+import { PARTICIPATION } from "./reputation/types";
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -63,7 +64,8 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SUBMITTED_SCRIPT_HASH\+`/g, submittedHash)
-        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
+        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash)
+        .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, PARTICIPATION);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 

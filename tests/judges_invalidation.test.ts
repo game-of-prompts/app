@@ -21,6 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, generate_pk_proposition, uint8ArrayToHex } from "$lib/ergo/utils";
+import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 // --- Configuración de Constantes y Carga de Contratos ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
@@ -102,6 +103,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes)))
             .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", dummySubmittedHash)
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(compile(REPUTATION_PROOF_SOURCE).bytes)))
+            .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         gameResolutionErgoTree = compile(resolutionSource);
         reputationProofErgoTree = compile(REPUTATION_PROOF_SOURCE);

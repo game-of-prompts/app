@@ -12,6 +12,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
+import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 // Helper functions and contract loading remain the same...
 function uint8ArrayToHex(bytes: Uint8Array): string {
@@ -37,6 +38,7 @@ const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
     .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
+    .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
 const gameResolutionErgoTree = compile(gameResolutionSource);
 const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));

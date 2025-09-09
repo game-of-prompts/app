@@ -19,6 +19,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
+import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -72,6 +73,7 @@ describe("Game Finalization (end_game)", () => {
     .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
     .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", "00".repeat(32))
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
+    .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     
   const gameResolutionErgoTree = compile(gameResolutionSourceWithHash);

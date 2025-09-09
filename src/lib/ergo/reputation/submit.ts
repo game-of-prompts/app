@@ -1,0 +1,269 @@
+import {
+    OutputBuilder,
+    SAFE_MIN_BOX_VALUE,
+    RECOMMENDED_MIN_FEE_VALUE,
+    TransactionBuilder,
+    type Box,
+    type Amount,
+    ErgoAddress,
+    SColl,
+    SByte,
+    SBool,
+    SLong
+} from '@fleet-sdk/core';
+import { blake2b256 } from '@fleet-sdk/crypto';
+import { type RPBox } from '$lib/ergo/reputation/objects';
+import { getReputationProofAddress }  from "$lib/ergo/contract";
+import { SString, hexToBytes } from '../utils';
+import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
+import { SConstant, SBoolType, SLongType } from '@fleet-sdk/serializer';
+import { reputation_proof } from '$lib/common/store';
+import { get } from 'svelte/store';
+import { GAME, JUDGE, PARTICIPATION } from './types';
+
+const ergo_tree_address = getReputationProofAddress();
+
+/**
+ * Serializes a (boolean, number) tuple into an Ergo-compatible (Boolean, Long) hex string for R6.
+ * @param isLocked The lock state.
+ * @param totalSupply The total token supply.
+ * @returns The serialized hex string for the tuple.
+ */
+function tupleToSerialized(isLocked: boolean, totalSupply: number): string {
+    const tuple = SPair(SBool(isLocked), SLong(totalSupply));
+    return SConstant(tuple);
+}
+
+/**
+ * Serializes a JavaScript boolean into an Ergo-compatible Boolean hex string.
+ * @param value The boolean to serialize.
+ * @returns The serialized hex string.
+ */
+export function booleanToSerializer(value: boolean): string {
+    return SConstant(SBool(value));
+}
+
+export async function generate_reputation_proof(
+    polarization: boolean,
+    content: object|string|null
+): Promise<string | null> {
+    const proof = get(reputation_proof);
+    const token_amount = REPUTATION_PROOF_TOTAL_SUPPLY;
+    const total_supply = REPUTATION_PROOF_TOTAL_SUPPLY;
+    const is_locked = false;
+    const type_nft_id = JUDGE;
+
+    console.log("Generating reputation proof with parameters:", {
+        token_amount,
+        total_supply,
+        type_nft_id,    
+        polarization,
+        content,
+        is_locked
+    });
+
+    const creatorAddressString = await ergo.get_change_address();
+    if (!creatorAddressString) {
+        throw new Error("Could not get the creator's address from the wallet.");
+    }
+    const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
+
+    // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
+    const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${type_nft_id}`);
+    if (!typeNftBoxResponse.ok) {
+      alert("Could not fetch the Type NFT box. Aborting transaction.");
+      return null;
+    }
+    const typeNftBox = (await typeNftBoxResponse.json()).items[0];
+
+    console.log("type nft box ", typeNftBox)
+
+    // Inputs for the transaction
+    const utxos = await ergo.get_utxos();
+    const inputs: Box<Amount>[] = utxos;
+    let dataInputs = [typeNftBox];
+    dataInputs.concat(proof?.current_boxes.slice(1))
+
+    const outputs: OutputBuilder[] = [];
+
+    // --- Create the main output for the new/modified proof ---
+    const new_proof_output = new OutputBuilder(
+        SAFE_MIN_BOX_VALUE,
+        ergo_tree_address
+    );
+
+    // Minting a new token if no input proof is provided
+    new_proof_output.mintToken({
+        amount: token_amount.toString()
+    });
+
+    const object_pointer = inputs[0].boxId;  // Points to the self token being evaluated by default
+
+    const propositionBytes = hexToBytes(creatorP2PKAddress.ergoTree);
+    if (!propositionBytes) {
+        throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
+    }
+    const hashedProposition = blake2b256(propositionBytes);
+
+    new_proof_output.setAdditionalRegisters({
+        R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
+        R5: SString(object_pointer),
+        R6: tupleToSerialized(is_locked, total_supply),
+        R7: SColl(SByte, hashedProposition).toHex(),
+        R8: booleanToSerializer(polarization),
+        R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
+    });
+
+    outputs.push(new_proof_output);
+
+    // --- Build and submit the transaction ---
+    try {
+        const unsignedTransaction = await new TransactionBuilder(await ergo.get_current_height())
+            .from(inputs)
+            .to(outputs)
+            .sendChangeTo(creatorP2PKAddress)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .withDataFrom(dataInputs)
+            .build()
+            .toEIP12Object();
+
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction);
+        const transactionId = await ergo.submit_tx(signedTransaction);
+
+
+
+        console.log("Transaction ID -> ", transactionId);
+        return transactionId;
+    } catch (e) {
+        console.error("Error building or submitting transaction:", e);
+        alert(`Transaction failed: ${e.message}`);
+        return null;
+    }
+}
+
+export async function update_reputation_proof(
+    type: "game"|"participation",
+    object_pointer: string,
+    polarization: boolean,
+    content: object|string|null,
+): Promise<string | null> {
+
+    const type_nft_id = type === "game" ? GAME : type === "participation" ? PARTICIPATION : null;
+    if (!type_nft_id) { throw new Error("Invalid reputation proof type.") }
+
+    const proof = get(reputation_proof);
+    const token_amount = 1;
+    const is_locked = true;
+    let total_supply;
+    let input_proof;
+
+    if (!proof) { throw new Error("Reputation proof not found.") }
+
+    input_proof = proof.current_boxes[0];  // TODO Check that this box is the SELF RPBox.
+    total_supply = proof.total_amount;
+
+    console.log("Generating reputation proof with parameters:", {
+        token_amount,
+        total_supply,
+        type_nft_id,    
+        object_pointer,
+        polarization,
+        content,
+        is_locked,
+        input_proof
+    });
+
+    const creatorAddressString = await ergo.get_change_address();
+    if (!creatorAddressString) {
+        throw new Error("Could not get the creator's address from the wallet.");
+    }
+    const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
+
+    // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
+    const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${type_nft_id}`);
+    if (!typeNftBoxResponse.ok) {
+      alert("Could not fetch the Type NFT box. Aborting transaction.");
+      return null;
+    }
+    const typeNftBox = (await typeNftBoxResponse.json()).items[0];
+
+    console.log("type nft box ", typeNftBox)
+
+    // Inputs for the transaction
+    const utxos = await ergo.get_utxos();
+    const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
+    let dataInputs = [typeNftBox];
+    dataInputs.concat(proof?.current_boxes.slice(1))
+
+    const outputs: OutputBuilder[] = [];
+
+    // --- Create the main output for the new/modified proof ---
+    const new_proof_output = new OutputBuilder(
+        SAFE_MIN_BOX_VALUE,
+        ergo_tree_address
+    );
+
+    // Transferring existing tokens
+    new_proof_output.addTokens({
+        tokenId: input_proof.token_id,
+        amount: token_amount.toString()
+    });
+
+    // If splitting, create a change box to send the remaining tokens back to the same contract
+    if (input_proof.token_amount - token_amount > 0) {
+        outputs.push(
+            new OutputBuilder(SAFE_MIN_BOX_VALUE, ergo_tree_address)
+            .addTokens({
+                tokenId: input_proof.token_id,
+                amount: (input_proof.token_amount - token_amount).toString()
+            })
+            // The change box must retain the original registers
+            .setAdditionalRegisters(input_proof.box.additionalRegisters)
+        );
+    }
+    
+    const propositionBytes = hexToBytes(creatorP2PKAddress.ergoTree);
+    if (!propositionBytes) {
+        throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
+    }
+    const hashedProposition = blake2b256(propositionBytes);
+
+    new_proof_output.setAdditionalRegisters({
+        R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
+        R5: SString(object_pointer),
+        R6: tupleToSerialized(is_locked, total_supply),
+        R7: SColl(SByte, hashedProposition).toHex(), // <-- Valor R7 Corregido
+        R8: booleanToSerializer(polarization),
+        R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
+    });
+
+    outputs.push(new_proof_output);
+
+    // --- Build and submit the transaction ---
+    try {
+        const unsignedTransaction = await new TransactionBuilder(await ergo.get_current_height())
+            .from(inputs)
+            .to(outputs)
+            .sendChangeTo(creatorP2PKAddress)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .withDataFrom(dataInputs)
+            .build()
+            .toEIP12Object();
+
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction);
+        const transactionId = await ergo.submit_tx(signedTransaction);
+
+
+
+        console.log("Transaction ID -> ", transactionId);
+        return transactionId;
+    } catch (e) {
+        console.error("Error building or submitting transaction:", e);
+        alert(`Transaction failed: ${e.message}`);
+        return null;
+    }
+}
+
+function SPair(arg0: SConstant<boolean, SBoolType>, arg1: SConstant<bigint, SLongType> & SLongType) {
+    throw new Error('Function not implemented.');
+}

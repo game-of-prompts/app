@@ -12,6 +12,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
+import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 // --- Configuración de Utilidades y Carga de Contratos ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
@@ -103,6 +104,7 @@ describe("Participant Refund After Cancellation", () => {
       .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
       .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
       .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
+      .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     const gameResolutionErgoTree = compile(resolutionSource);
     const resolutionHash = uint8ArrayToHex(
