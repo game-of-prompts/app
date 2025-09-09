@@ -17,6 +17,7 @@
     import { fade } from 'svelte/transition';
     import CreateJudge from './CreateJudge.svelte';
     import { reputation_proof } from '$lib/common/store';
+    import ShowJudge from './ShowJudge.svelte';
 
     let activeTab = 'participateGame';
     let showCopyMessage = false;
@@ -203,6 +204,9 @@
         {/if}
         {#if activeTab === 'createJudge'}
             <CreateJudge />
+        {/if}
+        {#if activeTab === 'showJudge'}
+            <ShowJudge />
         {/if}
     {:else}
         <GameDetails />
