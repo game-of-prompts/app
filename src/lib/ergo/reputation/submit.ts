@@ -42,7 +42,7 @@ export function booleanToSerializer(value: boolean): string {
     return SBool(value).toHex();
 }
 
-export async function generate_reputation_proof(): Promise<string | null> {
+export async function generate_reputation_proof(burned_amount: BigInt): Promise<string | null> {
     const proof = get(reputation_proof);
     const token_amount = REPUTATION_PROOF_TOTAL_SUPPLY;
     const total_supply = REPUTATION_PROOF_TOTAL_SUPPLY;
@@ -86,7 +86,7 @@ export async function generate_reputation_proof(): Promise<string | null> {
 
     // --- Create the main output for the new/modified proof ---
     const new_proof_output = new OutputBuilder(
-        SAFE_MIN_BOX_VALUE,
+        burned_amount > SAFE_MIN_BOX_VALUE ? burned_amount : SAFE_MIN_BOX_VALUE,
         ergo_tree_address
     );
 

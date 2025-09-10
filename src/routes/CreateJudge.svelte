@@ -6,6 +6,7 @@
     let transactionId: string | null = null;
     let isSubmitting: boolean = false;
     let errorMessage: string | null = null;
+    let burned_amount_erg: number = 0; // Default to 0 (optional burn)
 
     async function submit() {
         isSubmitting = true;
@@ -13,13 +14,26 @@
         transactionId = null;
 
         try {
-            const tx = await generate_reputation_proof();
+            if (burned_amount_erg < 0) {
+                throw new Error("Burned amount cannot be negative");
+            }
+            const burned_amount = burned_amount_erg * 10**9; // Convert to nanoErgs
+            const tx = await generate_reputation_proof(BigInt(burned_amount));
             transactionId = tx;
         } catch (error: any) {
             console.error(error);
-            errorMessage = error.message || "Error occurred while registering as a judge";
+            errorMessage = error.message.includes("insufficient funds")
+                ? "Insufficient ERG in your wallet"
+                : error.message || "Error occurred while registering as a judge";
         } finally {
             isSubmitting = false;
+        }
+    }
+
+    function copyTransactionId() {
+        if (transactionId) {
+            navigator.clipboard.writeText(transactionId);
+            alert("Transaction ID copied to clipboard!");
         }
     }
 </script>
@@ -39,10 +53,32 @@
                 <li><strong>On-Chain Transparency:</strong> All your judgments are recorded on the blockchain for anyone to verify your honesty.</li>
                 <li><strong>Build Your Reputation:</strong> A strong, honest track record makes game creators want to nominate you as a judge.</li>
                 <li><strong>Negotiate Commissions:</strong> As a judge, you can negotiate with the game creator to receive a portion of their commission for your judging role.</li>
+                <li><strong>Burn ERG for Credibility:</strong> Optionally burn ERG to strengthen your reputation proof. This permanent sacrifice signals your commitment to honesty, making you stand out to game creators.</li>
             </ul>
+
+            <div class="form-group mt-4">
+                <label for="burned_amount" class="block text-sm font-medium text-muted-foreground">Amount of ERG to Burn (Optional)</label>
+                <input
+                    type="number"
+                    id="burned_amount"
+                    bind:value={burned_amount_erg}
+                    min="0"
+                    step="0.001"
+                    placeholder="Enter ERG amount (e.g., 1.5)"
+                    class="mt-1 w-full p-2 rounded border border-gray-300 dark:border-gray-600 bg-background text-foreground"
+                />
+                <p class="text-sm text-muted-foreground mt-1">
+                    Burning ERG enhances your reputation proof, signaling honesty. This amount is permanently burned and cannot be recovered.
+                </p>
+            </div>
+
             <div class="form-actions mt-8 flex justify-center">
                 <Button size="lg" class="w-full sm:w-auto text-base" on:click={submit} disabled={isSubmitting}>
-                    {isSubmitting ? 'Registering...' : 'Register'}
+                    {#if isSubmitting}
+                        <span class="spinner mr-2"></span> Registering...
+                    {:else}
+                        Register
+                    {/if}
                 </Button>
             </div>
         {:else}
@@ -50,11 +86,19 @@
                 <h3 class="text-2xl font-bold text-green-500 mb-4">Registration Submitted!</h3>
                 <p class="mb-2">Your judge registration transaction has been sent to the blockchain.</p>
                 <p class="text-sm text-muted-foreground mb-4">It may take a few moments to confirm.</p>
-                <p class="font-mono text-xs p-2 rounded bg-slate-800/50 break-all">
-                    <a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="hover:underline">
-                        {transactionId}
-                    </a>
-                </p>
+                <div class="flex items-center justify-center">
+                    <p class="font-mono text-xs p-2 rounded bg-slate-800/50 break-all">
+                        <a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                            {transactionId}
+                        </a>
+                    </p>
+                    <button
+                        on:click={copyTransactionId}
+                        class="ml-2 text-sm text-muted-foreground hover:underline"
+                    >
+                        Copy TxID
+                    </button>
+                </div>
             </div>
         {/if}
 
@@ -101,5 +145,17 @@
     }
     .judge-description li {
         @apply text-base;
+    }
+    .spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
