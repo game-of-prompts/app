@@ -28,7 +28,6 @@
     import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
-    import { enUS } from 'date-fns/locale/en-US';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
@@ -36,12 +35,16 @@
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
+    import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
+    import { type ReputationProof } from "$lib/ergo/reputation/objects";
+    import { PARTICIPATION } from "$lib/ergo/reputation/types";
     
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
-    let currentHeight: number = 0; 
+    let participationVotes: Map<string, Map<string, ReputationProof>> = new Map();
+    let currentHeight: number = 0;
     const GRACE_PERIOD_IN_BLOCKS = 720; 
 
     // UI State
@@ -117,6 +120,10 @@
                 participations = await fetchSubmittedParticipations(game.gameId);
             } else if (game.status === GameState.Resolution) {
                 participations = await fetchResolvedParticipations(game.gameId);
+                participations.forEach(async (item) => {
+                    const participation = item.commitmentC_Hex;
+                    participationVotes.set(participation, await fetchReputationProofs(ergo, true, "participation", participation));
+                });
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchSubmittedParticipations(game.gameId);
             }
@@ -251,15 +258,15 @@
 
     async function handleJudgesInvalidate() {
         if (game?.status !== 'Resolution') return;
-        errorMessage = null; 
-        isSubmitting = true;
+        errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.judgesInvalidate(game, participations as ParticipationResolved[]);
-        } catch (e: any) { 
-            errorMessage = e.message;
-        } finally { 
-            isSubmitting = false;
-        }
+            const winner_participation = participations.filter((p) => game.winnerCandidateCommitment === p.commitmentC_Hex)[0]
+            const judgeVotesDatainputs = participationVotes.get(winner_participation.commitmentC_Hex)
+                ? [...participationVotes.get(winner_participation.commitmentC_Hex)!.values()].map(item => item.current_boxes.filter((box) => box.type.tokenId === PARTICIPATION && box.object_pointer === winner_participation.commitmentC_Hex && box.token_id in game.participatingJudges)[0].box)
+                : [];
+            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeVotesDatainputs);
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
     }
 
     async function handleIncludeOmitted() {

@@ -3,13 +3,15 @@ import {
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     type InputBox,
-    type Box
+    type Box,
+    Amount
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type GameResolution, type ParticipationResolved } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex } from '../contract';
+import { stringToBytes } from '@scure/base';
 
 // Constante del contrato game_resolution.es para la extensión del plazo
 const JUDGE_PERIOD_EXTENSION = 30;
@@ -27,7 +29,7 @@ const JUDGE_PERIOD_EXTENSION = 30;
 export async function judges_invalidate(
     game: GameResolution,
     invalidatedParticipation: ParticipationResolved,
-    judgeVoteDataInputs: Box<bigint>[]
+    judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
     console.log(`Iniciando invalidación de candidato para el juego: ${game.boxId}`);
