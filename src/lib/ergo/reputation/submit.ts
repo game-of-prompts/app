@@ -12,7 +12,7 @@ import {
     SLong
 } from '@fleet-sdk/core';
 import { blake2b256 } from '@fleet-sdk/crypto';
-import { type RPBox } from '$lib/ergo/reputation/objects';
+import { total_burned, type RPBox } from '$lib/ergo/reputation/objects';
 import { getReputationProofAddress }  from "$lib/ergo/contract";
 import { SString, hexToBytes } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
@@ -191,13 +191,13 @@ export async function update_reputation_proof(
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
     let dataInputs = [typeNftBox];
-    dataInputs.concat(proof?.current_boxes.slice(1))
+    dataInputs.concat(proof?.current_boxes.slice(1).map((i) => i.box))
 
     const outputs: OutputBuilder[] = [];
 
     // --- Create the main output for the new/modified proof ---
     const new_proof_output = new OutputBuilder(
-        SAFE_MIN_BOX_VALUE,
+        total_burned(proof) > SAFE_MIN_BOX_VALUE ? BigInt(total_burned(proof)) : SAFE_MIN_BOX_VALUE,
         ergo_tree_address
     );
 
