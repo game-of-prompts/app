@@ -2,7 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { reputation_proof } from '$lib/common/store';
     import { get } from 'svelte/store';
-    import type { ReputationProof, RPBox } from '$lib/ergo/reputation/objects';
+    import { total_burned, total_burned_string, type ReputationProof, type RPBox } from '$lib/ergo/reputation/objects';
 
     // Obtener la prueba de reputación desde el store
     const proof: ReputationProof | undefined = get(reputation_proof);
@@ -19,6 +19,7 @@
             <h3 class="section-title">Reputation Proof Details</h3>
             <ul class="proof-details list-disc pl-6 space-y-3">
                 <li><strong>Token ID:</strong> {proof.token_id}</li>
+                <li><strong>Burned:</strong> {total_burned_string(proof)} ERG</li>
                 <li><strong>Type:</strong> {proof.type.typeName} ({proof.type.description})</li>
                 <li><strong>Total Amount:</strong> {proof.total_amount}</li>
                 <li><strong>Owner Address:</strong> {proof.blake_owner_script}</li>

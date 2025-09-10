@@ -19,6 +19,7 @@
     import { reputation_proof } from '$lib/common/store';
     import ShowJudge from './ShowJudge.svelte';
     import { fetchReputationProofs } from '$lib/ergo/reputation/fetch';
+    import { total_burned } from '$lib/ergo/reputation/objects';
 
     let activeTab = 'participateGame';
     let showCopyMessage = false;
@@ -98,13 +99,24 @@
             current_height = await platform.get_current_height();
 
             const proofs = await fetchReputationProofs(ergo, false, "judge", null);
-            if (proofs.size > 0)
-            {
-                const pair = proofs.entries().next();
-                if (pair && pair.value) { // In case that contains more than one judge. TODO Select it.
-                    const proof = pair.value[1];
-                    reputation_proof.set(proof);
-                    console.log("Added judge proof!")
+
+            if (proofs.size > 0) {
+                let maxBurned = -Infinity;
+                let selectedProof = null;
+
+                for (const [key, proof] of proofs.entries()) {
+                    const burned = total_burned(proof);
+                    if (burned > maxBurned) {
+                        maxBurned = burned;
+                        selectedProof = proof;
+                    }
+                }
+
+                if (selectedProof) {
+                    reputation_proof.set(selectedProof);
+                    console.log("Added judge proof with highest burned: ", maxBurned);
+                } else {
+                    console.log("No valid proof found.");
                 }
             }
         } catch (error) {
