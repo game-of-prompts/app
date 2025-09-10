@@ -26,11 +26,23 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 [] Cubrir el caso sin participaciones validas.
 [x] Todas las votaciones deben validarse.
 [] Jueces
-    [] Fetch
-    [] Creación de juez
+    [x] Fetch
+    [x] Creación de juez
     [] Opinar sobre otro juez
     [] Opionar sobre un juego
     [] Opinar sobre participación
+    
+    - Vector de ataque: un usuario malicioso podría crear N jueces que opinan honestamente, si ademas, el usuario malicioso crea un juego e invita a sus jueces. ¿como sabran los usuarios que los jueces no son de fiar?
+        1.-Pueden fijarse en el lapso en el que opinaron en otros juegos.
+        2.-Para evitar que se creen jueces sin coste, podemos agregar la opción en la que se agregue ERG a un juez (suma del ERG en todas sus cajas) de manera que ese ERG, siguiendo el contrato actual, no podrá ser retirado (hasta que lo obtenga el minero en el demurage).
+        
+        Por tanto, si vemos muchos jueces, pero opinaron tarde y su ERG quemado es bajo, su reputación (representada en UI) será baja.   Si un pequeño grupo de jueces tiene mas cantidad quemada y opinaron en cada momento, esos tendran la reputación alta.
+
+        Tambien se puede tener en cuenta, y esto es solo a nivel de logica off-chain, que se valore mas una primera opinion sobre algo que una segunda ... aunque robots podrían estar replicando y tal vez entrar antes en mempool ... Asi que simplemente tendría mas sentido considerar quien opinó antes de que se resolviera un juego y quien despues, aun cuando las dos opiniones sean correctas, una tiene que valer mas que la otra.
+
+        Se debe implementar una formula de calculo de reputación, para mostrarlo a nivel local.     SUM[participations => p]( T*p.on_time*p.honest + p.honest + B*burn_erg)
+
+        Tambien debe haber una formula que nos indique a partir de que umbral de premio al creador le es rentable ser malicioso (siempre y cuando tenga a los jueces comprados). Esto es: la suma de los ERGs quemados de todos los jueces + (?) * la comisión del juego actual + (?) * historico de otros juegos del creador.  En referencia a esto último, el creador debería identificarse con su prueba de reputación (agregandola en game info) ya que el contrato del creador puede variar dependiendo de la configuracion (parte a los jueces, referidos, etc ...)
 
 [] GameInfo without JSON
 [] Allow for P2SH
