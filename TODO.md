@@ -29,8 +29,9 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
     [x] Fetch
     [x] Creación de juez
     [] Opinar sobre otro juez
-    [] Opionar sobre un juego
+    [] Opionar sobre un juego (aceptar invitación)
     [] Opinar sobre participación
+    [] Agregar prueba de reputación en juez.
     
     - Vector de ataque: un usuario malicioso podría crear N jueces que opinan honestamente, si ademas, el usuario malicioso crea un juego e invita a sus jueces. ¿como sabran los usuarios que los jueces no son de fiar?
         1.-Pueden fijarse en el lapso en el que opinaron en otros juegos.
