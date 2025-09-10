@@ -4,7 +4,7 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     type InputBox,
     type Box,
-    Amount
+    type Amount
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';

@@ -17,7 +17,7 @@ import { cancel_game } from './actions/cancel_game';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 import { end_game } from './actions/end_game';
 import { judges_invalidate } from './actions/judges_invalidate';
-import { Amount, type Box } from '@fleet-sdk/core';
+import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
