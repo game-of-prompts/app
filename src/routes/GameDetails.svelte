@@ -25,7 +25,7 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel } from 'lucide-svelte';
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
@@ -635,18 +635,20 @@
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
                 <div class="space-y-4">
                     {#if $connected}
+
                         {#if game.status === 'Active' && !participationIsEnded}
+                            {#if isNominatedJudge}
+                                <Button on:click={() => setupActionModal('accept_judge_nomination')} class="w-full">
+                                    <Gavel class="mr-2 h-4 w-4"/> Accept Judge Nomination
+                                </Button>
+                            {/if}
+                            
                             <Button on:click={() => setupActionModal('submit_score')} class="w-full">
                                 <Edit class="mr-2 h-4 w-4"/>Submit My Score
                             </Button>
+                            
                             <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
                                 <XCircle class="mr-2 h-4 w-4"/>Cancel Competition
-                            </Button>
-                        {/if}
-
-                        {#if isNominatedJudge && game.status === 'Active'}
-                            <Button on:click={() => setupActionModal('accept_judge_nomination')} class="w-full">
-                                <Gavel class="mr-2 h-4 w-4"/> Accept Judge Nomination
                             </Button>
                         {/if}
 
