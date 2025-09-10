@@ -36,7 +36,7 @@
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
     import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
-    import { RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
+    import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     
     // --- COMPONENT STATE ---
