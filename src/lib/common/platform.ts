@@ -145,4 +145,10 @@ export interface Platform {
      * @returns Un Map con todos los juegos, usando el ID del juego como clave.
      */
     fetchGoPGames(): Promise<Map<string, AnyGame>>;
+
+    /**
+     * 
+     */
+    acceptJudgeNomination(game: GameActive): Promise<string | null>;
+
 }

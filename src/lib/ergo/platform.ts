@@ -21,6 +21,7 @@ import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
+import { update_reputation_proof } from './reputation/submit';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation;
@@ -200,12 +201,12 @@ export class ErgoPlatform implements Platform {
      */
     async includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipations: ParticipationSubmitted[],
+        omittedParticipations: ParticipationSubmitted,
         currentResolved: ParticipationResolved[],
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
-        return await include_omitted_participation(game, omittedParticipations, currentResolved, newResolverPkHex);
+        return await include_omitted_participation(game, omittedParticipation, currentResolved, newResolverPkHex);
     }
 
     /**
@@ -279,4 +280,24 @@ export class ErgoPlatform implements Platform {
         console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
         return allGames;
     }
+
+    /**
+     * Allows a nominated judge to accept their role in an active game.
+     * @param game The Game object in 'Active' state.
+     * @returns A promise that resolves to the transaction ID.
+     */
+    async acceptJudgeNomination(game: GameActive): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        if (game.status !== 'Active') {
+            throw new Error("The game is not in an active state.");
+        }
+        try {
+            return await update_reputation_proof("game", game.gameId, true, "");
+        } catch (error) {
+            console.error("Error in platform method acceptJudgeNomination:", error);
+            if (error instanceof Error) throw new Error(`Failed to accept judge nomination: ${error.message}`);
+            throw new Error("An unknown error occurred while accepting the judge nomination.");
+        }
+    }
+
 }

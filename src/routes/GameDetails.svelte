@@ -14,7 +14,7 @@
         isGameParticipationEnded
 
     } from "$lib/common/game";
-    import { address, connected, game_detail } from "$lib/common/store";
+    import { address, connected, game_detail, reputation_proof } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
@@ -36,8 +36,8 @@
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
     import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
-    import { type ReputationProof } from "$lib/ergo/reputation/objects";
-    import { PARTICIPATION } from "$lib/ergo/reputation/types";
+    import { RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
+    import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
@@ -62,6 +62,7 @@
     let isOwner = false;
     let isResolver = false;
     let isJudge = false;
+    let isNominatedJudge = false;
     
     // Refund State
     let isClaimingRefundFor: string | null = null;
@@ -80,7 +81,7 @@
     
     // Modal State
     let showActionModal = false;
-    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | "end_game" | "invalidate_winner" | "include_omitted" | null = null;
+    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | "end_game" | "invalidate_winner" | "include_omitted" | "accept_judge_nomination" | null = null;
     let modalTitle = "";
     
     // Form Inputs
@@ -147,6 +148,8 @@
                 isOwner = false;
                 isResolver = false;
                 isJudge = false;
+                isNominatedJudge = false;
+
                 const userPKBytes = ErgoAddress.fromBase58(connectedAddress).getPublicKeys()[0];
                 const userPKHex = userPKBytes ? uint8ArrayToHex(userPKBytes) : null;
 
@@ -155,7 +158,18 @@
                     creatorPK = game.originalCreatorPK_Hex;
                     if(userPKHex) {
                         isResolver = userPKHex === game.resolverPK_Hex;
-                        // isJudge = game.participatingJudges.includes();  TODO Check local reputation proofs. 
+                        const own_proof = get(reputation_proof);
+                        if (own_proof) {
+                            isNominatedJudge = game.participatingJudges.includes(own_proof.token_id);
+
+                            const foundBox = own_proof.current_boxes.find((box: RPBox) => 
+                                box.type.tokenId === GAME && 
+                                box.object_pointer === game?.gameId && 
+                                box.polarization
+                            );
+                            const exists = !!foundBox;
+                            isJudge = isNominatedJudge && exists;
+                        }
                     }
                 }
                 
@@ -292,6 +306,19 @@
         }
     }
 
+    async function handleJudgeNomination() {
+        if (game?.status !== 'Active') return;
+        errorMessage = null;
+        isSubmitting = true;
+        try {
+            transactionId = await platform.acceptJudgeNomination(game);
+        } catch (e: any) {
+            errorMessage = e.message || "Error accepting judge nomination.";
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     async function handleJsonFileUpload(event: Event) {
         const target = event.target as HTMLInputElement;
         jsonUploadError = null; errorMessage = null;
@@ -328,6 +355,7 @@
             end_game: `Finalize Game`,
             invalidate_winner: `Judge Invalidation`,
             include_omitted: `Include Omitted Participation`,
+            accept_judge_nomination: 'Accept Judge Nomination'
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -546,6 +574,19 @@
                         <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
                     </div>
                     {/if}
+                    {#if game.participatingJudges && game.participatingJudges.length > 0}
+                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                        <span class="info-label">Participating Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}</span>
+                        <div class="info-value font-mono text-xs break-all">
+                            {#each game.participatingJudges as judge, index}
+                                <span>
+                                    {judge.slice(0, 12)}...{judge.slice(-6)}
+                                    {#if index < game.participatingJudges.length - 1}, {/if}
+                                </span>
+                            {/each}
+                        </div>
+                    </div>
+                    {/if}
                 </div>
             {/if}
         </section>
@@ -577,6 +618,12 @@
                             </Button>
                             <Button on:click={() => setupActionModal('cancel_game')} variant="destructive" class="w-full">
                                 <XCircle class="mr-2 h-4 w-4"/>Cancel Competition
+                            </Button>
+                        {/if}
+
+                        {#if isNominatedJudge && game.status === 'Active'}
+                            <Button on:click={() => setupActionModal('accept_judge_nomination')} class="w-full">
+                                <Gavel class="mr-2 h-4 w-4"/> Accept Judge Nomination
                             </Button>
                         {/if}
 
@@ -885,6 +932,16 @@
                         </p>
                         <Button on:click={handleIncludeOmitted} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-500 hover:bg-gray-600 text-white'} font-semibold">
                             {isSubmitting ? 'Processing...' : 'Confirm Inclusion'}
+                        </Button>
+                    </div>
+                {:else if currentActionType === 'accept_judge_nomination'}
+                    <div class="space-y-4">
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
+                            <strong>Action: Accept Judge Nomination</strong><br>
+                            By accepting, you agree to participate as a judge in this game, with the responsibility to review and potentially invalidate the winner if necessary.
+                        </p>
+                        <Button on:click={handleJudgeNomination} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold">
+                            {isSubmitting ? 'Processing...' : 'Confirm Judge Nomination'}
                         </Button>
                     </div>
                 {/if}
