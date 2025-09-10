@@ -192,8 +192,16 @@ export class ErgoPlatform implements Platform {
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
-        return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
+        return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);
+        /*if () {
+            return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
+        }
+        else {
+            return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);
+        }*/
     }
+
+
 
     /**
      * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
@@ -292,7 +300,7 @@ export class ErgoPlatform implements Platform {
             throw new Error("The game is not in an active state.");
         }
         try {
-            return await update_reputation_proof("game", game.gameId, true, "");
+            return await update_reputation_proof("game", game.gameId, true, null);
         } catch (error) {
             console.error("Error in platform method acceptJudgeNomination:", error);
             if (error instanceof Error) throw new Error(`Failed to accept judge nomination: ${error.message}`);
