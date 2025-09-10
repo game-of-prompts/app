@@ -290,15 +290,21 @@
         isSubmitting = true;
         try {
             const omittedParticipation = participations.find(p => p.boxId === selectedOmittedBoxId);
-            if (!omittedParticipation) {
+            if (!omittedParticipation || omittedParticipation.status !== 'Submitted') {
                 throw new Error("La participación seleccionada no se ha encontrado.");
             }
+
+            const currentWinner = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment)
+            if (!currentWinner) {
+                throw new Error("Ganador no encontrado.");
+            }
+
             const userAddress = get(address);
             if (!userAddress) {
                 throw new Error("Cartera no conectada.");
             }
             const newResolverPkHex = uint8ArrayToHex(ErgoAddress.fromBase58(userAddress).getPublicKeys()[0]);
-            transactionId = await platform.includeOmittedParticipations(game, [], participations as ParticipationResolved[], newResolverPkHex);
+            transactionId = await platform.includeOmittedParticipations(game, omittedParticipation, currentWinner, newResolverPkHex);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 

@@ -115,8 +115,8 @@ export interface Platform {
      */
     includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipation: ParticipationSubmitted[],
-        currentResolved: ParticipationResolved[],
+        omittedParticipation: ParticipationSubmitted,
+        currentResolved: ParticipationResolved,
         newResolverPkHex: string
     ): Promise<string | null>
 

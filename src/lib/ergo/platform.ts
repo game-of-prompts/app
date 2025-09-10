@@ -201,8 +201,8 @@ export class ErgoPlatform implements Platform {
      */
     async includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipations: ParticipationSubmitted,
-        currentResolved: ParticipationResolved[],
+        omittedParticipation: ParticipationSubmitted,
+        currentResolved: ParticipationResolved,
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
