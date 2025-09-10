@@ -153,7 +153,24 @@
                 const userPKBytes = ErgoAddress.fromBase58(connectedAddress).getPublicKeys()[0];
                 const userPKHex = userPKBytes ? uint8ArrayToHex(userPKBytes) : null;
 
-                if (game.status === 'Active') {creatorPK = game.gameCreatorPK_Hex;}
+                if (game.status === 'Active') {
+                    creatorPK = game.gameCreatorPK_Hex;
+                    if(userPKHex) {
+                        isResolver = userPKHex === game.gameCreatorPK_Hex;
+                        const own_proof = get(reputation_proof);
+                        if (own_proof) {
+                            isNominatedJudge = game.invitedJudges.includes(own_proof.token_id);
+
+                            const foundBox = own_proof.current_boxes.find((box: RPBox) => 
+                                box.type.tokenId === GAME && 
+                                box.object_pointer === game?.gameId && 
+                                box.polarization
+                            );
+                            const exists = !!foundBox;
+                            isJudge = isNominatedJudge && exists;
+                        }
+                    }
+                }
                 else if (game.status === 'Resolution') {
                     creatorPK = game.originalCreatorPK_Hex;
                     if(userPKHex) {
@@ -580,14 +597,14 @@
                         <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
                     </div>
                     {/if}
-                    {#if game.participatingJudges && game.participatingJudges.length > 0}
+                    {#if game.invitedJudges && game.invitedJudges.length > 0}
                     <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
                         <span class="info-label">Participating Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}</span>
                         <div class="info-value font-mono text-xs break-all">
-                            {#each game.participatingJudges as judge, index}
+                            {#each game.invitedJudges as judge, index}
                                 <span>
                                     {judge.slice(0, 12)}...{judge.slice(-6)}
-                                    {#if index < game.participatingJudges.length - 1}, {/if}
+                                    {#if index < game.invitedJudges.length - 1}, {/if}
                                 </span>
                             {/each}
                         </div>

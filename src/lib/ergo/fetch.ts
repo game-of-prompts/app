@@ -116,15 +116,16 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         const commissionPercentage = parseInt(r5Value[1], 10);
         if (!gameCreatorPK_Hex || isNaN(commissionPercentage)) throw new Error("Could not parse R5.");
 
-        // R6 (previously R5): secretHash
+        // R6 secretHash
         const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         if (!secretHash) throw new Error("R6 (secretHash) is invalid or does not exist.");
 
-        // R7 (previously R6): invitedJudges
-        const r7Value = box.additionalRegisters.R7?.renderedValue;
-        const invitedJudges = Array.isArray(r7Value) ? r7Value.map(parseCollByteToHex) : [];
+        // R7: invitedJudges
+        const invitedJudges: string[] = box.additionalRegisters.R7?.renderedValue
+            .replace(/[\[\]\s]/g, "")
+            .split(",");
 
-        // R8 (previously R7): numericalParameters
+        // R8 numericalParameters
         const r8RenderedValue = box.additionalRegisters.R8?.renderedValue;
         let parsedR8Array: any[] | null = null;
         if (typeof r8RenderedValue === 'string') {

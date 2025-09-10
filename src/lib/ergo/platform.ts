@@ -201,8 +201,6 @@ export class ErgoPlatform implements Platform {
         }*/
     }
 
-
-
     /**
      * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
      * El usuario que ejecuta esta acción se convierte en el nuevo 'resolver' para reclamar la comisión.
