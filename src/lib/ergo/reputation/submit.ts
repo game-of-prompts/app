@@ -190,14 +190,13 @@ export async function update_reputation_proof(
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
-    let dataInputs = [typeNftBox];
-    dataInputs.concat(proof?.current_boxes.slice(1).map((i) => i.box))
+    let dataInputs = [typeNftBox, ...proof?.current_boxes.slice(1).map((i) => i.box)];
 
     const outputs: OutputBuilder[] = [];
 
     // --- Create the main output for the new/modified proof ---
     const new_proof_output = new OutputBuilder(
-        total_burned(proof) > SAFE_MIN_BOX_VALUE ? BigInt(total_burned(proof)) : SAFE_MIN_BOX_VALUE,
+        SAFE_MIN_BOX_VALUE,
         ergo_tree_address
     );
 
@@ -210,7 +209,7 @@ export async function update_reputation_proof(
     // If splitting, create a change box to send the remaining tokens back to the same contract
     if (input_proof.token_amount - token_amount > 0) {
         outputs.push(
-            new OutputBuilder(SAFE_MIN_BOX_VALUE, ergo_tree_address)
+            new OutputBuilder(BigInt(input_proof.box.value), ergo_tree_address)
             .addTokens({
                 tokenId: input_proof.token_id,
                 amount: (input_proof.token_amount - token_amount).toString()
@@ -230,12 +229,16 @@ export async function update_reputation_proof(
         R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
         R5: SString(object_pointer),
         R6: tupleToSerialized(is_locked, total_supply),
-        R7: SColl(SByte, hashedProposition).toHex(), // <-- Valor R7 Corregido
+        R7: SColl(SByte, hashedProposition).toHex(),
         R8: booleanToSerializer(polarization),
         R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
     });
 
     outputs.push(new_proof_output);
+
+    console.log("INPUTS: ", inputs)
+    console.log("OUTPUTS: ", outputs)
+    console.log("DATA INPUTS: ", dataInputs)
 
     // --- Build and submit the transaction ---
     try {
