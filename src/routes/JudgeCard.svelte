@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Badge } from "$lib/components/ui/badge/index.js";
     import { Button } from "$lib/components/ui/button";
-    import { type ReputationProof } from "$lib/ergo/reputation/objects";
+    import { total_burned_string, type ReputationProof } from "$lib/ergo/reputation/objects";
 
     export let judge: ReputationProof;
     export let index: number;
@@ -16,12 +16,7 @@
     // Derived values
     $: opinionsCount = judge?.number_of_boxes > 0 ? judge.number_of_boxes - 1 : 0;
 
-    $: totalErgsBurned = judge?.total_amount
-        ? (judge.total_amount / 1e9).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 9,
-          })
-        : "0";
+    $: totalErgsBurned = total_burned_string(judge);
 
     // Wallpaper fallback
     const defaultImages = [
@@ -43,20 +38,20 @@
     $: wallpaperUrl = judge?.token_id
         ? defaultImages[hashStringToNumber(judge.token_id) % defaultImages.length]
         : defaultImages[0];
-        
+
 </script>
 
 <div
-    class="judge-row flex flex-col md:flex-row items-start gap-6 md:gap-16 lg:px-12 xl:px-20"
+    class="judge-row flex flex-col md:flex-row items-center gap-6 md:gap-12 lg:px-12 xl:px-20"
     class:md:flex-row-reverse={!isEven}
 >
     <!-- Image / Wallpaper -->
-    <div class="judge-image w-full md:w-1/2 rounded-xl overflow-hidden shadow-md">
+    <div class="judge-image w-full md:w-1/2 rounded-xl overflow-hidden shadow-md flex-shrink-0">
         <img src={wallpaperUrl} alt="Judge wallpaper" class="w-full h-64 object-cover" />
     </div>
 
     <!-- Content -->
-    <div class="content-wrapper w-full text-center md:text-left">
+    <div class="content-wrapper w-full text-center md:text-left flex flex-col justify-center">
         <Badge variant="secondary" class="mb-3">
             {opinionsCount} Opinions
         </Badge>
@@ -106,7 +101,7 @@
 
 <style>
     .judge-row {
-        padding: 1.25rem;
+        padding: 1.5rem;
         background-color: var(--card);
         border-radius: 1rem;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05),
@@ -117,10 +112,12 @@
     .judge-row:hover {
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
             0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        transform: translateY(-4px);
+        transform: translateY(-3px);
     }
+
     .judge-image img {
         transition: transform 0.4s ease;
+        border-radius: 0.75rem;
     }
     .judge-image img:hover {
         transform: scale(1.05);
