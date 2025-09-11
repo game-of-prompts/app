@@ -95,8 +95,6 @@ export async function fetchReputationProofs(
     value: string | null
 ): Promise<Map<string, ReputationProof>> {
 
-    console.log("Fetch reputation proofs");
-
     await fetchTypeNfts();
     const availableTypes = get(types);
 
@@ -160,7 +158,7 @@ export async function fetchReputationProofs(
                     const r6_parsed = parseR6(box.additionalRegisters.R6.renderedValue);
                     proof = {
                         token_id: rep_token_id,
-                        type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false },
+                        type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
                         total_amount: r6_parsed.totalSupply,
                         blake_owner_script: serializedToRendered(owner_hash_serialized),
                         owner_hash_serialized: owner_hash_serialized,
@@ -176,7 +174,7 @@ export async function fetchReputationProofs(
                 const type_nft_id_for_box = box.additionalRegisters.R4.renderedValue ?? "";
                 let typeNftForBox = availableTypes.get(type_nft_id_for_box);
                 if (!typeNftForBox) {
-                    typeNftForBox = { tokenId: type_nft_id_for_box, boxId: '', typeName: "Unknown Type", description: "Metadata not found", schemaURI: "", isRepProof: false };
+                    typeNftForBox = { tokenId: type_nft_id_for_box, boxId: '', typeName: "Unknown Type", description: "Metadata not found", schemaURI: "", isRepProof: false, box: null };
                 }
                 
                 let box_content: string|object|null = {};

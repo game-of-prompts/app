@@ -227,10 +227,6 @@ export async function update_reputation_proof(
 
     outputs.push(new_proof_output);
 
-    console.log("INPUTS: ", inputs)
-    console.log("OUTPUTS: ", outputs)
-    console.log("DATA INPUTS: ", dataInputs)
-
     // --- Build and submit the transaction ---
     try {
         const unsignedTransaction = await new TransactionBuilder(await ergo.get_current_height())

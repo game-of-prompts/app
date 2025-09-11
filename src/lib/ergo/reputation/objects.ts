@@ -9,7 +9,7 @@ export interface TypeNFT {
     description: string;
     schemaURI: string;
     isRepProof: boolean;
-    box: Box<Amount>;
+    box: Box<Amount>|null;
 }
 
 export interface ReputationProof {
