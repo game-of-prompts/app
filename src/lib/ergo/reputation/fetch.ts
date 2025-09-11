@@ -262,3 +262,107 @@ export async function fetchReputationProofs(
         return new Map();
     }
 }
+
+/**
+ * Fetch a single ReputationProof by its token id using explorer /api/v1/boxes/byTokenId/{tokenId}
+ * - Does NOT scan the whole chain (no unspent/search).
+ * - Verifies owner-hash consistency across boxes for the token (same behaviour as fetchReputationProofs).
+ * 
+ * @param tokenId token id of the reputation proof NFT
+ * @param ergo optional wallet object used to compute whether the current user can spend (same logic as fetchReputationProofs)
+ * @param options.ignoreOwnerHashConflict when true, will return a proof even if multiple different owner hashes exist (default false)
+ */
+export async function fetchReputationProofByTokenId(
+    tokenId: string,
+    ergo: any,
+    options: { ignoreOwnerHashConflict?: boolean } = {}
+): Promise<ReputationProof | null> {
+    await fetchTypeNfts();
+    const availableTypes = get(types);
+
+    try {
+        const resp = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${tokenId}`);
+        if (!resp.ok) {
+            console.warn(`Explorer returned ${resp.status} for token ${tokenId}`);
+            return null;
+        }
+        const data = await resp.json();
+        const items: ApiBox[] = data.items || [];
+        if (items.length === 0) {
+            console.warn(`No boxes returned for token ${tokenId}`);
+            return null;
+        }
+
+        // Only keep boxes that match the reputation-proof ergo_tree
+        const rpBoxes = items.filter(b => b.ergoTree === ergo_tree);
+        if (rpBoxes.length === 0) {
+            console.warn(`No reputation-proof boxes (ergoTree !== expected) found for token ${tokenId}`);
+            return null;
+        }
+
+        // Collect unique owner hashes (serialized)
+        const uniqueOwnerHashes = new Set(
+            rpBoxes
+                .filter(b => b.additionalRegisters.R7?.serializedValue)
+                .map(b => b.additionalRegisters.R7!.serializedValue)
+        );
+
+        if (uniqueOwnerHashes.size > 1 && !options.ignoreOwnerHashConflict) {
+            console.warn(`Reputation Proof ${tokenId} has conflicting owner hashes. Owner hashes:`, Array.from(uniqueOwnerHashes));
+            // Mirror the behavior in fetchReputationProofs: skip/abort when owner hash conflicts found
+            return null;
+        }
+
+        // Use the first matching rpBox as the primary box to read R6 / R7 values for summary fields
+        const primaryBox = rpBoxes[0];
+
+        const r6_parsed = parseR6(primaryBox.additionalRegisters.R6?.renderedValue ?? "");
+        const owner_hash_serialized = primaryBox.additionalRegisters.R7?.serializedValue ?? "";
+
+        // compute whether current user can spend (same method as fetchReputationProofs)
+        let userR7SerializedHex: string | null = null;
+        const change_address = get(connected) && ergo ? await ergo.get_change_address() : null;
+        if (change_address) {
+            try {
+                const userAddress = ErgoAddress.fromBase58(change_address);
+                const propositionBytes = hexToBytes(userAddress.ergoTree);
+                if (propositionBytes) {
+                    const hashedProposition = blake2b256(propositionBytes);
+                    userR7SerializedHex = SColl(SByte, hashedProposition).toHex();
+                }
+            } catch (err) {
+                console.warn("Could not compute user R7 serialized hash:", err);
+            }
+        }
+
+        const proof: ReputationProof = {
+            token_id: tokenId,
+            type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
+            total_amount: r6_parsed.totalSupply,
+            blake_owner_script: serializedToRendered(owner_hash_serialized),
+            owner_hash_serialized,
+            can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
+            current_boxes: [],
+            number_of_boxes: 0,
+            network: Network.ErgoMainnet,
+            data: {}
+        };
+
+        // Build current_boxes from all returned items (not only rpBoxes) — createRPBoxFromApiBox will skip non-RP boxes.
+        for (const box of items) {
+            const rpBox = createRPBoxFromApiBox(box, tokenId, availableTypes);
+            if (rpBox) {
+                if (rpBox.object_pointer === proof.token_id) {
+                    proof.type = rpBox.type;
+                }
+                proof.current_boxes.push(rpBox);
+                proof.number_of_boxes += 1;
+            }
+        }
+
+        return proof;
+    } catch (error) {
+        console.error(`Error fetching reputation proof for token ${tokenId}:`, error);
+        return null;
+    }
+}

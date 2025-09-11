@@ -35,7 +35,7 @@
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
-    import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
+    import { fetchReputationProofByTokenId, fetchReputationProofs } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     
@@ -63,6 +63,7 @@
     let isResolver = false;
     let isJudge = false;
     let isNominatedJudge = false;
+    let acceptedJudgeNominations: string[] = [];
     
     // Refund State
     let isClaimingRefundFor: string | null = null;
@@ -141,6 +142,26 @@
             } else {
                 deadlineDateDisplay = "N/A";
             }
+
+            acceptedJudgeNominations = game.status === "Active"
+                ? (
+                    await Promise.all(
+                        game.invitedJudges.map(async (judge) => {
+                            const judge_proof = await fetchReputationProofByTokenId(judge, ergo);
+                            if (!judge_proof) return null;
+
+                            const foundBox = judge_proof.current_boxes.find(
+                                (box: RPBox) =>
+                                    box.type.tokenId === GAME &&
+                                    box.object_pointer === game?.gameId &&
+                                    box.polarization
+                            );
+                            return foundBox ? judge : null;
+                        })
+                    )
+                ).filter((j): j is string => j !== null)
+                : [];
+
             
             const connectedAddress = get(address);
             if(get(connected) && connectedAddress && game) {
@@ -599,17 +620,23 @@
                     {/if}
                     {#if game.invitedJudges && game.invitedJudges.length > 0}
                     <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                        <span class="info-label">Participating Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}</span>
+                        <span class="info-label">
+                            Participating Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
+                        </span>
                         <div class="info-value font-mono text-xs break-all">
                             {#each game.invitedJudges as judge, index}
                                 <span>
                                     {judge.slice(0, 12)}...{judge.slice(-6)}
+                                    {#if acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
+                                        <span class="text-green-500"> (accepted)</span>
+                                    {/if}
                                     {#if index < game.invitedJudges.length - 1}, {/if}
                                 </span>
                             {/each}
                         </div>
                     </div>
                     {/if}
+
                 </div>
             {/if}
         </section>
