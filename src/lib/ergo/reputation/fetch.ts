@@ -34,45 +34,42 @@ function parseR6(r6RenderedValue: string): { isLocked: boolean; totalSupply: num
 export async function fetchTypeNfts() {
     try {
         const fetchedTypesArray: TypeNFT[] = [];
-        let offset = 0;
-        const limit = 100;
-        let moreDataAvailable = true;
 
-        while (moreDataAvailable) {
-            const url = `${explorer_uri}/api/v1/boxes/unspent/search?offset=${offset}&limit=${limit}`;
-            const body = { "ergoTreeTemplateHash": digital_public_good_contract_hash };
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-
-            if (!response.ok) {
-                moreDataAvailable = false;
-                console.error("Failed to fetch a page of type boxes from the explorer.");
-                continue;
-            }
+        const nftTypes = [GAME, PARTICIPATION, JUDGE];
+        for (const currentTypeNftId of nftTypes) {
             
-            const data = await response.json();
-            if (data.items.length === 0) {
-                moreDataAvailable = false;
-                continue;
-            }
-
-            const pageTypes = data.items.map((box: any): TypeNFT | null => {
-                if (!box.assets || box.assets.length === 0) return null;
-                return {
+            try {
+                const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${currentTypeNftId}`);
+                
+                if (!typeNftBoxResponse.ok) {
+                    alert(`Could not fetch the Type NFT box for ${currentTypeNftId}. Status: ${typeNftBoxResponse.status}. Aborting transaction.`);
+                    return null;
+                }
+                
+                const responseData = await typeNftBoxResponse.json();
+                
+                // Check if items exist and has at least one item
+                if (!responseData.items || responseData.items.length === 0) {
+                    alert(`No NFT box found for type ${currentTypeNftId}. Aborting transaction.`);
+                    return null;
+                }
+                
+                const box = responseData.items[0];
+                    fetchedTypesArray.push({
                     tokenId: box.assets[0].tokenId,
                     boxId: box.boxId,
                     typeName: hexToUtf8(box.additionalRegisters.R4?.renderedValue || '') ?? "",
                     description: hexToUtf8(box.additionalRegisters.R5?.renderedValue || '') ?? "",
                     schemaURI: hexToUtf8(box.additionalRegisters.R6?.renderedValue || '') ?? "",
                     isRepProof: box.additionalRegisters.R7?.renderedValue ?? false,
-                };
-            }).filter((t: TypeNFT | null): t is TypeNFT => t !== null);
-            
-            fetchedTypesArray.push(...pageTypes);
-            offset += limit;
+                    box: box
+                })
+                    
+            } catch (error) {
+                console.error(`Error fetching NFT box for type ${type}:`, error);
+                alert(`Network error while fetching Type NFT box for ${type}. Aborting transaction.`);
+                return null;
+            }
         }
         
         const typesMap = new Map(fetchedTypesArray.map(type => [type.tokenId, type]));

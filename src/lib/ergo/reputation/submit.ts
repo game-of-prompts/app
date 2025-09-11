@@ -12,12 +12,11 @@ import {
     SLong
 } from '@fleet-sdk/core';
 import { blake2b256 } from '@fleet-sdk/crypto';
-import { total_burned, type RPBox } from '$lib/ergo/reputation/objects';
 import { getReputationProofAddress }  from "$lib/ergo/contract";
 import { SString, hexToBytes } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
-import { SConstant, SBoolType, SLongType, SPair } from '@fleet-sdk/serializer';
-import { reputation_proof } from '$lib/common/store';
+import { SPair } from '@fleet-sdk/serializer';
+import { reputation_proof, types } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { GAME, JUDGE, PARTICIPATION } from './types';
 
@@ -121,7 +120,6 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
             .to(outputs)
             .sendChangeTo(creatorP2PKAddress)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .withDataFrom(dataInputs)
             .build()
             .toEIP12Object();
 
@@ -178,19 +176,12 @@ export async function update_reputation_proof(
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
 
     // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
-    const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${type_nft_id}`);
-    if (!typeNftBoxResponse.ok) {
-      alert("Could not fetch the Type NFT box. Aborting transaction.");
-      return null;
-    }
-    const typeNftBox = (await typeNftBoxResponse.json()).items[0];
-
-    console.log("type nft box ", typeNftBox)
+    let typeNftBoxes = Array.from(get(types), ([k, v]) => v.box);
 
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
-    let dataInputs = [typeNftBox, ...proof?.current_boxes.slice(1).map((i) => i.box)];
+    let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.slice(1).map((i) => i.box)];
 
     const outputs: OutputBuilder[] = [];
 
