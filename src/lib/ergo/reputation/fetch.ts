@@ -88,6 +88,66 @@ const ProofType = {
     judge: JUDGE
 }
 
+async function fetchAllBoxesForToken(tokenId: string): Promise<ApiBox[]> {
+    try {
+        const response = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${tokenId}`);
+        if (!response.ok) {
+            console.warn(`Could not fetch boxes for token ${tokenId}. Status: ${response.status}`);
+            return [];
+        }
+        
+        const responseData = await response.json();
+        return responseData.items || [];
+    } catch (error) {
+        console.error(`Error fetching boxes for token ${tokenId}:`, error);
+        return [];
+    }
+}
+
+function createRPBoxFromApiBox(box: ApiBox, tokenId: string, availableTypes: Map<string, TypeNFT>): RPBox | null {
+    if (box.ergoTree !== ergo_tree) return null;
+    if (!box.assets?.length || !box.additionalRegisters.R4 || !box.additionalRegisters.R6 || !box.additionalRegisters.R7) return null;
+
+    const type_nft_id_for_box = box.additionalRegisters.R4.renderedValue ?? "";
+    let typeNftForBox = availableTypes.get(type_nft_id_for_box);
+    if (!typeNftForBox) {
+        typeNftForBox = { tokenId: type_nft_id_for_box, boxId: '', typeName: "Unknown Type", description: "Metadata not found", schemaURI: "", isRepProof: false, box: null };
+    }
+    
+    let box_content: string|object|null = {};
+    try {
+        const rawValue = box.additionalRegisters.R9?.renderedValue;
+        if (rawValue) {
+            const potentialString = hexToUtf8(rawValue);
+            try {
+                box_content = JSON.parse(potentialString ?? "");
+            } catch (jsonError) {
+                box_content = potentialString;
+            }
+        }
+    } catch (error) {
+        box_content = {};
+    }
+    
+    const object_pointer_for_box = hexToUtf8(box.additionalRegisters.R5?.renderedValue ?? "") ?? "";
+
+    return {
+        box: {
+            boxId: box.boxId, value: box.value, assets: box.assets, ergoTree: box.ergoTree, creationHeight: box.creationHeight,
+            additionalRegisters: Object.entries(box.additionalRegisters).reduce((acc, [key, value]) => { acc[key] = value.serializedValue; return acc; }, {} as { [key: string]: string; }),
+            index: box.index, transactionId: box.transactionId
+        },
+        box_id: box.boxId,
+        type: typeNftForBox,
+        token_id: tokenId,
+        token_amount: Number(box.assets[0].amount),
+        object_pointer: object_pointer_for_box,
+        is_locked: parseR6(box.additionalRegisters.R6.renderedValue).isLocked,
+        polarization: box.additionalRegisters.R8?.renderedValue === 'true',
+        content: box_content,
+    };
+}
+
 export async function fetchReputationProofs(
     ergo: any, 
     all: boolean, 
@@ -126,6 +186,8 @@ export async function fetchReputationProofs(
 
     try {
         let offset = 0, limit = 100, moreDataAvailable = true;
+        const processedTokenIds = new Set<string>();
+        
         while (moreDataAvailable) {
             const url = `${explorer_uri}/api/v1/boxes/unspent/search?offset=${offset}&limit=${limit}`;
             const final_body = { "ergoTreeTemplateHash": ergo_tree_hash, "registers": registers };
@@ -142,83 +204,58 @@ export async function fetchReputationProofs(
                 const rep_token_id = box.assets[0].tokenId;
                 const owner_hash_serialized = box.additionalRegisters.R7.serializedValue;
 
-                let proof = proofs.get(rep_token_id);
+                if (processedTokenIds.has(rep_token_id)) continue;
+                processedTokenIds.add(rep_token_id);
 
-                if (proof && proof.owner_hash_serialized !== owner_hash_serialized) {
+                const r6_parsed = parseR6(box.additionalRegisters.R6.renderedValue);
+                const proof: ReputationProof = {
+                    token_id: rep_token_id,
+                    type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
+                    total_amount: r6_parsed.totalSupply,
+                    blake_owner_script: serializedToRendered(owner_hash_serialized),
+                    owner_hash_serialized: owner_hash_serialized,
+                    can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
+                    current_boxes: [],
+                    number_of_boxes: 0,
+                    network: Network.ErgoMainnet,
+                    data: {}
+                };
+
+                const allBoxesForToken = await fetchAllBoxesForToken(rep_token_id);
+                console.log(`Fetched ${allBoxesForToken.length} boxes for token ${rep_token_id}`);
+
+                const uniqueOwnerHashes = new Set(
+                    allBoxesForToken
+                        .filter(b => b.additionalRegisters.R7?.serializedValue)
+                        .map(b => b.additionalRegisters.R7!.serializedValue)
+                );
+
+                if (uniqueOwnerHashes.size > 1) {
                     console.warn(`Reputation Proof with token ID ${rep_token_id} has conflicting owner hashes. Skipping this proof.`, {
-                        expectedOwnerHash: proof.owner_hash_serialized,
-                        foundOwnerHash: owner_hash_serialized,
-                        conflictingBox: box.boxId
+                        ownerHashes: Array.from(uniqueOwnerHashes),
+                        boxCount: allBoxesForToken.length
                     });
-                    proofs.delete(rep_token_id);
                     continue;
                 }
 
-                if (!proof) {
-                    const r6_parsed = parseR6(box.additionalRegisters.R6.renderedValue);
-                    proof = {
-                        token_id: rep_token_id,
-                        type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
-                        total_amount: r6_parsed.totalSupply,
-                        blake_owner_script: serializedToRendered(owner_hash_serialized),
-                        owner_hash_serialized: owner_hash_serialized,
-                        can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
-                        current_boxes: [],
-                        number_of_boxes: 0,
-                        network: Network.ErgoMainnet,
-                        data: {}
-                    };
-                    proofs.set(rep_token_id, proof);
-                }
-
-                const type_nft_id_for_box = box.additionalRegisters.R4.renderedValue ?? "";
-                let typeNftForBox = availableTypes.get(type_nft_id_for_box);
-                if (!typeNftForBox) {
-                    typeNftForBox = { tokenId: type_nft_id_for_box, boxId: '', typeName: "Unknown Type", description: "Metadata not found", schemaURI: "", isRepProof: false, box: null };
-                }
-                
-                let box_content: string|object|null = {};
-                try {
-                    const rawValue = box.additionalRegisters.R9?.renderedValue;
-                    if (rawValue) {
-                        const potentialString = hexToUtf8(rawValue);
-                        try {
-                            box_content = JSON.parse(potentialString ?? "");
-                        } catch (jsonError) {
-                            box_content = potentialString;
+                for (const tokenBox of allBoxesForToken) {
+                    const rpBox = createRPBoxFromApiBox(tokenBox, rep_token_id, availableTypes);
+                    if (rpBox) {
+                        if (rpBox.object_pointer === proof.token_id) {
+                            proof.type = rpBox.type;
                         }
+                        
+                        proof.current_boxes.push(rpBox);
+                        proof.number_of_boxes += 1;
                     }
-                } catch (error) {
-                    box_content = {};
-                }
-                
-                const object_pointer_for_box = hexToUtf8(box.additionalRegisters.R5?.renderedValue ?? "") ?? "";
-
-                const current_box: RPBox = {
-                    box: {
-                        boxId: box.boxId, value: box.value, assets: box.assets, ergoTree: box.ergoTree, creationHeight: box.creationHeight,
-                        additionalRegisters: Object.entries(box.additionalRegisters).reduce((acc, [key, value]) => { acc[key] = value.serializedValue; return acc; }, {} as { [key: string]: string; }),
-                        index: box.index, transactionId: box.transactionId
-                    },
-                    box_id: box.boxId,
-                    type: typeNftForBox,
-                    token_id: rep_token_id,
-                    token_amount: Number(box.assets[0].amount),
-                    object_pointer: object_pointer_for_box,
-                    is_locked: parseR6(box.additionalRegisters.R6.renderedValue).isLocked,
-                    polarization: box.additionalRegisters.R8?.renderedValue === 'true',
-                    content: box_content,
-                };
-                
-                if (current_box.object_pointer === proof.token_id) {
-                    proof.type = typeNftForBox;
                 }
 
-                proof.current_boxes.push(current_box);
-                proof.number_of_boxes += 1;
+                proofs.set(rep_token_id, proof);
             }
             offset += limit;
         }
+        
+        console.log(`Successfully fetched ${proofs.size} complete reputation proofs`);
         return proofs;
     } catch (error) {
         console.error('An error occurred during the reputation proof search:', error);
