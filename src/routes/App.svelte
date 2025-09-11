@@ -20,6 +20,7 @@
     import ShowJudge from './ShowJudge.svelte';
     import { fetchReputationProofs } from '$lib/ergo/reputation/fetch';
     import { total_burned } from '$lib/ergo/reputation/objects';
+    import JudgeList from './JudgeList.svelte';
 
     let activeTab = 'participateGame';
     let showCopyMessage = false;
@@ -162,6 +163,7 @@
             <ul class="nav-links">
                 <li class:active={activeTab === 'participateGame'}><a href="#" on:click|preventDefault={() => changeTab('participateGame')}>Competitions</a></li>
                 <li class:active={activeTab === 'createGame'}><a href="#" on:click|preventDefault={() => changeTab('createGame')}>Create Competition</a></li>
+                <li class:active={activeTab === 'judges'}><a href="#" on:click|preventDefault={() => changeTab('judges')}>Judges</a></li>
                 {#if !$reputation_proof}
                     <li class:active={activeTab === 'createJudge'}><a href="#" on:click|preventDefault={() => changeTab('createJudge')}>Become a Judge</a></li>
                 {:else}
@@ -225,6 +227,9 @@
         {/if}
         {#if activeTab === 'createGame'}
             <CreateGame />
+        {/if}
+        {#if activeTab === 'judges'}
+            <JudgeList />
         {/if}
         {#if activeTab === 'createJudge'}
             <CreateJudge />
