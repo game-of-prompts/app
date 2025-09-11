@@ -637,7 +637,7 @@
                     {#if $connected}
 
                         {#if game.status === 'Active' && !participationIsEnded}
-                            {#if isNominatedJudge}
+                            {#if isNominatedJudge && !isJudge} <!-- Could be added !isOwner -->
                                 <Button on:click={() => setupActionModal('accept_judge_nomination')} class="w-full">
                                     <Gavel class="mr-2 h-4 w-4"/> Accept Judge Nomination
                                 </Button>
