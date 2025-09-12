@@ -82,7 +82,6 @@
 					{#if filteredBoxes.length > 0}
 						{#each filteredBoxes as box (box.box_id)}
 							<div class="box-item" class:positive-opinion={box.polarization} class:negative-opinion={!box.polarization}>
-								<div class="polarization-icon">{box.polarization ? '👍' : '👎'}</div>
 								
 								<div class="box-content">
 									{#if selectedType === GAME}
@@ -144,49 +143,114 @@
 </div>
 
 <style lang="postcss">
-	/* --- Estilos base (sin cambios) --- */
-	.show-judge-container { max-width: 1400px; margin: 0 auto; padding: 10px 15px 4rem; }
-	.project-title { text-align: center; font-size: 2.8rem; font-family: 'Russo One', sans-serif; }
-	.subtitle { font-size: 1.1rem; color: hsl(var(--muted-foreground)); margin-top: 0.5rem; margin-bottom: 3rem; }
-	.content-section { @apply p-6 bg-background/50 backdrop-blur-lg rounded-xl shadow border border-white/10; }
-	.section-title { @apply text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200; }
-	.proof-details { @apply text-base text-muted-foreground leading-relaxed list-disc pl-6 space-y-3; }
-	.filter-menu { @apply flex items-center justify-center gap-3 mb-6; }
-	.filter-badge { @apply px-4 py-2 text-sm font-medium border rounded-full transition-colors duration-200 border-white/20 text-slate-400 bg-slate-800/10 hover:bg-slate-700/30 hover:text-slate-200; }
-	.filter-badge.active { @apply bg-primary text-primary-foreground border-primary/50 cursor-default; }
-	.boxes-container { @apply flex flex-col gap-4; }
+    /* --- Estilos base --- */
+    .show-judge-container { max-width: 1400px; margin: 0 auto; padding: 10px 15px 4rem; }
+    .project-title { text-align: center; font-size: 2.8rem; font-family: 'Russo One', sans-serif; }
+    .subtitle { font-size: 1.1rem; color: hsl(var(--muted-foreground)); margin-top: 0.5rem; margin-bottom: 3rem; }
+    
+    /* --- Contenedor de contenido principal --- */
+    .content-section { 
+        @apply p-0;
+    }
+    .section-title { @apply text-2xl font-semibold mb-4 text-slate-800 dark:text-slate-200 px-2 md:px-0; }
+    .proof-details { @apply text-base text-muted-foreground leading-relaxed list-disc pl-6 space-y-3 mb-8 px-2 md:px-0; }
 
-	/* --- ESTILOS DE TARJETAS MODIFICADOS Y AMPLIADOS --- */
+    /* --- Menú de filtros --- */
+    .filter-menu { @apply flex items-center justify-center gap-2 md:gap-3 mb-6 flex-wrap px-2 md:px-0; }
+    .filter-badge {
+        @apply px-4 py-1.5 text-sm font-medium border rounded-full transition-colors duration-200;
+        @apply border-input bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+    }
+    .filter-badge.active {
+        @apply bg-primary text-primary-foreground border-transparent hover:bg-primary/90;
+        cursor: default;
+    }
+
+    /* --- Contenedor de las opiniones --- */
+    .boxes-container { 
+        @apply flex flex-col border-t border-border;
+    }
+
+	/* --- Item de opinión con mejor diferenciación de polarización --- */
 	.box-item {
-		@apply flex items-start gap-4 p-4 bg-slate-800/20 rounded-lg border border-white/10 transition-all duration-300;
-		border-left: 4px solid transparent;
+		@apply flex p-4 md:p-6 border-b border-border;
+		@apply border-l-4 transition-all duration-300;
+		@apply relative;
 	}
-	.box-item.positive-opinion { border-left-color: hsl(var(--success, 142 71% 45%)); }
-	.box-item.negative-opinion { border-left-color: hsl(var(--destructive, 0 84% 60%)); }
-	.polarization-icon { @apply text-2xl pt-1; }
-	.box-content { @apply flex-1; }
 
-	/* Estilos para el contenido principal (opinión) */
+	/* Polarización positiva - Verde */
+	.box-item.positive-opinion {
+		border-left-color: #22c55e; /* Verde más vibrante */
+		@apply bg-green-50/30 dark:bg-green-950/20;
+	}
+
+	.box-item.positive-opinion::before {
+		content: "✓";
+		@apply absolute -left-2 top-4 w-4 h-4 bg-green-500 text-white text-xs;
+		@apply rounded-full flex items-center justify-center font-bold;
+	}
+
+	/* Polarización negativa - Rojo */
+	.box-item.negative-opinion {
+		border-left-color: #ef4444; /* Rojo más vibrante */
+		@apply bg-red-50/30 dark:bg-red-950/20;
+	}
+
+	.box-item.negative-opinion::before {
+		content: "✗";
+		@apply absolute -left-2 top-4 w-4 h-4 bg-red-500 text-white text-xs;
+		@apply rounded-full flex items-center justify-center font-bold;
+	}
+
+	/* Hover effects para mayor interactividad */
+	.box-item.positive-opinion:hover {
+		@apply bg-green-50/50 dark:bg-green-950/30;
+		border-left-width: 6px;
+	}
+
+	.box-item.negative-opinion:hover {
+		@apply bg-red-50/50 dark:bg-red-950/30;
+		border-left-width: 6px;
+	}
+
+	/* Mejoras adicionales para el texto de polarización */
 	.box-content-text {
-		@apply text-base text-slate-300 mt-2 italic border-l-2 border-slate-700 pl-3;
+		@apply text-base mt-3 italic border-l-2 pl-4;
+		@apply transition-colors duration-300;
 	}
-	
-	/* Estilos para información de Juego */
-	.game-info { @apply flex flex-wrap items-center gap-x-4 gap-y-1; }
-	.game-title-link { @apply text-lg font-semibold text-primary hover:underline; }
-	.badge { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full; }
-	.badge.invited { @apply bg-blue-500/20 text-blue-300; }
-	.badge.organic { @apply bg-purple-500/20 text-purple-300; }
 
-	/* Estilos para información genérica (Participation, Judge) */
-	.generic-info { @apply flex items-center gap-2 text-lg; }
-	.info-label { @apply font-semibold text-slate-200; }
-	.info-link { @apply font-mono text-sm text-amber-400 hover:underline truncate; }
+	.positive-opinion .box-content-text {
+		@apply text-green-700 dark:text-green-300 border-green-300 dark:border-green-700;
+	}
 
-	/* Estilos para listas de detalles secundarios */
-	.sub-details-list { @apply list-disc pl-5 mt-3 space-y-1 text-sm text-slate-400; }
-	.sub-details-list li strong { @apply font-medium text-slate-300; }
-	
-	/* Modificador para la lista de "Other" para que sea más densa */
-	.sub-details-list.all-data { @apply font-mono text-xs; }
+	.negative-opinion .box-content-text {
+		@apply text-red-700 dark:text-red-300 border-red-300 dark:border-red-700;
+	}
+
+	/* Estilos para los detalles de polarización */
+	.sub-details-list li strong {
+		@apply font-medium;
+	}
+
+	.positive-opinion .sub-details-list li:has(strong:contains("Polarization")) {
+		@apply text-green-600 dark:text-green-400;
+	}
+
+	.negative-opinion .sub-details-list li:has(strong:contains("Polarization")) {
+		@apply text-red-600 dark:text-red-400;
+	}
+
+	/* Badge de estado opcional */
+	.polarization-badge {
+		@apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full;
+		@apply absolute top-4 right-4;
+	}
+
+	.polarization-badge.positive {
+		@apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300;
+	}
+
+	.polarization-badge.negative {
+		@apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300;
+	}
 </style>
