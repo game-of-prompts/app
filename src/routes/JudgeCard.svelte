@@ -9,9 +9,7 @@
 	$: isEven = index % 2 === 0;
 
 	// Short token id
-	$: tokenIdShort = judge?.token_id
-		? `${judge.token_id.slice(0, 8)}...${judge.token_id.slice(-8)}`
-		: "Unknown Token";
+	$: tokenId = judge?.token_id ?? "Unknown Token";
 
 	// Derived values
 	$: opinionsCount = judge?.number_of_boxes > 0 ? judge.number_of_boxes - 1 : 0;
@@ -53,10 +51,9 @@
 
 	<!-- Content -->
 	<div class="content-wrapper w-full text-center md:text-left flex flex-col justify-center">
-		<Badge variant="secondary" class="mb-3"> {opinionsCount} Opinions </Badge>
 
 		<h3 class="text-2xl font-bold font-['Russo_One'] mb-2 text-slate-700 dark:text-slate-300">
-			Judge Token
+			Judge {tokenId.slice(0, 4)}...{tokenId.slice(-2)}
 		</h3>
 
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-4 space-y-1">
@@ -65,7 +62,7 @@
 				<span
 					class="font-mono bg-gray-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300"
 				>
-					{tokenIdShort}
+					{tokenId}
 				</span>
 			</p>
 		</div>
