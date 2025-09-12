@@ -14,6 +14,10 @@
     export let game: Game;
     export let index: number;
 
+    // For opinions.
+    export let opinionContent: string | undefined = undefined;
+	export let isInvited: boolean | undefined = undefined;
+
     $: isEven = index % 2 === 0;
 
     const STATUS_COLORS = {
@@ -181,6 +185,11 @@
     </div>
 
     <div class="content-wrapper w-full md:w-7/12 text-center md:text-left">
+
+        {#if isInvited}
+            <span class="badge invited-badge">Invited Judge</span>
+        {/if}
+
         <Badge variant="secondary" class="mb-3">
             {game.participations?.length || 0} Participants
         </Badge>
@@ -210,6 +219,15 @@
             {game?.content?.description?.slice(0, 200) || 'No description.'}
             {#if game?.content?.description && game.content.description.length > 200}...{/if}
         </p>
+
+        {#if opinionContent}
+            <div class="opinion-content-block">
+                <span class="opinion-label">Judge's Opinion:</span>
+                <blockquote class="opinion-quote">
+                    {opinionContent}
+                </blockquote>
+            </div>
+        {/if}
 
         <div class="status-info flex flex-col sm:flex-row gap-4 items-center mb-6 justify-center md:justify-start">
             <div class="text-center md:text-left">
@@ -254,5 +272,20 @@
     .game-row:hover {
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         transform: translateY(-4px);
+    }
+
+    .opinion-content-block {
+        @apply mt-4 pt-4 border-t border-gray-700;
+    }
+    .opinion-label {
+        @apply text-sm font-bold text-gray-400 uppercase tracking-wider;
+    }
+    .opinion-quote {
+        @apply mt-1 text-base text-white italic bg-black/20 p-3 rounded-md;
+        border-left: 3px solid hsl(var(--primary));
+    }
+
+    .invited-badge {
+        @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300;
     }
 </style>
