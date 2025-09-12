@@ -51,7 +51,7 @@
         isLoadingApi = true;
         errorMessage = null;
         try {
-            const judgesMap = await fetchReputationProofs(ergo, true, "judge");
+            const judgesMap = await fetchReputationProofs(ergo, true, "judge", null);
             console.log("Loaded judges:", judgesMap)
             judges.set(judgesMap);
         } catch (error: any) {

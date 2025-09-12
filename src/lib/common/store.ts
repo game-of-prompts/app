@@ -13,4 +13,4 @@ export const games = writable<Map<string, Game>>(new Map());
 export const user_tokens = writable<Map<string, number>>(new Map());
 export const types = writable<Map<string, TypeNFT>>(new Map());
 export const reputation_proof = writable<ReputationProof|null>(null);
-export const judges = writable<ReputationProof[]>([]);
+export const judges = writable<Map<string, ReputationProof>>(new Map());

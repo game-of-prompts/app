@@ -14,7 +14,7 @@
         isGameParticipationEnded
 
     } from "$lib/common/game";
-    import { address, connected, game_detail, reputation_proof } from "$lib/common/store";
+    import { address, connected, game_detail, judge_detail, judges, reputation_proof } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
@@ -395,6 +395,16 @@
         }
     }
 
+	function handleJudgeDetails(judge: string) {
+        if (game) {
+            const obj = get(judges).get(judge);
+            if (obj) {
+                judge_detail.set(obj);
+                game_detail.set(null);
+            }
+        }
+    }
+
     // --- UI Utility Functions ---
 
     function setupActionModal(type: typeof currentActionType) {
@@ -635,13 +645,15 @@
                         </span>
                         <div class="info-value font-mono text-xs break-all">
                             {#each game.invitedJudges as judge, index}
-                                <span>
+                                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
                                     {judge.slice(0, 12)}...{judge.slice(-6)}
                                     {#if acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
                                         <span class="text-green-500"> (accepted)</span>
                                     {/if}
                                     {#if index < game.invitedJudges.length - 1}, {/if}
-                                </span>
+                                </a>
                             {/each}
                         </div>
                     </div>
