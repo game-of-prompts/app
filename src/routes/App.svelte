@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { address, connected, balance, game_detail, timer } from "$lib/common/store";
+    import { address, connected, balance, game_detail, timer, judge_detail } from "$lib/common/store";
     import CreateGame from './CreateGame.svelte';
     import TokenAcquisition from './TokenAcquisition.svelte';
     import GameDetails from './GameDetails.svelte';
@@ -79,6 +79,7 @@
         }
         timer.set({ countdownInterval: 0, target: 0 });
         game_detail.set(null);
+        judge_detail.set(null);
         activeTab = tab;
         mobileMenuOpen = false;
     }
@@ -221,7 +222,7 @@
 {/if}
 
 <main class="pb-16">
-    {#if $game_detail === null}
+    {#if $game_detail === null && $judge_detail == null}
         {#if activeTab === 'participateGame'}
             <TokenAcquisition />
         {/if}
@@ -237,8 +238,10 @@
         {#if activeTab === 'showJudge'}
             <ShowJudge />
         {/if}
-    {:else}
+    {:else if $game_detail !== null}
         <GameDetails />
+    {:else}
+        <ShowJudge />
     {/if}
 </main>
 

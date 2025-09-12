@@ -4,10 +4,25 @@
 	import { get } from 'svelte/store';
 	import { total_burned_string, type ReputationProof, type RPBox } from '$lib/ergo/reputation/objects';
 	import { GAME, PARTICIPATION, JUDGE } from '$lib/ergo/reputation/types';
-	import type { Game } from '$lib/ergo/game/objects';
+	import { judge_detail } from "$lib/common/store";
     import GameCard from './GameCard.svelte';
+    import { onDestroy } from 'svelte';
+    import Return from './Return.svelte';
 
-	export let proof: ReputationProof | undefined = undefined;
+	let proof: ReputationProof | undefined = undefined;
+
+	const unsubscribeDetail = judge_detail.subscribe(value => { proof = value ?? undefined });
+
+ 	onDestroy(() => {
+        unsubscribeDetail();
+    });
+
+	function handleViewDetails() {
+        if (proof) {
+            judge_detail.set(null);
+        }
+    }
+
 
 	const OTHER = 'other';
 	$: displayProof = proof ?? get(reputation_proof);
@@ -29,6 +44,10 @@
 		[OTHER]: 'Object Pointer'
 	};
 </script>
+
+{#if proof}
+<Return on:back={handleViewDetails} />
+{/if}
 
 <div class="show-judge-container">
 	<div class="hero-section text-center">

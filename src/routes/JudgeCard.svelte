@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Badge } from "$lib/components/ui/badge/index.js";
 	import { Button } from "$lib/components/ui/button";
 	import { total_burned_string, type ReputationProof } from "$lib/ergo/reputation/objects";
+	import { judge_detail } from "$lib/common/store";
 
 	export let judge: ReputationProof;
 	export let index: number;
@@ -31,6 +31,12 @@
 		}
 		return Math.abs(hash);
 	}
+
+	function handleViewDetails() {
+        if (judge) {
+            judge_detail.set(judge);
+        }
+    }
 
 	$: wallpaperUrl = judge?.token_id
 		? defaultImages[hashStringToNumber(judge.token_id) % defaultImages.length]
@@ -90,6 +96,7 @@
 		</div>
 
 		<Button
+			on:click={handleViewDetails}
 			size="lg"
 			class="w-full sm:w-auto transition-all duration-200 hover:scale-[1.03] bg-slate-600 hover:bg-slate-700 text-white dark:bg-slate-300 dark:hover:bg-slate-200 dark:text-slate-900 font-semibold"
 		>
