@@ -104,10 +104,9 @@
 
 									{:else if selectedType === JUDGE}
 										<div class="generic-info">
-											<span class="info-label">{pointerLabels[selectedType]}:</span>
-											<a href={`/judge?id=${box.object_pointer}`} class="info-link">{box.object_pointer}</a>
+											<span class="info-label">{pointerLabels[selectedType]}: {box.object_pointer.slice(0, 8)}</span>
 										</div>
-										<p class="box-content-text">{box.content || 'No content provided.'}</p>
+										<p class="box-content-text">{(typeof(box.content) == "string" ? box.content : JSON.stringify(box.content)) || 'No content provided.'}</p>
 										<ul class="sub-details-list">
 											<li><strong>Polarization:</strong> {box.polarization ? 'Positive' : 'Negative'}</li>
 										</ul>
@@ -215,7 +214,6 @@
 
 	/* Mejoras adicionales para el texto de polarización */
 	.box-content-text {
-		@apply text-base mt-3 italic border-l-2 pl-4;
 		@apply transition-colors duration-300;
 	}
 
