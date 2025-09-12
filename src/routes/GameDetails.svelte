@@ -38,6 +38,7 @@
     import { fetchReputationProofByTokenId, fetchReputationProofs } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
+    import Return from "./Return.svelte";
     
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
@@ -104,6 +105,13 @@
             cleanupTimers();
         }
     });
+
+    function handleViewDetails() {
+        if (game) {
+            game_detail.set(null);
+        }
+    }
+
 
     async function loadGameDetailsAndTimers() {
         if (!game) {
@@ -478,6 +486,8 @@
 </script>
 
 {#if game}
+<Return on:back={handleViewDetails} />
+
 <div class="game-detail-page min-h-screen {$mode === 'dark' ? 'bg-slate-900 text-gray-200' : 'bg-gray-50 text-gray-800'}">
     <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">    
         <section class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12">
