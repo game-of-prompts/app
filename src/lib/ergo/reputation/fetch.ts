@@ -254,9 +254,22 @@ export async function fetchReputationProofs(
             }
             offset += limit;
         }
-        
+
+        // Remove proofs that have duplicate (R4,R5) pairs across their boxes
+        for (const [id, p] of Array.from(proofs.entries())) {
+            const seen = new Set<string>();
+            let hasDuplicate = false;
+            for (const b of p.current_boxes) {
+                const key = `${b.type?.tokenId ?? ""}|${b.object_pointer ?? ""}`;
+                if (seen.has(key)) { hasDuplicate = true; break; }
+                seen.add(key);
+            }
+            if (hasDuplicate) proofs.delete(id);
+        }
+
         console.log(`Successfully fetched ${proofs.size} complete reputation proofs`);
         return proofs;
+
     } catch (error) {
         console.error('An error occurred during the reputation proof search:', error);
         return new Map();
@@ -360,6 +373,18 @@ export async function fetchReputationProofByTokenId(
             }
         }
 
+        // Skip proof if it has duplicate (R4,R5) pairs across boxes
+        {
+            const seen = new Set<string>();
+            for (const b of proof.current_boxes) {
+                const key = `${b.type?.tokenId ?? ""}|${b.object_pointer ?? ""}`;
+                if (seen.has(key)) {
+                    console.warn(`Reputation Proof ${tokenId} has multiple boxes with the same (R4,R5). Skipping.`);
+                    return null;
+                }
+                seen.add(key);
+            }
+        }
         return proof;
     } catch (error) {
         console.error(`Error fetching reputation proof for token ${tokenId}:`, error);
