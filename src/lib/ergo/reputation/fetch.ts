@@ -88,6 +88,7 @@ const ProofType = {
     judge: JUDGE
 }
 
+// NOTE: This helper function is not part of the original file, but is kept for context.
 async function fetchAllBoxesForToken(tokenId: string): Promise<ApiBox[]> {
     try {
         const response = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${tokenId}`);
@@ -103,6 +104,7 @@ async function fetchAllBoxesForToken(tokenId: string): Promise<ApiBox[]> {
         return [];
     }
 }
+
 
 function createRPBoxFromApiBox(box: ApiBox, tokenId: string, availableTypes: Map<string, TypeNFT>): RPBox | null {
     if (box.ergoTree !== ergo_tree) return null;
@@ -155,136 +157,97 @@ export async function fetchReputationProofs(
     value: string | null
 ): Promise<Map<string, ReputationProof>> {
 
-    await fetchTypeNfts();
-    const availableTypes = get(types);
-
     const proofs = new Map<string, ReputationProof>();
+    const tokenIdsToFetch = new Set<string>();
+    
+    // Build search criteria
     let registers: { [key: string]: any } = {};
-    let userR7SerializedHex: string | null = null;
-
     if (type || value) {
         const type_id = ProofType[type];
-        registers["R4"] = type_id
-        if (value) { 
+        registers["R4"] = type_id;
+        if (value) {
            registers["R5"] = value;
         }
     }
 
-    const change_address = get(connected) && ergo ? await ergo.get_change_address() : null;
-    if (change_address) {
-        const userAddress = ErgoAddress.fromBase58(change_address);
-        const propositionBytes = hexToBytes(userAddress.ergoTree);
-
-        if (propositionBytes) {
-            const hashedProposition = blake2b256(propositionBytes);
-            userR7SerializedHex = SColl(SByte, hashedProposition).toHex();
-            if (!all) {
+    // If searching for user-specific proofs, add owner hash to search criteria
+    if (!all) {
+        const change_address = get(connected) && ergo ? await ergo.get_change_address() : null;
+        if (change_address) {
+            const userAddress = ErgoAddress.fromBase58(change_address);
+            const propositionBytes = hexToBytes(userAddress.ergoTree);
+            if (propositionBytes) {
+                const hashedProposition = blake2b256(propositionBytes);
                 registers["R7"] = uint8ArrayToHex(hashedProposition);
             }
+        } else {
+             // If no user address, cannot fetch user-specific proofs. Return empty.
+            console.warn("Cannot fetch user proofs: no connected wallet address found.");
+            return new Map();
         }
     }
 
+    // --- Step 1: Find all unique token IDs that match the criteria ---
     try {
         let offset = 0, limit = 100, moreDataAvailable = true;
-        const processedTokenIds = new Set<string>();
         
         while (moreDataAvailable) {
             const url = `${explorer_uri}/api/v1/boxes/unspent/search?offset=${offset}&limit=${limit}`;
             const final_body = { "ergoTreeTemplateHash": ergo_tree_hash, "registers": registers };
             const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(final_body) });
 
-            if (!response.ok) { moreDataAvailable = false; continue; }
+            if (!response.ok) {
+                console.error(`Explorer search failed with status ${response.status}`);
+                moreDataAvailable = false;
+                continue;
+            }
+
             const json_data = await response.json();
-            if (json_data.items.length === 0) { moreDataAvailable = false; continue; }
+            if (!json_data.items || json_data.items.length === 0) {
+                moreDataAvailable = false;
+                continue;
+            }
 
             for (const box of json_data.items as ApiBox[]) {
-                if (box.ergoTree != ergo_tree) continue
-                if (!box.assets?.length || !box.additionalRegisters.R4 || !box.additionalRegisters.R6 || !box.additionalRegisters.R7) continue;
-
-                const rep_token_id = box.assets[0].tokenId;
-                const owner_hash_serialized = box.additionalRegisters.R7.serializedValue;
-
-                if (processedTokenIds.has(rep_token_id)) continue;
-                processedTokenIds.add(rep_token_id);
-
-                const r6_parsed = parseR6(box.additionalRegisters.R6.renderedValue);
-                const proof: ReputationProof = {
-                    token_id: rep_token_id,
-                    type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
-                    total_amount: r6_parsed.totalSupply,
-                    blake_owner_script: serializedToRendered(owner_hash_serialized),
-                    owner_hash_serialized: owner_hash_serialized,
-                    can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
-                    current_boxes: [],
-                    number_of_boxes: 0,
-                    network: Network.ErgoMainnet,
-                    data: {}
-                };
-
-                const allBoxesForToken = await fetchAllBoxesForToken(rep_token_id);
-                console.log(`Fetched ${allBoxesForToken.length} boxes for token ${rep_token_id}`);
-
-                const uniqueOwnerHashes = new Set(
-                    allBoxesForToken
-                        .filter(b => b.additionalRegisters.R7?.serializedValue)
-                        .map(b => b.additionalRegisters.R7!.serializedValue)
-                );
-
-                if (uniqueOwnerHashes.size > 1) {
-                    console.warn(`Reputation Proof with token ID ${rep_token_id} has conflicting owner hashes. Skipping this proof.`, {
-                        ownerHashes: Array.from(uniqueOwnerHashes),
-                        boxCount: allBoxesForToken.length
-                    });
-                    continue;
+                // Basic validation to ensure it's a potential reputation proof box
+                if (box.ergoTree === ergo_tree && box.assets?.length > 0) {
+                    const rep_token_id = box.assets[0].tokenId;
+                    tokenIdsToFetch.add(rep_token_id);
                 }
-
-                for (const tokenBox of allBoxesForToken) {
-                    const rpBox = createRPBoxFromApiBox(tokenBox, rep_token_id, availableTypes);
-                    if (rpBox) {
-                        if (rpBox.object_pointer === proof.token_id) {
-                            proof.type = rpBox.type;
-                        }
-                        
-                        proof.current_boxes.push(rpBox);
-                        proof.number_of_boxes += 1;
-                    }
-                }
-
-                proofs.set(rep_token_id, proof);
             }
             offset += limit;
         }
-
-        // Remove proofs that have duplicate (R4,R5) pairs across their boxes
-        for (const [id, p] of Array.from(proofs.entries())) {
-            const seen = new Set<string>();
-            let hasDuplicate = false;
-            for (const b of p.current_boxes) {
-                const key = `${b.type?.tokenId ?? ""}|${b.object_pointer ?? ""}`;
-                if (seen.has(key)) { hasDuplicate = true; break; }
-                seen.add(key);
-            }
-            if (hasDuplicate) proofs.delete(id);
-        }
-
-        console.log(`Successfully fetched ${proofs.size} complete reputation proofs`);
-        return proofs;
-
+        console.log(`Found ${tokenIdsToFetch.size} unique reputation proof token IDs matching criteria.`);
     } catch (error) {
-        console.error('An error occurred during the reputation proof search:', error);
-        return new Map();
+        console.error('An error occurred during the token ID search phase:', error);
+        return new Map(); // Return empty on error
     }
+    
+    // --- Step 2: Fetch full proof data for each unique token ID ---
+    if (tokenIdsToFetch.size > 0) {
+        // Fetch all type NFTs once to avoid repeated calls inside the loop
+        await fetchTypeNfts();
+
+        console.log(`Fetching full details for ${tokenIdsToFetch.size} proofs...`);
+        for (const tokenId of tokenIdsToFetch) {
+            try {
+                // Delegate the fetching and construction of the proof to the specialized function
+                const proof = await fetchReputationProofByTokenId(tokenId, ergo);
+                if (proof) {
+                    proofs.set(tokenId, proof);
+                }
+                // `fetchReputationProofByTokenId` already handles validation and logging for invalid proofs (e.g., hash conflicts)
+            } catch (e) {
+                console.error(`Failed to fetch or process proof for token ID ${tokenId}:`, e);
+            }
+        }
+    }
+
+    console.log(`Successfully constructed ${proofs.size} complete reputation proofs.`);
+    return proofs;
 }
 
-/**
- * Fetch a single ReputationProof by its token id using explorer /api/v1/boxes/byTokenId/{tokenId}
- * - Does NOT scan the whole chain (no unspent/search).
- * - Verifies owner-hash consistency across boxes for the token (same behaviour as fetchReputationProofs).
- * 
- * @param tokenId token id of the reputation proof NFT
- * @param ergo optional wallet object used to compute whether the current user can spend (same logic as fetchReputationProofs)
- * @param options.ignoreOwnerHashConflict when true, will return a proof even if multiple different owner hashes exist (default false)
- */
+
 export async function fetchReputationProofByTokenId(
     tokenId: string,
     ergo: any,

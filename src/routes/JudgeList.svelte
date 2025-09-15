@@ -1,7 +1,7 @@
 <script lang="ts">
     import JudgeCard from './JudgeCard.svelte';
-    import type { ReputationProof } from '$lib/common/types'; // Ajusta al path correcto
     import { ErgoPlatform } from '$lib/ergo/platform';
+    import { type ReputationProof } from '$lib/ergo/reputation/objects';
     import { judges } from '$lib/common/store';
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from 'lucide-svelte';
