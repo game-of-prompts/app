@@ -9,7 +9,7 @@ import {
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
 import { explorer_uri, network_id } from './envs';
-import { address, connected, network, balance } from "../common/store";
+import { address, connected, network, balance, judges } from "../common/store";
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
@@ -22,6 +22,7 @@ import { include_omitted_participation } from './actions/include_omitted_partici
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
 import { update_reputation_proof } from './reputation/submit';
+import { get } from 'svelte/store';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation;
@@ -144,11 +145,12 @@ export class ErgoPlatform implements Platform {
     async resolveGame(
         game: GameActive,
         participations: ParticipationSubmitted[],
-        secretS_hex: string
+        secretS_hex: string,
+        acceptedJudgeNominations: string[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
         
-        return await resolve_game(game, participations, secretS_hex, []);
+        return await resolve_game(game, participations, secretS_hex, acceptedJudgeNominations);
     }
 
     async cancel_game(

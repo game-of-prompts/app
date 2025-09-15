@@ -66,7 +66,8 @@ export interface Platform {
     resolveGame(
         game: GameActive,
         participations: ParticipationSubmitted[],
-        secretS_hex: string
+        secretS_hex: string,
+        acceptedJudgeNominations: string[]
     ): Promise<string | null>;
 
     /**

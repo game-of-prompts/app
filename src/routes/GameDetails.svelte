@@ -251,7 +251,7 @@
         if (game?.status !== 'Active' || participations.some(p => p.status !== 'Submitted')) return;
         errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.resolveGame(game, participations as ParticipationSubmitted[], secret_S_input_resolve);
+            transactionId = await platform.resolveGame(game, participations as ParticipationSubmitted[], secret_S_input_resolve, acceptedJudgeNominations);
         } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
     }
 

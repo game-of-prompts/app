@@ -14,6 +14,8 @@ import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
+import { judges } from '$lib/common/store';
+import { get } from 'svelte/store';
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = 40;
@@ -32,12 +34,21 @@ export async function resolve_game(
     game: GameActive,
     participations: ParticipationSubmitted[],
     secretS_hex: string,
-    judgeProofBoxes: Box<Amount>[]
+    judgeProofs: string[]
 ): Promise<string | null> {
 
     console.log(`Iniciando transición a resolución para el juego: ${game.boxId}`);
     
-    // --- 1. Preparación de datos y validaciones ---
+    const dataMap = get(judges);
+    const judgeProofBoxes: Box<Amount>[] = judgeProofs.flatMap(key => {
+        const judge = dataMap.get(key);
+        if (!judge) { return []; }
+        const boxWrapper = judge.current_boxes.find(box => box.object_pointer === game.gameId);
+        return boxWrapper ? [boxWrapper.box] : [];
+    });
+
+    console.warn("Judge proofs ", judgeProofs, dataMap, judgeProofBoxes)
+
     if (!Array.isArray(participations)) {
         throw new Error("El listado de participaciones proporcionado es inválido.");
     }
