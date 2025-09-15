@@ -294,7 +294,7 @@ export async function fetchReputationProofByTokenId(
     const availableTypes = get(types);
 
     try {
-        const resp = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${tokenId}`);
+        const resp = await fetch(`${explorer_uri}/api/v1/boxes/unspent/byTokenId/${tokenId}`);
         if (!resp.ok) {
             console.warn(`Explorer returned ${resp.status} for token ${tokenId}`);
             return null;
