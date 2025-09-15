@@ -2,7 +2,7 @@ import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/er
 import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex } from "$lib/ergo/utils";
 import { get } from "svelte/store";
 import { types, connected } from "$lib/common/store";
-import { explorer_uri } from "$lib/ergo/envs";
+import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofTemplateHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
 import { ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
 import { blake2b256 } from "@fleet-sdk/crypto";
@@ -10,7 +10,6 @@ import { GAME, JUDGE, PARTICIPATION } from "./types";
 
 const ergo_tree = getReputationProofErgoTreeHex();
 const ergo_tree_hash = getReputationProofTemplateHash();
-const digital_public_good_contract_hash = getDigitalPublicGoodTemplateHash();
 
 type RegisterValue = { renderedValue: string; serializedValue: string; };
 type ApiBox = {
@@ -31,8 +30,13 @@ function parseR6(r6RenderedValue: string): { isLocked: boolean; totalSupply: num
     }
 }
 
-export async function fetchTypeNfts() {
+export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {
     try {
+        if (!force && (Date.now() - get(types).last_fetch < CACHE_DURATION_MS)) {
+            console.log("Using cached Type NFTs (data is fresh).");
+            return get(types).data;
+        }
+
         const fetchedTypesArray: TypeNFT[] = [];
 
         const nftTypes = [GAME, PARTICIPATION, JUDGE];
@@ -43,7 +47,7 @@ export async function fetchTypeNfts() {
                 
                 if (!typeNftBoxResponse.ok) {
                     alert(`Could not fetch the Type NFT box for ${currentTypeNftId}. Status: ${typeNftBoxResponse.status}. Aborting transaction.`);
-                    return null;
+                    return new Map();
                 }
                 
                 const responseData = await typeNftBoxResponse.json();
@@ -51,7 +55,7 @@ export async function fetchTypeNfts() {
                 // Check if items exist and has at least one item
                 if (!responseData.items || responseData.items.length === 0) {
                     alert(`No NFT box found for type ${currentTypeNftId}. Aborting transaction.`);
-                    return null;
+                    return new Map();
                 }
                 
                 const box = responseData.items[0];
@@ -63,22 +67,25 @@ export async function fetchTypeNfts() {
                     schemaURI: hexToUtf8(box.additionalRegisters.R6?.renderedValue || '') ?? "",
                     isRepProof: box.additionalRegisters.R7?.renderedValue ?? false,
                     box: box
-                })
+                });
                     
             } catch (error) {
                 console.error(`Error fetching NFT box for type ${type}:`, error);
                 alert(`Network error while fetching Type NFT box for ${type}. Aborting transaction.`);
-                return null;
+                return new Map();
             }
         }
         
         const typesMap = new Map(fetchedTypesArray.map(type => [type.tokenId, type]));
-        types.set(typesMap);
+        types.set({data: typesMap, last_fetch: Date.now()});
         console.log(`Successfully fetched and stored ${typesMap.size} Type NFTs.`);
+
+        return get(types).data
 
     } catch (e: any) {
         console.error("Failed to fetch and store types:", e);
-        types.set(new Map());
+        types.set({data: new Map(), last_fetch: 0});
+        return get(types).data;
     }
 }
 
@@ -87,24 +94,6 @@ const ProofType = {
     participation: PARTICIPATION,
     judge: JUDGE
 }
-
-// NOTE: This helper function is not part of the original file, but is kept for context.
-async function fetchAllBoxesForToken(tokenId: string): Promise<ApiBox[]> {
-    try {
-        const response = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${tokenId}`);
-        if (!response.ok) {
-            console.warn(`Could not fetch boxes for token ${tokenId}. Status: ${response.status}`);
-            return [];
-        }
-        
-        const responseData = await response.json();
-        return responseData.items || [];
-    } catch (error) {
-        console.error(`Error fetching boxes for token ${tokenId}:`, error);
-        return [];
-    }
-}
-
 
 function createRPBoxFromApiBox(box: ApiBox, tokenId: string, availableTypes: Map<string, TypeNFT>): RPBox | null {
     if (box.ergoTree !== ergo_tree) return null;
@@ -225,8 +214,6 @@ export async function fetchReputationProofs(
     
     // --- Step 2: Fetch full proof data for each unique token ID ---
     if (tokenIdsToFetch.size > 0) {
-        // Fetch all type NFTs once to avoid repeated calls inside the loop
-        await fetchTypeNfts();
 
         console.log(`Fetching full details for ${tokenIdsToFetch.size} proofs...`);
         for (const tokenId of tokenIdsToFetch) {
@@ -253,8 +240,7 @@ export async function fetchReputationProofByTokenId(
     ergo: any,
     options: { ignoreOwnerHashConflict?: boolean } = {}
 ): Promise<ReputationProof | null> {
-    await fetchTypeNfts();
-    const availableTypes = get(types);
+    const availableTypes = await fetchTypeNfts();
 
     try {
         const resp = await fetch(`${explorer_uri}/api/v1/boxes/unspent/byTokenId/${tokenId}`);

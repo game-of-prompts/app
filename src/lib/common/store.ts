@@ -11,6 +11,9 @@ export const judge_detail = writable<ReputationProof|null>(null);
 export const timer = writable<{countdownInterval: number, target: number}>({countdownInterval: 0, target: 0})
 export const games = writable<Map<string, Game>>(new Map());
 export const user_tokens = writable<Map<string, number>>(new Map());
-export const types = writable<Map<string, TypeNFT>>(new Map());
+export const types = writable<{ data: Map<string, TypeNFT>; last_fetch: number }>({
+    data: new Map(),
+    last_fetch: 0
+});
 export const reputation_proof = writable<ReputationProof|null>(null);
 export const judges = writable<Map<string, ReputationProof>>(new Map());
