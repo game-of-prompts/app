@@ -35,11 +35,12 @@
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
-    import { fetchReputationProofByTokenId, fetchReputationProofs } from "$lib/ergo/reputation/fetch";
+    import { fetchJudges, fetchReputationProofByTokenId, fetchReputationProofs } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
-    
+
+
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
@@ -429,7 +430,7 @@
 
 	function handleJudgeDetails(judge: string) {
         if (game) {
-            const obj = get(judges).get(judge);
+            const obj = get(judges).data.get(judge);
             if (obj) {
                 judge_detail.set(obj);
                 game_detail.set(null);
@@ -520,7 +521,11 @@
         return null;
     }
     
-    onMount(() => { if (game) loadGameDetailsAndTimers(); });
+    onMount(async () => {
+        await fetchJudges();
+        if (game) loadGameDetailsAndTimers();
+    })
+
     onDestroy(() => {
         cleanupTimers();
         unsubscribeGameDetail();

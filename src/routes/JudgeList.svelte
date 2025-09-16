@@ -8,7 +8,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { get } from 'svelte/store';
     import { Input } from "$lib/components/ui/input";
-    import { fetchReputationProofs } from '$lib/ergo/reputation/fetch';
+    import { fetchJudges, fetchReputationProofs } from '$lib/ergo/reputation/fetch';
 
     let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, ReputationProof> = new Map();
@@ -47,22 +47,8 @@
         listedItems = new Map(sortedItemsArray);
     }
 
-    async function loadInitialItems() {
-        isLoadingApi = true;
-        errorMessage = null;
-        try {
-            const judgesMap = await fetchReputationProofs(ergo, true, "judge", null);
-            console.log("Loaded judges:", judgesMap)
-            judges.set(judgesMap);
-        } catch (error: any) {
-            console.error("Error fetching judges:", error);
-            errorMessage = error.message || "An error occurred while fetching judges.";
-            judges.set(new Map());
-        }
-    }
-
     const unsubscribeJudges = judges.subscribe(async value => {
-        allFetchedItems = value || new Map();
+        allFetchedItems = value.data || new Map();
         await applyFiltersAndSearch(allFetchedItems);
         if (isLoadingApi) isLoadingApi = false;
     });
@@ -77,13 +63,12 @@
         }, 300);
     }
 
-    onMount(() => {
-        loadInitialItems();
-        allFetchedItems = get(judges);
-            applyFiltersAndSearch(allFetchedItems).then(() => {
-                if (isLoadingApi) isLoadingApi = false;
-            });
-    });
+    onMount(async () => {
+        allFetchedItems = await fetchJudges();
+        applyFiltersAndSearch(allFetchedItems).then(() => {
+            if (isLoadingApi) isLoadingApi = false;
+        });
+    })
 
     onDestroy(() => {
         unsubscribeJudges();

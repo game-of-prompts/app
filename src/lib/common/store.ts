@@ -16,4 +16,7 @@ export const types = writable<{ data: Map<string, TypeNFT>; last_fetch: number }
     last_fetch: 0
 });
 export const reputation_proof = writable<ReputationProof|null>(null);
-export const judges = writable<Map<string, ReputationProof>>(new Map());
+export const judges = writable<{data: Map<string, ReputationProof>; last_fetch: number}>({
+    data: new Map(),
+    last_fetch: 0
+})

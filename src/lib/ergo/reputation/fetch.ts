@@ -1,7 +1,7 @@
 import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/ergo/reputation/objects";
 import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex } from "$lib/ergo/utils";
 import { get } from "svelte/store";
-import { types, connected } from "$lib/common/store";
+import { types, connected, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofTemplateHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
 import { ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
@@ -338,5 +338,22 @@ export async function fetchReputationProofByTokenId(
     } catch (error) {
         console.error(`Error fetching reputation proof for token ${tokenId}:`, error);
         return null;
+    }
+}
+
+export async function fetchJudges(force: boolean = false): Promise<Map<string, ReputationProof>> {
+    try {
+        if (!force && (Date.now() - get(judges).last_fetch < CACHE_DURATION_MS)) {
+            console.log("Using cached Judges (data is fresh).");
+            return get(judges).data;
+        }
+        const map = await fetchReputationProofs(ergo, true, "judge", null);
+        judges.set({data: map, last_fetch: Date.now()});
+        console.log(`Successfully fetched and stored ${map.size} Judges.`);
+        return get(judges).data;
+    } catch (e: any) {
+        console.error("Failed to fetch and store judges:", e);
+        judges.set({data: new Map(), last_fetch: 0});
+        return get(judges).data;
     }
 }

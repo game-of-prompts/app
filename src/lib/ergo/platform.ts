@@ -9,7 +9,7 @@ import {
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
 import { explorer_uri, network_id } from './envs';
-import { address, connected, network, balance, judges } from "../common/store";
+import { address, connected, network, balance } from "../common/store";
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
