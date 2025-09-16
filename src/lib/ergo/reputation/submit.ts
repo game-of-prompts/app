@@ -19,6 +19,7 @@ import { SPair } from '@fleet-sdk/serializer';
 import { reputation_proof, types } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { GAME, JUDGE, PARTICIPATION } from './types';
+import { fetchTypeNfts } from './fetch';
 
 const ergo_tree_address = getReputationProofAddress();
 
@@ -155,7 +156,7 @@ export async function update_reputation_proof(
 
     if (!proof) { throw new Error("Reputation proof not found.") }
 
-    input_proof = proof.current_boxes[0];  // TODO Check that this box is the SELF RPBox.
+    input_proof = proof.current_boxes.filter((b) => b.type.tokenId == JUDGE && b.object_pointer == proof.token_id)[0];
     total_supply = proof.total_amount;
 
     console.log("Generating reputation proof with parameters:", {
@@ -176,12 +177,12 @@ export async function update_reputation_proof(
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
 
     // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
-    let typeNftBoxes = Array.from(get(types), ([k, v]) => v.box);
+    let typeNftBoxes = Array.from(await fetchTypeNfts(), ([k, v]) => v.box);
 
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
-    let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.slice(1).map((i) => i.box)];
+    let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.filter((e) => e.box_id !== input_proof.box_id).map((i) => i.box)];
 
     const outputs: OutputBuilder[] = [];
 

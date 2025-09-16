@@ -30,7 +30,7 @@
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
-    import { Amount, Box, ErgoAddress } from "@fleet-sdk/core";
+    import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
