@@ -55,3 +55,13 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 [] Game obfuscated
 [] Señuelos
 [] Limited resources
+
+
+
+### Agregaciones al contrato
+
+- Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
+
+Actualmente, esto se puede dar, ya que aunque un conjunto mayoritario de los jueces opine en contra de la participacion candidata deberá haber alguien que gaste el game_resolution demostrando esas opiniones. Pero no hay una condición que obligue al creador a demostrar lo contrario si va a resolver
+
+Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs).
