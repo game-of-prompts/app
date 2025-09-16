@@ -4,7 +4,8 @@ import {
     type GameResolution, 
     type GameCancellation, 
     type ParticipationSubmitted, 
-    type ParticipationResolved
+    type ParticipationResolved,
+    mayority_invalidate
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
@@ -194,13 +195,14 @@ export class ErgoPlatform implements Platform {
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
-        return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);
-        /*if () {
+
+        if (judgeVoteDataInputs.length > (game.participatingJudges.length/2))
+        {
             return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
         }
         else {
             return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);
-        }*/
+        }
     }
 
     /**

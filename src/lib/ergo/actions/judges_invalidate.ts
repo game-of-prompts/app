@@ -13,18 +13,18 @@ import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 
-// Constante del contrato game_resolution.es para la extensión del plazo
-const JUDGE_PERIOD_EXTENSION = 30;
+// Constant from the game_resolution.es contract for extending the deadline
+const JUDGE_PERIOD_EXTENSION = 30 + 10;
 
 /**
- * Permite a un juez (o grupo de jueces) invalidar al ganador actual.
- * Esta versión simplificada consume la caja del candidato invalidado, devuelve sus fondos
- * al pozo del juego y extiende el plazo para que se determine un nuevo ganador en una acción posterior.
+ * Allows a judge (or group of judges) to invalidate the current winner.
+ * This simplified version consumes the invalidated candidate's box, returns their funds
+ * to the game pool, and extends the deadline for a new winner to be determined in a subsequent action.
  *
- * @param game El objeto GameResolution actual.
- * @param invalidatedParticipation La caja de participación del candidato que será invalidado.
- * @param judgeVoteDataInputs Las cajas de "voto" de los jueces, que se usarán como data-inputs.
- * @returns Una promesa que se resuelve con el ID de la transacción si tiene éxito.
+ * @param game The current GameResolution object.
+ * @param invalidatedParticipation The participation box of the candidate to be invalidated.
+ * @param judgeVoteDataInputs The judges' "vote" boxes, to be used as data-inputs.
+ * @returns A promise that resolves with the transaction ID if successful.
  */
 export async function judges_invalidate(
     game: GameResolution,
@@ -32,61 +32,61 @@ export async function judges_invalidate(
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
-    console.log(`Iniciando invalidación de candidato para el juego: ${game.boxId}`);
+    console.log(`Initiating candidate invalidation for the game: ${game.boxId}`);
 
-    // --- 1. Verificaciones preliminares ---
+    // --- 1. Preliminary checks ---
     const currentHeight = await ergo.get_current_height();
     if (currentHeight >= game.resolutionDeadline) {
-        throw new Error("La invalidación solo es posible antes de que finalice el período de los jueces.");
+        throw new Error("Invalidation is only possible before the judges' period ends.");
     }
 
-    // Verificar que la participación proporcionada es realmente la del candidato a ganador
+    // Verify that the provided participation is indeed that of the current winning candidate
     if (invalidatedParticipation.commitmentC_Hex !== game.winnerCandidateCommitment) {
-        throw new Error("La participación proporcionada no corresponde al candidato a ganador actual del juego.");
+        throw new Error("The provided participation does not correspond to the current winning candidate of the game.");
     }
     
     const requiredVotes = Math.floor(game.participatingJudges.length / 2) + 1;
     if (judgeVoteDataInputs.length < requiredVotes) {
-        throw new Error(`Se requieren ${requiredVotes} votos de jueces, pero solo se proporcionaron ${judgeVoteDataInputs.length}.`);
+        throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
     }
 
-    // --- 2. Preparar datos para la nueva caja de resolución ---
+    // --- 2. Prepare data for the new resolution box ---
     
-    // El valor del candidato invalidado se suma de nuevo al valor de la caja del juego
+    // The invalidated candidate's value is added back to the game box's value
     const newGameBoxValue = BigInt(game.value) + BigInt(invalidatedParticipation.value);
     const newDeadline = BigInt(game.resolutionDeadline + JUDGE_PERIOD_EXTENSION);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const secretS_bytes = hexToBytes(game.revealedS_Hex)!;
 
-    // Se resetea el candidato a un estado "nulo" (hash de un array de bytes vacío)
+    // Reset the candidate to a "null" state (hash of an empty byte array)
     const nextWinnerCandidateCommitment = uint8ArrayToHex(fleetBlake2b256(new Uint8Array()));
 
-    // --- 3. Construir la nueva caja de resolución ---
+    // --- 3. Build the new resolution box ---
     const recreatedGameBox = new OutputBuilder(newGameBoxValue, resolutionErgoTree)
-        .addTokens(game.box.assets) // Mantener el NFT del juego
+        .addTokens(game.box.assets) // Keep the game's NFT
         .setAdditionalRegisters({
-            // R4: Plazo extendido, mismo contador
+            // R4: Extended deadline, same counter
             R4: SPair(SLong(newDeadline), SInt(game.resolvedCounter)).toHex(),
-            // R5: Mismo secreto, candidato a ganador reseteado
+            // R5: Same secret, winning candidate reset
             R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(nextWinnerCandidateCommitment)!)).toHex(),
-            // R6-R9: Mantener los mismos valores que la caja original
+            // R6-R9: Keep the same values as the original box
             R6: SColl(SColl(SByte), game.participatingJudges.map(hexToBytes)).toHex(),
             R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
             R8: SPair(SColl(SByte, hexToBytes(game.resolverPK_Hex)!), SLong(BigInt(game.resolverCommission))).toHex(),
             R9: SPair(SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
         });
         
-    // --- 4. Construir y Enviar la Transacción ---
+    // --- 4. Build and Submit the Transaction ---
     const userAddress = await ergo.get_change_address();
     const utxos: InputBox[] = await ergo.get_utxos();
 
-    // Inputs: la caja de resolución, la caja del participante invalidado y las UTXOs del juez.
+    // Inputs: the resolution box, the invalidated participant's box, and the judge's UTXOs
     const inputs = [parseBox(game.box), parseBox(invalidatedParticipation.box), ...utxos];
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
         .to(recreatedGameBox)
-        .withDataFrom(judgeVoteDataInputs) // Añadir las cajas de voto de los jueces como data-inputs
+        .withDataFrom(judgeVoteDataInputs) // Add the judges' vote boxes as data-inputs
         .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
@@ -94,6 +94,6 @@ export async function judges_invalidate(
     const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     const txId = await ergo.submit_tx(signedTransaction);
 
-    console.log(`Transacción de invalidación de candidato enviada con éxito. ID: ${txId}`);
+    console.log(`Candidate invalidation transaction successfully submitted. ID: ${txId}`);
     return txId;
 }

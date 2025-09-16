@@ -30,7 +30,7 @@
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
-    import { ErgoAddress } from "@fleet-sdk/core";
+    import { Amount, Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
@@ -321,10 +321,42 @@
         errorMessage = null; isSubmitting = true;
         try {
             const winner_participation = participations.filter((p) => game.winnerCandidateCommitment === p.commitmentC_Hex)[0]
-            const judgeVotesDatainputs = participationVotes.get(winner_participation.commitmentC_Hex)
-                ? [...participationVotes.get(winner_participation.commitmentC_Hex)!.values()].map(item => item.current_boxes.filter((box) => box.type.tokenId === PARTICIPATION && box.object_pointer === winner_participation.commitmentC_Hex && box.token_id in game.participatingJudges)[0].box)
-                : [];
-            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeVotesDatainputs);
+
+            // First, retrieve the votes map for the winner's commitment hex, if it exists
+            const winnerVotesMap = participationVotes.get(winner_participation.commitmentC_Hex);
+
+            // Initialize an empty array for judge vote data inputs
+            let judgeVotesDataInputs: (Box<Amount>|null)[] = []; // Adjust 'any' to the appropriate type if known
+
+            if (winnerVotesMap) {
+                // Convert the map values to an array of items
+                const items = [...winnerVotesMap.values()];
+                
+                // For each item, find the relevant judge box and extract its 'box' property
+                judgeVotesDataInputs = items.map((item) => {
+                    // Filter the current boxes to find the one that matches:
+                    // - Type token ID is PARTICIPATION
+                    // - Object pointer matches the winner's commitment hex
+                    // - Token ID is in the game's participating judges
+                    // - Opinion is negative
+                    const matchingBoxes = item.current_boxes.filter((box) => 
+                        box.type.tokenId === PARTICIPATION &&
+                        box.object_pointer === winner_participation.commitmentC_Hex &&
+                        (box.token_id in game.participatingJudges) &&
+                        box.polarization === false
+                    );
+
+                    if (matchingBoxes.length !== 1) return null;
+                    
+                    // Should be one and only one box.
+                    const firstMatchingBox = matchingBoxes[0];
+                    return firstMatchingBox.box;
+                });
+            }
+
+            let judgeInvalidVotesDataInputs = judgeVotesDataInputs.filter((e) => e !== null);
+
+            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeInvalidVotesDataInputs);
         } catch (e: any) { errorMessage = e.message;
         } finally { isSubmitting = false; }
     }
@@ -721,12 +753,16 @@
                                 disabled={!isBeforeDeadline} 
                                 variant="outline" 
                                 class="w-full"
-                                title="Cualquiera puede ejecutar esta acción para reclamar la comisión del resolver.">
+                                title="Anyone can execute this action to claim the resolver's commission.">
                                 <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
                             </Button>
 
                             {#if isJudge}
-                                <Button on:click={() => setupActionModal('invalidate_winner')} disabled={!isBeforeDeadline} variant="destructive" class="w-full">
+                                <Button 
+                                    on:click={() => setupActionModal('invalidate_winner')} 
+                                    disabled={!isBeforeDeadline} 
+                                    variant="destructive" 
+                                    class="w-full">
                                     <XCircle class="mr-2 h-4 w-4"/> Judges: Invalidate Winner
                                 </Button>
                             {/if}
