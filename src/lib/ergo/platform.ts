@@ -4,8 +4,7 @@ import {
     type GameResolution, 
     type GameCancellation, 
     type ParticipationSubmitted, 
-    type ParticipationResolved,
-    mayority_invalidate
+    type ParticipationResolved
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
