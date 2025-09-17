@@ -184,7 +184,7 @@ export async function resolve_game(
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Estado: Resuelto (1)
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-        R6: SColl(SColl(SByte), judgesTokens.map(t => hexToBytes(t)!)).toHex(),
+        R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
         R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
