@@ -126,7 +126,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 3. Crear la caja `game_resolution`
         const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
-        const participatingJudges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
+        const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
@@ -136,7 +136,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
-                R6: SColl(SColl(SByte), participatingJudges).toHex(),
+                R6: SColl(SColl(SByte), judges).toHex(),
                 R7: SColl(SLong, numericalParams).toHex(),
                 R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
                 R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()

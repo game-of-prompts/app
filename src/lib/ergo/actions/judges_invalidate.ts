@@ -45,7 +45,7 @@ export async function judges_invalidate(
         throw new Error("The provided participation does not correspond to the current winning candidate of the game.");
     }
     
-    const requiredVotes = Math.floor(game.participatingJudges.length / 2) + 1;
+    const requiredVotes = Math.floor(game.judges.length / 2) + 1;
     if (judgeVoteDataInputs.length < requiredVotes) {
         throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
     }
@@ -70,7 +70,7 @@ export async function judges_invalidate(
             // R5: Same secret, winning candidate reset
             R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(nextWinnerCandidateCommitment)!)).toHex(),
             // R6-R9: Keep the same values as the original box
-            R6: SColl(SColl(SByte), game.participatingJudges.map(hexToBytes)).toHex(),
+            R6: SColl(SColl(SByte), game.judges.map(hexToBytes)).toHex(),
             R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
             R8: SPair(SColl(SByte, hexToBytes(game.resolverPK_Hex)!), SLong(BigInt(game.resolverCommission))).toHex(),
             R9: SPair(SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()

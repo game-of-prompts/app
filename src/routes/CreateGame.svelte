@@ -150,7 +150,7 @@
                 creatorStakeNanoErg: toNanoErg(creatorStakeErg),
                 participationFeeNanoErg: toNanoErg(participationFeeErg),
                 commissionPercentage: Math.round(commissionPercentage),
-                invitedJudges: judgesArray,
+                judges: judgesArray,
                 gameDetailsJson: gameDetails,
             });
             transactionId = result;

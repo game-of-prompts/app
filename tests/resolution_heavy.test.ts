@@ -168,7 +168,7 @@ describe("Game Resolution (resolve_game)", () => {
       .setAdditionalRegisters({
         R4: SInt(1).toHex(),
         R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(commitment1Hex)!)).toHex(),
-        R6: gameBox.additionalRegisters.R7, // invitedJudges
+        R6: gameBox.additionalRegisters.R7, // judges
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: gameBox.additionalRegisters.R5, // creatorInfo
         R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
@@ -262,7 +262,7 @@ describe("Game Resolution (resolve_game)", () => {
       .setAdditionalRegisters({
         R4: SInt(1).toHex(),
         R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(highestScoreCommitmentHex)!)).toHex(),
-        R6: gameBox.additionalRegisters.R7, // invitedJudges
+        R6: gameBox.additionalRegisters.R7, // judges
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: gameBox.additionalRegisters.R5, // creatorInfo
         R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()

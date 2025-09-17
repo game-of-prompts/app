@@ -34,7 +34,7 @@ interface CreateGoPGamePlatformParams {
     creatorStakeNanoErg: BigInt;
     participationFeeNanoErg: BigInt;
     commissionPercentage: number;
-    invitedJudges: string[];
+    judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
 }
 
@@ -113,7 +113,7 @@ export class ErgoPlatform implements Platform {
                 params.creatorStakeNanoErg,
                 params.participationFeeNanoErg,
                 params.commissionPercentage,
-                params.invitedJudges,
+                params.judges,
                 params.gameDetailsJson
             );
         } catch (error) {
@@ -195,7 +195,7 @@ export class ErgoPlatform implements Platform {
     ): Promise<string | null> {
         if (!ergo) throw new Error("Billetera no conectada.");
 
-        if (judgeVoteDataInputs.length > (game.participatingJudges.length/2))
+        if (judgeVoteDataInputs.length > (game.judges.length/2))
         {
             return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
         }

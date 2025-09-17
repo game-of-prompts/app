@@ -59,7 +59,7 @@ export interface GameActive {
     gameCreatorPK_Hex: string;
     commissionPercentage: number;
     secretHash: string;
-    invitedJudges: string[];
+    judges: string[];
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
@@ -82,7 +82,7 @@ export interface GameResolution {
     resolvedCounter: number;
     revealedS_Hex: string;
     winnerCandidateCommitment: string;
-    participatingJudges: string[];
+    judges: string[];
     originalDeadline: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
@@ -110,6 +110,7 @@ export interface GameCancellation {
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
+    judges: string[];
 }
 
 /**
@@ -126,6 +127,7 @@ export interface GameFinalized {
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
+    judges: string[];
 }
 
 /**

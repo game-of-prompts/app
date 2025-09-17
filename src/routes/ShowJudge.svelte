@@ -91,7 +91,7 @@
                                                     game={game}
                                                     index={0}
                                                     opinionContent={box.content || 'No content provided.'}
-                                                    isInvited={displayProof && game.invitedJudges.includes(displayProof.token_id)}
+                                                    isInvited={displayProof && game.judges.includes(displayProof.token_id)}
                                                 />
 										{/if}
 									

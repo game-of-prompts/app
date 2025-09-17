@@ -21,7 +21,7 @@ declare var ergo: any;
  * @param creatorStakeNanoErg - The amount of ERG the creator stakes.
  * @param participationFeeNanoErg - The fee for players to participate.
  * @param commissionPercentage - The commission percentage for the creator.
- * @param invitedJudges - An array of reputation token IDs for invited judges.
+ * @param judges - An array of reputation token IDs for invited judges.
  * @param gameDetailsJson - A JSON string with game details (title, description, etc.).
  * @returns The ID of the submitted transaction.
  */
@@ -32,7 +32,7 @@ export async function create_game(
     creatorStakeNanoErg: bigint,
     participationFeeNanoErg: bigint,
     commissionPercentage: number,
-    invitedJudges: string[],
+    judges: string[],
     gameDetailsJson: string
 ): Promise<string | null> {
 
@@ -40,7 +40,7 @@ export async function create_game(
         hashedSecret: hashedSecret.substring(0, 10) + "...",
         deadlineBlock,
         creatorStakeNanoErg: creatorStakeNanoErg.toString(),
-        invitedJudges,
+        judges,
         gameDetailsJsonBrief: gameDetailsJson.substring(0, 100) + "..."
     });
 
@@ -69,7 +69,7 @@ export async function create_game(
     const hashedSecretBytes = hexToBytes(hashedSecret);
     if (!hashedSecretBytes) throw new Error("Failed to convert the hashedSecret to bytes.");
 
-    const judgesColl = invitedJudges
+    const judgesColl = judges
         .map(judgeId => {
             const bytes = hexToBytes(judgeId);
             return bytes ? [...bytes] : null;

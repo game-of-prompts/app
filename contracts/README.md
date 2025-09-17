@@ -36,7 +36,7 @@ This contract acts as the main box holding the creator's stake and the game's ru
       * **R4: `Integer`**: Game state. In this phase, its value is **0 (Active)**.
       * **R5: `(Coll[Byte], Long)`**: `creatorInfo` - A tuple containing the creator's public key and their commission percentage.
       * **R6: `Coll[Byte]`**: `secretHash` - The Blake2b256 hash of a secret 'S', which is crucial for verifying scores later.
-      * **R7: `Coll[Coll[Byte]]`**: `invitedJudgesReputationProofs` - A list of reputation token IDs from judges invited to oversee the game.
+      * **R7: `Coll[Coll[Byte]]`**: `judgesReputationProofs` - A list of reputation token IDs from judges invited to oversee the game.
       * **R8: `Coll[Long]`**: `numericalParameters` - A collection of numeric values: `[deadline, creatorStake, participationFee]`.
       * **R9: `Coll[Byte]`**: `gameDetailsJsonHex` - Additional game details in JSON/Hex format.
       * **Tokens**: Contains a unique NFT that identifies the game.
@@ -98,7 +98,7 @@ The main game box during the final phase.
 
       * **R4: `Integer`**: Game state. In this phase, its value is **1 (Resolved)**.
       * **R5: `(Coll[Byte], Coll[Byte])`**: A tuple containing `(revealedSecretS, winnerCandidateCommitment)` - The revealed secret 'S' and the commitment of the current winning candidate.
-      * **R6: `Coll[Coll[Byte]]`**: `participatingJudges` - A list of judges who actually participated (confirmed their involvement).
+      * **R6: `Coll[Coll[Byte]]`**: `judges` - A list of judges who actually participated (confirmed their involvement).
       * **R7: `Coll[Long]`**: `numericalParams` - `[deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter]`. It includes a new `resolutionDeadline` for this phase and a counter for resolved participations.
       * **R8: `(Coll[Byte], Long)`**: `resolverInfo` - The "Resolver's" public key and their commission percentage.
       * **R9: `(Coll[Byte], Coll[Byte])`**: `gameProvenance` - A tuple with the ORIGINAL CREATOR's public key and the game details.

@@ -156,7 +156,7 @@
             acceptedJudgeNominations = game.status === "Active"
                 ? (
                     await Promise.all(
-                        game.invitedJudges.map(async (judge) => {
+                        game.judges.map(async (judge) => {
                             const judge_proof = await fetchReputationProofByTokenId(judge, ergo);
                             if (!judge_proof) return null;
 
@@ -190,7 +190,7 @@
                         isResolver = userPKHex === game.gameCreatorPK_Hex;
                         const own_proof = get(reputation_proof);
                         if (own_proof) {
-                            isNominatedJudge = game.invitedJudges.includes(own_proof.token_id);
+                            isNominatedJudge = game.judges.includes(own_proof.token_id);
 
                             const foundBox = own_proof.current_boxes.find((box: RPBox) => 
                                 box.type.tokenId === GAME && 
@@ -208,7 +208,7 @@
                         isResolver = userPKHex === game.resolverPK_Hex;
                         const own_proof = get(reputation_proof);
                         if (own_proof) {
-                            isNominatedJudge = game.participatingJudges.includes(own_proof.token_id);
+                            isNominatedJudge = game.judges.includes(own_proof.token_id);
 
                             const foundBox = own_proof.current_boxes.find((box: RPBox) => 
                                 box.type.tokenId === GAME && 
@@ -344,7 +344,7 @@
                     const matchingBoxes = item.current_boxes.filter((box) => 
                         box.type.tokenId === PARTICIPATION &&
                         box.object_pointer === winner_participation.commitmentC_Hex &&
-                        (box.token_id in game.participatingJudges) &&
+                        (box.token_id in game.judges) &&
                         box.polarization === false
                     );
 
@@ -676,19 +676,19 @@
                             <span class="info-value font-mono text-xs break-all">{game.revealedS_Hex}</span>
                         </div>
                     {/if}
-                    {#if game.status === 'Active' && game.invitedJudges && game.invitedJudges.length > 0}
+                    {#if game.status === 'Active' && game.judges && game.judges.length > 0}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
                             <span class="info-label">
                                 Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
                             </span>
                             <div class="info-value font-mono text-xs break-all">
-                                {#each game.invitedJudges as judge, index}
+                                {#each game.judges as judge, index}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-invalid-attribute -->
                                     <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
                                         {judge.slice(0, 12)}...{judge.slice(-6)}
-                                        {#if game.invitedJudges && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
+                                        {#if game.judges && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
                                             <span class="text-green-500"> (accepted)</span>
                                         {/if}
                                     </a>
@@ -696,7 +696,7 @@
                             </div>
                         </div>
                     {/if}
-                    {#if game.status == 'Resolution' && game.participatingJudges && game.participatingJudges.length > 0}
+                    {#if game.status == 'Resolution' && game.judges && game.judges.length > 0}
                         {@const candidateVotes = participationVotes.get(game.winnerCandidateCommitment) ?? new Map() }
                         {@const candidateParticipationVotes = Array.from(candidateVotes.keys()) ?? []}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
@@ -704,13 +704,13 @@
                                 Participating Judges {isNominatedJudge ? '(You are a judge)' : ''}
                             </span>
                             <div class="info-value font-mono text-xs break-all">
-                                {#each game.participatingJudges as judge, index}
+                                {#each game.judges as judge, index}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-invalid-attribute -->
                                     <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
                                         {judge.slice(0, 12)}...{judge.slice(-6)}
-                                        {#if game.participatingJudges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationVotes.includes(judge)}
+                                        {#if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationVotes.includes(judge)}
                                             <span class="text-green-500"> (invalidated)</span>
                                         {/if}
                                     </a>

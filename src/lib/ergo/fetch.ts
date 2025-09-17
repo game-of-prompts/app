@@ -120,8 +120,8 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         if (!secretHash) throw new Error("R6 (secretHash) is invalid or does not exist.");
 
-        // R7: invitedJudges
-        const invitedJudges: string[] = box.additionalRegisters.R7?.renderedValue
+        // R7: judges
+        const judges: string[] = box.additionalRegisters.R7?.renderedValue
             .replace(/[\[\]\s]/g, "")
             .split(",");
 
@@ -150,7 +150,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             gameCreatorPK_Hex,
             commissionPercentage,
             secretHash,
-            invitedJudges,
+            judges,
             deadlineBlock: Number(deadlineBlock),
             creatorStakeNanoErg,
             participationFeeNanoErg,
@@ -261,8 +261,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const winnerCandidateCommitment = parseCollByteToHex(r5Value[1]);
         if (!revealedS_Hex || !winnerCandidateCommitment) throw new Error("Could not parse R5.");
         
-        // R6: Coll[Coll[Byte]] -> participatingJudges
-        const participatingJudges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
+        // R6: Coll[Coll[Byte]] -> judges
+        const judges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
             .map(parseCollByteToHex)
             .filter((judge): judge is string => judge !== null && judge !== undefined);
 
@@ -300,7 +300,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             resolvedCounter: Number(resolvedCounter), 
             revealedS_Hex, 
             winnerCandidateCommitment, 
-            participatingJudges,
+            judges,
             originalDeadline: Number(originalDeadline), 
             creatorStakeNanoErg, 
             participationFeeNanoErg,
@@ -423,7 +423,8 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             currentStakeNanoErg,
             content,
             value: BigInt(box.value),
-            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
+            judges: []
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
