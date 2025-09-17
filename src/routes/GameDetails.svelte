@@ -347,43 +347,24 @@
         if (game?.status !== 'Resolution') return;
         errorMessage = null; isSubmitting = true;
         try {
+
             const winner_participation = participations.filter((p) => game.winnerCandidateCommitment === p.commitmentC_Hex)[0]
 
-            // First, retrieve the votes map for the winner's commitment hex, if it exists
-            const winnerVotesMap = participationVotes.get(winner_participation.commitmentC_Hex);
+            const winnerVotes = participationVotes.get(game.winnerCandidateCommitment);
+            if (!winnerVotes) throw new Error("No votes found.");
 
-            // Initialize an empty array for judge vote data inputs
-            let judgeVotesDataInputs: (Box<Amount>|null)[] = []; // Adjust 'any' to the appropriate type if known
+            const judgeInvalidVotesDataInputs = Array.from(winnerVotes.entries()).filter(([key, value]) => {
+                return candidateParticipationInvalidVotes.includes(key);
+            })
 
-            if (winnerVotesMap) {
-                // Convert the map values to an array of items
-                const items = [...winnerVotesMap.values()];
-                
-                // For each item, find the relevant judge box and extract its 'box' property
-                judgeVotesDataInputs = items.map((item) => {
-                    // Filter the current boxes to find the one that matches:
-                    // - Type token ID is PARTICIPATION
-                    // - Object pointer matches the winner's commitment hex
-                    // - Token ID is in the game's participating judges
-                    // - Opinion is negative
-                    const matchingBoxes = item.current_boxes.filter((box) => 
-                        box.type.tokenId === PARTICIPATION &&
-                        box.object_pointer === winner_participation.commitmentC_Hex &&
-                        (box.token_id in game.judges) &&
-                        box.polarization === false
-                    );
+            const judgeInvalidVotesDataInputsBoxes = judgeInvalidVotesDataInputs.map(([Key, value]) => {
+                return value.current_boxes.filter((box) => {
+                    return box.polarization === false;
+                })[0].box
+            })
+            
 
-                    if (matchingBoxes.length !== 1) return null;
-                    
-                    // Should be one and only one box.
-                    const firstMatchingBox = matchingBoxes[0];
-                    return firstMatchingBox.box;
-                });
-            }
-
-            let judgeInvalidVotesDataInputs = judgeVotesDataInputs.filter((e) => e !== null);
-
-            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeInvalidVotesDataInputs);
+            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeInvalidVotesDataInputsBoxes);
         } catch (e: any) { errorMessage = e.message;
         } finally { isSubmitting = false; }
     }
