@@ -87,3 +87,6 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - N: factor constante.
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
+
+
+##### Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
