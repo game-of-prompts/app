@@ -702,43 +702,6 @@
                             <span class="info-value font-mono text-xs break-all">{game.revealedS_Hex}</span>
                         </div>
                     {/if}
-                    {#if game.status === 'Active' && game.judges && game.judges.length > 0}
-                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                            <span class="info-label">
-                                Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
-                            </span>
-                            <div class="info-value font-mono text-xs break-all">
-                                {#each game.judges as judge}
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <!-- svelte-ignore a11y-invalid-attribute -->
-                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
-                                        {judge.slice(0, 12)}...{judge.slice(-6)}
-                                        {#if game.judges && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
-                                            <span class="text-green-500"> (accepted)</span>
-                                        {/if}
-                                    </a>
-                                {/each}
-                            </div>
-                        </div>
-                    {/if}
-                    {#if game.status == 'Resolution' && game.judges && game.judges.length > 0}
-                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                            <span class="info-label">
-                                Participating Judges {isNominatedJudge ? '(You are a judge)' : ''}
-                            </span>
-                            <div class="info-value font-mono text-xs break-all">
-                                {#each game.judges as judge}
-                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                    <!-- svelte-ignore a11y-invalid-attribute -->
-                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
-                                        {judge.slice(0, 12)}...{judge.slice(-6)}
-                                    </a>
-                                {/each}
-                            </div>
-                        </div>
-                    {/if}
 
                 </div>
             {/if}
@@ -761,10 +724,14 @@
                 <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:mt-8">
-                    {#if game.status == 'Resolution' && game.judges && game.judges.length > 0}
+                    {#if game.judges && game.judges.length > 0}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
                             <p class="text {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">
-                                Judges' Votes
+                                {#if game.status === 'Active'}
+                                    Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
+                                {:else if game.status === 'Resolution'}
+                                    Judges' Votes
+                                {/if}
                             </p>
                             <div class="info-value font-mono text-xs break-all">
                                 {#each game.judges as judge}
@@ -773,16 +740,28 @@
                                     <!-- svelte-ignore a11y-invalid-attribute -->
                                     <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
                                         {judge.slice(0, 12)}...{judge.slice(-6)}
-                                        {#if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationInvalidVotes.includes(judge)}
+                                        {#if game.status === 'Active' && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
+                                            <span class="text-green-500"> (accepted)</span>
+                                        {:else if game.status === 'Resolution' && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationInvalidVotes.includes(judge)}
                                             <span class="text-red-500"> (invalidated)</span>
-                                        {:else if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationValidVotes.includes(judge)}
+                                        {:else if game.status === 'Resolution' && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationValidVotes.includes(judge)}
                                             <span class="text-green-500"> (validated)</span>
-                                        {:else}
+                                        {:else if game.status === 'Resolution'}
                                             <span class="text-yellow-500"> (pending)</span>
                                         {/if}
                                     </a>
                                 {/each}
                             </div>
+                        </div>
+                    {:else}
+                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                            <p class="text {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">
+                                No Judges Assigned
+                            </p>
+                            <p class="text-sm font-medium text-yellow-500">Participants must trust the creator.</p>
+                            <p class="text-sm font-medium {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'}">
+                                Run a script to verify the creator’s history for honesty in past competitions.
+                            </p>
                         </div>
                     {/if}
                 </div>
