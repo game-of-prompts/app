@@ -546,7 +546,7 @@
         }
         return null;
     }
-    
+
     onMount(async () => {
         await fetchJudges();
         if (game) loadGameDetailsAndTimers();
@@ -708,6 +708,7 @@
         </section>
 
         <section class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode === 'dark' ? 'bg-slate-800' : 'bg-white'}">
+
             <div class="status-side">
                 <h2 class="text-2xl font-semibold mb-3">Status</h2>
                 {#if game.status === 'Active' && !participationIsEnded}
@@ -721,24 +722,24 @@
                 {:else}
                     <p class="text-xl font-medium text-gray-500">Game Over</p>
                 {/if}
-                <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
+                <p class="text-xs {$mode === 'dark' ? 'text-slate-400' : 'text-gray-600'} mt-1">Contract Status: {game.status}</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:mt-8">
                     {#if game.judges && game.judges.length > 0}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                            <p class="text {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">
+                            <p class="text {$mode === 'dark' ? 'text-slate-400' : 'text-gray-600'} mt-1">
                                 {#if game.status === 'Active'}
                                     Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
                                 {:else if game.status === 'Resolution'}
                                     Judges' Votes
                                 {/if}
                             </p>
-                            <div class="info-value font-mono text-xs break-all">
+                            <div class="info-value font-mono text-xs break-all mt-2">
                                 {#each game.judges as judge}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-invalid-attribute -->
-                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
+                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline text-blue-400 hover:text-blue-300">
                                         {judge.slice(0, 12)}...{judge.slice(-6)}
                                         {#if game.status === 'Active' && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
                                             <span class="text-green-500"> (accepted)</span>
@@ -752,15 +753,25 @@
                                     </a>
                                 {/each}
                             </div>
+                            {#if game.status === 'Active'}
+                                <p class="text-sm font-medium text-yellow-400 mt-2">
+                                    Trust requires a majority of {Math.floor(game.judges.length / 2) + 1} out of {game.judges.length} judges.
+                                </p>
+                                <p class="text-sm font-medium {$mode === 'dark' ? 'text-slate-300' : 'text-gray-400'} mt-1">
+                                    Verify judges' history with a script to check past performance.
+                                </p>
+                            {/if}
                         </div>
                     {:else}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                            <p class="text {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">
+                            <p class="text {$mode === 'dark' ? 'text-slate-400' : 'text-gray-600'} mt-1 text-lg font-semibold">
                                 No Judges Assigned
                             </p>
-                            <p class="text-sm font-medium text-yellow-500">Participants must trust the creator.</p>
-                            <p class="text-sm font-medium {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'}">
-                                Run a script to verify the creator’s history for honesty in past competitions.
+                            <p class="text-sm font-medium text-yellow-400 mt-1">
+                                Participants must trust the creator.
+                            </p>
+                            <p class="text-sm font-medium {$mode === 'dark' ? 'text-slate-300' : 'text-gray-400'} mt-2">
+                                Verify creator’s history with a script to check past competition honesty.
                             </p>
                         </div>
                     {/if}
