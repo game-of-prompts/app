@@ -161,6 +161,10 @@
         val invalidatedCandidateBox = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
 
         val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
+        // TODO Check
+        // todo filter participantInputs with:  ¿?
+        //   -  val correctParticipationFee = pBox.value >= participationFee
+        //   -  val pBox.creationHeight <= game.resolutionDeadline
         val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
             if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
                 val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>

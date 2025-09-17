@@ -104,6 +104,8 @@
                 outBox.R5[Coll[Byte]].get == pBox.R5[Coll[Byte]].get
               })
 
+              // TODO CHECK
+              // Should add    pBox.creationHeight <= game.resolutionDeadline  ?
               validScoreExists && correctParticipationFee && resolvedOutputExists
             }
             
