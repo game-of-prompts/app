@@ -70,7 +70,7 @@ export async function judges_invalidate(
             // R5: Same secret, winning candidate reset
             R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(nextWinnerCandidateCommitment)!)).toHex(),
             // R6-R9: Keep the same values as the original box
-            R6: SColl(SColl(SByte), game.judges.map(hexToBytes)).toHex(),
+            R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
             R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
             R8: SPair(SColl(SByte, hexToBytes(game.resolverPK_Hex)!), SLong(BigInt(game.resolverCommission))).toHex(),
             R9: SPair(SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
