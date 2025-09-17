@@ -867,7 +867,11 @@
                                 <div class="info-block">
                                     <span class="info-label">Solver ID</span>
                                     <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
-                                         {p.solverId_String.slice(0, 10)}...{p.solverId_String.slice(-4)}
+                                        {#if p.solverId_String}
+                                            {p.solverId_String.slice(0, 10)}...{p.solverId_String.slice(-4)}
+                                        {:else}
+                                            N/A
+                                        {/if}
                                     </span>
                                 </div>
                                 <div class="info-block">
