@@ -29,9 +29,9 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
     [x] Fetch
     [x] Creación de juez
     [] Opinar sobre otro juez
-    [] Opionar sobre un juego (aceptar invitación)
-    [] Opinar sobre participación
-    [] Agregar prueba de reputación en juez.
+    [x] Opionar sobre un juego (aceptar invitación)
+    [x] Opinar sobre participación
+    [x] Agregar prueba de reputación en juez.
     
     - Vector de ataque: un usuario malicioso podría crear N jueces que opinan honestamente, si ademas, el usuario malicioso crea un juego e invita a sus jueces. ¿como sabran los usuarios que los jueces no son de fiar?
         1.-Pueden fijarse en el lapso en el que opinaron en otros juegos.
@@ -58,17 +58,32 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 
 
-### Agregaciones al contrato
+# Agregaciones al contrato
 
-- Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
-
+##### Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
 Actualmente, esto se puede dar, ya que aunque un conjunto mayoritario de los jueces opine en contra de la participacion candidata deberá haber alguien que gaste el game_resolution demostrando esas opiniones. Pero no hay una condición que obligue al creador a demostrar lo contrario si va a resolver
 
 Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs).
 
 
-- judgesInvalidate  debería de permitirse que en la misma transaccion se agregue la prueba de reputación (en caso de que sea posible, simplemente implementar).
-
+##### judgesInvalidate  debería de permitirse que en la misma transaccion se agregue la prueba de reputación (en caso de que sea posible, simplemente implementar).
 Actualmente, el ultimo juez debe de subir su opinion, y despues, cualquiera gastar el contrato principal demostrando las opiniones.  
 
 Permitir hacer ambas cosas es una mejora de UX.
+
+~~##### Limite de invalidacion por jueces, en caso de superarse, se cancela el juego.~~
+~~El creador podría agregar muchas participaciones para bloquear la resolución (ya que los jueces no terminarían nunca, cada vez se extiende el tiempo de juicio).~~
+~~Aunque esto no es necesario ya que el creador debería de gastar para pagar todas las participaciones ... que no irán para él.  ~~
+~~Asi est no es necesario controlarlo~~
+
+##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
+Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
+- No hay vote, asi que no llama la atención.
+- Esperar al último momento permite probar mas veces.
+
+Una posible idea para incentivar a participar de manera prematura (si es que lo considera adecuado el creador) es que el puntaje no solo dependa de la puntuacion del juego, si no del bloque en el que se agregó la participación. Algo como `score = game_score + N*(DEADLINE - HEIGHT)` donde:
+- score: es la puntuación final
+- game_score: es la puntuación del solver en el juego.
+- N: factor constante.
+- DEADLINE: deadline de la competición.
+- HEIGHT: altura donde se agregó la participación.
