@@ -123,7 +123,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         // R7: judges
         const judges: string[] = box.additionalRegisters.R7?.renderedValue
             .replace(/[\[\]\s]/g, "")
-            .split(",");
+            .split(",").filter((e: string) => e.length === 64);
 
         // R8 numericalParameters
         const r8RenderedValue = box.additionalRegisters.R8?.renderedValue;
@@ -208,7 +208,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
 }
 
 // =================================================================
-// === ESTADO: GAME RESOLUTION
+// === STATE: GAME RESOLUTION
 // =================================================================
 
 /**
@@ -367,7 +367,7 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
 }
 
 // =================================================================
-// === ESTADO: GAME CANCELLATION
+// === STATE: GAME CANCELLATION
 // =================================================================
 
 /**
@@ -483,7 +483,7 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
 }
 
 // =================================================================
-// === ESTADO: PARTICIPATION SUBMITTED & RESOLVED
+// === STATE: PARTICIPATION SUBMITTED & RESOLVED
 // =================================================================
 
 
