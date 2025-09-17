@@ -84,16 +84,17 @@
         mobileMenuOpen = false;
     }
 
-    function copyToClipboard() {
-        if ($address) {
-            navigator.clipboard.writeText($address)
-                .then(() => {
-                    showCopyMessage = true;
-                    setTimeout(() => showCopyMessage = false, 2000);
-                })
-                .catch(err => console.error('Failed to copy text: ', err));
+    game_detail.subscribe((value) => {
+        if (value) {
+            activeTab = "participateGame";
         }
-    }
+    })
+
+    judge_detail.subscribe((value) => {
+        if (value) {
+            activeTab = "judges";
+        }
+    })
 
     async function updateWalletInfo() {
         try {
