@@ -103,7 +103,7 @@ export class ErgoPlatform implements Platform {
     }
 
     public async createGoPGame(params: CreateGoPGamePlatformParams): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         
         try {
             return await create_game(
@@ -130,7 +130,7 @@ export class ErgoPlatform implements Platform {
         solverId_string: string, 
         hashLogs_hex: string
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
 
         return await submit_score(
             game.gameId,
@@ -148,7 +148,7 @@ export class ErgoPlatform implements Platform {
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         
         return await resolve_game(game, participations, secretS_hex, acceptedJudgeNominations);
     }
@@ -158,7 +158,7 @@ export class ErgoPlatform implements Platform {
         secretS_hex: string,
         claimerAddressString: string
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         
         return await cancel_game(game, secretS_hex, claimerAddressString);
     }
@@ -167,7 +167,7 @@ export class ErgoPlatform implements Platform {
         game: GameCancellation, // Tipo específico: el juego debe estar en estado de cancelación.
         claimerAddressString: string
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
 
         return await drain_cancelled_game_stake(game, claimerAddressString);
     }
@@ -180,7 +180,7 @@ export class ErgoPlatform implements Platform {
         game: GameResolution,
         participations: ParticipationResolved[]
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         return await end_game(game, participations);
     }
 
@@ -193,7 +193,7 @@ export class ErgoPlatform implements Platform {
         invalidatedParticipation: ParticipationResolved,
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
 
         if (judgeVoteDataInputs.length > (game.judges.length/2))
         {
@@ -214,7 +214,7 @@ export class ErgoPlatform implements Platform {
         currentResolved: ParticipationResolved,
         newResolverPkHex: string
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         return await include_omitted_participation(game, omittedParticipation, currentResolved, newResolverPkHex);
     }
 
@@ -229,7 +229,7 @@ export class ErgoPlatform implements Platform {
         game: GameCancellation,
         participation: ParticipationSubmitted
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Cancelled_Draining') {
             throw new Error("El juego no está en un estado que permita reembolsos.");
         }
@@ -249,7 +249,7 @@ export class ErgoPlatform implements Platform {
         game: GameActive,
         participation: ParticipationSubmitted
     ): Promise<string | null> {
-        if (!ergo) throw new Error("Billetera no conectada.");
+        if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Active') {
             throw new Error("El juego no está en estado activo.");
         }
