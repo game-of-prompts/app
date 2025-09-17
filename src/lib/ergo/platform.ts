@@ -191,13 +191,14 @@ export class ErgoPlatform implements Platform {
     async judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ParticipationResolved,
+        participations: ParticipationResolved[],
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
 
         if (judgeVoteDataInputs.length > (game.judges.length/2))
         {
-            return await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
+            return await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
         }
         else {
             return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);

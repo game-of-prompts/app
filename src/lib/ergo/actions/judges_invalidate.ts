@@ -29,6 +29,7 @@ const JUDGE_PERIOD_EXTENSION = 30 + 10;
 export async function judges_invalidate(
     game: GameResolution,
     invalidatedParticipation: ParticipationResolved,
+    participations: ParticipationResolved[],
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
@@ -50,6 +51,8 @@ export async function judges_invalidate(
         throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
     }
 
+    const dataInputs = [...judgeVoteDataInputs, ...participations.map(p => p.box)]
+
     // --- 2. Prepare data for the new resolution box ---
     
     // The invalidated candidate's value is added back to the game box's value
@@ -59,19 +62,19 @@ export async function judges_invalidate(
     const secretS_bytes = hexToBytes(game.revealedS_Hex)!;
 
     // Reset the candidate to a "null" state (hash of an empty byte array)
-    const nextWinnerCandidateCommitment = uint8ArrayToHex(fleetBlake2b256(new Uint8Array()));
+    const nextWinnerCandidateCommitment = uint8ArrayToHex(fleetBlake2b256(new Uint8Array()));  // TODO Resolve the new winner.
 
     // --- 3. Build the new resolution box ---
     const recreatedGameBox = new OutputBuilder(newGameBoxValue, resolutionErgoTree)
         .addTokens(game.box.assets) // Keep the game's NFT
         .setAdditionalRegisters({
             // R4: Extended deadline, same counter
-            R4: SPair(SLong(newDeadline), SInt(game.resolvedCounter)).toHex(),
+            R4: SInt(1).toHex(),
             // R5: Same secret, winning candidate reset
             R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(nextWinnerCandidateCommitment)!)).toHex(),
             // R6-R9: Keep the same values as the original box
             R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
-            R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg]).toHex(),
+            R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg, SLong(newDeadline), SInt(game.resolvedCounter)]).toHex(),
             R8: SPair(SColl(SByte, hexToBytes(game.resolverPK_Hex)!), SLong(BigInt(game.resolverCommission))).toHex(),
             R9: SPair(SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
         });
@@ -86,12 +89,12 @@ export async function judges_invalidate(
     try {
         console.log("INPUTS ", inputs)
         console.log("OUTPUTS ", recreatedGameBox)
-        console.log("DATA INPUTS ", judgeVoteDataInputs)
+        console.log("DATA INPUTS ", dataInputs)
 
         const unsignedTransaction = new TransactionBuilder(currentHeight)
             .from(inputs)
             .to(recreatedGameBox)
-            .withDataFrom(judgeVoteDataInputs)
+            .withDataFrom(dataInputs)
             .sendChangeTo(userAddress)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();

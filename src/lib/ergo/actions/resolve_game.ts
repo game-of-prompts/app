@@ -191,7 +191,6 @@ export async function resolve_game(
     });
     
     const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
-    // MODIFICACIÓN: Se usan las participaciones VALIDADAS y se copian los registros con SConstant.
     const resolvedParticipationOutputs = validParticipations.map((p: ParticipationSubmitted) => {
         const pBox = parseBox(p.box);
         return new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)

@@ -107,6 +107,7 @@ export interface Platform {
     judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ParticipationResolved,
+        participations: ParticipationResolved[],
         judgeVoteDataInputs: Box<bigint>[]
     ): Promise<string | null>
 

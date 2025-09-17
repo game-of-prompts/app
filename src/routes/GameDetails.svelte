@@ -363,8 +363,9 @@
                 })[0].box
             })
             
+            const otherParticipations: ParticipationResolved[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
 
-            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, judgeInvalidVotesDataInputsBoxes);
+            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, otherParticipations, judgeInvalidVotesDataInputsBoxes);
         } catch (e: any) { errorMessage = e.message;
         } finally { isSubmitting = false; }
     }
