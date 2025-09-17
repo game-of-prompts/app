@@ -46,6 +46,8 @@
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
     let participationVotes: Map<string, Map<string, ReputationProof>> = new Map();
+    let candidateParticipationValidVotes: string[] = [];
+    let candidateParticipationInvalidVotes: string[] = [];
     let currentHeight: number = 0;
     const GRACE_PERIOD_IN_BLOCKS = 720; 
 
@@ -132,10 +134,33 @@
             } else if (game.status === GameState.Resolution) {
                 participations = await fetchResolvedParticipations(game.gameId);
                 participations.forEach(async (item) => {
+
                     const participation = item.commitmentC_Hex;
-                    participationVotes.set(participation, await fetchReputationProofs(ergo, true, "participation", participation));
+                    const votes = new Map<string, ReputationProof>(
+                        Array.from(get(judges).data.entries()).filter(([key, judge]) => {
+                            return judge.current_boxes.some((box) => {
+                                return box.object_pointer === participation && box.type.tokenId === PARTICIPATION;
+                            });
+                        })
+                    );
+                    
+                    participationVotes.set(participation, votes);
                 });
-                console.log("PARTICIPATION VOTES ", participationVotes)
+
+                const candidate_participation_votes = Array.from(participationVotes.get(game.winnerCandidateCommitment)?.entries() ?? []);
+                if (candidate_participation_votes) {
+                    candidateParticipationValidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                        return value.current_boxes.some((box) => {
+                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === true;
+                            });
+                     }).map(([key, value]) => key);
+                    
+                     candidateParticipationInvalidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                        return value.current_boxes.some((box) => {
+                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === false;
+                            });
+                     }).map(([key, value]) => key);
+                }
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchSubmittedParticipations(game.gameId);
             }
@@ -652,7 +677,8 @@
         <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
             <h2 class="text-2xl font-semibold mb-6">Details</h2>
             {#if game}
-                {@const creatorAddr = pkHexToBase58Address(game.gameCreatorPK_Hex)}
+                {@const creator_pk = game.status === 'Active' ? game.gameCreatorPK_Hex : game.originalCreatorPK_Hex}
+                {@const creatorAddr = pkHexToBase58Address(creator_pk)}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                     <div class="info-block">
                         <span class="info-label">Competition ID (NFT)</span>
@@ -682,7 +708,7 @@
                                 Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
                             </span>
                             <div class="info-value font-mono text-xs break-all">
-                                {#each game.judges as judge, index}
+                                {#each game.judges as judge}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-invalid-attribute -->
@@ -697,22 +723,17 @@
                         </div>
                     {/if}
                     {#if game.status == 'Resolution' && game.judges && game.judges.length > 0}
-                        {@const candidateVotes = participationVotes.get(game.winnerCandidateCommitment) ?? new Map() }
-                        {@const candidateParticipationVotes = Array.from(candidateVotes.keys()) ?? []}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
                             <span class="info-label">
                                 Participating Judges {isNominatedJudge ? '(You are a judge)' : ''}
                             </span>
                             <div class="info-value font-mono text-xs break-all">
-                                {#each game.judges as judge, index}
+                                {#each game.judges as judge}
                                     <!-- svelte-ignore a11y-click-events-have-key-events -->
                                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                                     <!-- svelte-ignore a11y-invalid-attribute -->
                                     <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
                                         {judge.slice(0, 12)}...{judge.slice(-6)}
-                                        {#if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationVotes.includes(judge)}
-                                            <span class="text-green-500"> (invalidated)</span>
-                                        {/if}
                                     </a>
                                 {/each}
                             </div>
@@ -738,7 +759,34 @@
                     <p class="text-xl font-medium text-gray-500">Game Over</p>
                 {/if}
                 <p class="text-xs {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">Contract Status: {game.status}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:mt-8">
+                    {#if game.status == 'Resolution' && game.judges && game.judges.length > 0}
+                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                            <p class="text {$mode === 'dark' ? 'text-slate-500' : 'text-gray-500'} mt-1">
+                                Judges' Votes
+                            </p>
+                            <div class="info-value font-mono text-xs break-all">
+                                {#each game.judges as judge}
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                    <!-- svelte-ignore a11y-invalid-attribute -->
+                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
+                                        {judge.slice(0, 12)}...{judge.slice(-6)}
+                                        {#if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationInvalidVotes.includes(judge)}
+                                            <span class="text-red-500"> (invalidated)</span>
+                                        {:else if game.judges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationValidVotes.includes(judge)}
+                                            <span class="text-green-500"> (validated)</span>
+                                        {:else}
+                                            <span class="text-yellow-500"> (pending)</span>
+                                        {/if}
+                                    </a>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
                 </div>
+            </div>
         
             <div class="actions-side md:border-l {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'} md:pl-8">
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
