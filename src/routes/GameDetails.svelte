@@ -135,6 +135,7 @@
                     const participation = item.commitmentC_Hex;
                     participationVotes.set(participation, await fetchReputationProofs(ergo, true, "participation", participation));
                 });
+                console.log("PARTICIPATION VOTES ", participationVotes)
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchSubmittedParticipations(game.gameId);
             }
@@ -669,31 +670,53 @@
                             {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
                         </a>
                     </div>
-                    {#if game.hashS}
-                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                        <span class="info-label">Hashed Secret (S)</span>
-                        <span class="info-value font-mono text-xs break-all">{game.hashS}</span>
-                    </div>
-                    {/if}
-                    {#if game.invitedJudges && game.invitedJudges.length > 0}
-                    <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
-                        <span class="info-label">
-                            Participating Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
-                        </span>
-                        <div class="info-value font-mono text-xs break-all">
-                            {#each game.invitedJudges as judge, index}
-                                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                                <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
-                                    {judge.slice(0, 12)}...{judge.slice(-6)}
-                                    {#if acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
-                                        <span class="text-green-500"> (accepted)</span>
-                                    {/if}
-                                    {#if index < game.invitedJudges.length - 1}, {/if}
-                                </a>
-                            {/each}
+                    {#if game.status === 'Resolution' && game.revealedS_Hex}
+                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                            <span class="info-label">Revealed Secret (S)</span>
+                            <span class="info-value font-mono text-xs break-all">{game.revealedS_Hex}</span>
                         </div>
-                    </div>
+                    {/if}
+                    {#if game.status === 'Active' && game.invitedJudges && game.invitedJudges.length > 0}
+                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                            <span class="info-label">
+                                Nominated Judges {isNominatedJudge ? '(You are a nominated judge)' : ''}
+                            </span>
+                            <div class="info-value font-mono text-xs break-all">
+                                {#each game.invitedJudges as judge, index}
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                    <!-- svelte-ignore a11y-invalid-attribute -->
+                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
+                                        {judge.slice(0, 12)}...{judge.slice(-6)}
+                                        {#if game.invitedJudges && acceptedJudgeNominations && acceptedJudgeNominations.includes(judge)}
+                                            <span class="text-green-500"> (accepted)</span>
+                                        {/if}
+                                    </a>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
+                    {#if game.status == 'Resolution' && game.participatingJudges && game.participatingJudges.length > 0}
+                        {@const candidateVotes = participationVotes.get(game.winnerCandidateCommitment) ?? new Map() }
+                        {@const candidateParticipationVotes = Array.from(candidateVotes.keys()) ?? []}
+                        <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
+                            <span class="info-label">
+                                Participating Judges {isNominatedJudge ? '(You are a judge)' : ''}
+                            </span>
+                            <div class="info-value font-mono text-xs break-all">
+                                {#each game.participatingJudges as judge, index}
+                                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                    <!-- svelte-ignore a11y-invalid-attribute -->
+                                    <a href="#" on:click|preventDefault={() => handleJudgeDetails(judge)} class="cursor-pointer hover:underline">
+                                        {judge.slice(0, 12)}...{judge.slice(-6)}
+                                        {#if game.participatingJudges && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationVotes.includes(judge)}
+                                            <span class="text-green-500"> (invalidated)</span>
+                                        {/if}
+                                    </a>
+                                {/each}
+                            </div>
+                        </div>
                     {/if}
 
                 </div>
@@ -836,7 +859,7 @@
                                 </div>
                             </div>
 
-                            <div class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                            <div class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                                 <div class="info-block">
                                     <span class="info-label">Fee Paid</span>
                                     <span class="info-value">{formatErg(p.value)} ERG</span>
@@ -844,13 +867,20 @@
                                 <div class="info-block">
                                     <span class="info-label">Solver ID</span>
                                     <span class="info-value font-mono text-xs" title={p.solverId_String || p.solverId_RawBytesHex}>
-                                        {p.solverId_String ? (p.solverId_String.length > 25 ? p.solverId_String.slice(0,25)+'...' : p.solverId_String) : (p.solverId_RawBytesHex.slice(0,20) + '...')}
+                                         {p.solverId_String.slice(0, 10)}...{p.solverId_String.slice(-4)}
                                     </span>
                                 </div>
                                 <div class="info-block">
                                     <span class="info-label">Transaction ID</span>
                                     <a href="{web_explorer_uri_tx + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
                                         {p.transactionId.slice(0, 10)}...{p.transactionId.slice(-4)}
+                                    </a>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Commitment</span>
+                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                    <a class="info-value font-mono text-xs" title={p.commitmentC_Hex}>
+                                        {p.commitmentC_Hex.slice(0, 10)}...{p.commitmentC_Hex.slice(-4)}
                                     </a>
                                 </div>
                                 <div class="info-block sm:col-span-2 lg:col-span-3">
