@@ -83,17 +83,28 @@ export async function judges_invalidate(
     // Inputs: the resolution box, the invalidated participant's box, and the judge's UTXOs
     const inputs = [parseBox(game.box), parseBox(invalidatedParticipation.box), ...utxos];
 
-    const unsignedTransaction = new TransactionBuilder(currentHeight)
-        .from(inputs)
-        .to(recreatedGameBox)
-        .withDataFrom(judgeVoteDataInputs) // Add the judges' vote boxes as data-inputs
-        .sendChangeTo(userAddress)
-        .payFee(RECOMMENDED_MIN_FEE_VALUE)
-        .build();
+    try {
+        console.log("INPUTS ", inputs)
+        console.log("OUTPUTS ", recreatedGameBox)
+        console.log("DATA INPUTS ", judgeVoteDataInputs)
 
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
-    const txId = await ergo.submit_tx(signedTransaction);
+        const unsignedTransaction = new TransactionBuilder(currentHeight)
+            .from(inputs)
+            .to(recreatedGameBox)
+            .withDataFrom(judgeVoteDataInputs)
+            .sendChangeTo(userAddress)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
 
-    console.log(`Candidate invalidation transaction successfully submitted. ID: ${txId}`);
-    return txId;
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+        console.log(`Candidate invalidation transaction successfully submitted. ID: ${txId}`);
+        return txId;
+    } catch (error)
+    {
+        console.warn(error)
+        throw error;
+    }
+
 }
