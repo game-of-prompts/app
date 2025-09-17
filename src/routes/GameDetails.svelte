@@ -760,6 +760,16 @@
                                 <p class="text-sm font-medium {$mode === 'dark' ? 'text-slate-300' : 'text-gray-400'} mt-1">
                                     Verify judges' history with a script to check past performance.
                                 </p>
+                            {:else if game.status === 'Resolution'}
+                                {#if new Date().getTime() < targetDate}
+                                    <p class="text-sm font-medium mt-2">
+                                        The candidate can be invalidated if more than {Math.floor(game.judges.length / 2)} out of {game.judges.length} judges vote to invalidate.
+                                    </p>
+                                {:else}
+                                   <p class="text-sm font-medium mt-2">
+                                        The candidate can no longer be invalidated as the voting period has ended.
+                                    </p>
+                                {/if}
                             {/if}
                         </div>
                     {:else}
