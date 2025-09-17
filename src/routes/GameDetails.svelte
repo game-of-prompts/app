@@ -947,7 +947,11 @@
                                             {/each}
                                             {#if actualScoreForThisParticipation !== null}
                                                 <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
-                                                    (Real Score: {actualScoreForThisParticipation})
+                                                    {#if game.status == "Active"}
+                                                        (one of these is the real one)
+                                                    {:else}
+                                                       (Real Score: {actualScoreForThisParticipation})
+                                                    {/if}
                                                 </span>
                                             {/if}
                                         {/if}
