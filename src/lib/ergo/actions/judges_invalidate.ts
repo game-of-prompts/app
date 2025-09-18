@@ -170,6 +170,14 @@ export async function judges_invalidate(
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
             ),
         });
+
+    console.log("registers output ", [
+                BigInt(game.originalDeadline),
+                BigInt(game.creatorStakeNanoErg),
+                BigInt(game.participationFeeNanoErg),
+                BigInt(newDeadline),
+                BigInt(game.resolvedCounter - 1),
+            ])
         
     // --- 5. Build and Submit the Transaction ---
     const userAddress = await ergo.get_change_address();
