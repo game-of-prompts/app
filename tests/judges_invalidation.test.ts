@@ -119,9 +119,9 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Crear Estado Inicial del Juego ---
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 1000n, "logs-invalid", secret);
-        nextWinnerCommitment = createCommitment("solver-next-winner", 900n, "logs-next-winner", secret);
-        extraParticipantCommitment = createCommitment("solver-extra-participant", 800n, "logs-extra-participant", secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", secret);
+        nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", secret);
+        extraParticipantCommitment = createCommitment("solver-extra-participant", 5n, "logs-extra-participant", secret);
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
@@ -160,7 +160,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "logs-invalid")).toHex(),
-                R9: SColl(SLong, [1000n]).toHex(),
+                R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
         invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
@@ -176,7 +176,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "logs-next-winner")).toHex(),
-                R9: SColl(SLong, [900n, 60n, 34n, 1000n]).toHex(),
+                R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
         nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
@@ -192,7 +192,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-extra-participant")).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "logs-extra-participant")).toHex(),
-                R9: SColl(SLong, [50n, 800n, 70000n]).toHex(),
+                R9: SColl(SLong, [20n, 2n, 300n, 1n, 5n, 300n, 3n, 1200n]).toHex(),
             }
         });
         extraParticipantBox = participationResolvedContract.utxos.toArray()[2];
