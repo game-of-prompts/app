@@ -13,8 +13,7 @@ import {
     SLong,
     SPair,
     SInt,
-    SBool,
-    SSigmaProp
+    SBool
 } from "@fleet-sdk/serializer";
 import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
 import * as fs from "fs";
