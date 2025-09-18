@@ -42,7 +42,7 @@ export async function judges_invalidate(
     }
 
     // Verify that the provided participation is indeed that of the current winning candidate
-    if (invalidatedParticipation.commitmentC_Hex !== game.nextWinnerCandidateCommitment) {
+    if (invalidatedParticipation.commitmentC_Hex !== game.winnerCandidateCommitment) {
         throw new Error("The provided participation does not correspond to the current winning candidate of the game.");
     }
     
@@ -123,7 +123,7 @@ export async function judges_invalidate(
     }
 
     if (!nextWinnerCandidateCommitment) {
-        throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
+        // throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
     }
 
     if (validParticipations.length !== participations.length)  {
@@ -136,7 +136,7 @@ export async function judges_invalidate(
     // --- 3. Prepare data for the new resolution box ---
     
     // The invalidated candidate's value is added back to the game box's value
-    const newGameBoxValue = BigInt(game.value) + BigInt(invalidatedParticipation.value);
+    const newGameBoxValue = game.value + invalidatedParticipation.value;
     const newDeadline = BigInt(game.resolutionDeadline + JUDGE_PERIOD_EXTENSION);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const secretS_bytes = hexToBytes(game.revealedS_Hex)!;
@@ -146,14 +146,29 @@ export async function judges_invalidate(
         .addTokens(game.box.assets) // Keep the game's NFT
         .setAdditionalRegisters({
             // R4: Extended deadline, same counter
-            R4: SInt(1).toHex(),
+            R4: SInt(1),
             // R5: Same secret, winning candidate reset
-            R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(nextWinnerCandidateCommitment)!)).toHex(),
+            R5: SPair(
+                SColl(SByte, secretS_bytes),
+                SColl(SByte, nextWinnerCandidateCommitment ? hexToBytes(nextWinnerCandidateCommitment)! : [])
+            ),
             // R6-R9: Keep the same values as the original box
-            R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
-            R7: SColl(SLong, [BigInt(game.originalDeadline), game.creatorStakeNanoErg, game.participationFeeNanoErg, SLong(newDeadline), SInt(game.resolvedCounter-1)]).toHex(),
-            R8: SPair(SColl(SByte, hexToBytes(game.resolverPK_Hex)!), SLong(BigInt(game.resolverCommission))).toHex(),
-            R9: SPair(SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
+            R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
+            R7: SColl(SLong, [
+                BigInt(game.originalDeadline),
+                BigInt(game.creatorStakeNanoErg),
+                BigInt(game.participationFeeNanoErg),
+                BigInt(newDeadline),
+                BigInt(game.resolvedCounter - 1),
+            ]),
+            R8: SPair(
+                SColl(SByte, hexToBytes(game.resolverPK_Hex)!),
+                SLong(BigInt(game.resolverCommission))
+            ),
+            R9: SPair(
+                SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!),
+                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+            ),
         });
         
     // --- 5. Build and Submit the Transaction ---
