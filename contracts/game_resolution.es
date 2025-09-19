@@ -165,6 +165,7 @@
         // todo filter participantInputs with:  ¿?
         //   -  val correctParticipationFee = pBox.value >= participationFee
         //   -  val pBox.creationHeight <= game.resolutionDeadline
+        // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
         val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
             if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
                 val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>

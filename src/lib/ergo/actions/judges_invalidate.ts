@@ -178,6 +178,8 @@ export async function judges_invalidate(
                 BigInt(newDeadline),
                 BigInt(game.resolvedCounter - 1),
             ])
+
+    console.log("dataInputs ", dataInputs)
         
     // --- 5. Build and Submit the Transaction ---
     const userAddress = await ergo.get_change_address();
@@ -190,6 +192,8 @@ export async function judges_invalidate(
         console.log("INPUTS ", inputs)
         console.log("OUTPUTS ", recreatedGameBox)
         console.log("DATA INPUTS ", dataInputs)
+
+        console.log("Current height: ", currentHeight)
 
         const unsignedTransaction = new TransactionBuilder(currentHeight)
             .from(inputs)
