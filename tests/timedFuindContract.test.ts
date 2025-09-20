@@ -35,7 +35,7 @@ describe("Timed fund contract", () => {
   const contractParty = mockChain.addParty(ergoTree.toHex(), "Timed Fund Contract");
 
   afterEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
   });
 
   describe("Below the deadline", () => {

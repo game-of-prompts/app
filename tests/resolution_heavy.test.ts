@@ -68,7 +68,7 @@ describe("Game Resolution (resolve_game)", () => {
 
 
   afterEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
   });
   
   beforeEach(() => {

@@ -88,7 +88,7 @@ describe("Game Finalization (end_game)", () => {
   const loserCommitment = "b2".repeat(32);
 
   beforeEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
     mockChain.jumpTo(800_000);
 
     // Asignar fondos a las partes para crear cajas y pagar tasas

@@ -128,7 +128,7 @@ describe("Game Cancellation (cancel_game)", () => {
     });
 
     afterEach(() => {
-        mockChain.reset();
+        mockChain.reset({clearParties: true});
     });
 
     it("should successfully cancel the game and pay penalty before the deadline", () => {
@@ -276,7 +276,7 @@ describe("Game Cancellation (Low Stake)", () => {
     });
 
     afterEach(() => {
-        mockChain.reset();
+        mockChain.reset({clearParties: true});
     });
 
     it("should fail to cancel if remaining stake is less than MIN_BOX_VALUE", () => {

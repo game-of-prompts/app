@@ -81,7 +81,7 @@ describe("Game Resolution (resolve_game)", () => {
   let winnerCandidateCommitment: string;
 
   afterEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
   });
   
   beforeEach(() => {

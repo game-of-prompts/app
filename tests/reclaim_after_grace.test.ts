@@ -111,7 +111,7 @@ describe("Participant Reclaim After Grace Period", () => {
   });
 
   afterEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
   });
 
   it("should allow a participant to reclaim funds if the grace period has passed", () => {

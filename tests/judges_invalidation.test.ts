@@ -84,7 +84,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
 
     beforeEach(() => {
-        mockChain.reset();
+        mockChain.reset({clearParties: true});
         mockChain.jumpTo(currentHeight);
 
         // --- Compilar Contratos ---
@@ -101,15 +101,15 @@ describe("Game Resolution Invalidation by Judges", () => {
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         gameResolutionErgoTree = compile(resolutionSource);
         reputationProofErgoTree = compile(REPUTATION_PROOF_SOURCE);
+    });
+
+    it("should successfully invalidate the current winner with a majority of judge votes (2 out of 3)", () => {
+        // --- Crear Estado Inicial del Juego ---
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    });
-
-    it("should successfully invalidate the current winner with a majority of judge votes (2 out of 3)", () => {
-        // --- Crear Estado Inicial del Juego ---
 
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
@@ -266,10 +266,15 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
         expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
-    
+
     it("should fail if there are not enough judge votes (1 out of 3)", () => {
 
         // --- Crear Estado Inicial del Juego ---
+
+        // --- Añadir Partidos de Contratos al MockChain ---
+        gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
+        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
@@ -407,6 +412,11 @@ describe("Game Resolution Invalidation by Judges", () => {
 
     it("should fail if a judge votes for the wrong commitment", () => {
         // --- Crear Estado Inicial del Juego ---
+
+        // --- Añadir Partidos de Contratos al MockChain ---
+        gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
+        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
@@ -549,6 +559,11 @@ describe("Game Resolution Invalidation by Judges", () => {
     it("should fail if trying to invalidate after the resolution deadline", () => {
         // --- Crear Estado Inicial del Juego ---
 
+        // --- Añadir Partidos de Contratos al MockChain ---
+        gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
+        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
+    
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -690,13 +705,16 @@ describe("Game Resolution Invalidation by Judges", () => {
     it("should successfully invalidate the current winner with a majority of judge votes (1 out of 1)", () => {
         // --- Crear Estado Inicial del Juego ---
 
+        // --- Añadir Partidos de Contratos al MockChain ---
+        gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
+        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
         nextWinner = mockChain.newParty("NextWinner");
         judge1 = mockChain.newParty("Judge1");
-        judge2 = mockChain.newParty("Judge2");
-        judge3 = mockChain.newParty("Judge3");
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
@@ -705,12 +723,10 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
-        judge2TokenId = Buffer.from(randomBytes(32)).toString("hex");
-        judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
         const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
-        const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
+        const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
@@ -796,9 +812,6 @@ describe("Game Resolution Invalidation by Judges", () => {
             }
         );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
-        judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
-
-        const requiredVotes = 2; // (3 / 2) + 1 = 2
         
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
@@ -817,7 +830,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                         R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
                     })
             ])
-            .withDataFrom([judge1ReputationBox, judge2ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
+            .withDataFrom([judge1ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();

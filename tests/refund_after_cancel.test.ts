@@ -200,7 +200,7 @@ describe("Participant Refund After Cancellation", () => {
   });
 
   afterEach(() => {
-    mockChain.reset();
+    mockChain.reset({clearParties: true});
   });
 
   it("should allow a participant to claim a full refund after the game is cancelled", () => {

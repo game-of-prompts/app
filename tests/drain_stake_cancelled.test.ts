@@ -75,7 +75,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
     });
 
     afterEach(() => {
-        mockChain.reset();
+        mockChain.reset({clearParties: true});
     });
 
     it("should successfully drain a portion of the stake after the cooldown period", () => {
