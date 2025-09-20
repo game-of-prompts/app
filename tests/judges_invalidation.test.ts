@@ -19,7 +19,7 @@ import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { bigintToLongByteArray, generate_pk_proposition, uint8ArrayToHex } from "$lib/ergo/utils";
+import { bigintToLongByteArray, generate_pk_proposition, hexToBytes, uint8ArrayToHex } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 // --- Configuración de Constantes y Carga de Contratos ---
@@ -1226,7 +1226,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        const invalidatedSolverIdBytes = Buffer.from("3962306666323433323336303463386466643032363265386136336263653139626335386438313339383663623139643465386437323161353762313566", "hex");
+        const invalidatedSolverIdBytes = Buffer.from("9b0ff243323604c8dfd02629e8a63bce19bc58d813986cb19d4e8d721a57b15f", "utf-8");
         const invalidatedLogsBytes = Buffer.from("23739dc0c5f61dd85a363872cc337e57e109f1b04b945ad6790a293425150cc8", "hex");
         participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
             ergoTree: participationResolvedErgoTree.toHex(),
@@ -1244,8 +1244,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         });
         invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
 
-        const nextSolverIdBytes = Buffer.from("383532373865663838396264373063253337613330663638363338386231633364376266393931653264636462303364653232336563643738626336", "hex");
-        const nextLogsBytes = Buffer.from("4132b3d13f16f7ba7a2d0d3c926bb817987825793bec7e8379a0cc3c91ab75bc", "hex");
+        const nextSolverIdBytes = Buffer.from("85278ef8896bd70c2537a30fc686388b1c3cd7bf991e2dcdb03de223ecd78bc6", "utf-8");
+        const nextLogsBytes = hexToBytes("4132b3d13f16f7ba7a2d0d3c926bb817987825793bec7e8379a0cc3c91ab75bc")!;
         participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationResolvedErgoTree.toHex(),
             value: 1000000n,
@@ -1254,13 +1254,30 @@ describe("Game Resolution Invalidation by Judges", () => {
             additionalRegisters: {
                 R4: SColl(SByte, pkBytes).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
-                R6: SColl(SByte, Buffer.from(gameNftId, "hex")).toHex(),
+                R6: SColl(SByte, hexToBytes(gameNftId)!).toHex(),
                 R7: SColl(SByte, nextSolverIdBytes).toHex(),
                 R8: SColl(SByte, nextLogsBytes).toHex(),
                 R9: SColl(SLong, [50n, 34n, 10n, 40n, 34n, 1200n, 20n]).toHex(),
             }
         });
         nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+
+        // Check commitment
+        console.log("Debug info for commitment check:");
+        console.log("Secret (hex):", Buffer.from(secret).toString("hex"));
+        console.log("Next solver id (hex):", Buffer.from(nextSolverIdBytes).toString("hex"));
+        console.log("Next logs (hex):", Buffer.from(nextLogsBytes).toString("hex"));
+        console.log("Expected commitment (hex):", Buffer.from(nextWinnerCommitment).toString("hex"));
+        const dataToHash = new Uint8Array([
+                    ...nextSolverIdBytes,
+                    ...bigintToLongByteArray(BigInt(40)),
+                    ...nextLogsBytes,
+                    ...secret
+                ]);
+        const testCommitment = blake2b256(dataToHash);
+        console.log("Calculated commitment:", Buffer.from(testCommitment).toString("hex"));
+        console.log("Expected commitment:  ", Buffer.from(nextWinnerCommitment).toString("hex"));
+        expect(Buffer.from(testCommitment).toString("hex")).to.equal(Buffer.from(nextWinnerCommitment).toString("hex"));
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = Buffer.from("f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8", "hex");
