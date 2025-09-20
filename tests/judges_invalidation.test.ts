@@ -550,12 +550,20 @@ describe("Game Resolution Invalidation by Judges", () => {
     });
     
     it("should fail if trying to invalidate after the resolution deadline", () => {
-                // --- Crear Estado Inicial del Juego ---
+        // --- Crear Estado Inicial del Juego ---
+
+        // --- Inicializar Actores ---
+        resolver = mockChain.newParty("Resolver");
+        invalidatedWinner = mockChain.newParty("InvalidatedWinner");
+        nextWinner = mockChain.newParty("NextWinner");
+        judge1 = mockChain.newParty("Judge1");
+        judge2 = mockChain.newParty("Judge2");
+        judge3 = mockChain.newParty("Judge3");
+        resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
         invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", secret);
-        extraParticipantCommitment = createCommitment("solver-extra-participant", 5n, "logs-extra-participant", secret);
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
@@ -615,22 +623,6 @@ describe("Game Resolution Invalidation by Judges", () => {
         });
         nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
 
-        participationResolvedContract.addUTxOs({
-            ergoTree: participationResolvedErgoTree.toHex(),
-            value: 1_000_000n,
-            creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
-            assets: [],
-            additionalRegisters: {
-                R4: SColl(SByte, extraParticipant.key.publicKey).toHex(),
-                R5: SColl(SByte, extraParticipantCommitment).toHex(),
-                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
-                R7: SColl(SByte, stringToBytes("utf8", "solver-extra-participant")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-extra-participant")).toHex(),
-                R9: SColl(SLong, [20n, 2n, 300n, 1n, 5n, 300n, 3n, 1200n]).toHex(),
-            }
-        });
-        extraParticipantBox = participationResolvedContract.utxos.toArray()[2];
-
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
         reputationProofContract.addUTxOs(
@@ -668,36 +660,31 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
-
-
-
-
-
-
-        mockChain.newBlocks(Number(JUDGE_PERIOD) + 1); // Avanzar el tiempo más allá del deadline
+        const requiredVotes = 2; // (3 / 2) + 1 = 2
         
-        const currentHeight = mockChain.height;
+        // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n;
+        const decrementedCounter = 1n; // 2 - 1
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        
+        mockChain.newBlocks(41); // Advance beyond the judge period
 
-        const tx = new TransactionBuilder(currentHeight)
-           .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
-           .to([
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
+            .to([
                 new OutputBuilder(newFunds, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
                         ...gameResolutionBox.additionalRegisters,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(),
-                        R7: SColl(SLong, newNumericalParams).toHex(),
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(), // Nuevo candidato
+                        R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
                     })
-           ])
-           .withDataFrom([judge1ReputationBox, judge2ReputationBox])
-           .sendChangeTo(resolver.address)
-           .payFee(RECOMMENDED_MIN_FEE_VALUE)
-           .build();
-
+            ])
+            .withDataFrom([judge1ReputationBox, judge2ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
+            .sendChangeTo(resolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
         const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
         expect(executionResult).to.be.false;
     });
