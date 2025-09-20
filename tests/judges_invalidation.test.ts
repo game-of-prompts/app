@@ -66,7 +66,7 @@ describe("Game Resolution Invalidation by Judges", () => {
     const currentHeight = 800_000;
     const resolutionDeadline = BigInt(currentHeight) + JUDGE_PERIOD;
     const gameNftId = "33aabb33aabb33aabb33aabb33aabb33aabb33aabb33aabb33aabb33aabb33aa";
-    const secret = stringToBytes("utf8", "secret-for-invalidation-test");
+    let secret = stringToBytes("utf8", "secret-for-invalidation-test");
 
     let gameResolutionBox: Box;
     let invalidatedWinnerBox: Box;
@@ -1173,5 +1173,160 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
         expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
         expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === extraParticipantBox.boxId)).to.not.be.undefined; // The extra participant box should remain.
+    });
+
+    it("should successfully invalidate current winner with single judge vote using transaction data", () => {
+        // Based on a real failed case.
+        
+        // --- Crear Estado Inicial del Juego ---
+
+        // --- Añadir Partidos de Contratos al MockChain ---
+        gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
+        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
+
+        // --- Inicializar Actores ---
+        resolver = mockChain.newParty("Resolver");
+        invalidatedWinner = mockChain.newParty("InvalidatedWinner");
+        nextWinner = mockChain.newParty("NextWinner");
+        judge1 = mockChain.newParty("Judge1");
+        resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+
+        // Ajustar la altura actual para coincidir con la transacción
+        mockChain.jumpTo(1616940);
+
+        // 1. Definir compromisos y secretos basados en la transacción
+        secret = Buffer.from("35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21", "hex");
+        invalidatedCommitment = Buffer.from("f1c5e1ba7002e8f330511ec71593e8463e1e221adfcbaecc18998858345411d0", "hex");
+        nextWinnerCommitment = Buffer.from("862ba47251932d8f1c2f59df9acfeb5f9b1481927d3f9e2a5990af4adb8d3408", "hex");
+
+        // 2. Crear tokens de reputación para los jueces
+        judge1TokenId = "2da371e44ef2083041fa048a55db55f7013d81f3c12ac79c3f814a282e1c7839";
+
+        // 3. Crear la caja `game_resolution`
+        const numericalParams: bigint[] = [1616920n, 1000000n, 1000000n, 1616961n, 2n];
+        const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
+        const pkBytes = Buffer.from("02910cc52aa89e392d2715fc556aea54d5d4d81ccca937a11481771d37395c39b7", "hex");
+        const jsonBytes = stringToBytes("utf8", '{"title":"TEST V1","description":"","imageURL":"","webLink":"","serviceId":"d19a3da7d5a202f11a330dc5557c27ca0faa175ed59ee5ffaced72e6cb226858b72d","mirrorUrls":[]}');
+
+        gameResolutionContract.addUTxOs({
+            ergoTree: gameResolutionErgoTree.toHex(),
+            value: 1000000n,
+            assets: [{ tokenId: gameNftId, amount: 1n }],
+            creationHeight: 1616921,
+            additionalRegisters: {
+                R4: SInt(1).toHex(), // Estado: Resolución
+                R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
+                R6: SColl(SColl(SByte), judges).toHex(),
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, pkBytes), SLong(40n)).toHex(),
+                R9: SPair(SColl(SByte, pkBytes), SColl(SByte, jsonBytes)).toHex()
+            }
+        });
+        gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
+
+        // 4. Crear cajas `participation_resolved`
+        const invalidatedSolverIdBytes = Buffer.from("3962306666323433323336303463386466643032363265386136336263653139626335386438313339383663623139643465386437323161353762313566", "hex");
+        const invalidatedLogsBytes = Buffer.from("23739dc0c5f61dd85a363872cc337e57e109f1b04b945ad6790a293425150cc8", "hex");
+        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationResolvedErgoTree.toHex(),
+            value: 1000000n,
+            creationHeight: 1616921,
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, pkBytes).toHex(),
+                R5: SColl(SByte, invalidatedCommitment).toHex(),
+                R6: SColl(SByte, Buffer.from(gameNftId, "hex")).toHex(),
+                R7: SColl(SByte, invalidatedSolverIdBytes).toHex(),
+                R8: SColl(SByte, invalidatedLogsBytes).toHex(),
+                R9: SColl(SLong, [100n, 200n, 23n, 300n, 2n, 203n]).toHex(),
+            }
+        });
+        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+
+        const nextSolverIdBytes = Buffer.from("383532373865663838396264373063253337613330663638363338386231633364376266393931653264636462303364653232336563643738626336", "hex");
+        const nextLogsBytes = Buffer.from("4132b3d13f16f7ba7a2d0d3c926bb817987825793bec7e8379a0cc3c91ab75bc", "hex");
+        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationResolvedErgoTree.toHex(),
+            value: 1000000n,
+            creationHeight: 1616921,
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, pkBytes).toHex(),
+                R5: SColl(SByte, nextWinnerCommitment).toHex(),
+                R6: SColl(SByte, Buffer.from(gameNftId, "hex")).toHex(),
+                R7: SColl(SByte, nextSolverIdBytes).toHex(),
+                R8: SColl(SByte, nextLogsBytes).toHex(),
+                R9: SColl(SLong, [50n, 34n, 10n, 40n, 34n, 1200n, 20n]).toHex(),
+            }
+        });
+        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+
+        // 5. Crear cajas `reputation_proof` para los jueces (los votos)
+        const dummyTypeNftId = Buffer.from("f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8", "hex");
+        const judgePropositionBytes = Buffer.from("cedca8dc7be135c9ae7cae80a953cb3d798d4956cc7b3fac10a4cb1f4a092984", "hex");
+        const nullBytes = Buffer.from("6e756c6c", "hex");
+        reputationProofContract.addUTxOs(
+            { // Voto del Juez 1
+                creationHeight: 1616923,
+                ergoTree: reputationProofErgoTree.toHex(),
+                value: 1000000n,
+                assets: [{ tokenId: judge1TokenId, amount: 1n }],
+                additionalRegisters: {
+                    R4: SColl(SByte, dummyTypeNftId).toHex(),
+                    R5: SColl(SByte, invalidatedCommitment).toHex(),
+                    R6: SPair(SBool(true), SLong(1000000n)).toHex(),
+                    R7: SColl(SByte, judgePropositionBytes).toHex(),
+                    R8: SBool(false).toHex(),
+                    R9: SColl(SByte, nullBytes).toHex(),
+                }
+            }
+        );
+        judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
+
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = 1616961n + JUDGE_PERIOD;
+        const decrementedCounter = 1n;
+        const newNumericalParams = [1616920n, 1000000n, 1000000n, extendedDeadline, decrementedCounter];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(newFunds, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        ...gameResolutionBox.additionalRegisters,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(), // Nuevo candidato
+                        R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
+                    })
+            ])
+            .withDataFrom([judge1ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
+            .sendChangeTo(resolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+        // --- Aserciones ---
+        expect(executionResult).to.be.true;
+
+        const newGameBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newGameBox).to.not.be.undefined;
+
+        // 1. Fondos retornados al pool
+        expect(newGameBox.value).to.equal(newFunds);
+
+        // 2. El candidato a ganador ha sido actualizado
+        const newR5 = newGameBox.additionalRegisters.R5;
+        expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+
+        // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
+        const newR7 = newGameBox.additionalRegisters.R7;
+        expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
+
+        // 4. Las cajas gastadas ya no existen
+        expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
+        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
 });
