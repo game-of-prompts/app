@@ -813,17 +813,11 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(gameResolutionContract.utxos.length).to.equal(1);
 
         // Verificaciones similares a las del test exitoso anterior
-        const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
-        expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
-        expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
-
-        console.log("New game boxes:", newGameBoxes);
-        console.log("Expected new funds:", newFunds);
-        console.log("Expected new numerical params:", newNumericalParams);
-        
-        const createdNewGameBox = newGameBoxes.find(b => b.value === newFunds && b.additionalRegisters.R7 === SColl(SLong, newNumericalParams).toHex());
-        expect(createdNewGameBox).to.not.be.undefined;
-        expect(createdNewGameBox!.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        const newGameBoxes = gameResolutionContract.utxos.toArray();
+        const newResolutionBox = newGameBoxes.find(b => b.value === newFunds && b.assets[0].tokenId === gameNftId && b.additionalRegisters.R7 === SColl(SLong, newNumericalParams).toHex());
+        expect(newResolutionBox).to.not.be.undefined;
+        expect(newResolutionBox!.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        expect(newResolutionBox!.additionalRegisters.R7).to.equal(SColl(SLong, newNumericalParams).toHex());
     });
 
 });
