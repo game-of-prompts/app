@@ -122,7 +122,7 @@ export async function resolve_game(
 
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!,
+                ...hexToBytes(p.solverId_RawBytesHex)!, // TODO CHECK Buffer.from(p.solverId_RawBytesHex, 'utf-8'),
                 ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
                 ...secretS_bytes
