@@ -49,14 +49,13 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
 describe("Game Finalization (end_game)", () => {
   const mockChain = new MockChain({ height: 800_000 });
 
-  // --- Partes Involucradas ---
-  const resolver = mockChain.newParty("Resolver");
-  const creator = mockChain.newParty("GameCreator");
-  const winner = mockChain.newParty("Winner");
-  const loser = mockChain.newParty("Loser");
-  
   const devErgoTree = Address.fromBase58(DEV_ADDR_BASE58).ergoTree;
-  const developer = mockChain.addParty(devErgoTree, "Developer");
+
+  let resolver: ReturnType<MockChain["newParty"]>;
+  let creator: ReturnType<MockChain["newParty"]>;
+  let winner: ReturnType<MockChain["newParty"]>;
+  let loser: ReturnType<MockChain["newParty"]>;
+  let developer: ReturnType<MockChain["addParty"]>;
 
   // --- Constantes del Juego para la Prueba ---
   const deadline = 800_050;
@@ -77,19 +76,29 @@ describe("Game Finalization (end_game)", () => {
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     
   const gameResolutionErgoTree = compile(gameResolutionSourceWithHash);
-
-  // --- Partes de Contrato en la MockChain ---
-  const gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
-  const participationContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationContract");
   
   // --- Variables para el Estado de la Prueba ---
   let gameNftId: string;
   const winnerCommitment = "a1".repeat(32);
   const loserCommitment = "b2".repeat(32);
 
+  let gameResolutionContract: ReturnType<MockChain["newParty"]>;
+  let participationContract: ReturnType<MockChain["newParty"]>;
+
   beforeEach(() => {
     mockChain.reset({clearParties: true});
     mockChain.jumpTo(800_000);
+
+      // --- Partes Involucradas ---
+    resolver = mockChain.newParty("Resolver");
+    creator = mockChain.newParty("GameCreator");
+    winner = mockChain.newParty("Winner");
+    loser = mockChain.newParty("Loser");
+    developer = mockChain.addParty(devErgoTree, "Developer");
+
+    // --- Partes de Contrato en la MockChain ---
+    gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
+    participationContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationContract");
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
@@ -166,6 +175,9 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Assert ---
     expect(mockChain.execute(transaction, { signers: [resolver] })).to.be.true;
+
+    console.log("Winner Balance:", winner.balance.nanoergs);
+    console.log("Final Winner Prize:", finalWinnerPrize);
 
     expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
