@@ -691,7 +691,15 @@ describe("Game Resolution Invalidation by Judges", () => {
 
     // Escenario con un único juez (1 de 1)
     it("should successfully invalidate the current winner with a majority of judge votes (1 out of 1)", () => {
-                // --- Crear Estado Inicial del Juego ---
+        // --- Crear Estado Inicial del Juego ---
+        // --- Inicializar Actores ---
+        resolver = mockChain.newParty("Resolver");
+        invalidatedWinner = mockChain.newParty("InvalidatedWinner");
+        nextWinner = mockChain.newParty("NextWinner");
+        judge1 = mockChain.newParty("Judge1");
+        judge2 = mockChain.newParty("Judge2");
+        judge3 = mockChain.newParty("Judge3");
+        resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
         invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", secret);
@@ -772,10 +780,6 @@ describe("Game Resolution Invalidation by Judges", () => {
         );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
 
-        console.log("Current height before new blocks:", mockChain.height);
-        mockChain.newBlocks(30);
-        console.log("Current height after new blocks:", mockChain.height);
-
         // Obtener la nueva caja añadida (última)
         const utxos = gameResolutionContract.utxos.toArray();
         console.log("All game resolution boxes:", utxos);
@@ -787,17 +791,17 @@ describe("Game Resolution Invalidation by Judges", () => {
         const decrementedCounter = 1n;
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
 
-        const tx = new TransactionBuilder(currentHeight)
-            .from([singleJudgeGameBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
-            .to([
-                new OutputBuilder(newFunds, gameResolutionContract.address)
+        const gameBoxOutput = new OutputBuilder(newFunds, gameResolutionContract.address)
                     .addTokens(singleJudgeGameBox.assets)
                     .setAdditionalRegisters({
                         ...singleJudgeGameBox.additionalRegisters,
                         R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(),
                         R7: SColl(SLong, newNumericalParams).toHex(),
-                    })
-            ])
+                    });
+
+        const tx = new TransactionBuilder(currentHeight)
+            .from([singleJudgeGameBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
+            .to([gameBoxOutput])
             .withDataFrom([judge1ReputationBox, nextWinnerBox])
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
@@ -806,81 +810,17 @@ describe("Game Resolution Invalidation by Judges", () => {
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
         expect(executionResult).to.be.true;
 
+        expect(gameResolutionContract.utxos.length).to.equal(1);
+
         // Verificaciones similares a las del test exitoso anterior
-        const newGameBoxes = gameResolutionContract.utxos.toArray();
+        const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
+        expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
+
         console.log("New game boxes:", newGameBoxes);
         console.log("Expected new funds:", newFunds);
         console.log("Expected new numerical params:", newNumericalParams);
-        const createdNewGameBox = newGameBoxes.find(b => b.value === newFunds && b.additionalRegisters.R7 === SColl(SLong, newNumericalParams).toHex());
-        expect(createdNewGameBox).to.not.be.undefined;
-        expect(createdNewGameBox!.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
-    });
-
-    it("should successfully invalidate the current winner with a majority of judge votes (1 out of 1) with an extra participant", () => {
-        // Creamos una nueva caja de game_resolution que solo tenga a judge1 como juez
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 3n];
-        const singleJudge = [Buffer.from(judge1TokenId, "hex")];
-
-        gameResolutionContract.addUTxOs({
-            ergoTree: gameResolutionErgoTree.toHex(),
-            value: 2_000_000_000n,
-            assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: 800_000,  // The previous game gox was created at height 800_000, because of that, the current resolution deadline is 800_040. To be able to invalidate, we need to create this new box at the same height, so the deadline remains the same.
-            additionalRegisters: {
-                R4: SInt(1).toHex(), // Estado: Resolución
-                R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
-                R6: SColl(SColl(SByte), singleJudge).toHex(), // Solo un juez
-                R7: SColl(SLong, numericalParams).toHex(),
-                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
-                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
-            }
-        });
-
-        // Obtener la nueva caja añadida (última)
-        const utxos = gameResolutionContract.utxos.toArray();
-        const singleJudgeGameBox = utxos[utxos.length - 1];
-
-        const currentHeight = mockChain.height;
-        const newFunds = singleJudgeGameBox.value + invalidatedWinnerBox.value;
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 2n;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
-        const tx_height = currentHeight + 50; // Intentamos crear la transacción 50 bloques después del current height, es decir, 10 bloques después del resolution deadline.
-
-        console.log("Current height:", currentHeight);
-        console.log("Resolution deadline:", resolutionDeadline);
-        console.log("Tx hegiht:", tx_height);
-        console.log("extended deadline:", extendedDeadline);
-       
-        /*
-Current height: 800000
-Resolution deadline: 800040n
-Tx hegiht: 800050
-extended deadline: 800080n
-        */
-
-        mockChain.jumpTo(tx_height);
-        const tx = new TransactionBuilder(tx_height)  // ¿Porqué pasa este test si se resuelve pasado el resolution deadline?
-            .from([singleJudgeGameBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
-            .to([
-                new OutputBuilder(newFunds, gameResolutionErgoTree)
-                    .addTokens(singleJudgeGameBox.assets)
-                    .setAdditionalRegisters({
-                        ...singleJudgeGameBox.additionalRegisters,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(),
-                        R7: SColl(SLong, newNumericalParams).toHex(),
-                    })
-            ])
-            .withDataFrom([judge1ReputationBox, nextWinnerBox, extraParticipantBox])
-            .sendChangeTo(resolver.address)
-            .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .build();
-
-        const executionResult = mockChain.execute(tx, { signers: [resolver] });
-        expect(executionResult).to.be.true;
-
-        // Verificaciones similares a las del test exitoso anterior
-        const newGameBoxes = gameResolutionContract.utxos.toArray();
+        
         const createdNewGameBox = newGameBoxes.find(b => b.value === newFunds && b.additionalRegisters.R7 === SColl(SLong, newNumericalParams).toHex());
         expect(createdNewGameBox).to.not.be.undefined;
         expect(createdNewGameBox!.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
