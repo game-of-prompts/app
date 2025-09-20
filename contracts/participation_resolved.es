@@ -46,15 +46,10 @@
     val winnerCandidateCommitment = mainGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
     val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
 
-    if (isBeforeDeadline && isTheInvalidatedCandidate) {
+    val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
+    if (isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1) {
       // 3. Verificar que la transacción recrea la caja del juego correctamente según las reglas de invalidación.
-      val recreatedGameBox = OUTPUTS(0)
-      
-      // La caja recreada debe tener el mismo script que la original.
-      val scriptIsPreserved = recreatedGameBox.propositionBytes == mainGameBox.propositionBytes
-      
-      // El deadline debe extenderse por el período de juicio.
-      val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
+      val recreatedGameBox = recreatedGameBoxes(0)
       
       // El contador de participantes resueltos debe disminuir en 1.
       val oldResolvedCounter = mainGameBox.R7[Coll[Long]].get(4)
@@ -67,7 +62,7 @@
       val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
       val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
 
-      scriptIsPreserved && deadlineIsExtended && counterIsDecreased && fundsAreReturned && winnerIsChanged
+      counterIsDecreased && fundsAreReturned && winnerIsChanged
     } else {
       false
     }

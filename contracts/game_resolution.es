@@ -154,9 +154,12 @@
           allJudgesParticipate && isGoProofType && voteTargetCommitment == winnerCandidateCommitment
         })
       }
+
+      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
       
-      if (votesAreValid) {
-        val recreatedGameBox = OUTPUTS(0)
+      if (votesAreValid && recreatedGameBoxes.size == 1) {
+        
+        val recreatedGameBox = recreatedGameBoxes(0)
         val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH})
         val invalidatedCandidateBox = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
 
