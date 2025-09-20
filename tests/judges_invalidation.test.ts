@@ -258,14 +258,11 @@ describe("Game Resolution Invalidation by Judges", () => {
         const newR5 = newGameBox.additionalRegisters.R5;
         expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
         
-        // 3. El deadline de resolución se ha extendido
+        // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
         const newR7 = newGameBox.additionalRegisters.R7;
         expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
 
-        // 4. El contador de participantes resueltos ha disminuido
-        // (Verificación ya incluida en la aserción de R7)
-
-        // 5. Las cajas gastadas ya no existen
+        // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
         expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
@@ -692,6 +689,7 @@ describe("Game Resolution Invalidation by Judges", () => {
     // Escenario con un único juez (1 de 1)
     it("should successfully invalidate the current winner with a majority of judge votes (1 out of 1)", () => {
         // --- Crear Estado Inicial del Juego ---
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -707,25 +705,28 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
+        judge2TokenId = Buffer.from(randomBytes(32)).toString("hex");
+        judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
         const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
-        const singleJudge = [Buffer.from(judge1TokenId, "hex")];
+        const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 5,
+            creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
-                R6: SColl(SColl(SByte), singleJudge).toHex(), // Solo un juez
+                R6: SColl(SColl(SByte), judges).toHex(),
                 R7: SColl(SLong, numericalParams).toHex(),
                 R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
                 R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
             }
         });
+        gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
         participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
@@ -778,46 +779,71 @@ describe("Game Resolution Invalidation by Judges", () => {
                 }
             }
         );
+        reputationProofContract.addUTxOs(
+            { // Voto del Juez 2
+                creationHeight: mockChain.height - 10,  // Judge opinion was formed 10 blocks ago, after resolve the game (30 blocks ago) and before judge period ends.
+                ergoTree: reputationProofErgoTree.toHex(),
+                value: 1_000_000n,
+                assets: [{ tokenId: judge2TokenId, amount: 1n }],
+                additionalRegisters: {
+                    R4: SColl(SByte, dummyTypeNftId).toHex(),
+                    R5: SColl(SByte, invalidatedCommitment).toHex(),
+                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
+                    R8: SBool(false).toHex(),  // Considera inválido al candidato
+                    R9: SColl(SByte, new Uint8Array(0)).toHex(),
+                }
+            }
+        );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
+        judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
-        // Obtener la nueva caja añadida (última)
-        const utxos = gameResolutionContract.utxos.toArray();
-        console.log("All game resolution boxes:", utxos);
-        const singleJudgeGameBox = utxos[utxos.length - 1];
-
-        const currentHeight = mockChain.height;
-        const newFunds = singleJudgeGameBox.value + invalidatedWinnerBox.value;
+        const requiredVotes = 2; // (3 / 2) + 1 = 2
+        
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n;
+        const decrementedCounter = 1n; // 2 - 1
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
-
-        const gameBoxOutput = new OutputBuilder(newFunds, gameResolutionContract.address)
-                    .addTokens(singleJudgeGameBox.assets)
+        
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(newFunds, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
                     .setAdditionalRegisters({
-                        ...singleJudgeGameBox.additionalRegisters,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(),
-                        R7: SColl(SLong, newNumericalParams).toHex(),
-                    });
-
-        const tx = new TransactionBuilder(currentHeight)
-            .from([singleJudgeGameBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
-            .to([gameBoxOutput])
-            .withDataFrom([judge1ReputationBox, nextWinnerBox])
+                        ...gameResolutionBox.additionalRegisters,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(), // Nuevo candidato
+                        R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
+                    })
+            ])
+            .withDataFrom([judge1ReputationBox, judge2ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-
+            
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+        // --- Aserciones ---
         expect(executionResult).to.be.true;
 
-        expect(gameResolutionContract.utxos.length).to.equal(1);
+        const newGameBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newGameBox).to.not.be.undefined;
+        
+        // 1. Fondos retornados al pool
+        expect(newGameBox.value).to.equal(newFunds);
 
-        // Verificaciones similares a las del test exitoso anterior
-        const newGameBoxes = gameResolutionContract.utxos.toArray();
-        const newResolutionBox = newGameBoxes.find(b => b.value === newFunds && b.assets[0].tokenId === gameNftId && b.additionalRegisters.R7 === SColl(SLong, newNumericalParams).toHex());
-        expect(newResolutionBox).to.not.be.undefined;
-        expect(newResolutionBox!.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
-        expect(newResolutionBox!.additionalRegisters.R7).to.equal(SColl(SLong, newNumericalParams).toHex());
+        // 2. El candidato a ganador ha sido actualizado
+        const newR5 = newGameBox.additionalRegisters.R5;
+        expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        
+        // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
+        const newR7 = newGameBox.additionalRegisters.R7;
+        expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
+
+        // 4. Las cajas gastadas ya no existen
+        expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
+        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
 
 });
