@@ -601,7 +601,7 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
     console.log(`Searching for resolved participations for game ${gameNftId}`);
 
     while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/search`;
+        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
                 method: 'POST',
