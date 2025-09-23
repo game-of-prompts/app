@@ -146,13 +146,16 @@
             }))
         }
 
-        allVotesAreUnique && judgeVotes.forall( { (voteBox: Box) =>
-          val judgeTokenId = voteBox.tokens(0)._1
+        val votesIntegrity = judgeVotes.forall( { (voteBox: Box) =>
+          
+          val allJudgesParticipate = participatingJudges.exists({ (pJudge: Coll[Byte]) => pJudge == voteBox.tokens(0)._1 })
           val isGoProofType = voteBox.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID
-          val voteTargetCommitment = voteBox.R5[Coll[Byte]].get
-          val allJudgesParticipate = participatingJudges.exists({ (pJudge: Coll[Byte]) => pJudge == judgeTokenId })
-          allJudgesParticipate && isGoProofType && voteTargetCommitment == winnerCandidateCommitment
+          val correctVoteTargetCommitment = voteBox.R5[Coll[Byte]].get == winnerCandidateCommitment
+          
+          allJudgesParticipate && isGoProofType && correctVoteTargetCommitment
         })
+
+        allVotesAreUnique && votesIntegrity
       }
 
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
