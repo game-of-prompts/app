@@ -13,7 +13,7 @@ import {
 } from '@fleet-sdk/core';
 import { blake2b256 } from '@fleet-sdk/crypto';
 import { getReputationProofAddress }  from "$lib/ergo/contract";
-import { SString, hexToBytes } from '../utils';
+import { SString, hexToBytes, parseBox } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
 import { SPair } from '@fleet-sdk/serializer';
 import { reputation_proof, types } from '$lib/common/store';
@@ -177,12 +177,12 @@ export async function update_reputation_proof(
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
 
     // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
-    let typeNftBoxes = Array.from(await fetchTypeNfts(), ([k, v]) => v.box);
+    let typeNftBoxes = Array.from(await fetchTypeNfts(), ([k, v]) => v.box ? parseBox(v.box) : null);
 
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
-    let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.filter((e) => e.box_id !== input_proof.box_id).map((i) => i.box)];
+    let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.filter((e) => e.box_id !== input_proof.box_id).map((i) => parseBox(i.box))];
 
     const outputs: OutputBuilder[] = [];
 
