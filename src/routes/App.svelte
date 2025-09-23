@@ -103,7 +103,7 @@
 
             const proofs = await fetchReputationProofs(ergo, false, "judge", null);
 
-            if (proofs.size > 0) {
+            /*if (proofs.size > 0) {
                 let maxBurned = -Infinity;
                 let selectedProof = null;
 
@@ -118,6 +118,26 @@
                 if (selectedProof) {
                     reputation_proof.set(selectedProof);
                     console.log("Added judge proof with highest burned: ", maxBurned);
+                } else {
+                    console.log("No valid proof found.");
+                }
+            }*/
+
+            if (proofs.size > 0) {
+                let less = 18; // Max amount of boxes for a judge proof.   [TODO]   Reputation contract needs to be reimplemented with AVL tree to allow any amount of boxes.
+                let selectedProof = null;
+
+                for (const [key, proof] of proofs.entries()) {
+                    const amount = proof.number_of_boxes;
+                    if (amount < less) {
+                        less = amount;
+                        selectedProof = proof;
+                    }
+                }
+
+                if (selectedProof) {
+                    reputation_proof.set(selectedProof);
+                    console.log("Added judge proof with less boxes: ", less);
                 } else {
                     console.log("No valid proof found.");
                 }
