@@ -7,7 +7,7 @@ import {
     type InputBox
 } from '@fleet-sdk/core';
 import { SColl, SLong, SByte } from '@fleet-sdk/serializer';
-import { hexToBytes, utf8StringToCollByteHex } from '$lib/ergo/utils';
+import { hexToBytes } from '$lib/ergo/utils';
 import { getGopParticipationSubmittedErgoTreeHex } from '../contract'; // <-- Importación actualizada
 
 declare var ergo: any;
@@ -88,7 +88,7 @@ export async function submit_score(
         R4: SColl(SByte, playerPkBytes).toHex(),
         R5: SColl(SByte, commitmentC_bytes).toHex(),
         R6: SColl(SByte, gameNftId_bytes).toHex(),
-        R7: utf8StringToCollByteHex(solverIdString), 
+        R7: SColl(SByte, hexToBytes(solverIdString) ?? "").toHex(),
         R8: SColl(SByte, hashLogs_bytes).toHex(),
         R9: SColl(SLong, scoreList).toHex()
     });

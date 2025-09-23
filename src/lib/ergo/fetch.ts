@@ -489,11 +489,11 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
 
 async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBase | null> {
     try {
-        const playerPK_Hex = parseCollByteToHex(box.additionalRegisters.R4?.renderedValue);
-        const commitmentC_Hex = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
-        const gameNftId = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
-        const solverId_RawBytesHex = parseCollByteToHex(box.additionalRegisters.R7?.renderedValue);
-        const hashLogs_Hex = parseCollByteToHex(box.additionalRegisters.R8?.renderedValue);
+        const playerPK_Hex = box.additionalRegisters.R4?.renderedValue;
+        const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
+        const gameNftId = box.additionalRegisters.R6?.renderedValue;
+        const solverId_RawBytesHex = box.additionalRegisters.R7?.renderedValue;
+        const hashLogs_Hex = box.additionalRegisters.R8?.renderedValue;
         const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
 
         if (!playerPK_Hex || !commitmentC_Hex || !gameNftId || !solverId_RawBytesHex || !hashLogs_Hex) {
@@ -510,7 +510,7 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
             playerPK_Hex,
             commitmentC_Hex,
             solverId_RawBytesHex,
-            solverId_String: hexToUtf8(solverId_RawBytesHex) || undefined, 
+            solverId_String: solverId_RawBytesHex, 
             hashLogs_Hex,
             scoreList,
             reputationOpinions: await fetchReputationOpinionsForTarget("participation", box.boxId)

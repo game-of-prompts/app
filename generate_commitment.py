@@ -27,7 +27,7 @@ def generate_gop_commitment(
     """
     try:
         # 1. Convert solver_id to bytes (UTF-8)
-        solver_id_bytes = solver_id.encode('utf-8')
+        solver_id_bytes = binascii.unhexlify(solver_id)
 
         # 2. Convert score (Long) to bytes
         # ErgoScript Long is 64-bit (8 bytes), big-endian, signed.

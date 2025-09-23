@@ -6,7 +6,7 @@ import {
     SConstant
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address, utf8StringToCollByteHex } from '$lib/ergo/utils';
+import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ParticipationSubmitted, type ParticipationResolved } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex } from '../contract';
@@ -106,7 +106,7 @@ export async function include_omitted_participation(
                 R4: SColl(SByte, hexToBytes(omittedParticipation.playerPK_Hex) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex) ?? "").toHex(),
                 R6: SColl(SByte, hexToBytes(omittedParticipation.gameNftId) ?? "").toHex(),
-                R7: utf8StringToCollByteHex(omittedParticipation.solverId_String ?? ""), 
+                R7: SColl(SByte, (hexToBytes(omittedParticipation.solverId_String ?? "")) ?? "").toHex(), 
                 R8: SColl(SByte, hexToBytes(omittedParticipation.hashLogs_Hex) ?? "").toHex(),
                 R9: SColl(SLong, omittedParticipation.scoreList.map(s => BigInt(s))).toHex()
         });

@@ -51,7 +51,13 @@ export async function judges_invalidate(
         throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
     }
 
-    const dataInputs = [...judgeVoteDataInputs, ...participations.map(p => p.box)]
+    const dataInputs = [...(judgeVoteDataInputs.map(e => parseBox(e))), ...participations.map(p => parseBox(p.box))];
+
+    console.log("PARTICIPACION to invalidate: ", invalidatedParticipation.commitmentC_Hex, invalidatedParticipation.box);
+    // Rendered: "410370ef7377b9c493fef9d11ae1eac7ece6ba25f4ceceea53650a7456f3194c"
+    // Serialized from judge box: "0e4034313033373065663733373762396334393366656639643131616531656163376563653662613235663463656365656135333635306137343536663331393463"
+    // Serialized from participation box: "0e20410370ef7377b9c493fef9d11ae1eac7ece6ba25f4ceceea53650a7456f3194c"
+    console.log("JUDGES: ", judgeVoteDataInputs);
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
@@ -203,7 +209,15 @@ export async function judges_invalidate(
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        console.log("Unsigned transaction: ", unsignedTransaction.toEIP12Object())
+
+        const signedTransaction = await Promise.race([
+            ergo.sign_tx(unsignedTransaction.toEIP12Object()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("sign_tx timeout")), 15000))
+        ]);
+
+        console.log("Signed transaction: ", signedTransaction)
+
         const txId = await ergo.submit_tx(signedTransaction);
 
         console.log(`Candidate invalidation transaction successfully submitted. ID: ${txId}`);

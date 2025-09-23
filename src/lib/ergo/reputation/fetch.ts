@@ -4,21 +4,13 @@ import { get } from "svelte/store";
 import { types, connected, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofTemplateHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
-import { ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
+import { type Amount, type Box, ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { GAME, JUDGE, PARTICIPATION } from "./types";
 
 const ergo_tree = getReputationProofErgoTreeHex();
 const ergo_tree_hash = getReputationProofTemplateHash();
 
-type RegisterValue = { renderedValue: string; serializedValue: string; };
-type ApiBox = {
-    boxId: string; value: string | bigint; assets: { tokenId: string; amount: string | bigint }[]; ergoTree: string; creationHeight: number;
-    additionalRegisters: {
-        R4?: RegisterValue; R5?: RegisterValue; R6?: RegisterValue; R7?: RegisterValue; R8?: RegisterValue; R9?: RegisterValue;
-    };
-    index: number; transactionId: string;
-};
 
 function parseR6(r6RenderedValue: string): { isLocked: boolean; totalSupply: number } {
     try {
@@ -95,7 +87,7 @@ const ProofType = {
     judge: JUDGE
 }
 
-function createRPBoxFromApiBox(box: ApiBox, tokenId: string, availableTypes: Map<string, TypeNFT>): RPBox | null {
+function createRPBoxFromApiBox(box: Box<Amount>, tokenId: string, availableTypes: Map<string, TypeNFT>): RPBox | null {
     if (box.ergoTree !== ergo_tree) return null;
     if (!box.assets?.length || !box.additionalRegisters.R4 || !box.additionalRegisters.R6 || !box.additionalRegisters.R7) return null;
 
@@ -120,14 +112,10 @@ function createRPBoxFromApiBox(box: ApiBox, tokenId: string, availableTypes: Map
         box_content = {};
     }
     
-    const object_pointer_for_box = hexToUtf8(box.additionalRegisters.R5?.renderedValue ?? "") ?? "";
+    const object_pointer_for_box = box.additionalRegisters.R5?.renderedValue ?? "";
 
     return {
-        box: {
-            boxId: box.boxId, value: box.value, assets: box.assets, ergoTree: box.ergoTree, creationHeight: box.creationHeight,
-            additionalRegisters: Object.entries(box.additionalRegisters).reduce((acc, [key, value]) => { acc[key] = value.serializedValue; return acc; }, {} as { [key: string]: string; }),
-            index: box.index, transactionId: box.transactionId
-        },
+        box: box,
         box_id: box.boxId,
         type: typeNftForBox,
         token_id: tokenId,
@@ -197,7 +185,7 @@ export async function fetchReputationProofs(
                 continue;
             }
 
-            for (const box of json_data.items as ApiBox[]) {
+            for (const box of json_data.items as Box<Amount>[]) {
                 // Basic validation to ensure it's a potential reputation proof box
                 if (box.ergoTree === ergo_tree && box.assets?.length > 0) {
                     const rep_token_id = box.assets[0].tokenId;
@@ -249,7 +237,7 @@ export async function fetchReputationProofByTokenId(
             return null;
         }
         const data = await resp.json();
-        const items: ApiBox[] = data.items || [];
+        const items: Box<Amount>[] = data.items || [];
         if (items.length === 0) {
             console.warn(`No boxes returned for token ${tokenId}`);
             return null;

@@ -137,11 +137,6 @@ export function parseIntFromHex(renderedValue: any): number | null {
     } catch (e) { return null; }
 }
 
-export function utf8StringToCollByteHex(inputString: string): string {
-    const bytes = stringToBytes('utf8', inputString);
-    return SColl(SByte, bytes).toHex();
-}
-
 export function bigintToLongByteArray(value: bigint): Uint8Array {
     const MIN_LONG = -(2n ** 63n);
     const MAX_LONG = (2n ** 63n) - 1n;

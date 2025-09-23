@@ -7,7 +7,7 @@ import {
     type Amount,
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, utf8StringToCollByteHex } from '$lib/ergo/utils';
+import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
@@ -192,7 +192,7 @@ export async function resolve_game(
                 R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
                 R6: SColl(SByte, hexToBytes(p.gameNftId) ?? "").toHex(),
-                R7: utf8StringToCollByteHex(p.solverId_String ?? ""), 
+                R7: SColl(SByte, hexToBytes(p.solverId_String ?? "") ?? "").toHex(), 
                 R8: SColl(SByte, hexToBytes(p.hashLogs_Hex) ?? "").toHex(),
                 R9: SColl(SLong, p.scoreList.map(s => BigInt(s))).toHex()
             });
