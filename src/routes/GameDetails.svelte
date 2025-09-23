@@ -358,18 +358,11 @@
             })
 
             const judgeInvalidVotesDataInputsBoxes = judgeInvalidVotesDataInputs.map(([Key, value]) => {
-                const boxes = value.current_boxes.filter((box) => {
+                return value.current_boxes.filter((box) => {
                     return box.polarization === false && box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION;
-                })
-                const rp = boxes[0];
-                const box = rp.box;
-                console.log("OPINION pointer ", rp.object_pointer)
-                console.log("OPINION r5: ", box.additionalRegisters.R5);
-                box.additionalRegisters.R5 = "0e20410370ef7377b9c493fef9d11ae1eac7ece6ba25f4ceceea53650a7456f3194c";
-                return box;
+                })[0].box;
             });
             
-            console.log("game box ", game.box)
             const otherParticipations: ParticipationResolved[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
 
             transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, otherParticipations, judgeInvalidVotesDataInputsBoxes);

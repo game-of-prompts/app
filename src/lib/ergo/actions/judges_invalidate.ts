@@ -53,12 +53,6 @@ export async function judges_invalidate(
 
     const dataInputs = [...(judgeVoteDataInputs.map(e => parseBox(e))), ...participations.map(p => parseBox(p.box))];
 
-    console.log("PARTICIPACION to invalidate: ", invalidatedParticipation.commitmentC_Hex, invalidatedParticipation.box);
-    // Rendered: "410370ef7377b9c493fef9d11ae1eac7ece6ba25f4ceceea53650a7456f3194c"
-    // Serialized from judge box: "0e4034313033373065663733373762396334393366656639643131616531656163376563653662613235663463656365656135333635306137343536663331393463"
-    // Serialized from participation box: "0e20410370ef7377b9c493fef9d11ae1eac7ece6ba25f4ceceea53650a7456f3194c"
-    console.log("JUDGES: ", judgeVoteDataInputs);
-
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
     const validParticipations: ParticipationResolved[] = [];
