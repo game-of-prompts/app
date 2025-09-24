@@ -247,8 +247,6 @@ export async function update_reputation_proof(
         const signedTransaction = await ergo.sign_tx(unsignedTransaction);
         const transactionId = await ergo.submit_tx(signedTransaction);
 
-
-
         console.log("Transaction ID -> ", transactionId);
         return transactionId;
     } catch (e) {
