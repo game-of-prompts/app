@@ -1,8 +1,3 @@
-En game.es Se deberá de juntar R4 y R8 en algun momento.   Y R9 debería de ser Coll[Coll[Byte]] para acceder a los detalles del juego.
-
-Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que ser siempre el mismo, y puediendo ser un contrato ... por lo que en lugar de ser una clave publica debe ser una dirección ...
-
-
 ### Acciones
 
 - Estado 1 (activo)
@@ -58,23 +53,45 @@ Asegurarse de que en el sistema de reputación se aseguran R7, sin que tenga que
 
 
 
-# Agregaciones al contrato
+
+
+- Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
+- ¿Cada participación debería de tener un NFT a modo de trazabilidad? Esto asegura que no se puedan duplicar participaciones si copian el commitment.
+- Agregar InvalidatedParticipation.   En realidad no debería de hacer falta crear una caja para esa participación. ¿Y si el token de la participación se queda en la caja del juego? Si el token se encuentra en el contrato y ademas a ese token mas de la mitad de los jueces han opinado en negativo ... entonces fue una participación invalidada.
+
+
+
 
 ##### Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
 Actualmente, esto se puede dar, ya que aunque un conjunto mayoritario de los jueces opine en contra de la participacion candidata deberá haber alguien que gaste el game_resolution demostrando esas opiniones. Pero no hay una condición que obligue al creador a demostrar lo contrario si va a resolver
 
-Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs).
+Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs). --> Esto es complicado de hacer, ya que mostrar todos los datainputs es dificil y en el caso de la implementación de las pruebas con merkles tambien. 
+  
+Tal vez lo mejor es implementar lo que hay abajo:
 
 
 ##### judgesInvalidate  debería de permitirse que en la misma transaccion se agregue la prueba de reputación (en caso de que sea posible, simplemente implementar).
 Actualmente, el ultimo juez debe de subir su opinion, y despues, cualquiera gastar el contrato principal demostrando las opiniones.  
 
-Permitir hacer ambas cosas es una mejora de UX.
+Permitir hacer ambas cosas es una mejora de UX.   Ademas, nos evita tener que implementar lo de arriba.
 
-~~##### Limite de invalidacion por jueces, en caso de superarse, se cancela el juego.~~
-~~El creador podría agregar muchas participaciones para bloquear la resolución (ya que los jueces no terminarían nunca, cada vez se extiende el tiempo de juicio).~~
-~~Aunque esto no es necesario ya que el creador debería de gastar para pagar todas las participaciones ... que no irán para él.  ~~
-~~Asi est no es necesario controlarlo~~
+
+
+
+### Optimización de participaciones.
+
+Las transacciones tienen una cantidad máxima de inputs que pueden gastar, ya que hay un limte de bytes.   Esto implica que hay un limite de participaciones, ya que no se podrá resolver el juego con todas a la vez ...
+
+Solución:
+- Permitir resolver el juego con N participaciones (game_active -> game_resolved) y despues el creador tiene X tiempo para agregar omitidas, ¿tal vez por lotes?, de forma que X es menor que JUDGE_TIME.  X puede ser una constante, por ejemplo 30 bloques (1 hora aprox.)
+
+- Otra solución podría usar chained tx. de forma que en lugar de 30 bloques debe de hacerse en el mismo. ¿?  -> El problema de esto es que la chained tx. se podría aprobar a mitad solo... Lo cual vuelve a requerir aumentar a 30 bloques de margen.
+
+- Otra solución complementaria puede ser que la penalización del stake por omisión de participación sea menor en función del bloque (cada vez penaliza mas) en caso de que se hayan agregado ya N participaciones (aunque siempre que la participacion omitida sea de un bloque posterior y no anterior a la mas nueva).
+
+
+## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp
+
 
 ##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
@@ -87,6 +104,3 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - N: factor constante.
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
-
-
-##### Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
