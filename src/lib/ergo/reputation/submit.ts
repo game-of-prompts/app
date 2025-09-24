@@ -198,6 +198,12 @@ export async function update_reputation_proof(
         amount: token_amount.toString()
     });
 
+    const propositionBytes = hexToBytes(creatorP2PKAddress.ergoTree);
+    if (!propositionBytes) {
+        throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
+    }
+    const hashedProposition = blake2b256(propositionBytes);
+
     // If splitting, create a change box to send the remaining tokens back to the same contract
     if (input_proof.token_amount - token_amount > 0) {
         outputs.push(
@@ -207,15 +213,16 @@ export async function update_reputation_proof(
                 amount: (input_proof.token_amount - token_amount).toString()
             })
             // The change box must retain the original registers
-            .setAdditionalRegisters(input_proof.box.additionalRegisters)
+            .setAdditionalRegisters({
+                R4: SColl(SByte, hexToBytes(input_proof.type.tokenId) ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(input_proof.object_pointer) ?? "").toHex(),
+                R6: tupleToSerialized(input_proof.is_locked, total_supply),
+                R7: SColl(SByte, hashedProposition).toHex(),
+                R8: booleanToSerializer(input_proof.polarization),
+                R9: SString(typeof(input_proof.content) === "object" ? JSON.stringify(input_proof.content): input_proof.content ?? "")
+            })
         );
     }
-    
-    const propositionBytes = hexToBytes(creatorP2PKAddress.ergoTree);
-    if (!propositionBytes) {
-        throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
-    }
-    const hashedProposition = blake2b256(propositionBytes);
 
     new_proof_output.setAdditionalRegisters({
         R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
