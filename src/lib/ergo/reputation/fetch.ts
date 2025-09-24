@@ -208,7 +208,7 @@ export async function fetchReputationProofs(
             try {
                 // Delegate the fetching and construction of the proof to the specialized function
                 const proof = await fetchReputationProofByTokenId(tokenId, ergo);
-                if (proof) {
+                if (proof && proof.current_boxes.some(b => b.type.tokenId === JUDGE && b.object_pointer === proof.token_id)) {
                     proofs.set(tokenId, proof);
                 }
                 // `fetchReputationProofByTokenId` already handles validation and logging for invalid proofs (e.g., hash conflicts)
