@@ -181,7 +181,7 @@ export async function update_reputation_proof(
 
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
-    const inputs: Box<Amount>[] = input_proof ? [input_proof.box, ...utxos] : utxos;
+    const inputs: Box<Amount>[] = input_proof ? [parseBox(input_proof.box), ...utxos] : utxos;
     let dataInputs = [...typeNftBoxes, ...proof?.current_boxes.filter((e) => e.box_id !== input_proof.box_id).map((i) => parseBox(i.box))];
 
     const outputs: OutputBuilder[] = [];
