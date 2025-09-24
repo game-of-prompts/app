@@ -204,7 +204,6 @@ export async function update_reputation_proof(
     }
     const hashedProposition = blake2b256(propositionBytes);
 
-    // If splitting, create a change box to send the remaining tokens back to the same contract
     if (input_proof.token_amount - token_amount > 0) {
         outputs.push(
             new OutputBuilder(BigInt(input_proof.box.value), ergo_tree_address)
@@ -212,7 +211,6 @@ export async function update_reputation_proof(
                 tokenId: input_proof.token_id,
                 amount: (input_proof.token_amount - token_amount).toString()
             })
-            // The change box must retain the original registers
             .setAdditionalRegisters({
                 R4: SColl(SByte, hexToBytes(input_proof.type.tokenId) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(input_proof.object_pointer) ?? "").toHex(),
