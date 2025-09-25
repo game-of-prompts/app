@@ -81,7 +81,7 @@ export interface GameResolution {
     resolutionDeadline: number;
     resolvedCounter: number;
     revealedS_Hex: string;
-    winnerCandidateCommitment: string;
+    winnerCandidateCommitment: string|null;
     judges: string[];
     originalDeadline: number;
     creatorStakeNanoErg: bigint;

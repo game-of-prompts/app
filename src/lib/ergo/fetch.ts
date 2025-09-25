@@ -105,9 +105,9 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         }
         const gameId = box.assets[0].tokenId;
 
-        // NEW: R4 is now game state, which we can optionally validate.
-        // const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-        // if (gameState !== 0) throw new Error("R4 indicates incorrect game state.");
+        // R4 is now game state, which we can optionally validate.
+        const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        if (gameState !== 0) throw new Error("R4 indicates incorrect game state.");
 
         // R5 (previously R4): creatorInfo (creator PK, commission)
         const r5Value = JSON.parse(box.additionalRegisters.R5?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
@@ -250,16 +250,16 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             return null;
         };
 
-        // NEW: R4 is game state.
-        // const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-        // if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
+        // R4 is game state.
+        const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
         
         // R5: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
         const r5Value = getArrayFromValue(box.additionalRegisters.R5?.renderedValue);
         if (!r5Value || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
         const revealedS_Hex = parseCollByteToHex(r5Value[0]);
         const winnerCandidateCommitment = parseCollByteToHex(r5Value[1]);
-        if (!revealedS_Hex || !winnerCandidateCommitment) throw new Error("Could not parse R5.");
+        if (!revealedS_Hex ) throw new Error("Could not parse R5.");
         
         // R6: Coll[Coll[Byte]] -> judges
         const judges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
@@ -287,8 +287,6 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const gameDetailsHex = r9Value[1];
         if (!originalCreatorPK_Hex || !gameDetailsHex) throw new Error("Could not parse R9.");
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
-
-        // --- FINAL OBJECT CONSTRUCTION ---
         
         return {
             platform: new ErgoPlatform(), 
@@ -299,7 +297,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             resolutionDeadline: Number(resolutionDeadline), 
             resolvedCounter: Number(resolvedCounter), 
             revealedS_Hex, 
-            winnerCandidateCommitment, 
+            winnerCandidateCommitment: winnerCandidateCommitment || null, 
             judges,
             originalDeadline: Number(originalDeadline), 
             creatorStakeNanoErg, 
