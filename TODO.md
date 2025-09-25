@@ -40,6 +40,7 @@
 
         Tambien debe haber una formula que nos indique a partir de que umbral de premio al creador le es rentable ser malicioso (siempre y cuando tenga a los jueces comprados). Esto es: la suma de los ERGs quemados de todos los jueces + (?) * la comisión del juego actual + (?) * historico de otros juegos del creador.  En referencia a esto último, el creador debería identificarse con su prueba de reputación (agregandola en game info) ya que el contrato del creador puede variar dependiendo de la configuracion (parte a los jueces, referidos, etc ...)
 
+[] Use CONTEXT.preHeader.timestamp  en lugar de HEIGHT
 [] GameInfo without JSON
 [] Allow for P2SH
 [x] Check constants on fetch.
