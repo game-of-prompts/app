@@ -8,6 +8,7 @@
     import GameCard from './GameCard.svelte';
     import { onDestroy } from 'svelte';
     import Return from './Return.svelte';
+    import { update_reputation_proof } from '$lib/ergo/reputation/submit';
 
 	let proof: ReputationProof | undefined = undefined;
 
@@ -43,6 +44,16 @@
 		[JUDGE]: 'Judge',
 		[OTHER]: 'Object Pointer'
 	};
+
+    let newOpinion: string = "";
+    let polarization: boolean = true;
+	let showOpinionForm: boolean = false;
+
+	async function handleOpinionSubmit() {
+        if (!proof) return;
+        await update_reputation_proof("judge", proof.token_id, polarization, newOpinion);
+        newOpinion = "";
+    }
 </script>
 
 {#if proof}
@@ -51,11 +62,11 @@
 
 <div class="show-judge-container">
 	<div class="hero-section text-center">
-		<h2 class="project-title">Reputation Proof</h2>
+		<h2 class="project-title">Reputation Proof - Judge</h2>
 		{#if proof}
-			<p class="subtitle">Details of the selected reputation proof.</p>
+			<p class="subtitle">Details of the selected judge.</p>
 		{:else}
-			<p class="subtitle">Details of your reputation proof as a judge.</p>
+			<p class="subtitle">Details of your current judge.</p>
 		{/if}
 	</div>
 
@@ -69,8 +80,45 @@
 				<li><strong>Owner Address:</strong> {displayProof.blake_owner_script}</li>
 			</ul>
 
+			{#if proof}
+				<div class="opinion-form mt-6 text-sm">
+					<button
+						class="flex items-center justify-between w-full px-3 py-2 rounded-md border bg-card hover:bg-accent hover:text-accent-foreground transition-colors"
+						on:click={() => (showOpinionForm = !showOpinionForm)}
+					>
+						<span class="font-medium">Give your opinion about this Judge</span>
+						<span class="ml-1">{showOpinionForm ? "▲" : "▼"}</span>
+					</button>
+
+					{#if showOpinionForm}
+						<div class="mt-2 p-3 rounded-md border bg-card space-y-2">
+							<textarea
+								bind:value={newOpinion}
+								placeholder="Optionally, write your opinion..."
+								class="w-full border border-input rounded p-2 resize-none focus:ring-1 focus:ring-primary focus:outline-none min-h-[60px] text-sm"
+							></textarea>
+
+							<div class="flex items-center gap-4">
+								<label class="flex items-center gap-1 cursor-pointer text-sm">
+									<input type="radio" bind:group={polarization} value={true} class="accent-green-500" />
+									Positive
+								</label>
+								<label class="flex items-center gap-1 cursor-pointer text-sm">
+									<input type="radio" bind:group={polarization} value={false} class="accent-red-500" />
+									Negative
+								</label>
+							</div>
+
+							<Button on:click={handleOpinionSubmit} disabled={!newOpinion.trim()} size="sm">
+								Submit
+							</Button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
 			{#if displayProof.current_boxes && displayProof.current_boxes.length > 0}
-				<h3 class="section-title mt-8">Opinions Issued (Boxes)</h3>
+				<h3 class="section-title mt-8">Opinions Issued</h3>
 				<div class="filter-menu">
 					<button class="filter-badge" class:active={selectedType === GAME} on:click={() => (selectedType = GAME)}>Games</button>
 					<button class="filter-badge" class:active={selectedType === PARTICIPATION} on:click={() => (selectedType = PARTICIPATION)}>Participations</button>
@@ -131,6 +179,7 @@
 					{/if}
 				</div>
 			{/if}
+
 		{:else}
 			<div class="no-proof text-center py-12">
 				<h3 class="text-2xl font-bold text-red-500 mb-4">No Reputation Proof Found</h3>
