@@ -46,6 +46,7 @@
 [x] Check constants on fetch.
 
 [] Poker
+[] Contratos satélites
 
 ##### game-service-factory
 [] Game obfuscated
@@ -55,22 +56,23 @@
 
 
 
+### Sobre fetch e indentación
+- Las participaciones y juegos gastados se pueden obtener de la api de cajas historicas.  Pero si no tiene utilidad mantener el estado no debe de dejarse, no es limpio.
+
+
+
 ### Participaciones en el contrato
-- Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
-- ¿Cada participación debería de tener un NFT a modo de trazabilidad? Esto asegura que no se puedan duplicar participaciones si copian el commitment.
-- SI se utilzia un merkle tree a partir de game resolution con las participaciones ... tal vez no es necesario resolved counter.
-- Agregar InvalidatedParticipation.   En realidad no debería de hacer falta crear una caja para esa participación. ¿Y si el token de la participación se queda en la caja del juego? Si el token se encuentra en el contrato y ademas a ese token mas de la mitad de los jueces han opinado en negativo ... entonces fue una participación invalidada.
+- [Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es]
 
 
 
 
-##### Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
+### Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
 Actualmente, esto se puede dar, ya que aunque un conjunto mayoritario de los jueces opine en contra de la participacion candidata deberá haber alguien que gaste el game_resolution demostrando esas opiniones. Pero no hay una condición que obligue al creador a demostrar lo contrario si va a resolver
 
 Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs). --> Esto es complicado de hacer, ya que mostrar todos los datainputs es dificil y en el caso de la implementación de las pruebas con merkles tambien. 
   
 Tal vez lo mejor es implementar lo que hay abajo:
-
 
 ##### judgesInvalidate  debería de permitirse que en la misma transaccion se agregue la prueba de reputación (en caso de que sea posible, simplemente implementar).
 Actualmente, el ultimo juez debe de subir su opinion, y despues, cualquiera gastar el contrato principal demostrando las opiniones.  
@@ -86,12 +88,29 @@ AUNQUE --- Realmente no es necesario, simplemente asumamos que es necesario que 
 
 Las transacciones tienen una cantidad máxima de inputs que pueden gastar, ya que hay un limte de bytes.   Esto implica que hay un limite de participaciones, ya que no se podrá resolver el juego con todas a la vez ...
 
-Solución:
-- Permitir resolver el juego con N participaciones (game_active -> game_resolved) y despues el creador tiene X tiempo para agregar omitidas, ¿tal vez por lotes?, de forma que X es menor que JUDGE_TIME.  X puede ser una constante, por ejemplo 30 bloques (1 hora aprox.)
+Soluciones: 
 
-- Otra solución podría usar chained tx. de forma que en lugar de 30 bloques debe de hacerse en el mismo. ¿?  -> El problema de esto es que la chained tx. se podría aprobar a mitad solo... Lo cual vuelve a requerir aumentar a 30 bloques de margen.
+~~ Permitir resolver el juego con N participaciones (game_active -> game_resolved) y despues el creador tiene X tiempo para agregar omitidas, ¿tal vez por lotes?, de forma que X es menor que JUDGE_TIME.  X puede ser una constante, por ejemplo 30 bloques (1 hora aprox.) ~~
 
-- Otra solución complementaria puede ser que la penalización del stake por omisión de participación sea menor en función del bloque (cada vez penaliza mas) en caso de que se hayan agregado ya N participaciones (aunque siempre que la participacion omitida sea de un bloque posterior y no anterior a la mas nueva).
+~~Otra solución podría usar chained tx. de forma que en lugar de 30 bloques debe de hacerse en el mismo. ¿?  -> El problema de esto es que la chained tx. se podría aprobar a mitad solo... Lo cual vuelve a requerir aumentar a 30 bloques de margen.~~
+
+~~ Otra solución complementaria puede ser que la penalización del stake por omisión de participación sea menor en función del bloque (cada vez penaliza mas) en caso de que se hayan agregado ya N participaciones (aunque siempre que la participacion omitida sea de un bloque posterior y no anterior a la mas nueva). ~~ 
+
+
+- SI se utilzia un merkle tree a partir de game resolution con las participaciones ... (tal vez no es necesario resolved counter).
+  Esto permite que el creador declare que participaciones están resueltas, sin tener que gastarlas todas en la tx. de resolución. Ni tampoco mostrarlas como datainputs.
+  ¿
+  Es necesario tener dos estados en las participaciones? Tal vez no es necesario gastarlas hasta el final ... Incluso tal vez no es necesario gastarlas, simplemente el ganador es quien puede obtener cada participacion ... aunque esto requiere de un estado de "juego terminado".
+
+  Pero, durante la fase de resolución, ¿como diferenciamos entre las participaciones que el creador todavía no ha procesado y las que ha omitido?
+  - Una solución a esto puede ser el actual resolved counter:
+   1. Computa todas las participaciones validas off-chain. 
+   2. Resuelve la caja del juego agregando la raiz de un Merkle tree de todas las participaciones ordenadas por altura:asc y <>.  
+        TODO: Hay que terminar de razonar porque ordenarlo asi, ya que implicará posiblemente no tener el mas alto al principio ... lo cual de mas trabajo a los jueces.
+                Si consideramos que se ordena por score:desc y altura:asc está directamente dando la puntuación ganadora de primeras.  <-- ESTO TIENE MAS SENTIDO.  Asi los jueces no trabajan de más por nada.
+
+
+
 
 
 ## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp
