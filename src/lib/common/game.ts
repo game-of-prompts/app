@@ -168,6 +168,11 @@ export interface ParticipationResolved extends ParticipationBase {
     spent: boolean; // Indica si la caja ya fue gastada.
 }
 
+export interface ParticipationInvalidated extends ParticipationBase {
+    status: 'Invalidated';
+    spent: boolean; // Indica si la caja ya fue gastada.
+}
+
 // =================================================================
 // === TIPOS DE UNIÓN Y FUNCIONES DE UTILIDAD
 // =================================================================

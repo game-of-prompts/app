@@ -58,6 +58,7 @@
 
 - Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
 - ¿Cada participación debería de tener un NFT a modo de trazabilidad? Esto asegura que no se puedan duplicar participaciones si copian el commitment.
+- SI se utilzia un merkle tree a partir de game resolution con las participaciones ... tal vez no es necesario resolved counter.
 - Agregar InvalidatedParticipation.   En realidad no debería de hacer falta crear una caja para esa participación. ¿Y si el token de la participación se queda en la caja del juego? Si el token se encuentra en el contrato y ademas a ese token mas de la mitad de los jueces han opinado en negativo ... entonces fue una participación invalidada.
 
 
@@ -76,6 +77,8 @@ Actualmente, el ultimo juez debe de subir su opinion, y despues, cualquiera gast
 
 Permitir hacer ambas cosas es una mejora de UX.   Ademas, nos evita tener que implementar lo de arriba.
 
+
+AUNQUE --- Realmente no es necesario, simplemente asumamos que es necesario que la participacion se invalide antes del deadline.    Se puede agregar incentivo al ejecutor de la invalidación ... 
 
 
 

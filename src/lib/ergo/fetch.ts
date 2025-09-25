@@ -10,6 +10,7 @@ import {
     type ParticipationBase,
     type ParticipationSubmitted,
     type ParticipationResolved,
+    ParticipationInvalidated,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -642,4 +643,8 @@ export async function fetchResolvedParticipations(gameNftId: string): Promise<Pa
     
     console.log(`Found ${participations.length} resolved participations for game ${gameNftId}.`);
     return participations;
+}
+
+export async function fetchInvalidatedParticipations(gameNftId: string): Promise<ParticipationInvalidated[]> {
+    
 }
