@@ -55,7 +55,7 @@
 
 
 
-
+### Participaciones en el contrato
 - Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es
 - ¿Cada participación debería de tener un NFT a modo de trazabilidad? Esto asegura que no se puedan duplicar participaciones si copian el commitment.
 - SI se utilzia un merkle tree a partir de game resolution con las participaciones ... tal vez no es necesario resolved counter.
