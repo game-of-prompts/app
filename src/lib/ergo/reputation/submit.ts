@@ -43,7 +43,6 @@ export function booleanToSerializer(value: boolean): string {
 }
 
 export async function generate_reputation_proof(burned_amount: BigInt): Promise<string | null> {
-    const proof = get(reputation_proof);
     const token_amount = REPUTATION_PROOF_TOTAL_SUPPLY;
     const total_supply = REPUTATION_PROOF_TOTAL_SUPPLY;
     const is_locked = false;
@@ -72,15 +71,10 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
       alert("Could not fetch the Type NFT box. Aborting transaction.");
       return null;
     }
-    const typeNftBox = (await typeNftBoxResponse.json()).items[0];
-
-    console.log("type nft box ", typeNftBox)
 
     // Inputs for the transaction
     const utxos = await ergo.get_utxos();
     const inputs: Box<Amount>[] = utxos;
-    let dataInputs = [typeNftBox];
-    dataInputs.concat(proof?.current_boxes.slice(1))
 
     const outputs: OutputBuilder[] = [];
 
@@ -90,7 +84,6 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
         ergo_tree_address
     );
 
-    // Minting a new token if no input proof is provided
     new_proof_output.mintToken({
         amount: token_amount.toString()
     });
