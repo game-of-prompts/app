@@ -20,10 +20,10 @@
 
 [] Cubrir el caso sin participaciones validas.
 [x] Todas las votaciones deben validarse.
-[] Jueces
+[x] Jueces
     [x] Fetch
     [x] Creación de juez
-    [] Opinar sobre otro juez
+    [x] Opinar sobre otro juez
     [x] Opionar sobre un juego (aceptar invitación)
     [x] Opinar sobre participación
     [x] Agregar prueba de reputación en juez.
