@@ -85,7 +85,7 @@ export async function resolve_game(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
-    let winnerCandidateCommitment: string | null = null;
+    let winnerCandidateCommitment: string = "";
     const validParticipations: ParticipationSubmitted[] = [];
     const participationErgoTree = getGopParticipationSubmittedErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
@@ -150,7 +150,7 @@ export async function resolve_game(
     }
 
     if (!winnerCandidateCommitment) {
-        throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
+        // throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
     }
 
     console.log(`Número de participaciones válidas: ${validParticipations.length}`);

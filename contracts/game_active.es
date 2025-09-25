@@ -121,32 +121,39 @@
           }
         })
         
-        if (foldResult._1 > -1L) {
+        val winnerComputeResult = if (foldResult._1 > -1L) {
+
           val initialWinnerCommitment = foldResult._2._1
           val validParticipantsCounter = foldResult._2._2
 
           if (validParticipantsCounter == participantInputs.size) {
 
-            // --- Validación de Jueces ---
-            val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
-            val judgeProofDataInputs = CONTEXT.dataInputs
-            /* .filter({(box: Box) => 
-              box.propositionBytes == REPUTATION_PROOF_BOX && 
-              box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
-              box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[(Boolean, Long)].get._1
-            })*/
-            val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
-            
-            val judgesAreValid = {
-              val sameSize = invitedJudges.size == participatingJudgesTokens.size
-              val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
-                  participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
-              })
-              sameSize && areTheSame
-            }
+            (initialWinnerCommitment, validParticipantsCounter)
+          } else { (Coll[Byte](), -1L) }  // Not all inputs (1-n) were valid participation boxes. Script will reduce to false.
 
-            val resolutionBoxIsValid = {
+        } else { 
+           // The game creator can consider that there is no winner. During the judge period anyone can add an omitted valid participation box.
+          (Coll[Byte](), 0L)
+        }
+
+        val initialWinnerCommitment = winnerComputeResult._1
+        val validParticipantsCounter = winnerComputeResult._2
+
+        if (validParticipantsCounter < 0L) { false } // Inputs (1-n) were not valid participation boxes.
+        else {
+
+          // --- Judge validation ---
+          val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
+          val judgeProofDataInputs = CONTEXT.dataInputs
+          /* .filter({(box: Box) =>  TODO
+            box.propositionBytes == REPUTATION_PROOF_BOX && 
+            box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
+            box.R5[Coll[Byte]].get == gameNftId &&
+            box.R6[(Boolean, Long)].get._1
+          })*/
+          val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
+
+          val resolutionBoxIsValid = {
               winnerCandidateCommitment == initialWinnerCommitment &&
               resolutionBox.value >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
@@ -160,11 +167,17 @@
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
             }
+            
+            val judgesAreValid = {
+              val sameSize = invitedJudges.size == participatingJudgesTokens.size
+              val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
+                  participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
+              })
+              sameSize && areTheSame
+            }
 
-            judgesAreValid && resolutionBoxIsValid
-
-          } else { false }  // Inputs (1-n) were not valid participation boxes.
-        } else { false }  // Must be at least one valid participation box.
+          judgesAreValid && resolutionBoxIsValid
+        }
       } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.
     } else { false }  // Deadline not reached.
   }
