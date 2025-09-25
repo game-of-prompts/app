@@ -85,7 +85,7 @@ export async function resolve_game(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
-    let winnerCandidateCommitment: string = "";
+    let winnerCandidateCommitment: string | null = null;
     const validParticipations: ParticipationSubmitted[] = [];
     const participationErgoTree = getGopParticipationSubmittedErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
@@ -177,7 +177,7 @@ export async function resolve_game(
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Estado: Resuelto (1)
-        R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+        R5: SPair(SColl(SByte, secretS_bytes), winnerCandidateCommitment ? SColl(SByte, hexToBytes(winnerCandidateCommitment)!) : SColl(SByte, [])).toHex(),
         R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
