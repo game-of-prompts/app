@@ -45,9 +45,12 @@
 		[OTHER]: 'Object Pointer'
 	};
 
+	let currentOpinion: RPBox | null = get(reputation_proof)?.current_boxes.find(box => box.type.tokenId === JUDGE && proof && box.object_pointer === proof.token_id) || null;
     let newOpinion: string = "";
     let polarization: boolean = true;
 	let showOpinionForm: boolean = false;
+
+	$: currentOpinion = get(reputation_proof)?.current_boxes.find(box => box.type.tokenId === JUDGE && proof && box.object_pointer === proof.token_id) || null;
 
 	async function handleOpinionSubmit() {
         if (!proof) return;
@@ -80,41 +83,51 @@
 				<li><strong>Owner Address:</strong> {displayProof.blake_owner_script}</li>
 			</ul>
 
-			{#if proof}
-				<div class="opinion-form mt-6 text-sm">
-					<button
-						class="flex items-center justify-between w-full px-3 py-2 rounded-md border bg-card hover:bg-accent hover:text-accent-foreground transition-colors"
-						on:click={() => (showOpinionForm = !showOpinionForm)}
-					>
-						<span class="font-medium">Give your opinion about this Judge</span>
-						<span class="ml-1">{showOpinionForm ? "▲" : "▼"}</span>
-					</button>
+			{#if proof && get(reputation_proof)?.token_id !== proof.token_id}
+				{#if currentOpinion}
+					<div class="existing-opinion mt-6 p-3 rounded-md border bg-card text-sm">
+						<h4 class="font-semibold mb-1">Your existing opinion</h4>
+						<p class="mb-1">{typeof currentOpinion.content == "string" ? currentOpinion.content : JSON.stringify(currentOpinion.content)}</p>
+						<p class="text-xs text-muted-foreground">
+							Polarization: {currentOpinion.polarization ? "Positive" : "Negative"}
+						</p>
+					</div>
+				{:else}
+					<div class="opinion-form mt-6 text-sm">
+						<button
+							class="flex items-center justify-between w-full px-3 py-2 rounded-md border bg-card hover:bg-accent hover:text-accent-foreground transition-colors"
+							on:click={() => (showOpinionForm = !showOpinionForm)}
+						>
+							<span class="font-medium">Give your opinion about this Judge</span>
+							<span class="ml-1">{showOpinionForm ? "▲" : "▼"}</span>
+						</button>
 
-					{#if showOpinionForm}
-						<div class="mt-2 p-3 rounded-md border bg-card space-y-2">
-							<textarea
-								bind:value={newOpinion}
-								placeholder="Optionally, write your opinion..."
-								class="w-full border border-input rounded p-2 resize-none focus:ring-1 focus:ring-primary focus:outline-none min-h-[60px] text-sm"
-							></textarea>
+						{#if showOpinionForm}
+							<div class="mt-2 p-3 rounded-md border bg-card space-y-2">
+								<textarea
+									bind:value={newOpinion}
+									placeholder="Optionally, write your opinion..."
+									class="w-full border border-input rounded p-2 resize-none focus:ring-1 focus:ring-primary focus:outline-none min-h-[60px] text-sm"
+								></textarea>
 
-							<div class="flex items-center gap-4">
-								<label class="flex items-center gap-1 cursor-pointer text-sm">
-									<input type="radio" bind:group={polarization} value={true} class="accent-green-500" />
-									Positive
-								</label>
-								<label class="flex items-center gap-1 cursor-pointer text-sm">
-									<input type="radio" bind:group={polarization} value={false} class="accent-red-500" />
-									Negative
-								</label>
+								<div class="flex items-center gap-4">
+									<label class="flex items-center gap-1 cursor-pointer text-sm">
+										<input type="radio" bind:group={polarization} value={true} class="accent-green-500" />
+										Positive
+									</label>
+									<label class="flex items-center gap-1 cursor-pointer text-sm">
+										<input type="radio" bind:group={polarization} value={false} class="accent-red-500" />
+										Negative
+									</label>
+								</div>
+
+								<Button on:click={handleOpinionSubmit} disabled={!newOpinion.trim()} size="sm">
+									Submit
+								</Button>
 							</div>
-
-							<Button on:click={handleOpinionSubmit} disabled={!newOpinion.trim()} size="sm">
-								Submit
-							</Button>
-						</div>
-					{/if}
-				</div>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 
 			{#if displayProof.current_boxes && displayProof.current_boxes.length > 0}
