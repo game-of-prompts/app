@@ -139,13 +139,13 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
 }
 
 export async function update_reputation_proof(
-    type: "game"|"participation",
+    type: "game"|"participation"|"judge",
     object_pointer: string,
     polarization: boolean,
     content: object|string|null,
 ): Promise<string | null> {
 
-    const type_nft_id = type === "game" ? GAME : type === "participation" ? PARTICIPATION : null;
+    const type_nft_id = type === "game" ? GAME : (type === "participation" ? PARTICIPATION : (type === "judge" ? JUDGE : null));
     if (!type_nft_id) { throw new Error("Invalid reputation proof type.") }
 
     const proof = get(reputation_proof);
