@@ -99,21 +99,41 @@ Soluciones:
 
 - SI se utilzia un merkle tree a partir de game resolution con las participaciones ... (tal vez no es necesario resolved counter).
   Esto permite que el creador declare que participaciones están resueltas, sin tener que gastarlas todas en la tx. de resolución. Ni tampoco mostrarlas como datainputs.
-  ¿
-  Es necesario tener dos estados en las participaciones? Tal vez no es necesario gastarlas hasta el final ... Incluso tal vez no es necesario gastarlas, simplemente el ganador es quien puede obtener cada participacion ... aunque esto requiere de un estado de "juego terminado".
+  ¿Es necesario tener dos estados en las participaciones? Tal vez no es necesario gastarlas hasta el final ... Incluso tal vez no es necesario gastarlas, simplemente el ganador es quien puede obtener cada participacion ... aunque esto requiere de un estado de "juego terminado".
 
   Pero, durante la fase de resolución, ¿como diferenciamos entre las participaciones que el creador todavía no ha procesado y las que ha omitido?
-  - Una solución a esto puede ser el actual resolved counter:
-   1. Computa todas las participaciones validas off-chain. 
-   2. Resuelve la caja del juego agregando la raiz de un Merkle tree de todas las participaciones ordenadas por altura:asc y <>.  
-        TODO: Hay que terminar de razonar porque ordenarlo asi, ya que implicará posiblemente no tener el mas alto al principio ... lo cual de mas trabajo a los jueces.
-                Si consideramos que se ordena por score:desc y altura:asc está directamente dando la puntuación ganadora de primeras.  <-- ESTO TIENE MAS SENTIDO.  Asi los jueces no trabajan de más por nada.
+  Consideramos que los bytes de un datainputs son bajisimos, despreciables, asi que el unico coste que tienen es en fees (10 veces menos que los inputs, pero nos da igual tambien).
+   1. Computa todas las participaciones validas off-chain.
+   2. Resuelve la caja del juego agregando la raiz de un Merkle tree de todas las participaciones; se ordena por score:desc y altura:asc. Se deben de presentar las participaciones como datainputs. ¿como se crea el merkle si no caben todos los datainputs? ¿la capacidad de participaciones es esa? Posiblemente el coste en bytes de datainputs sea muy muy bajo (ya que solo las referencias)
+   3. Cualquiera puede ejecutar la acción de participacion omitida presentandola como datainput siempre y cuando se demuestre que no está en el merkle de la caja.
+   4. Tras el deadline final (ya no se puede cambiar el candidato), se puede gastar la caja del juego y todas las participaciones. Deben de mostrarse todas las participaciones del merkle.  Se deben de enviar los fondos según el actual modelo de pagos.
 
+   Este último punto nos lanza una pregunta ¿como vamos a gastar todas las participaciones de golpe si podrían no caber en la tx.? Una solución puede ser haberlas agrupado antes en lotes.
+   Pero claro, ¿como agregamos una participacion omitida dentro de un lote? Siendo que ya hemos gastado algunas, ya no podemos usarlas como datainputs ...
+   ¿podríamos considerar que los lotes solo se pueden formar despues del deadline? Es decir, la accion isValidEndGame debe mostrar que en la caja del juego se ha pasado el deadline y debe de gastarse, o bien hacia la caja del juego, o bien a un lote que solo podrá ser gastado en la caja del juego.  La caja del juego solo podrá ser gastada gastando todas las participaciones o lotes que contengan todas las participaciones. Posiblemente esto se haría en una chained-tx.
+
+
+- A: De aqui solo nos falta resolver como conseguimos resolver el juego (generar una candidata) accediendo a cualquier cantidad de datainputs. (digamos que podemos tener 500 participaciones, tal vez mas) 
+  
+  B: ¿una solucion podría ser por lotes tambien? El creador sabe que no le caben todas ... bueno, puede ordenarlas y demostrar por lotes. 
+  Pero al final demuestra que de un conjunto de N participaciones su propuesta a candidata es la mayor de todas.
+  
+  A: ¿porque no simplemente subir la candidata y el merkle? de esta forma igualmente funcionará agregar una omitida.
+  
+  B: Es cierto que hacer la comprobación de la candidata on-chain requiere referenciar como datainputs a las N participaciones, en lugar de solo a la candidata.
+  Pero esto nos permite forzar al creador a poner la participacion mas alta como candidata del grupo presentado y la acción de omisión se refiere a introducir una al merkle, pero el contrato obliga a que todo lo que hay dentro del merkle, la candidata actual  será si o si la correcta.
+
+  A: Ya, pero siendo que el creador tiene staking, igualmente una acción que demostrara que la candidata es incorrecta (la candidata esta en el merkle pero no es la seleccionada) igualmente podría drenar su stake.
+
+  B: Sisi, eso es cierto, pero es mejor cubrir ese supuesto con garantias contractuales (lo que te permite el contrato y ya) que garantias economicas (lo que se ve incentivado a hacer el creador).
+     Hay que intentar que la mayor cantidad posible de supuestos sean de tipo contratual, en lugar de economicos.
 
 
 
 
 ## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp
+
+## Permitir pagos a jueces (razonar mas sobre ello)
 
 
 ##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
