@@ -67,6 +67,9 @@
 - De no ser asi, los jueces solo podrían tener un incentivo economico en caso de que el creador cobre, lo cual va encontra de su proposito.
 
 
+
+----
+
 ##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
 - No hay vote, asi que no llama la atención.
