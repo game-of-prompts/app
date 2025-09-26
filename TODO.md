@@ -28,25 +28,12 @@
     [x] Opinar sobre participación
     [x] Agregar prueba de reputación en juez.
     
-    - Vector de ataque: un usuario malicioso podría crear N jueces que opinan honestamente, si ademas, el usuario malicioso crea un juego e invita a sus jueces. ¿como sabran los usuarios que los jueces no son de fiar?
-        1.-Pueden fijarse en el lapso en el que opinaron en otros juegos.
-        2.-Para evitar que se creen jueces sin coste, podemos agregar la opción en la que se agregue ERG a un juez (suma del ERG en todas sus cajas) de manera que ese ERG, siguiendo el contrato actual, no podrá ser retirado (hasta que lo obtenga el minero en el demurage).
-        
-        Por tanto, si vemos muchos jueces, pero opinaron tarde y su ERG quemado es bajo, su reputación (representada en UI) será baja.   Si un pequeño grupo de jueces tiene mas cantidad quemada y opinaron en cada momento, esos tendran la reputación alta.
-
-        Tambien se puede tener en cuenta, y esto es solo a nivel de logica off-chain, que se valore mas una primera opinion sobre algo que una segunda ... aunque robots podrían estar replicando y tal vez entrar antes en mempool ... Asi que simplemente tendría mas sentido considerar quien opinó antes de que se resolviera un juego y quien despues, aun cuando las dos opiniones sean correctas, una tiene que valer mas que la otra.
-
-        Se debe implementar una formula de calculo de reputación, para mostrarlo a nivel local.     SUM[participations => p]( T*p.on_time*p.honest + p.honest + B*burn_erg)
-
-        Tambien debe haber una formula que nos indique a partir de que umbral de premio al creador le es rentable ser malicioso (siempre y cuando tenga a los jueces comprados). Esto es: la suma de los ERGs quemados de todos los jueces + (?) * la comisión del juego actual + (?) * historico de otros juegos del creador.  En referencia a esto último, el creador debería identificarse con su prueba de reputación (agregandola en game info) ya que el contrato del creador puede variar dependiendo de la configuracion (parte a los jueces, referidos, etc ...)
+[] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
 [] Use CONTEXT.preHeader.timestamp  en lugar de HEIGHT
 [] GameInfo without JSON
 [] Allow for P2SH
 [x] Check constants on fetch.
-
-[] Poker
-[] Contratos satélites
 
 ##### game-service-factory
 [] Game obfuscated
@@ -54,44 +41,30 @@
 [] Limited resources
 
 
-
-
 ### Sobre fetch e indexación
 - Las participaciones y juegos gastados se pueden obtener de la api de cajas historicas.  Pero si no tiene utilidad mantener el estado no debe de dejarse, no es limpio.
-
 
 
 ### Participaciones en el contrato
 - [Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es]
 
 
-
-
-### Evitar que el creador finalice el juego aunque exista una mayoría de jueces en contra.
-Actualmente, esto se puede dar, ya que aunque un conjunto mayoritario de los jueces opine en contra de la participacion candidata deberá haber alguien que gaste el game_resolution demostrando esas opiniones. Pero no hay una condición que obligue al creador a demostrar lo contrario si va a resolver
-
-Lo que debería implementarse es una condición en action3_endGame de game_resolution.es que muestre que la mayoria de los jueces del juego no poseen una opinion negativa de la participación (agregando todas las cajas de cada juez como datainputs). --> Esto es complicado de hacer, ya que mostrar todos los datainputs es dificil y en el caso de la implementación de las pruebas con merkles tambien. 
-  
-Tal vez lo mejor es implementar lo que hay abajo:
-
-##### judgesInvalidate  debería de permitirse que en la misma transaccion se agregue la prueba de reputación (en caso de que sea posible, simplemente implementar).
-Actualmente, el ultimo juez debe de subir su opinion, y despues, cualquiera gastar el contrato principal demostrando las opiniones.  
-
-Permitir hacer ambas cosas es una mejora de UX.   Ademas, nos evita tener que implementar lo de arriba.
-
-
-AUNQUE --- Realmente no es necesario, simplemente asumamos que es necesario que la participacion se invalide antes del deadline.    Se puede agregar incentivo al ejecutor de la invalidación ... 
-
-
-
 ### Simplificar participaciones
 
 - Un solo estado, solo se gasta al final del juego o en invalidez o cancelación.
+- Las participaciones solo se gastan al finalizar el juego o en cancelación o invalidación por jueces.
+- Omited participation solo controla la ganadora.
+- No hay resolvedCounter en game_resolution.es; únicamente puede finalizar el juego la participación ganadora (en base a su R4 ¿?).
+- Las participaciones poseen una condición que les permite gastarse en caso de que el ganador no finalice el juego en un tiempo (ej: 90 días).
 
 
 ## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp
 
+
 ## Permitir pagos a jueces (razonar mas sobre ello)
+
+- A parte del creador y desarrollador, debe de existir un rol de juez, de manera que el porcentaje asignado a juez se reparta entre los jueces nominados.
+- De no ser asi, los jueces solo podrían tener un incentivo economico en caso de que el creador cobre, lo cual va encontra de su proposito.
 
 
 ##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
@@ -105,3 +78,12 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - N: factor constante.
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
+
+### Gastar participaciones en lotes
+De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
+Teoricamente se permite un numero ilimitado de participaciones.
+
+### Poker
+
+
+### Contratos satélite
