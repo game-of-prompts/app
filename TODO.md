@@ -113,7 +113,7 @@ Soluciones:
    ¿podríamos considerar que los lotes solo se pueden formar despues del deadline? Es decir, la accion isValidEndGame debe mostrar que en la caja del juego se ha pasado el deadline y debe de gastarse, o bien hacia la caja del juego, o bien a un lote que solo podrá ser gastado en la caja del juego.  La caja del juego solo podrá ser gastada gastando todas las participaciones o lotes que contengan todas las participaciones. Posiblemente esto se haría en una chained-tx.
 
 
-- A: De aqui solo nos falta resolver como conseguimos resolver el juego (generar una candidata) accediendo a cualquier cantidad de datainputs. (digamos que podemos tener 500 participaciones, tal vez mas) 
+  A: De aqui solo nos falta resolver como conseguimos resolver el juego (generar una candidata) accediendo a cualquier cantidad de datainputs. (digamos que podemos tener 500 participaciones, tal vez mas) 
   
   B: ¿una solucion podría ser por lotes tambien? El creador sabe que no le caben todas ... bueno, puede ordenarlas y demostrar por lotes. 
   Pero al final demuestra que de un conjunto de N participaciones su propuesta a candidata es la mayor de todas.
