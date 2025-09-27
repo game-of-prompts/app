@@ -6,8 +6,7 @@
   val JUDGE_PERIOD = 30L 
   val DEV_ADDR = PK("`+DEV_ADDR+`")
   val DEV_COMMISSION_PERCENTAGE = 5L
-  val PARTICIPATION_SUBMITTED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`") 
-  val PARTICIPATION_RESOLVED_SCRIPT_HASH = fromBase16("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`")
+  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
@@ -65,7 +64,7 @@
       val recreatedGameBox = OUTPUTS(0)
 
       // Se verifica que la caja de participación enviada sea válida para este juego
-      val pBoxIsValid = blake2b256(submittedPBox.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH &&
+      val pBoxIsValid = blake2b256(submittedPBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
                         submittedPBox.R6[Coll[Byte]].get == gameNftId
 
       if (pBoxIsValid) {
@@ -92,7 +91,7 @@
             // Se busca la caja del candidato actual en los dataInputs.
             val currentCandidateBoxes = CONTEXT.dataInputs.filter({
               (b:Box) => 
-                blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && 
+                blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
                 b.R5[Coll[Byte]].get == winnerCandidateCommitment &&
                 b.R6[Coll[Byte]].get == gameNftId
             })
@@ -147,7 +146,7 @@
           
           // Verificación de que la caja de participación se convierte a "resuelta"
           val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
-            blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+            blake2b256(outBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
             outBox.value == submittedPBox.value &&
             outBox.R4[Coll[Byte]].get == submittedPBox.R4[Coll[Byte]].get &&
             outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get &&
@@ -197,8 +196,8 @@
       if (votesAreValid && recreatedGameBoxes.size == 1) {
         
         val recreatedGameBox = recreatedGameBoxes(0)
-        val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH})
-        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
+        val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH})
+        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
         if (invalidatedCandidateBoxes.size == 1) {
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
@@ -241,7 +240,7 @@
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
 
       // Valores comunes para ambos casos (con y sin ganador)
-      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
+      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       
       // --- MEJORA 3: Manejar el caso CON y SIN ganador ---

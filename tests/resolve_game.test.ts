@@ -22,27 +22,22 @@ const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation_submited.es"), "utf-8");
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
+const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }";
 
 // Contract compilation remains the same...
-const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
-const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
-const participationSubmittedErgoTree = compile(participationSubmittedSource);
-const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+const participationSubmittedErgoTree = compile(PARTICIPATION_SOURCE);
+const participationScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
 const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
 const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
 const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
-    .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
 const gameResolutionErgoTree = compile(gameResolutionSource);
 const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash).replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash).replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash).replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash).replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash).replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationScriptHash).replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
 const gameActiveErgoTree = compile(gameActiveSource);
 
 
@@ -56,9 +51,8 @@ describe("Game Resolution (resolve_game)", () => {
   
   // --- Partidos de Contratos --- 
   let gameActiveContract: ReturnType<MockChain["addParty"]>;
-  let participationSubmittedContract: ReturnType<MockChain["addParty"]>;
+  let participationContract: ReturnType<MockChain["addParty"]>;
   let gameResolutionContract: ReturnType<MockChain["addParty"]>;
-  let participationResolvedContract: ReturnType<MockChain["addParty"]>;
 
 
   // --- Estado del Juego ---
@@ -68,7 +62,6 @@ describe("Game Resolution (resolve_game)", () => {
   const participationFee = 1_000_000n;
   const creatorStake = 2_000_000_000n;
   const resolutionDeadline = BigInt(deadlineBlock + 40);  // Seems that the mockchain goes various blocks forward when executing the tx!
-  const resolvedCounter = 2;
   let commitment1Hex: string;
   let commitment2Hex: string;
   let gameBoxOutput: OutputBuilder;
@@ -96,9 +89,8 @@ describe("Game Resolution (resolve_game)", () => {
 
     // --- Definir Partidos de Contratos --- 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
-    participationSubmittedContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationSubmittedContract");
+    participationContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationContract");
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
-    participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolvedContract");
 
 
     // --- Creación de la caja `game_active.es` ---
@@ -125,7 +117,7 @@ describe("Game Resolution (resolve_game)", () => {
 
     const resolvedorPkBytes = creatorPkBytes;
 
-    // --- Creación de las cajas `participation_submited.es` ---
+    // --- Creación de las cajas `participation.es` ---
     score1 = 1000n;
     commitment1Hex = uint8ArrayToHex(blake2b256(
         new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...secret])
@@ -133,7 +125,7 @@ describe("Game Resolution (resolve_game)", () => {
 
     winnerCandidateCommitment = commitment1Hex;
 
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline, BigInt(resolvedCounter)];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
 
     // OUTPUT(0)
     gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
@@ -157,7 +149,7 @@ describe("Game Resolution (resolve_game)", () => {
       };
 
     // INPUTS(1)
-    participationSubmittedContract.addUTxOs({
+    participationContract.addUTxOs({
       creationHeight: mockChain.height,
       ergoTree: participationSubmittedErgoTree.toHex(),
       assets: [],
@@ -166,9 +158,8 @@ describe("Game Resolution (resolve_game)", () => {
     });
 
     // OUTPUTS(1)
-    participation1Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
+    participation1Output = new OutputBuilder(participationFee, participationContract.address) 
       .setAdditionalRegisters(participation1_registers);
-
 
     score2 = 850n;
     commitment2Hex = uint8ArrayToHex(blake2b256(
@@ -185,7 +176,7 @@ describe("Game Resolution (resolve_game)", () => {
     };
 
     // INPUTS(2)
-    participationSubmittedContract.addUTxOs({
+    participationContract.addUTxOs({
       creationHeight: mockChain.height,
       ergoTree: participationSubmittedErgoTree.toHex(),
       assets: [],
@@ -194,7 +185,7 @@ describe("Game Resolution (resolve_game)", () => {
     });
 
     // OUTPUTS(2)
-    participation2Output = new OutputBuilder(participationFee, participationResolvedContract.address) 
+    participation2Output = new OutputBuilder(participationFee, participationContract.address) 
       .setAdditionalRegisters(participation2_registers)
     
     mockChain.newBlocks(deadlineBlock - mockChain.height + 1);
@@ -206,8 +197,8 @@ describe("Game Resolution (resolve_game)", () => {
     const tx = new TransactionBuilder(currentHeight)
       .from([
         gameActiveContract.utxos.toArray()[0],
-        participationSubmittedContract.utxos.toArray()[0],
-        participationSubmittedContract.utxos.toArray()[1],
+        participationContract.utxos.toArray()[0],
+        participationContract.utxos.toArray()[1],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput, participation1Output, participation2Output])
       .sendChangeTo(creator.address)
@@ -220,9 +211,9 @@ describe("Game Resolution (resolve_game)", () => {
 
     // --- Verificación usando los partidos de contrato --- 
     expect(gameActiveContract.utxos.length).to.equal(0);
-    expect(participationSubmittedContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
     expect(gameResolutionContract.utxos.length).to.equal(1);
-    expect(participationResolvedContract.utxos.length).to.equal(2);
+    expect(participationContract.utxos.length).to.equal(2);
 
     const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
     expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
@@ -235,10 +226,10 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); // Using hexToBytes?
     
     const r7 = newResolutionBox.additionalRegisters.R7;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline, BigInt(resolvedCounter)];
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
     expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
 
-    const resolvedParticipationBoxes = participationResolvedContract.utxos.toArray();
+    const resolvedParticipationBoxes = participationContract.utxos.toArray();
 
     const matchingResolvedBox1 = resolvedParticipationBoxes.find(b => b.additionalRegisters.R5 === SColl(SByte, commitment1Hex).toHex());
     expect(matchingResolvedBox1).to.not.be.undefined;

@@ -1,0 +1,144 @@
+{
+  // =================================================================
+  // === CONSTANTES Y HASHES DE SCRIPTS
+  // =================================================================
+
+  // Prefijo P2PK para la validación de direcciones.
+  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
+  
+  // Período de gracia en bloques para que el jugador reclame si el juego se atasca.
+  val GRACE_PERIOD_IN_BLOCKS = 720L // Aprox. 24 horas
+
+  // =================================================================
+  // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
+  // =================================================================
+
+  // R4: Coll[Byte] - playerPKBytes: Clave pública del jugador.
+  // R5: Coll[Byte] - commitmentC: Commitment criptográfico con la puntuación verdadera.
+  // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participación.
+  // R7: Coll[Byte] - solverId: ID del solver del jugador.
+  // R8: Coll[Byte] - hashLogs: Hash de los logs del juego del jugador.
+  // R9: Coll[Long] - scoreList: Lista de puntuaciones, una de las cuales es la verdadera.
+  
+  // =================================================================
+  // === EXTRACCIÓN DE VALORES
+  // =================================================================
+
+  val playerPKBytes = SELF.R4[Coll[Byte]].get
+  val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
+
+  // =================================================================
+  // === ACCIONES DE GASTO
+  // =================================================================
+
+  // ### Acción 3: Reembolso por Cancelación de Juego
+  // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
+  val spentInValidGameCancellation = {
+    if (CONTEXT.dataInputs.size > 0) {
+      val gameBoxInData = CONTEXT.dataInputs(0)  // Caja del juego game_cancelled.es como Data Input.
+
+      val correctGame = gameBoxInData.tokens.size > 0 &&
+                        gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
+                        gameBoxInData.R6[Coll[Byte]].isDefined &&
+                        gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
+
+      val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
+        outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
+        outBox.value >= SELF.value
+      }
+      
+      correctGame && playerGetsRefund
+    }
+    else { false }
+  }
+
+  // ### Acción 4: Reclamo por Período de Gracia
+  // Permite al jugador reclamar sus fondos si el juego queda "atascado"
+  // (no se ha resuelto después de un período de gracia tras la fecha límite).
+  val playerReclaimsAfterGracePeriod = {
+    if (CONTEXT.dataInputs.size > 0) {
+      val gameBoxInData = CONTEXT.dataInputs(0) // Caja del juego game_active.es como Data Input.
+
+      // Condición 1: El Data Input debe ser la caja del juego correcto y estar en estado "Activo".
+      val gameBoxIsCorrectAndActive =
+        gameBoxInData.tokens.size > 0 &&
+        gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
+        gameBoxInData.R4[Int].get == 0 // Estado "Activo" es 0
+
+      if (gameBoxIsCorrectAndActive) {
+        val gameDeadline = gameBoxInData.R8[Coll[Long]].get(0)
+        
+        // Condición 2: El período de gracia después de la fecha límite debe haber pasado.
+        val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
+
+        // Condición 3: El jugador debe recibir un reembolso completo.
+        val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
+          outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
+          outBox.value >= SELF.value
+        }
+        
+        gracePeriodIsOver && playerGetsRefund
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  }
+
+  // --- ACCIÓN 5: Gasto en la finalización normal del juego (EndGame) ---
+  val isValidEndGame = {
+    val mainGameBox = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})(0)
+    val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+
+    // 1. Verificar que esta participación pertenece a la caja del juego que se está gastando.
+    val gameLinkIsValid = mainGameBox.tokens(0)._1 == gameNftIdInSelf && mainGameBox.R4[Int].get == 1
+
+    // 2. Verificar que el período de resolución/juicio ha terminado.
+    val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
+
+    gameLinkIsValid && resolutionPeriodIsOver
+  }
+
+  // --- ACCIÓN 6: Gasto cuando esta participación es invalidada por los jueces ---
+  val isInvalidatedByJudges = {
+    val mainGameBox = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})(0)
+    val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+
+    // 1. Verificar que la invalidación ocurre antes del deadline de resolución.
+    val isBeforeDeadline = HEIGHT < resolutionDeadline
+    
+    // 2. Verificar que ESTA caja es la candidata a ganadora que se está invalidando.
+    //    El commitment en R5 de esta caja debe coincidir con el del candidato en la caja del juego.
+    val winnerCandidateCommitment = mainGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+    val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
+
+    val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
+    if (isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1) {
+      // 3. Verificar que la transacción recrea la caja del juego correctamente según las reglas de invalidación.
+      val recreatedGameBox = recreatedGameBoxes(0)
+      
+      // El contador de participantes resueltos debe disminuir en 1.
+      val oldResolvedCounter = mainGameBox.R7[Coll[Long]].get(4)
+      val counterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == oldResolvedCounter - 1  // Esta comprobación nos asegura que la acción realizada es una invalidación por los jueces.
+      
+      // Los fondos de esta caja deben ser devueltos al pozo de premios en la nueva caja del juego.
+      val fundsAreReturned = recreatedGameBox.value >= mainGameBox.value + SELF.value
+      
+      // El nuevo candidato a ganador debe ser diferente al de esta caja.
+      val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+      val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
+
+      counterIsDecreased && fundsAreReturned && winnerIsChanged
+    } else {
+      false
+    }
+  }
+
+  sigmaProp(
+    spentInValidGameCancellation || 
+    playerReclaimsAfterGracePeriod || 
+    isValidEndGame || 
+    isInvalidatedByJudges
+  )
+}

@@ -33,12 +33,8 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
   path.join(contractsDir, "game_resolution.es"),
   "utf-8"
 );
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "participation_submited.es"),
-  "utf-8"
-);
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(
-  path.join(contractsDir, "participation_resolved.es"),
+const PARTICIPATION_TEMPLATE = fs.readFileSync(
+  path.join(contractsDir, "participation.es"),
   "utf-8"
 );
 
@@ -56,7 +52,7 @@ describe("Participant Refund After Cancellation", () => {
   // --- Partidos de Contratos ---
   let gameActiveContract: ReturnType<MockChain["newParty"]>;
   let gameCancellationContract: ReturnType<MockChain["newParty"]>;
-  let participationSubmittedContract: ReturnType<MockChain["newParty"]>;
+  let participationContract: ReturnType<MockChain["newParty"]>;
 
   // --- Cajas (UTXOs) ---
   let participationBox: Box;
@@ -84,25 +80,16 @@ describe("Participant Refund After Cancellation", () => {
     canceller.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
 
     // --- Compilación de Contratos en Orden ---
-    const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-    const resolvedHash = uint8ArrayToHex(
-      blake2b256(participationResolvedErgoTree.bytes)
-    );
-    const submittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace(
-      "`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`",
-      resolvedHash
-    );
-    const participationSubmittedErgoTree = compile(submittedSource);
-    const submittedHash = uint8ArrayToHex(
-      blake2b256(participationSubmittedErgoTree.bytes)
+    const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
+    const participationHash = uint8ArrayToHex(
+      blake2b256(participationErgoTree.bytes)
     );
     const gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
     const cancellationHash = uint8ArrayToHex(
       blake2b256(gameCancellationErgoTree.bytes)
     );
     const resolutionSource = GAME_RESOLUTION_TEMPLATE
-      .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
-      .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
+      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
       .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
       .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -110,13 +97,10 @@ describe("Participant Refund After Cancellation", () => {
     const resolutionHash = uint8ArrayToHex(
       blake2b256(gameResolutionErgoTree.bytes)
     );
-    const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace(
-      "`+GAME_RESOLUTION_SCRIPT_HASH+`",
-      resolutionHash
-    )
+    const gameActiveSource = GAME_ACTIVE_TEMPLATE
+      .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
       .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
-      .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", submittedHash)
-      .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash);
+      .replace("`+PARTICIPATION_HASH+`", participationHash);
     const gameActiveErgoTree = compile(gameActiveSource);
 
     // --- Añadir Partidos de Contratos a la Cadena ---
@@ -128,9 +112,9 @@ describe("Participant Refund After Cancellation", () => {
       gameCancellationErgoTree.toHex(),
       "GameCancellation"
     );
-    participationSubmittedContract = mockChain.addParty(
-      participationSubmittedErgoTree.toHex(),
-      "ParticipationSubmitted"
+    participationContract = mockChain.addParty(
+      participationErgoTree.toHex(),
+      "Participation"
     );
 
     // --- FASE 1: Crear el estado inicial (Juego Activo + Participación) ---
@@ -154,9 +138,9 @@ describe("Participant Refund After Cancellation", () => {
     });
      const gameActiveBox = gameActiveContract.utxos.toArray()[0];
 
-    participationSubmittedContract.addUTxOs({
+    participationContract.addUTxOs({
       value: participationFee,
-      ergoTree: participationSubmittedErgoTree.toHex(),
+      ergoTree: participationErgoTree.toHex(),
       assets: [],
       creationHeight: mockChain.height,
       additionalRegisters: {
@@ -195,7 +179,7 @@ describe("Participant Refund After Cancellation", () => {
     mockChain.execute(cancelTx, { signers: [canceller] });
 
     // Guardar las cajas necesarias para el test principal
-    participationBox = participationSubmittedContract.utxos.toArray()[0];
+    participationBox = participationContract.utxos.toArray()[0];
     gameCancellationBox = gameCancellationContract.utxos.toArray()[0];
   });
 
@@ -232,7 +216,7 @@ describe("Participant Refund After Cancellation", () => {
     expect(executionResult).to.be.true;
 
     // 2. La caja de participación debe haber sido gastada
-    expect(participationSubmittedContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
 
     // 3. El balance del participante debe reflejar el reembolso
     const expectedBalance =

@@ -10,7 +10,7 @@ import { network_id } from "./envs";
 import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
 import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
-import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation_submited.es?raw';
+import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?raw';
 import PARTICIPATION_RESOLVED_SOURCE from '../../../contracts/participation_resolved.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
@@ -23,7 +23,7 @@ const ergoTreeVersion = 1;
 let _gameActive: { ergoTree?: ErgoTree, templateHash?: string } = {};
 let _gameResolution: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
-let _participationSubmitted: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participationResolved: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 // --- Dev fee/config ---
@@ -41,12 +41,12 @@ function ensureParticipationResolvedCompiled(): void {
     _participationResolved.ergoTree = compile(PARTICIPATION_RESOLVED_SOURCE, { version: ergoTreeVersion });
 }
 
-function ensureParticipationSubmittedCompiled(): void {
-    if (_participationSubmitted.ergoTree) return;
+function ensureParticipationCompiled(): void {
+    if (_participation.ergoTree) return;
     ensureParticipationResolvedCompiled();
-    const resolvedHash = getGopParticipationResolvedScriptHash();
-    let source = PARTICIPATION_SUBMITTED_SOURCE.replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
-    _participationSubmitted.ergoTree = compile(source, { version: ergoTreeVersion });
+    const resolvedHash = getGopParticipationSubmittedScriptHash();
+    let source = PARTICIPATION_SUBMITTED_SOURCE.replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, resolvedHash);
+    _participation.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
 function ensureGameCancellationCompiled(): void {
@@ -56,15 +56,13 @@ function ensureGameCancellationCompiled(): void {
 
 function ensureGameResolutionCompiled(): void {
     if (_gameResolution.ergoTree) return;
-    ensureParticipationSubmittedCompiled(); // Dependencia transitiva
+    ensureParticipationCompiled(); // Dependencia transitiva
     const submittedHash = getGopParticipationSubmittedScriptHash();
-    const resolvedHash = getGopParticipationResolvedScriptHash();
     const reputationHash = getReputationProofScriptHash();
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
-        .replace(/`\+PARTICIPATION_SUBMITTED_SCRIPT_HASH\+`/g, submittedHash)
-        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash)
+        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, PARTICIPATION);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
@@ -73,18 +71,18 @@ function ensureGameActiveCompiled(): void {
     if (_gameActive.ergoTree) return;
     ensureGameResolutionCompiled();
     ensureGameCancellationCompiled();
-    ensureParticipationSubmittedCompiled();
+    ensureParticipationCompiled();
 
     const resolutionHash = getGopGameResolutionScriptHash();
     const cancellationHash = getGopGameCancellationScriptHash();
     const participationHash = getGopParticipationSubmittedScriptHash();
-    const resolvedHash = getGopParticipationResolvedScriptHash();
+    const resolvedHash = getGopParticipationSubmittedScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
         .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
         .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
         .replace(/`\+PARTICIPATION_SUBMITED_SCRIPT_HASH\+`/g, participationHash)
-        .replace(/`\+PARTICIPATION_RESOLVED_SCRIPT_HASH\+`/g, resolvedHash);
+        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, resolvedHash);
         
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }
@@ -130,16 +128,10 @@ export function getGopGameCancellationAddress(): Address { ensureGameCancellatio
 export function getGopGameCancellationErgoTreeHex(): string { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toHex(); }
 
 // --- Participation Submitted ---
-export const getGopParticipationSubmittedTemplateHash = () => getTemplateHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
-export const getGopParticipationSubmittedScriptHash = () => getScriptHash(_participationSubmitted, ensureParticipationSubmittedCompiled);
-export function getGopParticipationSubmittedAddress(): Address { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toAddress(networkType); }
-export function getGopParticipationSubmittedErgoTreeHex(): string { ensureParticipationSubmittedCompiled(); return _participationSubmitted.ergoTree!.toHex(); }
-
-// --- Participation Resolved ---
-export const getGopParticipationResolvedTemplateHash = () => getTemplateHash(_participationResolved, ensureParticipationResolvedCompiled);
-export const getGopParticipationResolvedScriptHash = () => getScriptHash(_participationResolved, ensureParticipationResolvedCompiled);
-export function getGopParticipationResolvedAddress(): Address { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toAddress(networkType); }
-export function getGopParticipationResolvedErgoTreeHex(): string { ensureParticipationResolvedCompiled(); return _participationResolved.ergoTree!.toHex(); }
+export const getGopParticipationSubmittedTemplateHash = () => getTemplateHash(_participation, ensureParticipationCompiled);
+export const getGopParticipationSubmittedScriptHash = () => getScriptHash(_participation, ensureParticipationCompiled);
+export function getGopParticipationSubmittedAddress(): Address { ensureParticipationCompiled(); return _participation.ergoTree!.toAddress(networkType); }
+export function getGopParticipationSubmittedErgoTreeHex(): string { ensureParticipationCompiled(); return _participation.ergoTree!.toHex(); }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

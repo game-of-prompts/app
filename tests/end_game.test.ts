@@ -34,8 +34,8 @@ const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(
-  path.join(contractsDir, "participation_resolved.es"),
+const PARTICIPATION_SOURCE = fs.readFileSync(
+  path.join(contractsDir, "participation.es"),
   "utf-8"
 );
 
@@ -65,12 +65,11 @@ describe("Game Finalization (end_game)", () => {
   const resolverCommissionPercent = 10;
 
   // --- Compilación Dinámica de Contratos ---
-  const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-  const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
+  const pparticipationErgoTree = compile(PARTICIPATION_SOURCE);
+  const pparticipationScriptHash = uint8ArrayToHex(blake2b256(pparticipationErgoTree.bytes));
   
   const gameResolutionSourceWithHash = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
-    .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", "00".repeat(32))
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", pparticipationScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -98,7 +97,7 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Partes de Contrato en la MockChain ---
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
-    participationContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationContract");
+    participationContract = mockChain.addParty(pparticipationErgoTree.toHex(), "ParticipationContract");
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
@@ -130,7 +129,7 @@ describe("Game Finalization (end_game)", () => {
         participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: participationResolvedErgoTree.toHex(),
+            ergoTree: pparticipationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, party.key.publicKey).toHex(),

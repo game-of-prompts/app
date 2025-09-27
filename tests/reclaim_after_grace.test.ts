@@ -23,8 +23,7 @@ function uint8ArrayToHex(bytes: Uint8Array): string {
 const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
 const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation_submited.es"), "utf-8");
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
+const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const GRACE_PERIOD_IN_BLOCKS = 720;
@@ -34,7 +33,7 @@ describe("Participant Reclaim After Grace Period", () => {
   let creator: ReturnType<MockChain["newParty"]>;
   let participant: ReturnType<MockChain["newParty"]>;
   let gameActiveContract: ReturnType<MockChain["newParty"]>;
-  let participationSubmittedContract: ReturnType<MockChain["newParty"]>;
+  let participationContract: ReturnType<MockChain["newParty"]>;
   let gameActiveBox: Box;
   let participationBox: Box;
   const creatorStake = 1_000_000_000n;
@@ -48,20 +47,12 @@ describe("Participant Reclaim After Grace Period", () => {
     participant = mockChain.newParty("Participant");
     participant.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
 
-    const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-    const resolvedHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
-    const submittedSourceWithConstant = PARTICIPATION_SUBMITTED_TEMPLATE.replace(
-      "val GRACE_PERIOD_IN_BLOCKS = 720L",
-      `val GRACE_PERIOD_IN_BLOCKS = ${GRACE_PERIOD_IN_BLOCKS}L`
-    ).replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash);
-
-    const participationSubmittedErgoTree = compile(submittedSourceWithConstant);
-    const submittedHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+    const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
+    const participationHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
     const gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
     const cancellationHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
     const resolutionSource = GAME_RESOLUTION_TEMPLATE
-      .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
-      .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
+      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
       .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
       .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -69,12 +60,11 @@ describe("Participant Reclaim After Grace Period", () => {
     const resolutionHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
     const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
       .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
-      .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", submittedHash)
-      .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash);
+      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash);
     const gameActiveErgoTree = compile(gameActiveSource);
 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActive");
-    participationSubmittedContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationSubmitted");
+    participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
 
     gameActiveContract.addUTxOs({
       value: creatorStake,
@@ -91,9 +81,9 @@ describe("Participant Reclaim After Grace Period", () => {
       },
     });
 
-    participationSubmittedContract.addUTxOs({
+    participationContract.addUTxOs({
       value: participationFee,
-      ergoTree: participationSubmittedErgoTree.toHex(),
+      ergoTree: participationErgoTree.toHex(),
       assets: [],
       creationHeight: mockChain.height,
       additionalRegisters: {
@@ -107,7 +97,7 @@ describe("Participant Reclaim After Grace Period", () => {
     });
 
     gameActiveBox = gameActiveContract.utxos.toArray()[0];
-    participationBox = participationSubmittedContract.utxos.toArray()[0];
+    participationBox = participationContract.utxos.toArray()[0];
   });
 
   afterEach(() => {
@@ -130,7 +120,7 @@ describe("Participant Reclaim After Grace Period", () => {
     const executionResult = mockChain.execute(reclaimTx, { signers: [participant] });
 
     expect(executionResult).to.be.true;
-    expect(participationSubmittedContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
     const expectedBalance = participantInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
     expect(participant.balance.nanoergs).to.equal(expectedBalance);
     expect(gameActiveContract.utxos.length).to.equal(1);
@@ -154,6 +144,6 @@ describe("Participant Reclaim After Grace Period", () => {
     const executionResult = mockChain.execute(reclaimTx, { signers: [participant], throw: false });
 
     expect(executionResult).to.be.false;
-    expect(participationSubmittedContract.utxos.length).to.equal(1);
+    expect(participationContract.utxos.length).to.equal(1);
   });
 });

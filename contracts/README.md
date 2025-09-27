@@ -46,7 +46,7 @@ This contract acts as the main box holding the creator's stake and the game's ru
     1.  **`action1_transitionToResolution`**: This is triggered **after** the `deadline` has passed.
 
           * **Requirement**: The creator must reveal the secret `S`, and its hash must match the `secretHash` stored in R6.
-          * **Process**: This transaction consumes the `game_active` box and all valid `participation_submited.es` boxes. It calculates the real score of each participant using `S` and determines an initial winner.
+          * **Process**: This transaction consumes the `game_active` box and all valid `participation.es` boxes. It calculates the real score of each participant using `S` and determines an initial winner.
           * **Output**: Creates a `game_resolution.es` box with the updated state and transforms the participation boxes into `participation_resolved.es` boxes.
 
     2.  **`action2_transitionToCancellation`**: This is triggered **before** the `deadline` has passed.
@@ -55,7 +55,7 @@ This contract acts as the main box holding the creator's stake and the game's ru
           * **Process**: Penalizes the creator.
           * **Output**: Creates a `game_cancellation.es` box containing the creator's remaining stake and a payout box for the revealer, who claims a portion of the stake (1/5) as a reward.
 
-#### **2.2. Contract: `participation_submited.es`**
+#### **2.2. Contract: `participation.es`**
 
 Each player who joins the game creates a box of this type.
 
@@ -106,7 +106,7 @@ The main game box during the final phase.
   * **Spending Conditions (Actions)**:
 
     1.  **`action1_includeOmittedParticipation`**: Triggered **before** the `resolutionDeadline`.
-          * **Requirement**: An omitted `participation_submited.es` box is provided as an input, and the current winner's box is provided as a `data-input`.
+          * **Requirement**: An omitted `participation.es` box is provided as an input, and the current winner's box is provided as a `data-input`.
           * **Process**: Compares the score of the omitted entry with the current winner's. If the new score is higher (or equal but created earlier), the `winnerCandidateCommitment` is updated.
           * **Output**: The `game_resolution.es` box is recreated with the new winner candidate and the `resolvedCounter` is incremented.
     2.  **`action3_endGame`**: Triggered **after** the `resolutionDeadline`.
@@ -120,7 +120,7 @@ The final state of a valid participation box.
 
   * **Purpose**: To wait to be spent in the final `endGame` transaction.
 
-  * **Registers**: Maintains the same register structure as `participation_submited.es` (R4-R9).
+  * **Registers**: Maintains the same register structure as `participation.es` (R4-R9).
 
   * **Spending Conditions (Actions)**:
 
@@ -159,7 +159,7 @@ This is a penalty state triggered if the secret is revealed prematurely.
 
 These two contracts manage the state of an individual player's entry throughout the game's lifecycle. They transition from a "submitted" state, where actions are flexible, to a "resolved" state, where the entry simply waits for the final outcome.
 
-#### **1. Contract: `participation_submited.es`**
+#### **1. Contract: `participation.es`**
 
 This is the initial state for a player's entry. A box protected by this script is created when a player pays the fee to join the game.
 
@@ -191,11 +191,11 @@ This is the initial state for a player's entry. A box protected by this script i
 
 #### **2. Contract: `participation_resolved.es`**
 
-This is the final, passive state of a valid participation entry. Once the game enters the resolution phase, all `participation_submited.es` boxes are transitioned to this script.
+This is the final, passive state of a valid participation entry. Once the game enters the resolution phase, all `participation.es` boxes are transitioned to this script.
 
 * **Purpose**: To hold the player's entry data securely after the game's secret has been revealed, waiting to be consumed in the final prize distribution transaction.
 
-* **Registers**: The register structure (R4-R9) is identical to `participation_submited.es`, preserving all the original entry data.
+* **Registers**: The register structure (R4-R9) is identical to `participation.es`, preserving all the original entry data.
 
 * **Spending Conditions (Actions)**: This box has only one possible spending path.
 

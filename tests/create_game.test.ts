@@ -50,12 +50,8 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
 // NOTE: The cancellation contract was not provided. A simple mock
 // that always fails is created to allow the `game_active` contract to compile.
 const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }"; 
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "participation_submited.es"),
-  "utf-8"
-);
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(
-  path.join(contractsDir, "participation_resolved.es"),
+const PARTICIPATION_TEMPLATE = fs.readFileSync(
+  path.join(contractsDir, "participation.es"),
   "utf-8"
 );
 
@@ -84,15 +80,9 @@ describe("Game Creation (create_game)", () => {
   // The `game_active` contract needs to know the hash of other contracts it can transition to.
   // Therefore, we compile in order of dependency, injecting the necessary hashes.
 
-  // 1. `participation_resolved`: No dependencies.
-  const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-  const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
-
-  // 2. `participation_submited`: Depends on the hash of `participation_resolved`.
-  const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
-  const participationSubmittedErgoTree = compile(participationSubmittedSource);
-  const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+  // 1. `participation`: No dependencies.
+  const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
+  const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
   
   // 3. `game_cancellation`: Mock with no dependencies.
   const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
@@ -100,8 +90,7 @@ describe("Game Creation (create_game)", () => {
   
   // 4. `game_resolution`: Depends on participation hashes.
   const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
-    .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -112,8 +101,7 @@ describe("Game Creation (create_game)", () => {
   const gameActiveSource = GAME_ACTIVE_TEMPLATE
     .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
     .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-    .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
-    .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash); // Dependency added for completeness.
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash); // Dependency added for completeness.
   
   gameActiveErgoTree = compile(gameActiveSource);
   

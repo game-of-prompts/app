@@ -31,7 +31,7 @@ const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version:
 const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
 const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
 
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
+const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
@@ -54,12 +54,12 @@ describe("Game Resolution Invalidation by Judges", () => {
 
     // --- Contratos y Partidos ---
     let gameResolutionContract: ReturnType<MockChain["newParty"]>;
-    let participationResolvedContract: ReturnType<MockChain["newParty"]>;
+    let participationContract: ReturnType<MockChain["newParty"]>;
     let reputationProofContract: ReturnType<MockChain["newParty"]>;
     
     // --- ErgoTrees de Contratos ---
     let gameResolutionErgoTree: ReturnType<typeof compile>;
-    let participationResolvedErgoTree: ReturnType<typeof compile>;
+    let participationErgoTree: ReturnType<typeof compile>;
     let reputationProofErgoTree: ReturnType<typeof compile>;
 
     // --- Estado del Juego ---
@@ -88,14 +88,13 @@ describe("Game Resolution Invalidation by Judges", () => {
         mockChain.jumpTo(currentHeight);
 
         // --- Compilar Contratos ---
-        participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
+        participationErgoTree = compile(PARTICIPATION_SOURCE);
         
         // Asumimos que no necesitamos el hash de 'submitted' para este test
         const dummySubmittedHash = "0".repeat(64);
 
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes)))
-            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", dummySubmittedHash)
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationErgoTree.bytes)))
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(compile(REPUTATION_PROOF_SOURCE).bytes)))
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -108,7 +107,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -150,8 +149,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -164,10 +163,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -180,7 +179,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -264,7 +263,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
-        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
+        expect(participationContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
 
     it("should fail if there are not enough judge votes (1 out of 3)", () => {
@@ -273,7 +272,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -315,8 +314,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -329,10 +328,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -345,7 +344,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -415,7 +414,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -457,8 +456,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -471,10 +470,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -487,7 +486,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -561,7 +560,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
     
         // --- Inicializar Actores ---
@@ -603,8 +602,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -617,10 +616,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -633,7 +632,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -706,7 +705,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -744,8 +743,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -758,10 +757,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -774,7 +773,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -855,7 +854,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
-        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
+        expect(participationContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
 
     it("should fail if trying to maintain the resolvedCounter instead of decrement it", () => {
@@ -865,7 +864,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -903,8 +902,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -917,10 +916,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -933,7 +932,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -1002,7 +1001,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -1042,8 +1041,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
         // 4. Crear cajas `participation_resolved`
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,
             assets: [],
@@ -1056,10 +1055,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 230n, 300n, 1000n, 2n, 3n, 10n, 2n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -1072,10 +1071,10 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
-        participationResolvedContract.addUTxOs({ // Participante extra que no será invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Participante extra que no será invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
@@ -1088,9 +1087,9 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 10n, 40n, 50n, 500n, 1n, 1n, 5n, 1n]).toHex(),
             }
         });
-        const extraParticipantBox = participationResolvedContract.utxos.toArray()[2];
+        const extraParticipantBox = participationContract.utxos.toArray()[2];
 
-        expect(participationResolvedContract.utxos.toArray().length).to.equal(3);
+        expect(participationContract.utxos.toArray().length).to.equal(3);
 
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const dummyTypeNftId = "f6819e0b7cf99c8c7872b62f4985b8d900c6150925d01eb279787517a848b6d8";
@@ -1171,8 +1170,8 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
-        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
-        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === extraParticipantBox.boxId)).to.not.be.undefined; // The extra participant box should remain.
+        expect(participationContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
+        expect(participationContract.utxos.toArray().find(b => b.boxId === extraParticipantBox.boxId)).to.not.be.undefined; // The extra participant box should remain.
     });
 
     it("should successfully invalidate current winner with single judge vote using transaction data", () => {
@@ -1182,7 +1181,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -1228,8 +1227,8 @@ describe("Game Resolution Invalidation by Judges", () => {
         // 4. Crear cajas `participation_resolved`
         const invalidatedSolverIdBytes = Buffer.from("9b0ff243323604c8dfd02629e8a63bce19bc58d813986cb19d4e8d721a57b15f", "utf-8");
         const invalidatedLogsBytes = Buffer.from("23739dc0c5f61dd85a363872cc337e57e109f1b04b945ad6790a293425150cc8", "hex");
-        participationResolvedContract.addUTxOs({ // Ganador a ser invalidado
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Ganador a ser invalidado
+            ergoTree: participationErgoTree.toHex(),
             value: 1000000n,
             creationHeight: 1616921,
             assets: [],
@@ -1242,12 +1241,12 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [100n, 200n, 23n, 300n, 2n, 203n]).toHex(),
             }
         });
-        invalidatedWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
         const nextSolverIdBytes = Buffer.from("85278ef8896bd70c2537a30fc686388b1c3cd7bf991e2dcdb03de223ecd78bc6", "utf-8");
         const nextLogsBytes = hexToBytes("4132b3d13f16f7ba7a2d0d3c926bb817987825793bec7e8379a0cc3c91ab75bc")!;
-        participationResolvedContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({ // Próximo candidato a ganador
+            ergoTree: participationErgoTree.toHex(),
             value: 1000000n,
             creationHeight: 1616921,
             assets: [],
@@ -1260,7 +1259,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R9: SColl(SLong, [50n, 34n, 10n, 40n, 34n, 1200n, 20n]).toHex(),
             }
         });
-        nextWinnerBox = participationResolvedContract.utxos.toArray()[1];
+        nextWinnerBox = participationContract.utxos.toArray()[1];
 
         // Check commitment
         console.log("Debug info for commitment check:");
@@ -1344,6 +1343,6 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
-        expect(participationResolvedContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
+        expect(participationContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
 });

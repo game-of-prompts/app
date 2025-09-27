@@ -24,8 +24,7 @@ import { PARTICIPATION } from "$lib/ergo/reputation/types";
 // --- Utility and Constants Setup ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation_submited.es"), "utf-8");
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
+const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
 // Helper to create a commitment hash
@@ -44,13 +43,11 @@ describe("Omitted Participation Inclusion", () => {
 
     // --- Contracts & Parties ---
     let gameResolutionContract: ReturnType<MockChain["newParty"]>;
-    let participationSubmittedContract: ReturnType<MockChain["newParty"]>;
-    let participationResolvedContract: ReturnType<MockChain["newParty"]>;
+    let participationContract: ReturnType<MockChain["newParty"]>;
     
     // --- Contract ErgoTrees ---
     let gameResolutionErgoTree: ReturnType<typeof compile>;
-    let participationSubmittedErgoTree: ReturnType<typeof compile>;
-    let participationResolvedErgoTree: ReturnType<typeof compile>;
+    let participationErgoTree: ReturnType<typeof compile>;
 
     // --- Game State Variables ---
     const resolutionDeadline = 800_200;
@@ -79,16 +76,12 @@ describe("Omitted Participation Inclusion", () => {
         newResolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 3n }); // Add more balance for multiple tests
 
         // --- Compile Contracts ---
-        participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-        const resolvedHash = Buffer.from(blake2b256(participationResolvedErgoTree.bytes)).toString("hex");
-        
-        const submittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash);
-        participationSubmittedErgoTree = compile(submittedSource);
-        const submittedHash = Buffer.from(blake2b256(participationSubmittedErgoTree.bytes)).toString("hex");
+
+        participationErgoTree = compile(PARTICIPATION_SOURCE);
+        const participationHash = Buffer.from(blake2b256(participationErgoTree.bytes)).toString("hex");
 
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", resolvedHash)
-            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", submittedHash)
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -96,8 +89,7 @@ describe("Omitted Participation Inclusion", () => {
 
         // --- Add Contract Parties to MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationSubmittedContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationSubmitted");
-        participationResolvedContract = mockChain.addParty(participationResolvedErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationSubmitted");
     });
 
     // Setup function to initialize the state for each test scenario
@@ -124,8 +116,8 @@ describe("Omitted Participation Inclusion", () => {
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
-        participationResolvedContract.addUTxOs({
-            ergoTree: participationResolvedErgoTree.toHex(),
+        participationContract.addUTxOs({
+            ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
             creationHeight: mockChain.height - 10,
             assets: [],
@@ -138,10 +130,10 @@ describe("Omitted Participation Inclusion", () => {
                 R9: SColl(SLong, [winnerScore]).toHex(),
             }
         });
-        currentWinnerBox = participationResolvedContract.utxos.toArray()[0];
+        currentWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationSubmittedContract.addUTxOs({
-            ergoTree: participationSubmittedErgoTree.toHex(),
+        participationContract.addUTxOs({
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             value: 1_000_000n,
             creationHeight: omittedCreationHeight,  // Configurable creation height
@@ -154,7 +146,7 @@ describe("Omitted Participation Inclusion", () => {
                 R9: SColl(SLong, [omittedScore]).toHex(),
             }
         });
-        omittedParticipantBox = participationSubmittedContract.utxos.toArray()[0];
+        omittedParticipantBox = participationContract.utxos.toArray()[0];
 
         mockChain.newBlocks(10); 
     };
@@ -178,7 +170,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(), // New resolver
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters) // Box becomes resolved
             ])
             .withDataFrom([currentWinnerBox])
@@ -217,7 +209,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters) // Box becomes resolved
             ])
             .withDataFrom([currentWinnerBox])
@@ -248,7 +240,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters) // Box becomes resolved
             ])
             .withDataFrom([currentWinnerBox])
@@ -280,7 +272,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters)
             ])
             .withDataFrom([currentWinnerBox])
@@ -313,7 +305,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters)
             ])
             .withDataFrom([currentWinnerBox])
@@ -348,8 +340,8 @@ describe("Omitted Participation Inclusion", () => {
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
-        participationSubmittedContract.addUTxOs({
-            ergoTree: participationSubmittedErgoTree.toHex(),
+        participationContract.addUTxOs({
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             value: 1_000_000n,
             creationHeight: 600_000,
@@ -362,7 +354,7 @@ describe("Omitted Participation Inclusion", () => {
                 R9: SColl(SLong, [1000n]).toHex(),
             }
         });
-        omittedParticipantBox = participationSubmittedContract.utxos.toArray()[0];
+        omittedParticipantBox = participationContract.utxos.toArray()[0];
 
         mockChain.newBlocks(10); 
 
@@ -381,7 +373,7 @@ describe("Omitted Participation Inclusion", () => {
                         R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(BigInt(10))).toHex(), // New resolver
                         R9: gameResolutionBox.additionalRegisters.R9
                     }),
-                new OutputBuilder(omittedParticipantBox.value, participationResolvedErgoTree)
+                new OutputBuilder(omittedParticipantBox.value, participationErgoTree)
                     .setAdditionalRegisters(omittedParticipantBox.additionalRegisters) // Box becomes resolved
             ])
             .sendChangeTo(newResolver.address)

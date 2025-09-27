@@ -37,8 +37,7 @@ function uint8ArrayToHex(bytes: Uint8Array): string {
 const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
 const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SUBMITTED_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation_submited.es"), "utf-8");
-const PARTICIPATION_RESOLVED_SOURCE = fs.readFileSync(path.join(contractsDir, "participation_resolved.es"), "utf-8");
+const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 
 // Dirección de desarrollador para comisiones, requerida por game_resolution.es
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
@@ -78,17 +77,11 @@ describe("Game Cancellation (cancel_game)", () => {
         // --- Compilación de Contratos en Orden de Dependencia ---
 
         // 1. Compilar contratos sin dependencias de hash.
-        const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-        const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
-        
-        // 2. Compilar contratos que dependen de los hashes anteriores.
-        const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
-        const participationSubmittedErgoTree = compile(participationSubmittedSource);
-        const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
+        const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
+        const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
 
         const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
-            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -103,8 +96,7 @@ describe("Game Cancellation (cancel_game)", () => {
         const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
             .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
             .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-            .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
         gameActiveErgoTree = compile(finalGameActiveSource);
 
         // --- Creación de la Caja del Juego ---
@@ -234,15 +226,11 @@ describe("Game Cancellation (Low Stake)", () => {
         claimer.addBalance({ nanoergs: 1_000_000_000n });
 
         // --- Compilación de Contratos ---
-        // (La compilación es idéntica a la del bloque describe anterior)
-        const participationResolvedErgoTree = compile(PARTICIPATION_RESOLVED_SOURCE);
-        const participationResolvedScriptHash = uint8ArrayToHex(blake2b256(participationResolvedErgoTree.bytes));
-        const participationSubmittedSource = PARTICIPATION_SUBMITTED_TEMPLATE.replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+        const participationSubmittedSource = PARTICIPATION_TEMPLATE
         const participationSubmittedErgoTree = compile(participationSubmittedSource);
         const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
         const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash)
-            .replace("`+PARTICIPATION_SUBMITTED_SCRIPT_HASH+`", participationSubmittedScriptHash)
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationSubmittedScriptHash)
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
@@ -253,8 +241,7 @@ describe("Game Cancellation (Low Stake)", () => {
         const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
             .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
             .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-            .replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationSubmittedScriptHash)
-            .replace("`+PARTICIPATION_RESOLVED_SCRIPT_HASH+`", participationResolvedScriptHash);
+            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationSubmittedScriptHash);
         gameActiveErgoTree = compile(finalGameActiveSource);
 
         // --- Creación de la Caja del Juego con Stake Bajo ---
