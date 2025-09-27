@@ -19,7 +19,7 @@
   // =================================================================
 
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
+  // R5: (Coll[Byte], Option[Coll[Byte]])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
   // R7: Coll[Long]                 - numericalParams: [deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter].
   // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
@@ -31,7 +31,7 @@
 
   val gameState = SELF.R4[Int].get
 
-  val r5Tuple = SELF.R5[(Coll[Byte], Coll[Byte])].get
+  val r5Tuple = SELF.R5[(Coll[Byte], Option[Coll[Byte]])].get
   val revealedS = r5Tuple._1
   val winnerCandidateCommitment = r5Tuple._2
   
@@ -102,7 +102,7 @@
           recreatedGameBox.R4[Int].get == gameState &&
           recreatedGameBox.tokens.size == 1 &&
           recreatedGameBox.tokens(0)._1 == gameNftId &&
-          recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
+          recreatedGameBox.R5[(Coll[Byte], Option[Coll[Byte]])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
           recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
           recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&  // The game deadline remains the same
           recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&  // The creator's stake remains the same
@@ -110,7 +110,7 @@
           recreatedGameBox.R7[Coll[Long]].get(3) == resolutionDeadline && // The resolution deadline remains the same
           recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter + 1 && // The resolved counter remains the same
           recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
-          recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get  // The game provenance remains the same
+          recreatedGameBox.R9[(Coll[Byte], Option[Coll[Byte]])].get == SELF.R9[(Coll[Byte], Option[Coll[Byte]])].get  // The game provenance remains the same
         }
         
         val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
@@ -189,7 +189,7 @@
         val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
         val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
         val resolvedCounterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter - 1
-        val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
+        val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Option[Coll[Byte]])].get._2 == nextCandidateCommitment
         val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
         
         fundsReturnedToPool && deadlineIsExtended && resolvedCounterIsDecreased && candidateIsReset && gameStateIsPreserved
@@ -207,8 +207,8 @@
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       
       // Se asume que el commitment del ganador está en R5 como una Opción.
-      // Si no hay ganador, R5[Option[Coll[Byte]]] estará vacío (None).
-      val winnerCandidateCommitmentOpt = SELF.R5[Option[Coll[Byte]]].get
+      // Si no hay ganador, R5[Coll[Byte], Option[Coll[Byte]]]._2 estará vacío (None).
+      val winnerCandidateCommitmentOpt = SELF.R5[Coll[Byte], Option[Coll[Byte]]].get._2
 
       // --- MEJORA 3: Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitmentOpt.isDefined) {

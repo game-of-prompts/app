@@ -63,8 +63,8 @@
     if (isAfterDeadline) {
       val resolutionBox = OUTPUTS(0)
       
-      // La estructura de la nueva caja de resolución es (Coll[Byte], Coll[Byte])
-      val r5Tuple = resolutionBox.R5[(Coll[Byte], Coll[Byte])].get
+      // La estructura de la nueva caja de resolución es (Coll[Byte], Option[Coll[Byte]])
+      val r5Tuple = resolutionBox.R5[(Coll[Byte], Option[Coll[Byte]])].get
       val revealedS = r5Tuple._1
       val winnerCandidateCommitment = r5Tuple._2
 
