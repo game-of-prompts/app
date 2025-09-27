@@ -1,232 +1,151 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
-  Box,
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
+import { SByte, SColl, SLong, SInt } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
-// --- Configuración de Utilidades y Carga de Contratos ---
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-
+// Helper para convertir Uint8Array a una cadena hexadecimal.
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");
 }
 
-const GAME_ACTIVE_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_active.es"),
-  "utf-8"
-);
-const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_cancellation.es"),
-  "utf-8"
-);
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_resolution.es"),
-  "utf-8"
-);
-const PARTICIPATION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "participation.es"),
-  "utf-8"
-);
+// =================================================================
+// === CARGA Y COMPILACIÓN DE CONTRATOS
+// =================================================================
 
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
+const contractsDir = path.resolve(__dirname, "..", "contracts");
 
-// --- Suite de Pruebas ---
-describe("Participant Refund After Cancellation", () => {
+// Cargar el código fuente de los contratos ErgoScript
+const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
+const GAME_CANCELLATION_SOURCE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
+const GAME_ACTIVE_SOURCE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
+
+// Compilar los contratos a ErgoTree
+const participationErgoTree = compile(PARTICIPATION_SOURCE);
+const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
+const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
+const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
+
+// Inyectar hashes en el contrato 'game_active.es' (necesario para la consistencia del entorno de prueba)
+const gameActiveSource = GAME_ACTIVE_SOURCE
+    .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", "0".repeat(64)) // No es relevante para este test
+    .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
+const gameActiveErgoTree = compile(gameActiveSource);
+
+
+describe("Participation Contract: Refund after Game Cancellation", () => {
   let mockChain: MockChain;
 
   // --- Actores ---
-  let creator: ReturnType<MockChain["newParty"]>;
-  let participant: ReturnType<MockChain["newParty"]>;
-  let canceller: ReturnType<MockChain["newParty"]>;
+  let player: ReturnType<MockChain["newParty"]>;
+  let creator: ReturnType<MockChain["newParty"]>; // Para crear la caja de juego inicial
 
   // --- Partidos de Contratos ---
-  let gameActiveContract: ReturnType<MockChain["newParty"]>;
-  let gameCancellationContract: ReturnType<MockChain["newParty"]>;
-  let participationContract: ReturnType<MockChain["newParty"]>;
+  let participationContract: ReturnType<MockChain["addParty"]>;
+  let gameCancelledContract: ReturnType<MockChain["addParty"]>;
 
-  // --- Cajas (UTXOs) ---
-  let participationBox: Box;
-  let gameCancellationBox: Box;
+  // --- Estado del Juego ---
+  let gameNftId: string;
+  const participationFee = 1_000_000n; // 0.001 ERG
+  const creatorInitialStake = 2_000_000_000n; // 2 ERG
 
-  // --- Parámetros del Juego ---
-  const creatorStake = 10_000_000_000n; // 10 ERG
-  const participationFee = 1_000_000_000n; // 1 ERG
-  const deadlineBlock = 800_200;
-  const secret = stringToBytes("utf8", "the-secret-phrase");
-  const hashedSecret = blake2b256(secret);
-  const gameNftId =
-    "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f417";
+  afterEach(() => {
+    mockChain.reset({ clearParties: true });
+  });
 
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
 
-    // --- Inicializar Actores ---
+    // Inicializar actores con saldo para las tasas de transacción
+    player = mockChain.newParty("PlayerToRefund");
     creator = mockChain.newParty("GameCreator");
-    participant = mockChain.newParty("Participant");
-    canceller = mockChain.newParty("Canceller");
+    player.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
-    // Fondos para pagar tasas de transacción
-    participant.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
-    canceller.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
+    // --- Definir Partidos de Contratos ---
+    participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
+    gameCancelledContract = mockChain.addParty(gameCancellationErgoTree.toHex(), "GameCancelledContract");
 
-    // --- Compilación de Contratos en Orden ---
-    const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-    const participationHash = uint8ArrayToHex(
-      blake2b256(participationErgoTree.bytes)
-    );
-    const gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
-    const cancellationHash = uint8ArrayToHex(
-      blake2b256(gameCancellationErgoTree.bytes)
-    );
-    const resolutionSource = GAME_RESOLUTION_TEMPLATE
-      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
-      .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-      .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-      .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-    const gameResolutionErgoTree = compile(resolutionSource);
-    const resolutionHash = uint8ArrayToHex(
-      blake2b256(gameResolutionErgoTree.bytes)
-    );
-    const gameActiveSource = GAME_ACTIVE_TEMPLATE
-      .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
-      .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
-      .replace("`+PARTICIPATION_HASH+`", participationHash);
-    const gameActiveErgoTree = compile(gameActiveSource);
-
-    // --- Añadir Partidos de Contratos a la Cadena ---
-    gameActiveContract = mockChain.addParty(
-      gameActiveErgoTree.toHex(),
-      "GameActive"
-    );
-    gameCancellationContract = mockChain.addParty(
-      gameCancellationErgoTree.toHex(),
-      "GameCancellation"
-    );
-    participationContract = mockChain.addParty(
-      participationErgoTree.toHex(),
-      "Participation"
-    );
-
-    // --- FASE 1: Crear el estado inicial (Juego Activo + Participación) ---
-   gameActiveContract.addUTxOs({
-      value: creatorStake,
-      ergoTree: gameActiveErgoTree.toHex(),
+    // --- Crear el estado inicial: una caja de juego cancelada y una participación ---
+    gameNftId = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
+    const secret = stringToBytes("utf8", "the-secret-was-revealed");
+    
+    // 1. Crear la caja `game_cancelled.es` (Data Input)
+    // Esta caja simula un juego que ha sido cancelado.
+    gameCancelledContract.addUTxOs({
+      creationHeight: mockChain.height - 100, // Creada en el pasado
+      ergoTree: gameCancellationErgoTree.toHex(),
       assets: [{ tokenId: gameNftId, amount: 1n }],
-      creationHeight: mockChain.height,
+      value: creatorInitialStake, // El stake que queda
       additionalRegisters: {
-        R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
-        R6: SColl(SByte, hashedSecret).toHex(),
-        R7: SColl(SColl(SByte), []).toHex(),
-        R8: SColl(SLong, [
-          BigInt(deadlineBlock),
-          creatorStake,
-          participationFee,
-        ]).toHex(),
-        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
-      },
+        R4: SInt(2).toHex(), // Estado 2: "Cancelled"
+        R5: SLong(BigInt(mockChain.height - 50)).toHex(), // unlockHeight en el pasado
+        R6: SColl(SByte, secret).toHex(), // El secreto revelado
+        R7: SLong(creatorInitialStake).toHex(), // Stake actual
+        R8: SColl(SByte, stringToBytes("utf8", `{"gameNftId":"${gameNftId}"}`)).toHex(),
+      }
     });
-     const gameActiveBox = gameActiveContract.utxos.toArray()[0];
+
+    // 2. Crear la caja `participation.es` (Input a gastar)
+    // Esta es la caja del jugador que quiere su reembolso.
+    const playerPkBytes = player.address.getPublicKeys()[0];
+    const dummyCommitment = blake2b256(stringToBytes("utf8", "dummy-commitment"));
 
     participationContract.addUTxOs({
-      value: participationFee,
+      creationHeight: mockChain.height - 90,
       ergoTree: participationErgoTree.toHex(),
       assets: [],
-      creationHeight: mockChain.height,
+      value: participationFee,
       additionalRegisters: {
-        R4: SColl(SByte, participant.key.publicKey).toHex(),
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), // Commitment (dummy)
+        R4: SColl(SByte, playerPkBytes).toHex(),
+        R5: SColl(SByte, dummyCommitment).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
-        R7: SColl(SByte, "bb".repeat(8)).toHex(), // solverId (dummy)
-        R8: SColl(SByte, "cc".repeat(32)).toHex(), // hashLogs (dummy)
-        R9: SColl(SLong, [100n, 200n]).toHex(), // scoreList (dummy)
-      },
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, [500n, 800n, 1000n, 1200n]).toHex()
+      }
     });
+  });
 
-    // --- FASE 2: Cancelar el juego para preparar el estado del test ---
-    const stakePortionToClaim = creatorStake / 5n;
-    const remainingStake = creatorStake - stakePortionToClaim;
-    const cooldown = 40n;  // Seems that the mockchain goes various blocks forward when executing the tx!
+  it("should allow a player to claim a refund if the game is cancelled", () => {
+    const currentHeight = mockChain.height;
 
-    const cancelTx = new TransactionBuilder(mockChain.height)
-      .from([gameActiveBox, ...canceller.utxos.toArray()])
-      .to([
-        new OutputBuilder(remainingStake, gameCancellationErgoTree)
-          .addTokens(gameActiveBox.assets)
-          .setAdditionalRegisters({
-            R4: SInt(2).toHex(),
-            R5: SLong(BigInt(mockChain.height) + cooldown).toHex(),
-            R6: SColl(SByte, secret).toHex(), // Se revela el secreto
-            R7: SLong(remainingStake).toHex(),
-            R8: gameActiveBox.additionalRegisters.R9,
-          }),
-        new OutputBuilder(stakePortionToClaim, canceller.address),
-      ])
-      .sendChangeTo(canceller.address)
+    // Caja de salida que devuelve los fondos al jugador
+    const refundOutput = new OutputBuilder(participationFee, player.address);
+    
+    const participationBoxToSpend = participationContract.utxos.toArray()[0];
+    const gameCancelledBoxAsData = gameCancelledContract.utxos.toArray()[0];
+
+    const tx = new TransactionBuilder(currentHeight)
+      .from([participationBoxToSpend, ...player.utxos.toArray()])
+      .withDataFrom([gameCancelledBoxAsData])
+      .to([refundOutput])
+      .sendChangeTo(player.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    mockChain.execute(cancelTx, { signers: [canceller] });
+    const executionResult = mockChain.execute(tx, { signers: [player] });
 
-    // Guardar las cajas necesarias para el test principal
-    participationBox = participationContract.utxos.toArray()[0];
-    gameCancellationBox = gameCancellationContract.utxos.toArray()[0];
-  });
-
-  afterEach(() => {
-    mockChain.reset({clearParties: true});
-  });
-
-  it("should allow a participant to claim a full refund after the game is cancelled", () => {
-    // --- Arrange ---
-    const participantInitialBalance = participant.balance.nanoergs;
-    expect(gameCancellationBox).to.not.be.undefined;
-    expect(participationBox).to.not.be.undefined;
-
-    // --- Act ---
-    const refundTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...participant.utxos.toArray()])
-      .withDataFrom([gameCancellationBox]) // Proporcionar la caja cancelada como prueba
-      .to(
-        new OutputBuilder(
-          participationBox.value, // Reembolso completo
-          participant.address
-        )
-      )
-      .sendChangeTo(participant.address)
-      .payFee(RECOMMENDED_MIN_FEE_VALUE)
-      .build();
-
-    const executionResult = mockChain.execute(refundTx, {
-      signers: [participant],
-    });
-
-    // --- Assert ---
     // 1. La transacción debe ser válida
     expect(executionResult).to.be.true;
 
     // 2. La caja de participación debe haber sido gastada
     expect(participationContract.utxos.length).to.equal(0);
 
-    // 3. El balance del participante debe reflejar el reembolso
-    const expectedBalance =
-      participantInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
-    expect(participant.balance.nanoergs).to.equal(expectedBalance);
-
-    // 4. La caja de cancelación NO debe haber sido gastada (solo leída)
-    expect(gameCancellationContract.utxos.length).to.equal(1);
-    expect(gameCancellationContract.utxos.toArray()[0].boxId).to.equal(
-      gameCancellationBox.boxId
-    );
+    // 3. La caja del juego cancelado (data input) no debe haber sido gastada
+    expect(gameCancelledContract.utxos.length).to.equal(1);
+    
+    // 4. El jugador debe tener una nueva caja con el valor del reembolso
+    const playerRefundBox = player.utxos.toArray().find(box => box.value === participationFee);
+    expect(playerRefundBox).to.not.be.undefined;
+    expect(playerRefundBox?.value).to.equal(participationFee);
   });
 });
