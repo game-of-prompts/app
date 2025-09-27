@@ -88,51 +88,59 @@
 
   // --- ACCIÓN 5: Gasto en la finalización normal del juego (EndGame) ---
   val isValidEndGame = {
-    val mainGameBox = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})(0)
-    val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
-    // 1. Verificar que esta participación pertenece a la caja del juego que se está gastando.
-    val gameLinkIsValid = mainGameBox.tokens(0)._1 == gameNftIdInSelf && mainGameBox.R4[Int].get == 1
+    if (mainGameBoxes.size == 1) {
+      val mainGameBox = mainGameBoxes(0)
+      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
 
-    // 2. Verificar que el período de resolución/juicio ha terminado.
-    val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
+      // 1. Verificar que esta participación pertenece a la caja del juego que se está gastando.
+      val gameLinkIsValid = mainGameBox.tokens(0)._1 == gameNftIdInSelf && mainGameBox.R4[Int].get == 1
 
-    gameLinkIsValid && resolutionPeriodIsOver
+      // 2. Verificar que el período de resolución/juicio ha terminado.
+      val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
+
+      gameLinkIsValid && resolutionPeriodIsOver
+    } 
+    else { false }
   }
 
   // --- ACCIÓN 6: Gasto cuando esta participación es invalidada por los jueces ---
   val isInvalidatedByJudges = {
-    val mainGameBox = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})(0)
-    val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
-    // 1. Verificar que la invalidación ocurre antes del deadline de resolución.
-    val isBeforeDeadline = HEIGHT < resolutionDeadline
-    
-    // 2. Verificar que ESTA caja es la candidata a ganadora que se está invalidando.
-    //    El commitment en R5 de esta caja debe coincidir con el del candidato en la caja del juego.
-    val winnerCandidateCommitment = mainGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
-    val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
+    if (mainGameBoxes.size == 1) {
+      val mainGameBox = mainGameBoxes(0)
+      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
 
-    val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
-    if (isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1) {
-      // 3. Verificar que la transacción recrea la caja del juego correctamente según las reglas de invalidación.
-      val recreatedGameBox = recreatedGameBoxes(0)
+      // 1. Verificar que la invalidación ocurre antes del deadline de resolución.
+      val isBeforeDeadline = HEIGHT < resolutionDeadline
       
-      // El contador de participantes resueltos debe disminuir en 1.
-      val oldResolvedCounter = mainGameBox.R7[Coll[Long]].get(4)
-      val counterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == oldResolvedCounter - 1  // Esta comprobación nos asegura que la acción realizada es una invalidación por los jueces.
-      
-      // Los fondos de esta caja deben ser devueltos al pozo de premios en la nueva caja del juego.
-      val fundsAreReturned = recreatedGameBox.value >= mainGameBox.value + SELF.value
-      
-      // El nuevo candidato a ganador debe ser diferente al de esta caja.
-      val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
-      val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
+      // 2. Verificar que ESTA caja es la candidata a ganadora que se está invalidando.
+      //    El commitment en R5 de esta caja debe coincidir con el del candidato en la caja del juego.
+      val winnerCandidateCommitment = mainGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+      val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
 
-      counterIsDecreased && fundsAreReturned && winnerIsChanged
-    } else {
-      false
+      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
+      if (isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1) {
+        // 3. Verificar que la transacción recrea la caja del juego correctamente según las reglas de invalidación.
+        val recreatedGameBox = recreatedGameBoxes(0)
+        
+        // El contador de participantes resueltos debe disminuir en 1.
+        val oldResolvedCounter = mainGameBox.R7[Coll[Long]].get(4)
+        val counterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == oldResolvedCounter - 1  // Esta comprobación nos asegura que la acción realizada es una invalidación por los jueces.
+        
+        // Los fondos de esta caja deben ser devueltos al pozo de premios en la nueva caja del juego.
+        val fundsAreReturned = recreatedGameBox.value >= mainGameBox.value + SELF.value
+        
+        // El nuevo candidato a ganador debe ser diferente al de esta caja.
+        val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+        val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
+
+        counterIsDecreased && fundsAreReturned && winnerIsChanged
+      } else { false }
     }
+    else { false }
   }
 
   sigmaProp(
