@@ -10,7 +10,7 @@ import { dev_addr_base58, dev_fee } from '../contract';
 
 /**
  * Construye y envía la transacción para finalizar un juego.
- * Los pagos que no alcanzan el mínimo (polvo) se redirigen al ganador.
+ * Los pagos que no alcanzan el mínimo (polvo) se redirigen al beneficiario principal.
  * @param game El objeto que representa la caja del juego a finalizar.
  * @param participations Un array con las cajas de participación resueltas.
  * @returns El ID de la transacción enviada.
@@ -27,63 +27,98 @@ export async function end_game(
     if (currentHeight < game.resolutionDeadline) {
         throw new Error("El período de resolución de los jueces aún no ha terminado.");
     }
-    const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment);
-    if (!winnerParticipation) {
-        throw new Error("No se pudo encontrar la caja de participación del ganador declarado.");
-    }
+    const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment) ?? null;
 
     // --- 2. Lógica de Cálculo de Pagos ---
     const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
-    
-    // 2.1. Calcular los componentes base del pago
-    const creatorStake = game.creatorStakeNanoErg;
-    const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
-    const devCommission = (prizePool * dev_fee) / 100n;
-    const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
-    // 2.2. Determinar los pagos intermedios según si el premio del ganador es "polvo"
-    const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
+    // Variables para almacenar los pagos finales
+    let finalWinnerPrize = 0n;
+    let finalResolverPayout = 0n;
+    let finalDevPayout = 0n;
 
-    const intermediateDevPayout = winnerGetsBasePrize ? devCommission : 0n;
-    const intermediateResolverPayout = winnerGetsBasePrize ? (creatorStake + resolverCommission) : creatorStake;
-    const intermediateWinnerPayout = winnerGetsBasePrize ? winnerBasePrize : (winnerBasePrize + resolverCommission + devCommission);
+    if (winnerParticipation === null) {
+        // --- CASO: NO HAY GANADOR ---
+        console.log("No hay ganador declarado. El premio se distribuye entre el resolutor y el desarrollador.");
 
-    // 2.3. Calcular qué cantidades se confiscan por ser "polvo" y redistribuirlas al ganador
-    const devForfeits = (intermediateDevPayout > 0n && intermediateDevPayout < SAFE_MIN_BOX_VALUE) ? intermediateDevPayout : 0n;
-    const resolverForfeits = (intermediateResolverPayout > 0n && intermediateResolverPayout < SAFE_MIN_BOX_VALUE) ? intermediateResolverPayout : 0n;
+        // El resolutor reclama la apuesta del creador (creatorStake) y todo el pozo de premios.
+        const totalValue = prizePool + game.creatorStakeNanoErg;
 
-    // 2.4. Asignar los pagos finales
-    const finalDevPayout = intermediateDevPayout - devForfeits;
-    const finalResolverPayout = intermediateResolverPayout - resolverForfeits;
-    const finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits;
+        // La comisión del desarrollador se calcula sobre el pozo de premios.
+        const devCommission = (prizePool * dev_fee) / 100n;
 
-    console.log("--- Resumen de Pagos (nanoErgs) ---");
-    console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
-    console.log(`Pago Final Resolver: ${finalResolverPayout}`);
-    console.log(`Pago Final Dev: ${finalDevPayout}`);
-    console.log("------------------------------------");
+        // Si la comisión del dev es "polvo", se confisca y se entrega al resolutor.
+        const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
+        
+        finalDevPayout = devCommission - devForfeits;
+        // El resolutor recibe el valor total menos la comisión del dev (y se queda con la parte confiscada).
+        finalResolverPayout = totalValue - finalDevPayout;
+
+        console.log("--- Resumen de Pagos (Sin Ganador) ---");
+        console.log(`Pago Final Resolver: ${finalResolverPayout} (incluye NFT)`);
+        console.log(`Pago Final Dev: ${finalDevPayout}`);
+        console.log("---------------------------------------");
+
+    } else {
+        // --- CASO: SÍ HAY GANADOR ---
+        console.log(`Ganador declarado: ${winnerParticipation.playerPK_Hex}`);
+
+        const creatorStake = game.creatorStakeNanoErg;
+        const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
+        const devCommission = (prizePool * dev_fee) / 100n;
+        const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+        // Determinar si el premio base del ganador es suficiente para crear una caja.
+        const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
+
+        // Si el premio del ganador es "polvo", las comisiones no se pagan y van al ganador.
+        const intermediateDevPayout = winnerGetsBasePrize ? devCommission : 0n;
+        const intermediateResolverPayout = winnerGetsBasePrize ? (creatorStake + resolverCommission) : creatorStake;
+        const intermediateWinnerPayout = winnerGetsBasePrize ? winnerBasePrize : (prizePool + creatorStake);
+
+        // Redistribuir pagos intermedios si son "polvo".
+        const devForfeits = (intermediateDevPayout > 0n && intermediateDevPayout < SAFE_MIN_BOX_VALUE) ? intermediateDevPayout : 0n;
+        const resolverForfeits = (intermediateResolverPayout > 0n && intermediateResolverPayout < SAFE_MIN_BOX_VALUE) ? intermediateResolverPayout : 0n;
+
+        // Asignar los pagos finales. El ganador recibe cualquier cantidad confiscada.
+        finalDevPayout = intermediateDevPayout - devForfeits;
+        finalResolverPayout = intermediateResolverPayout - resolverForfeits;
+        finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits;
+
+        console.log("--- Resumen de Pagos (nanoErgs) ---");
+        console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
+        console.log(`Pago Final Resolver: ${finalResolverPayout}`);
+        console.log(`Pago Final Dev: ${finalDevPayout}`);
+        console.log("------------------------------------");
+    }
 
     // --- 3. Construcción de Salidas ---
     const outputs: OutputBuilder[] = [];
     const gameNft = game.box.assets[0];
-    const winnerAddressString = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
 
-    // 3.1. Salida para el Ganador (siempre se crea, contiene el NFT)
-    // La transacción fallará a nivel de protocolo si finalWinnerPrize < SAFE_MIN_BOX_VALUE,
-    // lo cual es el comportamiento deseado.
-    outputs.push(
-        new OutputBuilder(finalWinnerPrize, winnerAddressString).addTokens([gameNft])
-    );
-
-    // 3.2. Salida para el Resolutor (si aplica)
-    if (finalResolverPayout > 0n) {
-        const resolverAddressString = pkHexToBase58Address(game.resolverPK_Hex);
+    // 3.1. Salida para el Ganador (si existe)
+    if (winnerParticipation !== null) {
+        const winnerAddressString = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
+        // La transacción fallará a nivel de protocolo si finalWinnerPrize < SAFE_MIN_BOX_VALUE,
+        // lo cual es el comportamiento deseado.
         outputs.push(
-            new OutputBuilder(finalResolverPayout, resolverAddressString)
+            new OutputBuilder(finalWinnerPrize, winnerAddressString).addTokens([gameNft])
         );
     }
 
-    // 3.3. Salida para el Desarrollador (si aplica)
+    // 3.2. Salida para el Resolutor (si su pago no es cero)
+    if (finalResolverPayout > 0n) {
+        const resolverAddressString = pkHexToBase58Address(game.resolverPK_Hex);
+        const resolverOutput = new OutputBuilder(finalResolverPayout, resolverAddressString);
+        
+        // Si no hubo ganador, el resolutor recibe el NFT del juego.
+        if (winnerParticipation === null) {
+            resolverOutput.addTokens([gameNft]);
+        }
+        outputs.push(resolverOutput);
+    }
+
+    // 3.3. Salida para el Desarrollador (si su pago no es cero)
     if (finalDevPayout > 0n) {
         outputs.push(
             new OutputBuilder(finalDevPayout, dev_addr_base58)

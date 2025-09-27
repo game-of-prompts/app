@@ -331,7 +331,7 @@
     }
 
     async function handleEndGame() {
-        if (game?.status !== 'Resolution' || !participations.length) return;
+        if (game?.status !== 'Resolution') return;
         errorMessage = null; 
         isSubmitting = true;
         try {
