@@ -147,8 +147,57 @@
     } else { false }  // Deadline not reached.
   }
 
+  // =================================================================
+  // === ACCIÓN 2: TRANSICIÓN A CANCELACIÓN
+  // =================================================================
+  // Se ejecuta antes de la fecha límite si alguien revela el secreto para penalizar al creador.
+
+  val action2_transitionToCancellation = {
+    if (isBeforeDeadline && OUTPUTS.size >= 2) {
+      val cancellationBox = OUTPUTS(0)
+      val claimerOutput = OUTPUTS(1)
+
+      // Calcular los valores iniciales.
+      val initialStakePortionToClaim = creatorStake / STAKE_DENOMINATOR
+      val initialRemainingStake = creatorStake - initialStakePortionToClaim
+
+      // Asegurarse de que la caja de cancelación tenga al menos el valor mínimo requerido.
+      val stakePortionToClaim = if (initialRemainingStake < MIN_BOX_VALUE) {
+        creatorStake - MIN_BOX_VALUE
+      } else {
+        initialStakePortionToClaim
+      }
+
+      val remainingStake = if (initialRemainingStake < MIN_BOX_VALUE) {
+        MIN_BOX_VALUE
+      } else {
+        initialRemainingStake
+      }
+
+      // --- 1. Validar la caja de cancelación (OUTPUTS(0)) ---
+      val cancellationBoxIsValid = {
+          blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH &&
+          cancellationBox.value >= remainingStake &&
+          cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
+          cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)
+          cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
+          blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
+          cancellationBox.R7[Long].get == remainingStake &&
+          cancellationBox.R8[Coll[Byte]].isDefined  // TODO More validations on game details ...
+      }
+      
+      // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
+      val claimerOutputIsValid = claimerOutput.value >= stakePortionToClaim
+      
+      // El resultado final es verdadero solo si ambas cajas son válidas.
+      cancellationBoxIsValid && claimerOutputIsValid
+
+    } else { 
+      false 
+    }
+  }
 
   val game_active = gameState == 0
-  val actions = action1_transitionToResolution
+  val actions = action1_transitionToResolution || action2_transitionToCancellation
   sigmaProp(game_active && actions)
 }
