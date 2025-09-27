@@ -306,4 +306,187 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
         expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
     });
+
+    it("should include an omitted participant that has the same score as the current winner (but was submitted earlier)", () => {
+        // Setup with same scores (1000n) but omitted participant created earlier
+        const earlierCreationHeight = 500_000; // Earlier than the default 600_000
+        setupScenario(1000n, 1000n, earlierCreationHeight);
+
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+        const newGameBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newGameBox.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
+        expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+    it("should fail if an omitted participant has the same score as the current winner but was submitted later", () => {
+        // Setup with same scores (1000n) but omitted participant created later
+        const laterCreationHeight = 650_000; // Later than the default 600_000 used for currentWinnerBox
+        setupScenario(1000n, 1000n, laterCreationHeight);
+
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+    });
+
+
+    it("should fail if the omitted participant has a commitment created with a fake secret", () => {
+        // Create a fake secret and use it to create a fake commitment
+        const fakeSecret = stringToBytes("utf8", "fake-secret-for-cheating");
+        const fakeCommitment = createCommitment("solver-omitted", 1200n, "logs-omitted", fakeSecret);
+
+        // Setup the current winner normally
+        winnerCommitment = createCommitment("solver-winner", 1000n, "logs-winner", secret);
+
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
+
+        gameResolutionContract.addUTxOs({
+            ergoTree: gameResolutionErgoTree.toHex(),
+            value: 2_000_000_000n,
+            assets: [{ tokenId: gameNftId, amount: 1n }],
+            creationHeight: mockChain.height - 10,
+            additionalRegisters: {
+                R4: SInt(1).toHex(),
+                R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+                R6: SColl(SColl(SByte), []).toHex(),
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, originalResolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, originalResolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+        });
+        gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
+
+        participationContract.addUTxOs({
+            ergoTree: participationErgoTree.toHex(),
+            value: 1_000_000n,
+            creationHeight: mockChain.height - 10,
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, currentWinnerPlayer.key.publicKey).toHex(),
+                R5: SColl(SByte, winnerCommitment).toHex(),
+                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
+                R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
+                R8: SColl(SByte, stringToBytes("utf8", "logs-winner")).toHex(),
+                R9: SColl(SLong, [1000n]).toHex(),
+            }
+        });
+        currentWinnerBox = participationContract.utxos.toArray()[0];
+
+        // Create the omitted participant box with the fake commitment
+        participationContract.addUTxOs({
+            ergoTree: participationErgoTree.toHex(),
+            assets: [],
+            value: 1_000_000n,
+            creationHeight: 600_000,
+            additionalRegisters: {
+                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R5: SColl(SByte, fakeCommitment).toHex(), // Using fake commitment here
+                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
+                R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
+                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
+                R9: SColl(SLong, [1200n]).toHex(),
+            }
+        });
+        omittedParticipantBox = participationContract.utxos.toArray()[1];
+
+        mockChain.newBlocks(10);
+
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, fakeCommitment)).toHex(), // Using the real secret but fake commitment
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+    });
+
+    it("should fail if the secret revealed does not match the commitment of the omitted participant", () => {
+        setupScenario(1000n, 1200n);
+
+        // Use a different secret that won't match the omitted participant's commitment
+        const wrongSecret = stringToBytes("utf8", "wrong-secret-for-omitted-test");
+        
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, wrongSecret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+    });
 });
