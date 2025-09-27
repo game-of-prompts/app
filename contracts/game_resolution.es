@@ -74,7 +74,8 @@
 
         // Se verifica que la caja de participación enviada sea válida para este juego
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
-                          omittedWinnerBox.R6[Coll[Byte]].get == gameNftId
+                                omittedWinnerBox.R6[Coll[Byte]].get == gameNftId &&
+                                omittedWinnerBox.creationInfo._1 < deadline
 
         if (omittedBoxIsValid) {
           // Se calcula el puntaje de la nueva participación revelando el secreto
@@ -89,7 +90,6 @@
           val newScoreIsValid = newScore != -1L
 
           if (newScoreIsValid) {
-            // ===================== LÓGICA PRINCIPAL MODIFICADA =====================
             
             val newWinnerCandidate = if (winnerCandidateCommitment == Coll[Byte]()) {
               // CASO 1: No hay un candidato a ganador actual.
