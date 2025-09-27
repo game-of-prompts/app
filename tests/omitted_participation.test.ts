@@ -198,7 +198,7 @@ describe("Omitted Participation Inclusion", () => {
         expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
     });
 
-    it("should include an omitted participant who is not the new winner", () => {
+    it("should fail with an omitted participant who is not the new winner", () => {
         // Omitted player has a lower score (800 < 1000)
         setupScenario(1000n, 800n);
 
@@ -225,16 +225,8 @@ describe("Omitted Participation Inclusion", () => {
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        const executionResult = mockChain.execute(tx, { signers: [newResolver] });
-        expect(executionResult).to.be.true;
-
-        const newGameBox = gameResolutionContract.utxos.toArray()[0];
-        // Assert winner has NOT changed
-        expect(newGameBox.additionalRegisters.R5).to.equal(gameResolutionBox.additionalRegisters.R5);
-        // Assert participant count is updated
-        expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
-        // Assert a new resolved box for the omitted participant was created
-        expect(participationResolvedContract.utxos.toArray()).to.have.length(2);
+        const executionResult = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(executionResult).to.be.false;
     });
 
     it("should fail if include an omitted participant who is not the new winner, but set it as the current winner", () => {

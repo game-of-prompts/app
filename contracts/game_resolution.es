@@ -19,7 +19,7 @@
   // =================================================================
 
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Option[Coll[Byte]])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
+  // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
   // R7: Coll[Long]                 - numericalParams: [deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter].
   // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
@@ -31,7 +31,7 @@
 
   val gameState = SELF.R4[Int].get
 
-  val r5Tuple = SELF.R5[(Coll[Byte], Option[Coll[Byte]])].get
+  val r5Tuple = SELF.R5[(Coll[Byte], Coll[Byte])].get
   val revealedS = r5Tuple._1
   val winnerCandidateCommitment = r5Tuple._2
   
@@ -57,74 +57,108 @@
   // === ACCIONES DE GASTO
   // =================================================================
 
-  // ### Acción 1: Incluir Participación Omitida
+  // ### Acción 1: Incluir Participación Omitida (Versión Corregida y Mejorada)
   val action1_includeOmittedParticipation = {
-    if (isBeforeResolutionDeadline && INPUTS.size > 1 && OUTPUTS.size > 1 && CONTEXT.dataInputs.size > 0) {
+    // Verificaciones iniciales de la estructura de la transacción
+    if (isBeforeResolutionDeadline && INPUTS.size > 1 && OUTPUTS.size > 1) {
       val submittedPBox = INPUTS(1)
       val recreatedGameBox = OUTPUTS(0)
-      val currentCandidateBox = CONTEXT.dataInputs(0)
 
+      // Se verifica que la caja de participación enviada sea válida para este juego
       val pBoxIsValid = blake2b256(submittedPBox.propositionBytes) == PARTICIPATION_SUBMITTED_SCRIPT_HASH &&
-                        submittedPBox.R6[Coll[Byte]].get == gameNftId // No se comprueba que fuera creada antes de la resolución, ya que se presupone que lo cubre la acción 2 del script de participación enviada.
+                        submittedPBox.R6[Coll[Byte]].get == gameNftId
 
-      val candidateDataInputIsValid = currentCandidateBox.R5[Coll[Byte]].get == winnerCandidateCommitment &&
-                                      blake2b256(currentCandidateBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-                                      currentCandidateBox.R6[Coll[Byte]].get == gameNftId
-
-      if (pBoxIsValid && candidateDataInputIsValid) {
-        
+      if (pBoxIsValid) {
+        // Se calcula el puntaje de la nueva participación revelando el secreto
         val newScore = submittedPBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
           if (acc._2) { acc } else {
             val testCommitment = blake2b256(submittedPBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ submittedPBox.R8[Coll[Byte]].get ++ revealedS)
             if (testCommitment == submittedPBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
           }
         })._1
-        
-        val currentScore = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
-          if (acc._2) { acc } else {
-            val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ revealedS)
-            if (testCommitment == currentCandidateBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
+
+        // Solo continuamos si el puntaje se pudo validar (es decir, no es -1)
+        val newScoreIsValid = newScore != -1L
+
+        if (newScoreIsValid) {
+          // ===================== LÓGICA PRINCIPAL MODIFICADA =====================
+          
+          val newWinnerCandidate = if (winnerCandidateCommitment == Coll[Byte]()) {
+            // CASO 1: No hay un candidato a ganador actual.
+            // La caja presentada se convierte en el nuevo candidato. No se necesita dataInput.
+            submittedPBox.R5[Coll[Byte]].get
+          } else {
+            // CASO 2: Ya existe un candidato a ganador.
+            // Se busca la caja del candidato actual en los dataInputs.
+            val currentCandidateBoxes = CONTEXT.dataInputs.filter({
+              (b:Box) => 
+                blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && 
+                b.R5[Coll[Byte]].get == winnerCandidateCommitment &&
+                b.R6[Coll[Byte]].get == gameNftId
+            })
+            
+            if (currentCandidateBoxes.size == 1) {
+              val currentCandidateBox = currentCandidateBoxes(0)
+              
+              // Se calcula el puntaje del candidato actual de forma segura
+              val currentScore = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
+                if (acc._2) { acc } else {
+                  val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ revealedS)
+                  if (testCommitment == currentCandidateBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
+                }
+              })._1
+
+              // Se determina el nuevo ganador comparando puntajes y alturas de bloque
+              if (newScore > currentScore || (newScore == currentScore && submittedPBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
+                submittedPBox.R5[Coll[Byte]].get // El nuevo es mejor
+              } else {
+                winnerCandidateCommitment // El actual sigue siendo el mejor
+              }
+            } else {
+              // Si hay un compromiso pero no se provee la caja en dataInputs (o hay más de una), la transacción es inválida.
+              Coll[Byte]()
+            }
           }
-        })._1
 
-        val newWinnerCandidate = if (
-            newScore > currentScore ||   // If the new score is higher than the current one
-            newScore == currentScore && submittedPBox.creationInfo._1 < currentCandidateBox.creationInfo._1  // Or if the scores are equal but the new one is from an earlier block
-          ) {
-          submittedPBox.R5[Coll[Byte]].get
-        } 
-        else {
-          winnerCandidateCommitment
-        }
+          // Se verifica si el nuevo candidato es diferente al actual
+          val winnerCandidateChanged = newWinnerCandidate != winnerCandidateCommitment
 
-        val gameBoxIsRecreatedCorrectly = {
-          recreatedGameBox.propositionBytes == SELF.propositionBytes &&
-          recreatedGameBox.R4[Int].get == gameState &&
-          recreatedGameBox.tokens.size == 1 &&
-          recreatedGameBox.tokens(0)._1 == gameNftId &&
-          recreatedGameBox.R5[(Coll[Byte], Option[Coll[Byte]])].get == (revealedS, newWinnerCandidate) &&  // Maintain the revealed secret and update the winner candidate
-          recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&  // The participating judges remain the same
-          recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&  // The game deadline remains the same
-          recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&  // The creator's stake remains the same
-          recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&  // The participation fee remains the same
-          recreatedGameBox.R7[Coll[Long]].get(3) == resolutionDeadline && // The resolution deadline remains the same
-          recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter + 1 && // The resolved counter remains the same
-          recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&  // The resolver's commission percentage remains the same
-          recreatedGameBox.R9[(Coll[Byte], Option[Coll[Byte]])].get == SELF.R9[(Coll[Byte], Option[Coll[Byte]])].get  // The game provenance remains the same
-        }
-        
-        val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
-          blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
-          outBox.value == submittedPBox.value &&
-          outBox.R4[Coll[Byte]].get == submittedPBox.R4[Coll[Byte]].get &&
-          outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get &&
-          outBox.R6[Coll[Byte]].get == submittedPBox.R6[Coll[Byte]].get &&
-          outBox.R7[Coll[Byte]].get == submittedPBox.R7[Coll[Byte]].get &&
-          outBox.R8[Coll[Byte]].get == submittedPBox.R8[Coll[Byte]].get &&
-          outBox.R9[Coll[Long]].get == submittedPBox.R9[Coll[Long]].get
-        })
-        
-        gameBoxIsRecreatedCorrectly && participationIsRecreated
+          // Se comprueba que el nuevo candidato sea válido y que haya cambiado
+          val winnerCandidateIsDetermined = ((winnerCandidateCommitment == Coll[Byte]() && newWinnerCandidate != Coll[Byte]()) || 
+                                            (winnerCandidateCommitment != Coll[Byte]())) && 
+                                            winnerCandidateChanged
+
+          // Verificación de la recreación de la caja del juego
+          val gameBoxIsRecreatedCorrectly = {
+            recreatedGameBox.propositionBytes == SELF.propositionBytes &&
+            recreatedGameBox.R4[Int].get == gameState &&
+            recreatedGameBox.tokens.size == 1 &&
+            recreatedGameBox.tokens(0)._1 == gameNftId &&
+            recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get == (revealedS, newWinnerCandidate) &&  // Se actualiza el candidato
+            recreatedGameBox.R6[Coll[Coll[Byte]]].get == participatingJudges &&
+            recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&
+            recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&
+            recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
+            recreatedGameBox.R7[Coll[Long]].get(3) == resolutionDeadline &&
+            recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter + 1 && // Se incrementa el contador
+            recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&
+            recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
+          }
+          
+          // Verificación de que la caja de participación se convierte a "resuelta"
+          val participationIsRecreated = OUTPUTS.exists( { (outBox: Box) =>
+            blake2b256(outBox.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH &&
+            outBox.value == submittedPBox.value &&
+            outBox.R4[Coll[Byte]].get == submittedPBox.R4[Coll[Byte]].get &&
+            outBox.R5[Coll[Byte]].get == submittedPBox.R5[Coll[Byte]].get &&
+            outBox.R6[Coll[Byte]].get == submittedPBox.R6[Coll[Byte]].get &&
+            outBox.R7[Coll[Byte]].get == submittedPBox.R7[Coll[Byte]].get &&
+            outBox.R8[Coll[Byte]].get == submittedPBox.R8[Coll[Byte]].get &&
+            outBox.R9[Coll[Long]].get == submittedPBox.R9[Coll[Long]].get
+          })
+          
+          gameBoxIsRecreatedCorrectly && participationIsRecreated && newScoreIsValid && winnerCandidateIsDetermined
+        } else { false }
       } else { false }
     } else { false }
   }
@@ -164,35 +198,39 @@
         
         val recreatedGameBox = recreatedGameBoxes(0)
         val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH})
-        val invalidatedCandidateBox = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})(0)
+        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
+        if (invalidatedCandidateBoxes.size == 1) {
+          val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
-        val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
-        // TODO Check
-        // todo filter participantInputs with:  ¿?
-        //   -  val correctParticipationFee = pBox.value >= participationFee
-        //   -  val pBox.creationHeight <= game.resolutionDeadline
-        // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
-        val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
-            if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
-                val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
-                    if (scoreAcc._2) { scoreAcc } else {
-                        val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
-                        if (testCommitment == pBox.R5[Coll[Byte]].get) { (score, true) } else { scoreAcc }
-                    }
-                })
-                val actualScore = scoreCheckResult._1
-                if (actualScore > acc._1) { (actualScore, pBox.R5[Coll[Byte]].get) } else { acc }
-            } else { acc }
-        })
-        val nextCandidateCommitment = foldResult._2
+          val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
+          // TODO Check
+          // todo filter participantInputs with:  ¿?
+          //   -  val correctParticipationFee = pBox.value >= participationFee
+          //   -  val pBox.creationHeight <= game.resolutionDeadline
+          // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
+          val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
+              if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
+                  val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
+                      if (scoreAcc._2) { scoreAcc } else {
+                          val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
+                          if (testCommitment == pBox.R5[Coll[Byte]].get) { (score, true) } else { scoreAcc }
+                      }
+                  })
+                  val actualScore = scoreCheckResult._1
+                  if (actualScore > acc._1) { (actualScore, pBox.R5[Coll[Byte]].get) } else { acc }
+              } else { acc }
+          })
+          val nextCandidateCommitment = foldResult._2
 
-        val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
-        val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
-        val resolvedCounterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter - 1
-        val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Option[Coll[Byte]])].get._2 == nextCandidateCommitment
-        val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
-        
-        fundsReturnedToPool && deadlineIsExtended && resolvedCounterIsDecreased && candidateIsReset && gameStateIsPreserved
+          val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
+          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
+          val resolvedCounterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == resolvedCounter - 1
+          val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
+          val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
+          
+          fundsReturnedToPool && deadlineIsExtended && resolvedCounterIsDecreased && candidateIsReset && gameStateIsPreserved
+        } else { false }
+
       } else { false }
     } else { false }
   }
@@ -203,17 +241,12 @@
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
 
       // Valores comunes para ambos casos (con y sin ganador)
-      val participations = INPUTS.filter({ (box: Box) => blake2b265(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
+      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       
-      // Se asume que el commitment del ganador está en R5 como una Opción.
-      // Si no hay ganador, R5[Coll[Byte], Option[Coll[Byte]]]._2 estará vacío (None).
-      val winnerCandidateCommitmentOpt = SELF.R5[Coll[Byte], Option[Coll[Byte]]].get._2
-
       // --- MEJORA 3: Manejar el caso CON y SIN ganador ---
-      if (winnerCandidateCommitmentOpt.isDefined) {
+      if (winnerCandidateCommitment != Coll[Byte]()) {
         // --- CASO 1: HAY UN GANADOR DECLARADO ---
-        val winnerCandidateCommitment = winnerCandidateCommitmentOpt.get
 
         // --- MEJORA 1: Verificación segura del input del ganador ---
         val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
