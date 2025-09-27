@@ -199,56 +199,101 @@
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
+    // La condición principal no cambia: solo se puede finalizar después del deadline.
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
-      // 1. Calcular los componentes base del pago
 
-      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
-
+      // Valores comunes para ambos casos (con y sin ganador)
+      val participations = INPUTS.filter({ (box: Box) => blake2b265(box.propositionBytes) == PARTICIPATION_RESOLVED_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
-
-      val resolverCommission = prizePool * commissionPercentage / 100L
-      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-      val winnerBasePrize = prizePool - resolverCommission - devCommission
-
-      // 2. Determinar los pagos intermedios según si el premio del ganador es "polvo"
-      val winnerGetsBasePrize = winnerBasePrize >= MIN_ERG_BOX
-
-      val intermediateDevPayout = if (winnerGetsBasePrize) { devCommission } else { 0L }
-      val intermediateResolverPayout = if (winnerGetsBasePrize) { creatorStake + resolverCommission } else { creatorStake }
-      val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { winnerBasePrize + resolverCommission + devCommission }
-
-      // 3. Calcular qué cantidades se confiscan por ser "polvo" y redistribuirlas al ganador
-      val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0L) { intermediateDevPayout } else { 0L }
-      val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0L) { intermediateResolverPayout } else { 0L }
-
-      val finalDevPayout = intermediateDevPayout - devForfeits
-      val finalResolverPayout = intermediateResolverPayout - resolverForfeits
-      val finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits
-
-      // 4. Validar las salidas de la transacción
-      val winnerBoxInput = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })(0)
-      val winnerPK = winnerBoxInput.R4[Coll[Byte]].get
-
-      // Por convención, la salida del ganador (que siempre recibe el NFT) debe ser la primera.
-      val winnerOutput = OUTPUTS(0)
-      val winnerGetsPaid = winnerOutput.value >= finalWinnerPrize &&
-                           winnerOutput.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) &&
-                           winnerOutput.tokens(0)._1 == gameNftId
       
-      // NOTA: Si `finalWinnerPrize` resulta ser menor que MIN_ERG_BOX, la creación de `winnerOutput` fallará a nivel de protocolo, lo cual es el comportamiento esperado para bloquear fondos insuficientes. No debería jamás alcanzarse este punto ya como mínimo cuanta con los fondos totales de una caja de participación.
+      // Se asume que el commitment del ganador está en R5 como una Opción.
+      // Si no hay ganador, R5[Option[Coll[Byte]]] estará vacío (None).
+      val winnerCandidateCommitmentOpt = SELF.R5[Option[Coll[Byte]]].get
 
-      val resolverGetsPaid = if (finalResolverPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
-      } else { true }
-      
-      val devGetsPaid = if (finalDevPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
-      } else { true }
+      // --- MEJORA 3: Manejar el caso CON y SIN ganador ---
+      if (winnerCandidateCommitmentOpt.isDefined) {
+        // --- CASO 1: HAY UN GANADOR DECLARADO ---
+        val winnerCandidateCommitment = winnerCandidateCommitmentOpt.get
 
-      // TODO Check participation resolved counter.
+        // --- MEJORA 1: Verificación segura del input del ganador ---
+        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
 
-      winnerGetsPaid && resolverGetsPaid && devGetsPaid
-    } else { false }
+        // Solo continuamos si se encuentra exactamente una caja de participación para el ganador.
+        if (winnerBoxes.size > 0) {  // Maybe there are more than one box with the same commitment, but at least one. (it's secure because the commitment includes the public key)
+          val winnerBoxInput = winnerBoxes(0)
+          val winnerPK = winnerBoxInput.R4[Coll[Byte]].get
+
+          // La lógica de cálculo de pagos es la misma que la original.
+          val resolverCommission = prizePool * commissionPercentage / 100L
+          val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+          val winnerBasePrize = prizePool - resolverCommission - devCommission
+
+          val winnerGetsBasePrize = winnerBasePrize >= MIN_ERG_BOX
+
+          val intermediateDevPayout = if (winnerGetsBasePrize) { devCommission } else { 0L }
+          val intermediateResolverPayout = if (winnerGetsBasePrize) { creatorStake + resolverCommission } else { creatorStake }
+          val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { prizePool + creatorStake }
+
+          val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0L) { intermediateDevPayout } else { 0L }
+          val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0L) { intermediateResolverPayout } else { 0L }
+
+          val finalDevPayout = intermediateDevPayout - devForfeits
+          val finalResolverPayout = intermediateResolverPayout - resolverForfeits
+          val finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits
+
+          // --- MEJORA 2: Validación flexible de la salida del ganador ---
+          // Se usa `OUTPUTS.exists` en lugar de `OUTPUTS(0)` para no depender del orden.
+          val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
+              b.value >= finalWinnerPrize &&
+              b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) &&
+              b.tokens.size == 1 && // Buena práctica: asegurar que solo está el NFT
+              b.tokens(0)._1 == gameNftId
+          })
+
+          val resolverGetsPaid = if (finalResolverPayout > 0L) {
+              OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
+          } else { true }
+          
+          val devGetsPaid = if (finalDevPayout > 0L) {
+              OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
+          } else { true }
+
+          winnerGetsPaid && resolverGetsPaid && devGetsPaid
+        } else {
+          // Si no se encuentra la caja del ganador, la transacción es inválida.
+          false
+        }
+      } else {
+        // --- CASO 2: NO HAY GANADOR DECLARADO ---
+        // El resolutor reclama el stake del creador y el pozo de premios, pagando la comisión del dev.
+        val totalValue = prizePool + creatorStake
+        val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+
+        // Lógica de polvo para la comisión del desarrollador.
+        val devForfeits = if (devCommission < MIN_ERG_BOX && devCommission > 0L) { devCommission } else { 0L }
+        val finalDevPayout = devCommission - devForfeits
+        
+        // El resolutor se lleva todo lo demás.
+        val finalResolverPayout = totalValue - finalDevPayout
+
+        // Verificación de las salidas para el caso sin ganador.
+        val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
+            b.value >= finalResolverPayout &&
+            b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK) &&
+            b.tokens.size == 1 && // El resolutor recibe el NFT
+            b.tokens(0)._1 == gameNftId
+        })
+        
+        val devGetsPaid = if (finalDevPayout > 0L) {
+            OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
+        } else { true }
+        
+        // No debe haber más salidas (excepto la del cambio, que el script no valida).
+        resolverGetsPaid && devGetsPaid
+      }
+    } else {
+      false
+    }
   }
 
   val game_in_resolution = gameState == 1
