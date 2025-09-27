@@ -63,7 +63,7 @@
       })
       
       if (resolutionBoxes.size == 1) {
-        val resolutonBox = resolutionBoxes(0)
+        val resolutionBox = resolutionBoxes(0)
         
         // La estructura de la nueva caja de resolución es (Coll[Byte], Coll[Byte])
         val r5Tuple = resolutionBox.R5[(Coll[Byte], Coll[Byte])].get
@@ -111,12 +111,13 @@
           // --- Judge validation ---
           val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
           val judgeProofDataInputs = CONTEXT.dataInputs
-          /* .filter({(box: Box) =>  TODO
-            box.propositionBytes == REPUTATION_PROOF_BOX && 
-            box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
-            box.R5[Coll[Byte]].get == gameNftId &&
-            box.R6[(Boolean, Long)].get._1
-          })*/
+            .filter({(box: Box) =>
+              // box.propositionBytes == REPUTATION_PROOF_BOX && 
+              box.tokens.size == 1 &&
+              // box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
+              box.R5[Coll[Byte]].get == gameNftId &&
+              box.R6[(Boolean, Long)].get._1
+            })
           val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
 
           val resolutionBoxIsValid = {
