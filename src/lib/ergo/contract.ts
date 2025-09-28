@@ -11,7 +11,6 @@ import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
 import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?raw';
-import PARTICIPATION_RESOLVED_SOURCE from '../../../contracts/participation_resolved.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 import { PARTICIPATION } from "./reputation/types";
@@ -36,17 +35,9 @@ export const dev_fee = 5n;
 
 // Nota: El orden de compilación es importante debido a las dependencias entre scripts.
 
-function ensureParticipationResolvedCompiled(): void {
-    if (_participationResolved.ergoTree) return;
-    _participationResolved.ergoTree = compile(PARTICIPATION_RESOLVED_SOURCE, { version: ergoTreeVersion });
-}
-
 function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
-    ensureParticipationResolvedCompiled();
-    const resolvedHash = getGopParticipationSubmittedScriptHash();
-    let source = PARTICIPATION_SUBMITTED_SOURCE.replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, resolvedHash);
-    _participation.ergoTree = compile(source, { version: ergoTreeVersion });
+    _participation.ergoTree = compile(PARTICIPATION_SUBMITTED_SOURCE, { version: ergoTreeVersion });
 }
 
 function ensureGameCancellationCompiled(): void {
