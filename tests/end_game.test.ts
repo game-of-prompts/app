@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
@@ -280,4 +280,140 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
   
+
+  it("Should fail if a non-winner (loser) tries to sign when a winner is declared", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    loser.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE }); // Fondos para la comisión
+    
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+    
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+    
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...loser.utxos.toArray()])
+      .to([
+        new OutputBuilder(winnerBasePrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(creatorStake + resolverCommission, resolver.address),
+        new OutputBuilder(devCommission, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(loser.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [loser], throw: false })).to.be.false;
+  });
+  
+  it("Should fail if the resolver tries to sign when a winner is declared", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+    
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+    
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...resolver.utxos.toArray()])
+      .to([
+        new OutputBuilder(winnerBasePrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(creatorStake + resolverCommission, resolver.address),
+        new OutputBuilder(devCommission, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(resolver.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [resolver], throw: false })).to.be.false;
+  });
+
+  it("Should fail if a participant tries to sign when no winner is declared", () => {
+    // --- Arrange ---
+    // Reconfigurar para un escenario sin ganador
+    gameResolutionContract.utxos.clear();
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height, value: creatorStake, ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+    mockChain.jumpTo(resolutionDeadline);
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const devCommission = (prizePool * 5n) / 100n;
+    const finalResolverPayout = creatorStake + prizePool - devCommission;
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()]) // 'winner' es solo un participante aquí
+      .to([
+        new OutputBuilder(finalResolverPayout, resolver.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(devCommission, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    // La transacción debe fallar porque 'winner' (un participante) no puede firmar.
+    expect(mockChain.execute(transaction, { signers: [winner], throw: false })).to.be.false;
+  });
+
+  it("Should fail if the creator tries to sign when no winner is declared", () => {
+    // --- Arrange ---
+    // Reconfigurar para un escenario sin ganador
+    gameResolutionContract.utxos.clear();
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height, value: creatorStake, ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+    mockChain.jumpTo(resolutionDeadline);
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const devCommission = (prizePool * 5n) / 100n;
+    const finalResolverPayout = creatorStake + prizePool - devCommission;
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...creator.utxos.toArray()])
+      .to([
+        new OutputBuilder(finalResolverPayout, resolver.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(devCommission, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(creator.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [creator], throw: false })).to.be.false;
+  });
+
 });
