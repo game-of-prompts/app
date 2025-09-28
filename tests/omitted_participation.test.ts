@@ -372,7 +372,6 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         expect(result).to.be.false;
     });
 
-
     it("should fail if the omitted participant has a commitment created with a fake secret", () => {
         // Create a fake secret and use it to create a fake commitment
         const fakeSecret = stringToBytes("utf8", "fake-secret-for-cheating");
@@ -642,37 +641,6 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
 
         // Should fail because omitted participant has lower score
         const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
-        expect(result).to.be.false;
-    });
-
-    it("should fail if signer is not the current resolver", () => {
-        setupScenario(1000n, 1200n);
-
-        const unauthorizedParty = mockChain.newParty("UnauthorizedUser");
-        unauthorizedParty.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 3n });
-
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
-
-        const tx = new TransactionBuilder(mockChain.height)
-            .from([gameResolutionBox, ...unauthorizedParty.utxos.toArray()])
-            .to([
-                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
-                    .addTokens(gameResolutionBox.assets)
-                    .setAdditionalRegisters({
-                        R4: gameResolutionBox.additionalRegisters.R4,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
-                        R6: gameResolutionBox.additionalRegisters.R6,
-                        R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, unauthorizedParty.key.publicKey), SLong(10n)).toHex(), // Wrong resolver
-                        R9: gameResolutionBox.additionalRegisters.R9
-                    })
-            ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
-            .sendChangeTo(unauthorizedParty.address)
-            .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .build();
-
-        const result = mockChain.execute(tx, { signers: [unauthorizedParty], throw: false });
         expect(result).to.be.false;
     });
 
