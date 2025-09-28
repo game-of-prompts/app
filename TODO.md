@@ -54,8 +54,8 @@
 [x] Un solo estado, solo se gasta al final del juego o en invalidez o cancelación.
 [x] Las participaciones solo se gastan al finalizar el juego o en cancelación o invalidación por jueces.
 [x] Omited participation solo controla la ganadora.
-[] No hay resolvedCounter en game_resolution.es; únicamente puede finalizar el juego la participación ganadora (en base a su R4 ¿?).
-[] Las participaciones poseen una condición que les permite gastarse en caso de que el ganador no finalice el juego en un tiempo (ej: 90 días).
+[x] No hay resolvedCounter en game_resolution.es; únicamente puede finalizar el juego la participación ganadora
+[] Las participaciones poseen una condición que permite al creador del juego obtener su valor si el ganador no resuelve el juego en 90 días.
 
 
 ## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp

@@ -130,8 +130,47 @@
     else { false }
   }
 
+  // ### Acción 5: Reclamo del creador por abandono
+  // Permite al creador del juego reclamar los fondos de esta participación si
+  // ha pasado un tiempo muy largo (90 días) desde la finalización del juego.
+  // Esto actúa como un mecanismo de limpieza para fondos no reclamados o atascados.
+  val creatorClaimsAbandonedFunds = {
+    // Buscamos la caja principal del juego en estado "Finalizado" (1) entre los DataInputs.
+    val mainGameBoxes = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
+
+    if (mainGameBoxes.size == 1) {
+      val mainGameBox = mainGameBoxes(0)
+      
+      // --- Condición 1: Plazo de 90 días superado ---
+      // Se comprueba que han pasado 90 días (64800 bloques) desde la fecha límite de resolución.
+      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+      val isAfter90Days = HEIGHT >= resolutionDeadline + 64800L
+
+      if (isAfter90Days) {
+        // --- Condición 2: Autenticación del creador ---
+        // Se extrae la clave pública del creador desde el R8 de la caja del juego y se verifica la firma.
+        val creatorPKBytes = mainGameBox.R8[(Coll[Byte], Long)].get._1
+        val signedByCreator = proveDlog(decodePoint(creatorPKBytes))
+
+        // --- Condición 3: Destino de los fondos ---
+        // Se asegura de que uno de los outputs de la transacción envía los fondos a la dirección del creador.
+        val outputGoesToCreator = OUTPUTS.exists({(b:Box) => 
+          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ creatorPKBytes
+        })
+
+        signedByCreator && sigmaProp(outputGoesToCreator)
+      } else {
+        sigmaProp(false)
+      }
+    } 
+    else { 
+      sigmaProp(false) 
+    }
+  }
+
   spentInValidGameCancellation || 
   playerReclaimsAfterGracePeriod || 
   sigmaProp(isValidEndGame) || 
-  sigmaProp(isInvalidatedByJudges)
+  sigmaProp(isInvalidatedByJudges) ||
+  creatorClaimsAbandonedFunds
 }
