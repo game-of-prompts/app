@@ -228,6 +228,32 @@
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
+    // Requerimos autorización explícita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),
+    // si NO hay candidato, debe firmar el creador (la clave del creador puede estar en R9._1 o, como fallback, en R8._1).
+
+    // Primero calculamos la identidad del creador disponible en el contrato (preferimos R9._1, fallback a R8._1)
+    val creatorPkFromR9 = SELF.R9[(Coll[Byte], Coll[Byte])].get._1
+    val creatorPkFromR8 = SELF.R8[(Coll[Byte], Long)].get._1
+    val creatorPK = if (creatorPkFromR9 != Coll[Byte]()) creatorPkFromR9 else creatorPkFromR8
+
+    // Determinamos una SigmaProp que representa la autorización del que llama a finalizar
+    val authorizedToEnd: SigmaProp = {
+      if (winnerCandidateCommitment != Coll[Byte]()) {
+        // Hay candidato a ganador: requerimos que la transacción esté firmada por la clave pública del ganador
+        val winnerBoxes = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && box.R5[Coll[Byte]].get == winnerCandidateCommitment })
+        if (winnerBoxes.size > 0) {
+          val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get
+          proveDlog(winnerPK)
+        } else {
+          // No se puede verificar la clave del ganador -> denegado
+          proveDlog(Coll[Byte]()) // provocará que la condición sea falsa (clave vacía no válida)
+        }
+      } else {
+        // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
+        proveDlog(creatorPK)
+      }
+    }
+
     // La condición principal no cambia: solo se puede finalizar después del deadline.
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
 
@@ -246,6 +272,9 @@
         if (winnerBoxes.size > 0) {  // Maybe there are more than one box with the same commitment, but at least one. (it's secure because the commitment includes the public key)
           val winnerBoxInput = winnerBoxes(0)
           val winnerPK = winnerBoxInput.R4[Coll[Byte]].get
+
+          // Verificamos que el firmante sea el ganador
+          val signerIsWinner = authorizedToEnd // authorizedToEnd debe ser proveDlog(winnerPK)
 
           // La lógica de cálculo de pagos es la misma que la original.
           val resolverCommission = prizePool * commissionPercentage / 100L
@@ -282,13 +311,16 @@
               OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
           } else { true }
 
-          winnerGetsPaid && resolverGetsPaid && devGetsPaid
+          signerIsWinner && winnerGetsPaid && resolverGetsPaid && devGetsPaid
         } else {
           // Si no se encuentra la caja del ganador, la transacción es inválida.
           false
         }
       } else {
         // --- CASO 2: NO HAY GANADOR DECLARADO ---
+        // Requerimos que el firmante sea el creador
+        val signerIsCreator = authorizedToEnd
+
         // El resolutor reclama el stake del creador y el pozo de premios, pagando la comisión del dev.
         val totalValue = prizePool + creatorStake
         val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
@@ -312,8 +344,7 @@
             OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
         } else { true }
         
-        // No debe haber más salidas (excepto la del cambio, que el script no valida).
-        resolverGetsPaid && devGetsPaid
+        signerIsCreator && resolverGetsPaid && devGetsPaid
       }
     } else {
       false
