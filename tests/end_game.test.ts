@@ -89,7 +89,7 @@ describe("Game Finalization (end_game)", () => {
     mockChain.reset({clearParties: true});
     mockChain.jumpTo(800_000);
 
-      // --- Partes Involucradas ---
+    // --- Partes Involucradas ---
     resolver = mockChain.newParty("Resolver");
     creator = mockChain.newParty("GameCreator");
     winner = mockChain.newParty("Winner");
@@ -209,4 +209,75 @@ describe("Game Finalization (end_game)", () => {
     expect(winner.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
     expect(gameResolutionContract.utxos.length).to.equal(1);
   });
+
+  it("Should distribute funds to resolver and dev when there is no winner", () => {
+    // --- Arrange ---
+    // Limpiar la caja del juego creada en beforeEach para crear una nueva para este test
+    gameResolutionContract.utxos.clear();
+    
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    
+    // Crear una nueva caja de juego con un 'winner commitment' vacío
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), // Estado: Resolución
+            R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(), // Sin ganador
+            R6: SColl(SColl(SByte), []).toHex(),
+            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+
+    // Añadir fondos al resolver para que pueda firmar y pagar la comisión
+    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    
+    mockChain.jumpTo(resolutionDeadline);
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const devCommission = (prizePool * 5n) / 100n;
+    
+    // Si no hay ganador, el pozo de premios y el stake van al resolver
+    const finalResolverPayout = creatorStake + prizePool - devCommission;
+    const finalDevPayout = devCommission;
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...resolver.utxos.toArray()])
+      .to([
+        // El NFT y los fondos van al resolver
+        new OutputBuilder(finalResolverPayout, resolver.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(finalDevPayout, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(resolver.address) // El cambio va al firmante, el resolver
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [resolver] })).to.be.true;
+    
+    // Verificar los balances finales
+    expect(developer.balance.nanoergs).to.equal(finalDevPayout);
+    expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
+
+    // Los balances de los jugadores no deberían cambiar (excepto por las comisiones si tuvieran)
+    expect(creator.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
+    expect(winner.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
+    expect(loser.balance.nanoergs).to.equal(0n); // El perdedor no tenía fondos iniciales
+    
+    // Verificar que el resolver recibió el NFT
+    expect(resolver.balance.tokens[0].tokenId).to.equal(gameNftId);
+    
+    // Verificar que las cajas de contrato se han consumido
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+  });
+  
 });

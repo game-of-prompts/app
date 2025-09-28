@@ -244,7 +244,7 @@
         }
       } else {
         // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
-        sigmaProp(true) // TODO   use   val creatorPK = SELF.R8[(Coll[Byte], Long)].get._1  // TODO
+        proveDlog(decodePoint(resolverPK))   
       }
     }
 
