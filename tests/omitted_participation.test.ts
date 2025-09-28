@@ -116,7 +116,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         participationContract.addUTxOs({
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: mockChain.height - 10,
+            creationHeight: 600_000,
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, currentWinnerPlayer.key.publicKey).toHex(),
