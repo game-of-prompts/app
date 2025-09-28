@@ -6,7 +6,7 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SLong, SPair, SInt } from "@fleet-sdk/serializer";
+import { SByte, SColl, SLong, SPair, SInt, SGroupElement } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -140,7 +140,7 @@ describe("Game Resolution (resolve_game)", () => {
       });
 
     participation1_registers = {
-        R4: SColl(SByte, participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, commitment1Hex).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),

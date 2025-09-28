@@ -13,7 +13,7 @@
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
   // =================================================================
 
-  // R4: Coll[Byte] - playerPKBytes: Clave pública del jugador.
+  // R4: GroupElement - playerPK: Clave pública del jugador.
   // R5: Coll[Byte] - commitmentC: Commitment criptográfico con la puntuación verdadera.
   // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participación.
   // R7: Coll[Byte] - solverId: ID del solver del jugador.
@@ -24,14 +24,14 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val playerPKBytes = SELF.R4[Coll[Byte]].get
+  val playerPK = SELF.R4[GroupElement].get
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
   // =================================================================
   // === ACCIONES DE GASTO
   // =================================================================
 
-  // ### Acción 3: Reembolso por Cancelación de Juego
+  // ### Acción 1: Reembolso por Cancelación de Juego
   // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
   val spentInValidGameCancellation = {
     if (CONTEXT.dataInputs.size > 0) {
@@ -41,25 +41,19 @@
                         gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
                         gameBoxInData.R6[Coll[Byte]].isDefined &&
                         gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
-
-      val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
-        outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
-        outBox.value >= SELF.value
-      }
       
-      correctGame && playerGetsRefund
+      sigmaProp(correctGame) && proveDlog(playerPK)
     }
-    else { false }
+    else { sigmaProp(false) }
   }
 
-  // ### Acción 4: Reclamo por Período de Gracia
+  // ### Acción 2: Reclamo por Período de Gracia
   // Permite al jugador reclamar sus fondos si el juego queda "atascado"
   // (no se ha resuelto después de un período de gracia tras la fecha límite).
   val playerReclaimsAfterGracePeriod = {
     if (CONTEXT.dataInputs.size > 0) {
       val gameBoxInData = CONTEXT.dataInputs(0) // Caja del juego game_active.es como Data Input.
 
-      // Condición 1: El Data Input debe ser la caja del juego correcto y estar en estado "Activo".
       val gameBoxIsCorrectAndActive =
         gameBoxInData.tokens.size > 0 &&
         gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
@@ -68,25 +62,18 @@
       if (gameBoxIsCorrectAndActive) {
         val gameDeadline = gameBoxInData.R8[Coll[Long]].get(0)
         
-        // Condición 2: El período de gracia después de la fecha límite debe haber pasado.
         val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
 
-        // Condición 3: El jugador debe recibir un reembolso completo.
-        val playerGetsRefund = OUTPUTS.exists { (outBox: Box) =>
-          outBox.propositionBytes == P2PK_ERGOTREE_PREFIX ++ playerPKBytes &&
-          outBox.value >= SELF.value
-        }
-        
-        gracePeriodIsOver && playerGetsRefund
+        sigmaProp(gracePeriodIsOver) && proveDlog(playerPK)
       } else {
-        false
+        sigmaProp(false)
       }
     } else {
-      false
+      sigmaProp(false)
     }
   }
 
-  // --- ACCIÓN 5: Gasto en la finalización normal del juego (EndGame) ---
+  // --- ACCIÓN 3: Gasto en la finalización normal del juego (EndGame) ---
   val isValidEndGame = {
     val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
@@ -105,7 +92,7 @@
     else { false }
   }
 
-  // --- ACCIÓN 6: Gasto cuando esta participación es invalidada por los jueces ---
+  // --- ACCIÓN 4: Gasto cuando esta participación es invalidada por los jueces ---
   val isInvalidatedByJudges = {
     val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
@@ -143,10 +130,8 @@
     else { false }
   }
 
-  sigmaProp(
-    spentInValidGameCancellation || 
-    playerReclaimsAfterGracePeriod || 
-    isValidEndGame || 
-    isInvalidatedByJudges
-  )
+  spentInValidGameCancellation || 
+  playerReclaimsAfterGracePeriod || 
+  sigmaProp(isValidEndGame) || 
+  sigmaProp(isInvalidatedByJudges)
 }

@@ -11,6 +11,7 @@ import {
 import {
   SByte,
   SColl,
+  SGroupElement,
   SInt,
   SLong,
   SPair
@@ -101,7 +102,7 @@ describe("Game Finalization (end_game)", () => {
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
-    resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    winner.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
     // Crear y distribuir el Game NFT
     gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
@@ -132,7 +133,7 @@ describe("Game Finalization (end_game)", () => {
             ergoTree: pparticipationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, party.key.publicKey).toHex(),
+                R4: SGroupElement(party.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, commitment).toHex(),
                 R6: SColl(SByte, gameNftId).toHex(),
                 R7: SColl(SByte, "c3".repeat(32)).toHex(),
@@ -162,7 +163,7 @@ describe("Game Finalization (end_game)", () => {
     const finalDevPayout = devCommission;
 
     const transaction = new TransactionBuilder(mockChain.height)
-      .from([gameBox, ...participationBoxes.toArray(), ...resolver.utxos.toArray()])
+      .from([gameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()])
       .to([
         new OutputBuilder(finalWinnerPrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
         new OutputBuilder(finalResolverPayout, resolver.address),
@@ -173,7 +174,7 @@ describe("Game Finalization (end_game)", () => {
       .build();
 
     // --- Assert ---
-    expect(mockChain.execute(transaction, { signers: [resolver] })).to.be.true;
+    expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
 
     console.log("Winner Balance:", winner.balance.nanoergs);
     console.log("Final Winner Prize:", finalWinnerPrize);
@@ -196,16 +197,16 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Act ---
     const transaction = new TransactionBuilder(mockChain.height)
-      .from([gameBox, ...resolver.utxos.toArray()])
+      .from([gameBox, ...winner.utxos.toArray()])
       .to(new OutputBuilder(SAFE_MIN_BOX_VALUE, winner.address))
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(resolver.address)
       .build();
 
     // --- Assert ---
-    expect(mockChain.execute(transaction, { signers: [resolver], throw: false })).to.be.false;
+    expect(mockChain.execute(transaction, { signers: [winner], throw: false })).to.be.false;
 
-    expect(winner.balance.nanoergs).to.equal(0n);
+    expect(winner.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
     expect(gameResolutionContract.utxos.length).to.equal(1);
   });
 });

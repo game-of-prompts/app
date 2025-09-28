@@ -12,7 +12,8 @@ import {
     SColl,
     SLong,
     SPair,
-    SInt
+    SInt,
+    SGroupElement
 } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
@@ -119,7 +120,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             creationHeight: 600_000,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, currentWinnerPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( currentWinnerPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
@@ -135,7 +136,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: omittedCreationHeight,
             additionalRegisters: {
-                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( omittedPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -265,7 +266,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( omittedPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -404,7 +405,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             creationHeight: mockChain.height - 10,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, currentWinnerPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( currentWinnerPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
@@ -421,7 +422,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( omittedPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, fakeCommitment).toHex(), // Using fake commitment here
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -501,7 +502,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( omittedPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", wrongGameNftId)).toHex(), // Wrong gameNftId
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -549,7 +550,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte, omittedPlayer.key.publicKey).toHex(),
+                R4: SGroupElement( omittedPlayer.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, inconsistentCommitment).toHex(), // Doesn't match the solver name below
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(), // Different from commitment

@@ -7,7 +7,7 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
+import { SByte, SColl, SGroupElement, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -87,7 +87,7 @@ describe("Participant Reclaim After Grace Period", () => {
       assets: [],
       creationHeight: mockChain.height,
       additionalRegisters: {
-        R4: SColl(SByte, participant.key.publicKey).toHex(),
+        R4: SGroupElement(participant.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, "aa".repeat(32)).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, "bb".repeat(8)).toHex(),

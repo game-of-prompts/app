@@ -6,7 +6,7 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SLong, SInt } from "@fleet-sdk/serializer";
+import { SByte, SColl, SLong, SInt, SGroupElement } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -105,7 +105,7 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
       assets: [],
       value: participationFee,
       additionalRegisters: {
-        R4: SColl(SByte, playerPkBytes).toHex(),
+        R4: SGroupElement( playerPkBytes).toHex(),
         R5: SColl(SByte, dummyCommitment).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
