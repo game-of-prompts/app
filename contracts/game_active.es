@@ -143,7 +143,6 @@
 
           judgesAreValid && resolutionBoxIsValid
         } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.
-
       } else { false }  // There should be exactly one resolution box.
     } else { false }  // Deadline not reached.
   }
