@@ -18,7 +18,7 @@
 
 ### Otros
 
-[] Cubrir el caso sin participaciones validas.
+[x] Cubrir el caso sin participaciones validas.
 [x] Todas las votaciones deben validarse.
 [x] Jueces
     [x] Fetch
@@ -32,7 +32,7 @@
 
 [] Use CONTEXT.preHeader.timestamp  en lugar de HEIGHT
 [] GameInfo without JSON
-[] Allow for P2SH
+[] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
 [x] Check constants on fetch.
 
 ##### game-service-factory
