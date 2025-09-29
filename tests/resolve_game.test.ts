@@ -189,10 +189,203 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r4).to.equal(SInt(1).toHex());
     
     const r5 = newResolutionBox.additionalRegisters.R5;
-    expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); // Using hexToBytes?
+    expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); 
     
     const r7 = newResolutionBox.additionalRegisters.R7;
     const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
     expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
+
+  it("should FAIL transition the game to the resolution phase if participation game nft id is wrong", () => {
+    const currentHeight = mockChain.height;
+
+    const wrongGameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc72"; // last digit changed
+
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      ergoTree: participationSubmittedErgoTree.toHex(),
+      assets: [],
+      value: participationFee,
+      additionalRegisters: {
+        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, commitment1Hex).toHex(),
+        R6: SColl(SByte, wrongGameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, [500n, 800n, score1, 1200n]).toHex()
+      }
+    });
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([gameBoxOutput])
+      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL transition the game to the resolution phase if commitment is wrong", () => {
+    const currentHeight = mockChain.height;
+
+    const wrongSecret = stringToBytes("utf8", "wrong-secret-phrase-for-testing");
+    const wrongCommitment1Hex = uint8ArrayToHex(blake2b256(
+        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...wrongSecret])
+    ));
+
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      ergoTree: participationSubmittedErgoTree.toHex(),
+      assets: [],
+      value: participationFee,
+      additionalRegisters: {
+        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, wrongCommitment1Hex).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, [500n, 800n, score1, 1200n]).toHex()
+      }
+    });
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([gameBoxOutput])
+      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL transition the game to the resolution phase if doesn't contains the real score", () => {
+    const currentHeight = mockChain.height;
+
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      ergoTree: participationSubmittedErgoTree.toHex(),
+      assets: [],
+      value: participationFee,
+      additionalRegisters: {
+        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, commitment1Hex).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, [500n, 800n, 640n, 1200n]).toHex()
+      }
+    });
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([gameBoxOutput])
+      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL transition the game to the resolution phase if output state is wrong", () => {
+    const currentHeight = mockChain.height;
+  
+    const creator_commission_percentage = 10n;
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const resolvedorPkBytes = creatorPkBytes;
+
+    const wrongGameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
+      .addTokens([{ tokenId: gameNftId, amount: 1n }])
+      .setAdditionalRegisters({
+        R4: SInt(0).toHex(),
+        R5: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
+        R6: SColl(SColl(SByte), []).toHex(),
+        R7: SColl(SLong, newNumericalParams).toHex(),
+        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
+        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+      });
+
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([wrongGameBoxOutput])
+      .withDataFrom([participationContract.utxos.toArray()[0]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should successfully transition the game to the resolution phase without winner", () => {
+    const currentHeight = mockChain.height;
+
+    const creator_commission_percentage = 10n;
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const resolvedorPkBytes = creatorPkBytes;
+
+    const gameBoxOutputWithAnyWinner = new OutputBuilder(creatorStake, gameResolutionContract.address) 
+      .addTokens([{ tokenId: gameNftId, amount: 1n }])
+      .setAdditionalRegisters({
+        R4: SInt(1).toHex(),
+        R5: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
+        R6: SColl(SColl(SByte), []).toHex(),
+        R7: SColl(SLong, newNumericalParams).toHex(),
+        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
+        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+      });
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([gameBoxOutputWithAnyWinner])
+      .withDataFrom([])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator] });
+
+    expect(executionResult).to.be.true;
+
+    // --- Verificación usando los partidos de contrato --- 
+    expect(gameActiveContract.utxos.length).to.equal(0);
+    expect(gameResolutionContract.utxos.length).to.equal(1);
+
+    const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
+    expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
+    expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
+    
+    const r4 = newResolutionBox.additionalRegisters.R4;
+    expect(r4).to.equal(SInt(1).toHex());
+    
+    const r5 = newResolutionBox.additionalRegisters.R5;
+    expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex()); 
+    
+    const r7 = newResolutionBox.additionalRegisters.R7;
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
+  });
+
 });
