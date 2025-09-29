@@ -44,11 +44,6 @@
 ### Sobre fetch e indexación
 - Las participaciones y juegos gastados se pueden obtener de la api de cajas historicas.  Pero si no tiene utilidad mantener el estado no debe de dejarse, no es limpio.
 
-
-### Participaciones en el contrato
-- [Revisar todo's en el gasto de participaciones en game_active.es y game_resolution.es]
-
-
 ### Simplificar participaciones
 
 [x] Un solo estado, solo se gasta al final del juego o en invalidez o cancelación.
