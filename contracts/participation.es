@@ -35,14 +35,18 @@
   // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
   val spentInValidGameCancellation = {
     if (CONTEXT.dataInputs.size > 0) {
-      val gameBoxInData = CONTEXT.dataInputs(0)  // Caja del juego game_cancelled.es como Data Input.
+      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 2})  // Caja del juego game_cancelled.es como Data Input.
 
-      val correctGame = gameBoxInData.tokens.size > 0 &&
-                        gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
-                        gameBoxInData.R6[Coll[Byte]].isDefined &&
-                        gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
-      
-      sigmaProp(correctGame) && proveDlog(playerPK)
+      if (gameBoxInDataArr.size != 1) { sigmaProp(false) } // Debe haber exactamente una caja del juego en estado "Cancelado".
+      else {
+        val gameBoxInData = gameBoxInDataArr(0)
+        val correctGame = gameBoxInData.tokens.size > 0 &&
+                          gameBoxInData.tokens(0)._1 == gameNftIdInSelf && 
+                          gameBoxInData.R6[Coll[Byte]].isDefined &&
+                          gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
+        
+        sigmaProp(correctGame) && proveDlog(playerPK)
+      }
     }
     else { sigmaProp(false) }
   }
@@ -52,15 +56,10 @@
   // (no se ha resuelto después de un período de gracia tras la fecha límite).
   val playerReclaimsAfterGracePeriod = {
     if (CONTEXT.dataInputs.size > 0) {
-      val gameBoxInData = CONTEXT.dataInputs(0) // Caja del juego game_active.es como Data Input.
+      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 0}) // Caja del juego game_active.es como Data Input.
 
-      val gameBoxIsCorrectAndActive =
-        gameBoxInData.tokens.size > 0 &&
-        gameBoxInData.tokens(0)._1 == gameNftIdInSelf &&
-        gameBoxInData.R4[Int].get == 0 // Estado "Activo" es 0
-
-      if (gameBoxIsCorrectAndActive) {
-        val gameDeadline = gameBoxInData.R8[Coll[Long]].get(0)
+      if (gameBoxInDataArr.size == 1) {
+        val gameDeadline = gameBoxInDataArr(0).R8[Coll[Long]].get(0)
         
         val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
 
@@ -155,7 +154,8 @@
         // --- Condición 3: Destino de los fondos ---
         // Se asegura de que uno de los outputs de la transacción envía los fondos a la dirección del creador.
         val outputGoesToCreator = OUTPUTS.exists({(b:Box) => 
-          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ creatorPKBytes
+          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ creatorPKBytes &&
+          b.value >= SELF.value
         })
 
         signedByCreator && sigmaProp(outputGoesToCreator)
