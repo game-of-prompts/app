@@ -3,6 +3,7 @@ import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
   Box,
+  ErgoTree,
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
@@ -13,6 +14,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { hexToBytes } from "$lib/ergo/utils";
 
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
@@ -25,6 +27,8 @@ const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "particip
 
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const ABANDON_PERIOD_IN_BLOCKS = 64800;
+
+let gameResolutionErgoTree: null|ErgoTree = null;
 
 describe("Creator Claims Abandoned Funds", () => {
   let mockChain: MockChain;
@@ -52,7 +56,7 @@ describe("Creator Claims Abandoned Funds", () => {
       .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
       .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-    const gameResolutionErgoTree = compile(resolutionSource);
+    gameResolutionErgoTree = compile(resolutionSource);
 
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
@@ -79,7 +83,7 @@ describe("Creator Claims Abandoned Funds", () => {
       additionalRegisters: {
         R4: SGroupElement(participant.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, "aa".repeat(32)).toHex(),
-        R6: SColl(SByte, gameNftId).toHex(),
+        R6: SColl(SByte, hexToBytes(gameNftId) ?? "").toHex(),
         R7: SColl(SByte, "bb".repeat(8)).toHex(),
         R8: SColl(SByte, "cc".repeat(32)).toHex(),
         R9: SColl(SLong, [100n, 200n]).toHex(),
@@ -155,12 +159,20 @@ describe("Creator Claims Abandoned Funds", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
-    const wrongNftId = "wrong" + gameNftId.substring(5);
-    const wrongGameBox = {
-      ...gameResolutionBox,
+    const wrongNftId = "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f418"; // last digit changed
+    gameResolutionContract.addUTxOs({
+      value: creatorStake,
+      ergoTree: gameResolutionErgoTree.toHex(),
       assets: [{ tokenId: wrongNftId, amount: 1n }],
-    };
-    gameResolutionContract.addUTxOs(wrongGameBox);
+      creationHeight: mockChain.height,
+      additionalRegisters: {
+        R4: SInt(0).toHex(),
+        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
+        R6: SColl(SColl(SByte), []).toHex(),
+        R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
+        R8: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+      },
+    });
     const wrongGameResolutionBox = gameResolutionContract.utxos.toArray()[1];
 
     const claimTx = new TransactionBuilder(mockChain.height)
@@ -181,14 +193,19 @@ describe("Creator Claims Abandoned Funds", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
-    const wrongStateBox = {
-      ...gameResolutionBox,
+    gameResolutionContract.addUTxOs({
+      value: creatorStake,
+      ergoTree: gameResolutionErgoTree.toHex(),
+      assets: [{ tokenId: gameNftId, amount: 1n }],
+      creationHeight: mockChain.height,
       additionalRegisters: {
-        ...gameResolutionBox.additionalRegisters,
         R4: SInt(0).toHex(),
+        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
+        R6: SColl(SColl(SByte), []).toHex(),
+        R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
+        R8: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
       },
-    };
-    gameResolutionContract.addUTxOs(wrongStateBox);
+    });
     const wrongStateGameBox = gameResolutionContract.utxos.toArray()[1];
 
     const claimTx = new TransactionBuilder(mockChain.height)
