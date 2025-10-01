@@ -8,22 +8,20 @@ import {
     type GameResolution,
     type GameCancellation,
     type ParticipationBase,
-    type ParticipationSubmitted,
-    type ParticipationResolved,
+    type Participation,
+    type Participation,
     type ParticipationInvalidated,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
     getGopGameActiveScriptHash,
     getGopGameResolutionTemplateHash,
-    getGopParticipationSubmittedTemplateHash,
-    getGopParticipationResolvedTemplateHash,
+    getGopParticipationTemplateHash,
     getGopGameCancellationTemplateHash,
     getGopGameActiveErgoTreeHex,
     getGopGameResolutionErgoTreeHex,
     getGopGameCancellationErgoTreeHex,
-    getGopParticipationSubmittedErgoTreeHex,
-    getGopParticipationResolvedErgoTreeHex
+    getGopParticipationErgoTreeHex
 } from "./contract"; // Assumes this file exports functions to get script hashes
 import {
     hexToUtf8,
@@ -525,11 +523,11 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
 /**
  * Searches for "Submitted" participations for a specific game.
  * @param gameNftId The NFT ID of the game.
- * @returns A `Promise` with an array of `ParticipationSubmitted`.
+ * @returns A `Promise` with an array of `Participation`.
  */
-export async function fetchSubmittedParticipations(gameNftId: string): Promise<ParticipationSubmitted[]> {
-    const participations: ParticipationSubmitted[] = [];
-    const scriptHash = getGopParticipationSubmittedTemplateHash();
+export async function fetchParticipations(gameNftId: string): Promise<Participation[]> {
+    const participations: Participation[] = [];
+    const scriptHash = getGopParticipationTemplateHash();
     
     let offset = 0;
     const limit = 100;
@@ -559,8 +557,8 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
             const items: Box[] = data.items || [];
 
             for (const box of items) {
-                if (box.ergoTree !== getGopParticipationSubmittedErgoTreeHex()) {
-                    console.warn('parseParticipationSubmittedBox: invalid constants');
+                if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
+                    console.warn('parseParticipationBox: invalid constants');
                     continue;
                 }
                 const p_base = await _parseParticipationBox(box);
@@ -583,64 +581,5 @@ export async function fetchSubmittedParticipations(gameNftId: string): Promise<P
     }
 
     console.log(`Found ${participations.length} submitted participations for game ${gameNftId}.`);
-    return participations;
-}
-
-/**
- * Searches for "Resolved" participations for a game (both spent and unspent).
- */
-export async function fetchResolvedParticipations(gameNftId: string): Promise<ParticipationResolved[]> {
-    const participations: ParticipationResolved[] = [];
-    const scriptHash = getGopParticipationResolvedTemplateHash();
-    
-    let offset = 0;
-    const limit = 100;
-    let moreAvailable = true;
-
-    console.log(`Searching for resolved participations for game ${gameNftId}`);
-
-    while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
-        try {
-            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: scriptHash,
-                    registers: { "R6": gameNftId }
-                }),
-            });
-
-            if (!response.ok) throw new Error(`API response: ${response.status}`);
-
-            const data = await response.json();
-            const items: Box[] = data.items || [];
-
-            for (const box of items) {
-                if (box.ergoTree !== getGopParticipationResolvedErgoTreeHex()) {
-                    console.warn('parseParticipationResolvedBox: invalid constants');
-                    continue;
-                }
-                const p_base = await _parseParticipationBox(box);
-                if (p_base) {
-                    participations.push({
-                        ...p_base,
-                        status: 'Resolved',
-                        spent: box.transactionId !== null
-                    });
-                }
-            }
-
-            offset += items.length;
-            moreAvailable = items.length === limit;
-
-        } catch (error)
-        {
-            console.error(`An exception occurred while fetching resolved participations for ${gameNftId}:`, error);
-            moreAvailable = false;
-        }
-    }
-    
-    console.log(`Found ${participations.length} resolved participations for game ${gameNftId}.`);
     return participations;
 }

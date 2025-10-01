@@ -108,7 +108,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -273,7 +273,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -415,7 +415,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -561,7 +561,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
     
         // --- Inicializar Actores ---
@@ -706,7 +706,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -865,7 +865,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -1002,7 +1002,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---
@@ -1182,7 +1182,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         // --- Añadir Partidos de Contratos al MockChain ---
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationResolved");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
 
         // --- Inicializar Actores ---

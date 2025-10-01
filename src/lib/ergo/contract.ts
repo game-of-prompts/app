@@ -48,7 +48,7 @@ function ensureGameCancellationCompiled(): void {
 function ensureGameResolutionCompiled(): void {
     if (_gameResolution.ergoTree) return;
     ensureParticipationCompiled(); // Dependencia transitiva
-    const submittedHash = getGopParticipationSubmittedScriptHash();
+    const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
@@ -66,8 +66,8 @@ function ensureGameActiveCompiled(): void {
 
     const resolutionHash = getGopGameResolutionScriptHash();
     const cancellationHash = getGopGameCancellationScriptHash();
-    const participationHash = getGopParticipationSubmittedScriptHash();
-    const resolvedHash = getGopParticipationSubmittedScriptHash();
+    const participationHash = getGopParticipationScriptHash();
+    const resolvedHash = getGopParticipationScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
         .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
@@ -119,10 +119,10 @@ export function getGopGameCancellationAddress(): Address { ensureGameCancellatio
 export function getGopGameCancellationErgoTreeHex(): string { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toHex(); }
 
 // --- Participation Submitted ---
-export const getGopParticipationSubmittedTemplateHash = () => getTemplateHash(_participation, ensureParticipationCompiled);
-export const getGopParticipationSubmittedScriptHash = () => getScriptHash(_participation, ensureParticipationCompiled);
-export function getGopParticipationSubmittedAddress(): Address { ensureParticipationCompiled(); return _participation.ergoTree!.toAddress(networkType); }
-export function getGopParticipationSubmittedErgoTreeHex(): string { ensureParticipationCompiled(); return _participation.ergoTree!.toHex(); }
+export const getGopParticipationTemplateHash = () => getTemplateHash(_participation, ensureParticipationCompiled);
+export const getGopParticipationScriptHash = () => getScriptHash(_participation, ensureParticipationCompiled);
+export function getGopParticipationAddress(): Address { ensureParticipationCompiled(); return _participation.ergoTree!.toAddress(networkType); }
+export function getGopParticipationErgoTreeHex(): string { ensureParticipationCompiled(); return _participation.ergoTree!.toHex(); }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

@@ -85,7 +85,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         gameResolutionErgoTree = compile(resolutionSource);
 
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
-        participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationSubmitted");
+        participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
     });
 
     afterEach(() => {

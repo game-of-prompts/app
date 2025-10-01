@@ -8,9 +8,9 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameActive, type ParticipationSubmitted } from '$lib/common/game';
+import { type GameActive, type Participation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex, getGopParticipationSubmittedErgoTreeHex } from '../contract';
+import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 import { GAME } from '../reputation/types';
 import { fetchJudges } from '../reputation/fetch';
@@ -21,16 +21,16 @@ const JUDGE_PERIOD = 40;
 /**
  * Inicia la transición de un juego del estado Activo al de Resolución.
  * Esta acción consume la caja del juego y todas las participaciones válidas,
- * y crea una nueva caja 'GameResolution' y cajas 'ParticipationResolved'.
+ * y crea una nueva caja 'GameResolution' y cajas 'Participation'.
  * @param game El objeto GameActive a resolver.
- * @param participations Un array de todas las participaciones enviadas (ParticipationSubmitted).
+ * @param participations Un array de todas las participaciones enviadas (Participation).
  * @param secretS_hex El secreto 'S' en formato hexadecimal para revelar al ganador.
  * @param judgeProofBoxes Un array de las cajas de prueba de reputación de los jueces, que se usarán como dataInputs.
  * @returns El ID de la transacción si tiene éxito.
  */
 export async function resolve_game(
     game: GameActive,
-    participations: ParticipationSubmitted[],
+    participations: Participation[],
     secretS_hex: string,
     judgeProofs: string[]
 ): Promise<string | null> {
@@ -86,8 +86,8 @@ export async function resolve_game(
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
     let winnerCandidateCommitment: string | null = null;
-    const validParticipations: ParticipationSubmitted[] = [];
-    const participationErgoTree = getGopParticipationSubmittedErgoTreeHex();
+    const validParticipations: Participation[] = [];
+    const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
     if (!participationErgoTreeBytes) {
         throw new Error("El ErgoTree del script de participación es inválido.");
@@ -184,10 +184,9 @@ export async function resolve_game(
         R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
     
-    const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
-    const resolvedParticipationOutputs = validParticipations.map((p: ParticipationSubmitted) => {
+    const participationOutputs = validParticipations.map((p: Participation) => {
         const pBox = parseBox(p.box);
-        return new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
+        return new OutputBuilder(BigInt(pBox.value), participationErgoTree)
             .setAdditionalRegisters({
                 R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
@@ -205,7 +204,7 @@ export async function resolve_game(
     try {
         const unsignedTransaction = new TransactionBuilder(currentHeight)
             .from(inputs)
-            .to([resolutionBoxOutput, ...resolvedParticipationOutputs])
+            .to([resolutionBoxOutput, ...participationOutputs])
             .sendChangeTo(resolverAddressString)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .withDataFrom(judgeProofBoxes)

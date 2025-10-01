@@ -5,7 +5,7 @@ import {
     SAFE_MIN_BOX_VALUE,
 } from '@fleet-sdk/core';
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
-import { type GameResolution, type ParticipationResolved } from '$lib/common/game';
+import { type GameResolution, type Participation } from '$lib/common/game';
 import { dev_addr_base58, dev_fee } from '../contract';
 
 /**
@@ -17,7 +17,7 @@ import { dev_addr_base58, dev_fee } from '../contract';
  */
 export async function end_game(
     game: GameResolution,
-    participations: ParticipationResolved[]
+    participations: Participation[]
 ): Promise<string> {
 
     console.log(`[end_game] Iniciando finalización del juego: ${game.boxId}`);

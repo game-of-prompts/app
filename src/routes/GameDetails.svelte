@@ -5,8 +5,7 @@
         type AnyParticipation,
         type GameActive,
         type GameCancellation,
-        type ParticipationSubmitted,
-        type ParticipationResolved,
+        type Participation,
         GameState, 
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
@@ -18,7 +17,7 @@
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
-    import { fetchSubmittedParticipations, fetchResolvedParticipations } from "$lib/ergo/fetch";
+    import { fetchParticipations } from "$lib/ergo/fetch";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
@@ -30,12 +29,12 @@
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
-    import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
+    import { ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
-    import { fetchJudges, fetchReputationProofByTokenId, fetchReputationProofs } from "$lib/ergo/reputation/fetch";
+    import { fetchJudges, fetchReputationProofByTokenId } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
@@ -130,9 +129,9 @@
             participationIsEnded = await isGameParticipationEnded(game);
             gameEnded = isGameEnded(game);
             if (game.status === GameState.Active) {
-                participations = await fetchSubmittedParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId);
             } else if (game.status === GameState.Resolution) {
-                participations = await fetchResolvedParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId);
                 participations.forEach(async (item) => {
 
                     const participation = item.commitmentC_Hex;
@@ -162,7 +161,7 @@
                      }).map(([key, value]) => key);
                 }
             } else if (game.status === GameState.Cancelled_Draining) {
-                participations = await fetchSubmittedParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId);
             }
 
             if (game.status === 'Active') {
@@ -278,7 +277,7 @@
         if (game?.status !== 'Active' || participations.some(p => p.status !== 'Submitted')) return;
         errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.resolveGame(game, participations as ParticipationSubmitted[], secret_S_input_resolve, acceptedJudgeNominations);
+            transactionId = await platform.resolveGame(game, participations as Participation[], secret_S_input_resolve, acceptedJudgeNominations);
         } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
     }
 
@@ -299,7 +298,7 @@
         } finally { isSubmitting = false; }
     }
 
-    async function handleClaimRefund(participation: ParticipationSubmitted) {
+    async function handleClaimRefund(participation: Participation) {
         if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return;
         isClaimingRefundFor = participation.boxId;
         claimRefundError[participation.boxId] = null;
@@ -313,7 +312,7 @@
         }
     }
 
-    async function handleReclaimAfterGrace(participation: ParticipationSubmitted) {
+    async function handleReclaimAfterGrace(participation: Participation) {
         if (game?.status !== 'Active' || participation.status !== 'Submitted') return;
 
         isReclaimingGraceFor = participation.boxId;
@@ -335,7 +334,7 @@
         errorMessage = null; 
         isSubmitting = true;
         try {
-            transactionId = await platform.endGame(game, participations as ParticipationResolved[]);
+            transactionId = await platform.endGame(game, participations as Participation[]);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
@@ -363,9 +362,9 @@
                 })[0].box;
             });
             
-            const otherParticipations: ParticipationResolved[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
+            const otherParticipations: Participation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
 
-            transactionId = await platform.judgesInvalidate(game, winner_participation as ParticipationResolved, otherParticipations, judgeInvalidVotesDataInputsBoxes);
+            transactionId = await platform.judgesInvalidate(game, winner_participation as Participation, otherParticipations, judgeInvalidVotesDataInputsBoxes);
         } catch (e: any) { errorMessage = e.message;
         } finally { isSubmitting = false; }
     }

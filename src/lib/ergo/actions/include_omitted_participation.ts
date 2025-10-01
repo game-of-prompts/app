@@ -7,9 +7,9 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address } from '$lib/ergo/utils';
-import { type GameResolution, type ParticipationSubmitted, type ParticipationResolved } from '$lib/common/game';
+import { type GameResolution, type Participation, type Participation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex } from '../contract';
+import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 
 /**
  * Permite a cualquier usuario incluir una participación que fue omitida
@@ -23,8 +23,8 @@ import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex
  */
 export async function include_omitted_participation(
     game: GameResolution,
-    omittedParticipation: ParticipationSubmitted,
-    currentWinnerParticipation: ParticipationResolved,
+    omittedParticipation: Participation,
+    currentWinnerParticipation: Participation,
     newResolverPkHex: string
 ): Promise<string | null> {
 
@@ -44,7 +44,7 @@ export async function include_omitted_participation(
 
     // --- 2. Determinar el nuevo ganador potencial ---
 
-    const getActualScore = (p: ParticipationSubmitted | ParticipationResolved): bigint => {
+    const getActualScore = (p: Participation | Participation): bigint => {
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
                 ...hexToBytes(p.solverId_RawBytesHex)!, ...bigintToLongByteArray(BigInt(score)),
@@ -99,9 +99,9 @@ export async function include_omitted_participation(
     });
 
     // SALIDA(1): La nueva caja de participación resuelta
-    const resolvedParticipationErgoTree = getGopParticipationResolvedErgoTreeHex();
+    const participationErgoTree = getGopParticipationErgoTreeHex();
     const pBox = parseBox(omittedParticipation.box);
-    const resolvedParticipationOutput = new OutputBuilder(BigInt(pBox.value), resolvedParticipationErgoTree)
+    const participationOutput = new OutputBuilder(BigInt(pBox.value), participationErgoTree)
         .setAdditionalRegisters({
                 R4: SColl(SByte, hexToBytes(omittedParticipation.playerPK_Hex) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex) ?? "").toHex(),
@@ -120,7 +120,7 @@ export async function include_omitted_participation(
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
-        .to([recreatedGameBox, resolvedParticipationOutput])
+        .to([recreatedGameBox, participationOutput])
         .withDataFrom(dataInputs)
         .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)

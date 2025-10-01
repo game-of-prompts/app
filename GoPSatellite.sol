@@ -64,7 +64,7 @@ contract GoPSatellite {
     // =================================================================
 
     event GameCreated(bytes32 indexed gameNftId, uint256 participationFee, uint256 deadline);
-    event ParticipationSubmitted(address indexed player, bytes32 indexed commitmentC);
+    event Participation(address indexed player, bytes32 indexed commitmentC);
     event GameResolved(address indexed winner, uint256 prizeAmount);
     event GameCancelled();
     event RefundClaimed(address indexed player, uint256 amount);
@@ -150,7 +150,7 @@ contract GoPSatellite {
         });
 
         participantAddresses.push(msg.sender);
-        emit ParticipationSubmitted(msg.sender, _commitmentC);
+        emit Participation(msg.sender, _commitmentC);
     }
 
     /**

@@ -6,7 +6,7 @@ import {
     ErgoAddress,
 } from '@fleet-sdk/core';
 import { parseBox } from '$lib/ergo/utils'; // Assuming you have a utility function to parse JSON to InputBox
-import type { GameCancellation, ParticipationSubmitted } from '$lib/common/game'; // Assuming your data types
+import type { GameCancellation, Participation } from '$lib/common/game'; // Assuming your data types
 
 // Declaration for the wallet connector (dApp connector)
 declare var ergo: any;
@@ -21,7 +21,7 @@ declare var ergo: any;
  */
 export async function claim_after_cancellation(
     game: GameCancellation,
-    participation: ParticipationSubmitted
+    participation: Participation
 ): Promise<string> {
     console.log(`[claim_after_cancellation] Initiating claim for participation: ${participation.boxId}`);
 

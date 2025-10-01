@@ -4,8 +4,8 @@ import type {
     GameActive,
     GameResolution,
     GameCancellation,
-    ParticipationSubmitted,
-    ParticipationResolved
+    Participation,
+    Participation
 } from "$lib/common/game";
 import { type Box } from "@fleet-sdk/core";
 
@@ -65,7 +65,7 @@ export interface Platform {
      */
     resolveGame(
         game: GameActive,
-        participations: ParticipationSubmitted[],
+        participations: Participation[],
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null>;
@@ -86,7 +86,7 @@ export interface Platform {
     /**
      * Reclama el reembolso de una participación en un juego cancelado.
      * @param game El objeto Game en estado 'GameCancellation'.
-     * @param participation La participación ('ParticipationSubmitted') que se va a reembolsar.
+     * @param participation La participación ('Participation') que se va a reembolsar.
      * @param claimerAddressString La dirección del usuario que reclama.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      */
@@ -97,7 +97,7 @@ export interface Platform {
 
     endGame(
         game: GameResolution,
-        participations: ParticipationResolved[]
+        participations: Participation[]
     ): Promise<string | null>;
 
     /**
@@ -106,8 +106,8 @@ export interface Platform {
      */
     judgesInvalidate(
         game: GameResolution,
-        invalidatedParticipation: ParticipationResolved,
-        participations: ParticipationResolved[],
+        invalidatedParticipation: Participation,
+        participations: Participation[],
         judgeVoteDataInputs: Box<bigint>[]
     ): Promise<string | null>
 
@@ -117,8 +117,8 @@ export interface Platform {
      */
     includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipation: ParticipationSubmitted,
-        currentResolved: ParticipationResolved,
+        omittedParticipation: Participation,
+        currentResolved: Participation,
         newResolverPkHex: string
     ): Promise<string | null>
 
@@ -129,7 +129,7 @@ export interface Platform {
     */
     claimAfterCancellation(
         game: GameCancellation,
-        participation: ParticipationSubmitted
+        participation: Participation
     ): Promise<string | null>;
 
     /*
@@ -138,7 +138,7 @@ export interface Platform {
     */
     reclaimAfterGrace(
         game: GameActive,
-        participation: ParticipationSubmitted
+        participation: Participation
     ): Promise<string | null>;
 
 

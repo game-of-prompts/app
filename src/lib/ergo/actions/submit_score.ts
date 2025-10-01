@@ -8,7 +8,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SLong, SByte } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils';
-import { getGopParticipationSubmittedErgoTreeHex } from '../contract'; // <-- Importación actualizada
+import { getGopParticipationErgoTreeHex } from '../contract'; // <-- Importación actualizada
 
 declare var ergo: any;
 
@@ -64,7 +64,7 @@ export async function submit_score(
     }
 
     // 3. Obtener el ErgoTree del contrato de participación
-    const participationContractErgoTree = getGopParticipationSubmittedErgoTreeHex(); // <-- Uso de la función actualizada
+    const participationContractErgoTree = getGopParticipationErgoTreeHex(); // <-- Uso de la función actualizada
     if (!participationContractErgoTree) {
         throw new Error("No se pudo obtener el ErgoTree del contrato de participación.");
     }

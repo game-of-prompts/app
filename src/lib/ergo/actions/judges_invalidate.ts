@@ -8,9 +8,9 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameResolution, type ParticipationResolved } from '$lib/common/game';
+import { type GameResolution, type Participation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { getGopGameResolutionErgoTreeHex, getGopParticipationResolvedErgoTreeHex } from '../contract';
+import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 
 // Constant from the game_resolution.es contract for extending the deadline
@@ -28,8 +28,8 @@ const JUDGE_PERIOD_EXTENSION = 30 + 10;
  */
 export async function judges_invalidate(
     game: GameResolution,
-    invalidatedParticipation: ParticipationResolved,
-    participations: ParticipationResolved[],
+    invalidatedParticipation: Participation,
+    participations: Participation[],
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
@@ -55,9 +55,9 @@ export async function judges_invalidate(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
-    const validParticipations: ParticipationResolved[] = [];
+    const validParticipations: Participation[] = [];
     let nextWinnerCandidateCommitment: string | null = null;
-    const participationErgoTree = getGopParticipationResolvedErgoTreeHex();
+    const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
     if (!participationErgoTreeBytes) {
         throw new Error("El ErgoTree del script de participación es inválido.");

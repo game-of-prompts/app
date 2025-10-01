@@ -3,8 +3,8 @@ import {
     type GameActive, 
     type GameResolution, 
     type GameCancellation, 
-    type ParticipationSubmitted, 
-    type ParticipationResolved
+    type Participation, 
+    type Participation
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
@@ -144,7 +144,7 @@ export class ErgoPlatform implements Platform {
 
     async resolveGame(
         game: GameActive,
-        participations: ParticipationSubmitted[],
+        participations: Participation[],
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null> {
@@ -178,7 +178,7 @@ export class ErgoPlatform implements Platform {
      */
     async endGame(
         game: GameResolution,
-        participations: ParticipationResolved[]
+        participations: Participation[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         return await end_game(game, participations);
@@ -190,8 +190,8 @@ export class ErgoPlatform implements Platform {
      */
     async judgesInvalidate(
         game: GameResolution,
-        invalidatedParticipation: ParticipationResolved,
-        participations: ParticipationResolved[],
+        invalidatedParticipation: Participation,
+        participations: Participation[],
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -211,8 +211,8 @@ export class ErgoPlatform implements Platform {
      */
     async includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipation: ParticipationSubmitted,
-        currentResolved: ParticipationResolved,
+        omittedParticipation: Participation,
+        currentResolved: Participation,
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -222,13 +222,13 @@ export class ErgoPlatform implements Platform {
     /**
      * Reclama el reembolso de una participación en un juego cancelado.
      * @param game El objeto Game en estado 'GameCancellation'.
-     * @param participation La participación ('ParticipationSubmitted') que se va a reembolsar.
+     * @param participation La participación ('Participation') que se va a reembolsar.
      * @param claimerAddressString La dirección del usuario que reclama.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      */
     async claimAfterCancellation(
         game: GameCancellation,
-        participation: ParticipationSubmitted
+        participation: Participation
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Cancelled_Draining') {
@@ -243,12 +243,12 @@ export class ErgoPlatform implements Platform {
     /** 
      * Permite al creador de una participación reclamar su stake después de que el período de gracia haya terminado.
      * @param game El objeto Game en estado 'GameActive'.
-     * @param participation La participación ('ParticipationSubmitted') que se va a reclamar.
+     * @param participation La participación ('Participation') que se va a reclamar.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      *   */
     async reclaimAfterGrace(
         game: GameActive,
-        participation: ParticipationSubmitted
+        participation: Participation
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Active') {
