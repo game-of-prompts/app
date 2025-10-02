@@ -41,8 +41,9 @@
 [x] Check constants on fetch.
 
 
-[] Obtener juegos finalizados y participaciones gastadas
+[x] Obtener juegos finalizados y participaciones gastadas
 [] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
+[] Agregar acción de Obtener fondos tras el periodo de gracia. En caso de que el ganador/resolvedor no reclamen los fondos de la participacion.
 
 
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.

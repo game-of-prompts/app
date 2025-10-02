@@ -1018,6 +1018,14 @@
                                     </div>
                                 {/if}
                             </div>
+
+                            {#if isExpired && isCurrentUserParticipant}
+                                <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
+                                    <p class="text-xs {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'}">
+                                        You will be able to claim a refund after the game is finalized and the grace period has ended. This allows you to withdraw your funds along with other participants whose entries were not used for the prize.
+                                    </p>
+                                </div>
+                            {/if}
                         </div>
                     {/each}
                 </div>
