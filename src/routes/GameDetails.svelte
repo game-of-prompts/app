@@ -301,7 +301,7 @@
     }
 
     async function handleClaimRefund(participation: ValidParticipation) {
-        if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return;
+        if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return
         isClaimingRefundFor = participation.boxId;
         claimRefundError[participation.boxId] = null;
         try {
@@ -854,19 +854,27 @@
                         {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
 
                         {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                        {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && !p.spent}
+                        {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && p.status === 'Submitted'}
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
+                        {@const isExpired = p.status === 'Expired'}
 
                         <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
                             {isCurrentParticipationWinner
                                 ? 'winner-card border-green-500/50'
-                                : ($mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200')}">
+                                : ($mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200')}
+                            {isExpired ? ($mode === 'dark' ? 'bg-gray-700 border-gray-800 opacity-70' : 'bg-gray-200 border-gray-300 opacity-70') : ''}">
 
                             {#if isCurrentParticipationWinner}
                                 <div class="winner-badge">
                                     <Trophy class="w-4 h-4 mr-2" />
                                     <span>WINNER CANDIDATE</span>
+                                </div>
+                            {/if}
+                            
+                            {#if isExpired}
+                                <div class="expired-badge absolute top-6 right-16 bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                    EXPIRED
                                 </div>
                             {/if}
                             
