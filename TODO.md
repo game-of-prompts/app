@@ -42,7 +42,7 @@
 
 
 [x] Obtener juegos finalizados y participaciones gastadas
-[] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
+[x] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
 [] Agregar acción de Obtener fondos tras el periodo de gracia. En caso de que el ganador/resolvedor no reclamen los fondos de la participacion.
 
 
