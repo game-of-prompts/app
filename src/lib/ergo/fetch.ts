@@ -275,7 +275,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const numericalParams = parseLongColl(r7Array);
         if (!numericalParams || numericalParams.length < 5) throw new Error("R7 does not contain the 5 expected numerical parameters.");
         console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
-        const [originalDeadline, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
 
         // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
@@ -303,7 +303,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             revealedS_Hex, 
             winnerCandidateCommitment: winnerCandidateCommitment || null, 
             judges,
-            originalDeadline: Number(originalDeadline), 
+            deadlineBlock: Number(deadlineBlock), 
             creatorStakeNanoErg, 
             participationFeeNanoErg,
             resolverPK_Hex, 
@@ -429,7 +429,8 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             participationFeeNanoErg,
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            judges: []
+            judges: [],
+            deadlineBlock: 0 // TODO add original deadline
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
@@ -607,6 +608,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             box: currentBox,
             platform: new ErgoPlatform(),
             status: GameState.Finalized,
+            deadlineBlock: lastBox.deadlineBlock,
             gameId,
             content,
             value: BigInt(lastBox.box.value),
@@ -768,16 +770,29 @@ export async function fetchHistoricalParticipations(gameNftId: string, gameDeadl
                 const p_base = await _parseParticipationBox(box);
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
+                    const expired = box.creationHeight < gameDeadline;
                     let status: AnyParticipation['status'];
-                    if (spent) {
-                        status =  box.creationHeight < gameDeadline ? 'Invalidated' : 'Expired';
+                    if (expired) {
+                        participations.push({
+                            ...p_base,
+                            status: 'Expired',
+                            spent
+                        });
                     } else {
-                        status = 'Submitted';
+                        if (spent) {
+                            participations.push({
+                                ...p_base,
+                                status: 'Consumed', // Or invalidated, or cancelled  TODO (we need more data to distinguish. Is this needed?)
+                                spent
+                            });
+                        } else {
+                            participations.push({
+                                ...p_base,
+                                status: 'Submitted',
+                                spent
+                            });
+                        }
                     }
-                    participations.push({
-                        ...p_base,
-                        status
-                    });
                 }
             }
 

@@ -83,7 +83,7 @@ export interface GameResolution {
     revealedS_Hex: string;
     winnerCandidateCommitment: string|null;
     judges: string[];
-    originalDeadline: number;
+    deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
     resolverPK_Hex: string;
@@ -110,6 +110,7 @@ export interface GameCancellation {
     content: GameContent;
     participationFeeNanoErg: bigint;
     value: bigint;
+    deadlineBlock: number;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
 }
@@ -129,6 +130,7 @@ export interface GameFinalized {
     participationFeeNanoErg: bigint;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
+    deadlineBlock: number;
 }
 
 /**
@@ -167,6 +169,16 @@ export interface ParticipationInvalidated extends ParticipationBase {
 
 export interface ParticipationExpired extends ParticipationBase {
     status: 'Expired';
+    spent: boolean;
+}
+
+export interface ParticipationCancelled extends ParticipationBase {
+    status: 'Cancelled';
+    spent: true;
+}
+
+export interface ParticipationConsumed extends ParticipationBase {
+    status: 'Consumed';
     spent: true;
 }
 
@@ -178,7 +190,7 @@ export interface ParticipationExpired extends ParticipationBase {
 export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
-export type AnyParticipation = ValidParticipation | ParticipationInvalidated | ParticipationExpired;
+export type AnyParticipation = ValidParticipation | ParticipationInvalidated | ParticipationExpired | ParticipationCancelled | ParticipationConsumed;
 
 /**
  * Determina si el período de participación de un juego ha terminado.

@@ -76,7 +76,7 @@ export async function include_omitted_participation(
     
     // Extraer y actualizar los parámetros numéricos de R7
     const numericalParams = [
-        BigInt(game.originalDeadline), 
+        BigInt(game.deadlineBlock), 
         game.creatorStakeNanoErg, 
         game.participationFeeNanoErg,
         BigInt(game.resolutionDeadline),

@@ -155,7 +155,7 @@ export async function judges_invalidate(
             // R6-R9: Keep the same values as the original box
             R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
             R7: SColl(SLong, [
-                BigInt(game.originalDeadline),
+                BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
                 BigInt(newDeadline),
@@ -172,7 +172,7 @@ export async function judges_invalidate(
         });
 
     console.log("registers output ", [
-                BigInt(game.originalDeadline),
+                BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
                 BigInt(newDeadline),

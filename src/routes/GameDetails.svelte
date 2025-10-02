@@ -17,7 +17,7 @@
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
-    import { fetchParticipations } from "$lib/ergo/fetch";
+    import { fetchHistoricalParticipations, fetchParticipations } from "$lib/ergo/fetch";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
@@ -129,9 +129,9 @@
             participationIsEnded = await isGameParticipationEnded(game);
             gameEnded = isGameEnded(game);
             if (game.status === GameState.Active) {
-                participations = await fetchParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
             } else if (game.status === GameState.Resolution) {
-                participations = await fetchParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
                 participations.forEach(async (item) => {
 
                     const participation = item.commitmentC_Hex;
@@ -161,7 +161,9 @@
                      }).map(([key, value]) => key);
                 }
             } else if (game.status === GameState.Cancelled_Draining) {
-                participations = await fetchParticipations(game.gameId);
+                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
+            } else if (game.status === GameState.Finalized) {
+                participations = await fetchHistoricalParticipations(game.gameId, game.deadlineBlock);
             }
 
             if (game.status === 'Active') {
@@ -362,7 +364,7 @@
                 })[0].box;
             });
             
-            const otherParticipations: ValidParticipation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
+            const otherParticipations: ValidParticipation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex && p.status === 'Submitted') as ValidParticipation[];
 
             transactionId = await platform.judgesInvalidate(game, winner_participation as ValidParticipation, otherParticipations, judgeInvalidVotesDataInputsBoxes);
         } catch (e: any) { errorMessage = e.message;
@@ -380,7 +382,7 @@
                 throw new Error("La participación seleccionada no se ha encontrado.");
             }
 
-            const currentWinner = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment)
+            const currentWinner = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment && p.status === 'Submitted') as ValidParticipation | undefined;
             if (!currentWinner) {
                 throw new Error("Ganador no encontrado.");
             }

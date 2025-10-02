@@ -126,7 +126,7 @@
             participationEnded = await isGameParticipationEnded(currentGame);
 
             if (currentGame.status === 'Active' || currentGame.status === 'Resolution') {
-                const deadline = currentGame.status === 'Active' ? currentGame.deadlineBlock : currentGame.originalDeadline;
+                const deadline = currentGame.status === 'Active' ? currentGame.deadlineBlock : currentGame.deadlineBlock;
                 const deadlineTimestamp = await block_height_to_timestamp(deadline, currentGame.platform);
                 const deadlineDateObj = new Date(deadlineTimestamp);
                 deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
