@@ -85,8 +85,10 @@ export async function resolve_game(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
+    let resolvedCounter = 0;
     let winnerCandidateCommitment: string | null = null;
-    const validParticipations: Participation[] = [];
+    let winnerCandidateBox: Box<Amount> | null = null;
+
     const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
     if (!participationErgoTreeBytes) {
@@ -122,7 +124,7 @@ export async function resolve_game(
 
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!, // TODO CHECK Buffer.from(p.solverId_RawBytesHex, 'utf-8'),
+                ...hexToBytes(p.solverId_RawBytesHex)!,
                 ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
                 ...secretS_bytes
@@ -140,27 +142,23 @@ export async function resolve_game(
             continue;
         }
         
-        validParticipations.push(p);
+        resolvedCounter++;
 
         // Si la participación es válida, se considera para determinar al ganador.
         if (actualScore > maxScore) {
             maxScore = actualScore;
             winnerCandidateCommitment = p.commitmentC_Hex;
+            winnerCandidateBox = p.box;
         }
     }
 
-    if (!winnerCandidateCommitment) {
-        // throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
-    }
-
-    console.log(`Número de participaciones válidas: ${validParticipations.length}`);
+    console.log(`Número de participaciones válidas: ${resolvedCounter}`);
     console.log(`Ganador candidato determinado con compromiso: ${winnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Construir las Salidas de la Transacción ---
 
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
-    const resolvedCounter = BigInt(validParticipations.length);
 
     const newNumericalParams = [
         BigInt(game.deadlineBlock), 
@@ -183,31 +181,18 @@ export async function resolve_game(
         R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
         R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
-    
-    const participationOutputs = validParticipations.map((p: Participation) => {
-        const pBox = parseBox(p.box);
-        return new OutputBuilder(BigInt(pBox.value), participationErgoTree)
-            .setAdditionalRegisters({
-                R4: SColl(SByte, hexToBytes(p.playerPK_Hex) ?? "").toHex(),
-                R5: SColl(SByte, hexToBytes(p.commitmentC_Hex) ?? "").toHex(),
-                R6: SColl(SByte, hexToBytes(p.gameNftId) ?? "").toHex(),
-                R7: SColl(SByte, hexToBytes(p.solverId_String ?? "") ?? "").toHex(), 
-                R8: SColl(SByte, hexToBytes(p.hashLogs_Hex) ?? "").toHex(),
-                R9: SColl(SLong, p.scoreList.map(s => BigInt(s))).toHex()
-            });
-    });
 
-    // --- 4. Construir y Enviar la Transacción ---
-    const utxos = await ergo.get_utxos();
-    const inputs = [parseBox(game.box), ...validParticipations.map(p => parseBox(p.box)), ...utxos];
-    
+    // --- 4. Construir y Enviar la Transacción ---    
+
+    const dataInputs = winnerCandidateBox ? [...judgeProofBoxes, winnerCandidateBox] : judgeProofBoxes;
+
     try {
         const unsignedTransaction = new TransactionBuilder(currentHeight)
-            .from(inputs)
-            .to([resolutionBoxOutput, ...participationOutputs])
+            .from([parseBox(game.box), ...await ergo.get_utxos()])
+            .to([resolutionBoxOutput])
             .sendChangeTo(resolverAddressString)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            .withDataFrom(judgeProofBoxes)
+            .withDataFrom(dataInputs)
             .build();
 
         const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
