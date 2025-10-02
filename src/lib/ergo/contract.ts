@@ -102,6 +102,7 @@ function getScriptHash(stateObject: { ergoTree?: ErgoTree, scriptHash?: string }
 }
 
 // --- Game Active ---
+export const getGopGameActiveTemplateHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
 export const getGopGameActiveScriptHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
 export function getGopGameActiveAddress(): Address { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toAddress(networkType); }
 export function getGopGameActiveErgoTreeHex(): string { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toHex(); }

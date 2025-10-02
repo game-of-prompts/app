@@ -123,7 +123,6 @@ export interface GameFinalized {
     platform: ErgoPlatform;
     status: 'Finalized';
     gameId: string;
-    winnerInfo: WinnerInfo | null; // Puede ser null si el juego fue cancelado
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
@@ -161,12 +160,12 @@ export interface ValidParticipation extends ParticipationBase {
 
 export interface ParticipationInvalidated extends ParticipationBase {
     status: 'Invalidated';
-    spent: boolean; // Indica si la caja ya fue gastada.
+    spent: true;
 }
 
 export interface ParticipationExpired extends ParticipationBase {
     status: 'Expired';
-    spent: false; // No se puede gastar algo que nunca se entregó a tiempo.
+    spent: true;
 }
 
 // =================================================================

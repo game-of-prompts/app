@@ -13,6 +13,8 @@ import {
     type ParticipationExpired,
     type GameFinalized,
     type AnyParticipation,
+    type AnyGame,
+    type GameContent,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -23,7 +25,8 @@ import {
     getGopGameActiveErgoTreeHex,
     getGopGameResolutionErgoTreeHex,
     getGopGameCancellationErgoTreeHex,
-    getGopParticipationErgoTreeHex
+    getGopParticipationErgoTreeHex,
+    getGopGameActiveTemplateHash
 } from "./contract"; // Assumes this file exports functions to get script hashes
 import {
     hexToUtf8,
@@ -481,6 +484,142 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
     return games;
 }
 
+
+
+
+// =================================================================
+// === STATE: GAME FINALIZED
+// =================================================================
+
+export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>> {
+    const games = new Map<string, GameFinalized>();
+
+    const templateHashes = [
+        getGopGameActiveTemplateHash(),
+        getGopGameResolutionTemplateHash(),
+        getGopGameCancellationTemplateHash()
+    ];
+
+    const allGameIds = new Set<string>();
+    const historicalContractBoxes = new Map<string, AnyGame[]>();
+
+    for (const templateHash of templateHashes) {
+        let offset = 0;
+        const limit = 100;
+        let more = true;
+
+        while (more) {
+            const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ergoTreeTemplateHash: templateHash }),
+                });
+                if (!response.ok) throw new Error(`API response: ${response.status}`);
+
+                const data = await response.json();
+                const items: Box[] = data.items || [];
+
+                for (const box of items) {
+                    let game: AnyGame | null = null;
+                    if (templateHash === getGopGameActiveTemplateHash()) {
+                        game = await parseGameActiveBox(box);
+                    } else if (templateHash === getGopGameResolutionTemplateHash()) {
+                        game = await parseGameResolutionBox(box);
+                    } else if (templateHash === getGopGameCancellationTemplateHash()) {
+                        game = await parseGameCancellationBox(box);
+                    }
+                    if (game) {
+                        allGameIds.add(game.gameId);
+                        if (!historicalContractBoxes.has(game.gameId)) {
+                            historicalContractBoxes.set(game.gameId, []);
+                        }
+                        historicalContractBoxes.get(game.gameId)!.push(game);
+                    }
+                }
+
+                offset += items.length;
+                more = items.length === limit;
+            } catch (error) {
+                console.error("Exception while fetching historical boxes for template " + templateHash + ":", error);
+                more = false;
+            }
+        }
+    }
+
+    const activeGames = await fetchActiveGames();
+    const resolutionGames = await fetchResolutionGames();
+    const cancellationGames = await fetchCancellationGames();
+
+    for (const gameId of allGameIds) {
+        if (activeGames.has(gameId) || resolutionGames.has(gameId) || cancellationGames.has(gameId)) {
+            continue;
+        }
+
+        let currentBox: Box<Amount> | null = null;
+        try {
+            const url = `${explorer_uri}/api/v1/boxes/unspent/byTokenId/${gameId}`;
+            const response = await fetch(`${url}?limit=1`);
+            if (!response.ok) throw new Error(`API response: ${response.status}`);
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                currentBox = data.items[0];
+            }
+        } catch (e) {
+            console.error(`Error fetching current box for game ${gameId}:`, e);
+            continue;
+        }
+
+        if (!currentBox) continue;
+
+        const contractTrees = [
+            getGopGameActiveErgoTreeHex(),
+            getGopGameResolutionErgoTreeHex(),
+            getGopGameCancellationErgoTreeHex()
+        ];
+        if (contractTrees.includes(currentBox.ergoTree)) continue;
+
+        const histBoxes = historicalContractBoxes.get(gameId) || [];
+        let content: GameContent = {
+            rawJsonString: "{}",
+            title: "Unknown",
+            description: "Unknown",
+            serviceId: ""
+        };
+        let judges: string[] = [];
+
+        if (histBoxes.length > 0) {
+            histBoxes.sort((a, b) => b.box.creationHeight - a.box.creationHeight);
+            const lastBox = histBoxes[0];
+            content = lastBox.content;
+            judges = lastBox.judges || [];
+        } else {
+            continue;  // Skip if no historical data to extract content
+        }
+
+        const finalized: GameFinalized = {
+            boxId: currentBox.boxId,
+            box: currentBox,
+            platform: new ErgoPlatform(),
+            status: GameState.Finalized,
+            gameId,
+            content,
+            value: BigInt(currentBox.value),
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
+            judges
+        };
+
+        console.log("Finalized game found. Body: ", finalized);
+
+        games.set(gameId, finalized);
+    }
+
+    console.log(`Found ${games.size} finalized games.`);
+    return games;
+}
+
+
 // =================================================================
 // === STATE: PARTICIPATION SUBMITTED & RESOLVED
 // =================================================================
@@ -584,5 +723,68 @@ export async function fetchParticipations(gameNftId: string, gameDeadline: numbe
     }
 
     console.log(`Found ${participations.length} submitted participations for game ${gameNftId}.`);
+    return participations;
+}
+
+export async function fetchHistoricalParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
+    const participations: AnyParticipation[] = [];
+    const scriptHash = getGopParticipationTemplateHash();
+    
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    while (moreAvailable) {
+        const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ergoTreeTemplateHash: scriptHash,
+                    registers: {
+                        "R6": gameNftId
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API response was not OK: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
+                    console.warn('parseParticipationBox: invalid constants');
+                    continue;
+                }
+                const p_base = await _parseParticipationBox(box);
+                if (p_base) {
+                    const spent = !!box.spentTransactionId;
+                    let status: AnyParticipation['status'];
+                    if (spent) {
+                        status =  box.creationHeight < gameDeadline ? 'Invalidated' : 'Expired';
+                    } else {
+                        status = 'Submitted';
+                    }
+                    participations.push({
+                        ...p_base,
+                        status
+                    });
+                }
+            }
+
+            offset += items.length;
+            moreAvailable = items.length === limit;
+
+        } catch (error) {
+            console.error(`An exception occurred while fetching historical participations for ${gameNftId}:`, error);
+            moreAvailable = false;
+        }
+    }
+
+    console.log(`Found ${participations.length} historical participations for game ${gameNftId}.`);
     return participations;
 }

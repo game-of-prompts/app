@@ -4,9 +4,9 @@ import {
     type GameResolution, 
     type GameCancellation, 
     type ValidParticipation, 
-    type ValidParticipation
+    type GameFinalized
 } from '../common/game';
-import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
+import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames, fetchFinalizedGames } from './fetch';
 import { create_game } from './actions/create_game';
 import { explorer_uri, network_id } from './envs';
 import { address, connected, network, balance } from "../common/store";
@@ -25,7 +25,7 @@ import { update_reputation_proof } from './reputation/submit';
 import { get } from 'svelte/store';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
-type AnyGame = GameActive | GameResolution | GameCancellation;
+type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -272,10 +272,11 @@ export class ErgoPlatform implements Platform {
         console.log("Buscando todos los juegos en todos los estados...");
 
         // Ejecutar todas las búsquedas en paralelo para mayor eficiencia.
-        const [activeGames, resolutionGames, cancellationGames] = await Promise.all([
+        const [activeGames, resolutionGames, cancellationGames, finalizedGames] = await Promise.all([
             fetchActiveGames(),
             fetchResolutionGames(),
-            fetchCancellationGames()
+            fetchCancellationGames(),
+            fetchFinalizedGames()
         ]);
 
         // Combinar los resultados en un solo mapa.
@@ -285,6 +286,7 @@ export class ErgoPlatform implements Platform {
             ...activeGames,
             ...resolutionGames,
             ...cancellationGames,
+            ...finalizedGames
         ]);
 
         console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
