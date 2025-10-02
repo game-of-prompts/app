@@ -108,6 +108,7 @@ export interface GameCancellation {
     revealedS_Hex: string;
     currentStakeNanoErg: bigint;
     content: GameContent;
+    participationFeeNanoErg: bigint;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
@@ -125,6 +126,7 @@ export interface GameFinalized {
     gameId: string;
     content: GameContent;
     value: bigint;
+    participationFeeNanoErg: bigint;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
 }

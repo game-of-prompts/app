@@ -24,7 +24,7 @@
         OPEN: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200",
         AWAITING_RESULTS: "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200",
         RESOLUTION: "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200",
-        RESOLVED: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200",
+        FINALIZED: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200",
         CANCELLED: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200",
         DEFAULT: "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300",
     };
@@ -75,8 +75,8 @@
                 break;
 
             case GameState.Finalized:
-                statusMessage = "Resolved";
-                statusColor = STATUS_COLORS.RESOLVED;
+                statusMessage = "Finalized";
+                statusColor = STATUS_COLORS.FINALIZED;
                 remainingTimeCountdown = "Game has ended";
                 break;
 

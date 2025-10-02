@@ -404,7 +404,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         
         // R7: creatorStake (Long). El stake actual del creador.
-        const currentStakeNanoErg = parseInt(box.additionalRegisters.R7?.renderedValue, 10);
+        const currentStakeNanoErg = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
         
         // R8: ReadOnlyInfo (Coll[Byte]). JSON con datos inmutables.
         const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R8?.renderedValue) || ""), box.boxId, box.assets[0]);
@@ -413,6 +413,8 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
             throw new Error("Invalid or missing registers R5, R6, or R7.");
         }
+
+        const participationFeeNanoErg = BigInt(0); // Asumiendo 0 en cancelación
 
         return {
             platform: new ErgoPlatform(),
@@ -424,6 +426,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             revealedS_Hex,
             currentStakeNanoErg,
             content,
+            participationFeeNanoErg,
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: []
@@ -589,9 +592,10 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         };
         let judges: string[] = [];
 
+        let lastBox: AnyGame | null = null;
         if (histBoxes.length > 0) {
             histBoxes.sort((a, b) => b.box.creationHeight - a.box.creationHeight);
-            const lastBox = histBoxes[0];
+            lastBox = histBoxes[0];
             content = lastBox.content;
             judges = lastBox.judges || [];
         } else {
@@ -605,7 +609,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             status: GameState.Finalized,
             gameId,
             content,
-            value: BigInt(currentBox.value),
+            value: BigInt(lastBox.box.value),
+            participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges
         };
