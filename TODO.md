@@ -16,6 +16,16 @@
     - [x] Cancelar por inactividad en estado 1
     - [x] Retirar fondos por cancelacion en estado 3
 
+
+### Simplificar participaciones
+
+[x] Un solo estado, solo se gasta al final del juego o en invalidez o cancelación.
+[x] Las participaciones solo se gastan al finalizar el juego o en cancelación o invalidación por jueces.
+[x] Omited participation solo controla la ganadora.
+[x] No hay resolvedCounter en game_resolution.es; únicamente puede finalizar el juego la participación ganadora
+[x] Las participaciones poseen una condición que permite al creador del juego obtener su valor si el ganador no resuelve el juego en 90 días.
+
+
 ### Otros
 
 [x] Cubrir el caso sin participaciones validas.
@@ -27,13 +37,24 @@
     [x] Opionar sobre un juego (aceptar invitación)
     [x] Opinar sobre participación
     [x] Agregar prueba de reputación en juez.
-    
+
+[x] Check constants on fetch.
+
+
+[] Obtener juegos finalizados y participaciones gastadas
+[] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
+
+
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
 [] Use CONTEXT.preHeader.timestamp  en lugar de HEIGHT
 [] GameInfo without JSON
 [] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
-[x] Check constants on fetch.
+
+
+
+
+
 
 ##### game-service-factory
 [] Game obfuscated
@@ -41,19 +62,6 @@
 [] Limited resources
 
 
-### Sobre fetch e indexación
-- Las participaciones y juegos gastados se pueden obtener de la api de cajas historicas.  Pero si no tiene utilidad mantener el estado no debe de dejarse, no es limpio.
-
-### Simplificar participaciones
-
-[x] Un solo estado, solo se gasta al final del juego o en invalidez o cancelación.
-[x] Las participaciones solo se gastan al finalizar el juego o en cancelación o invalidación por jueces.
-[x] Omited participation solo controla la ganadora.
-[x] No hay resolvedCounter en game_resolution.es; únicamente puede finalizar el juego la participación ganadora
-[x] Las participaciones poseen una condición que permite al creador del juego obtener su valor si el ganador no resuelve el juego en 90 días.
-
-
-## ¿Usar timestamp en lugar de HEIGHT?   CONTEXT.preHeader.timestamp
 
 
 ## Permitir pagos a jueces (razonar mas sobre ello)
