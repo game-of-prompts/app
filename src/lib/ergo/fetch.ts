@@ -742,7 +742,10 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
  * @param gameDeadline The deadline block height of the game.
  * @returns A `Promise` with an array of `Participation`.
  */
-export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
+export async function fetchParticipations(game: AnyGame): Promise<AnyParticipation[]> {
+    const gameNftId = game.gameId;
+    const gameDeadline = game.deadlineBlock;
+
     const participations: AnyParticipation[] = [];
     const scriptHash = getGopParticipationTemplateHash();
     
@@ -791,7 +794,8 @@ export async function fetchParticipations(gameNftId: string, gameDeadline: numbe
                             participations.push({
                                 ...p_base,
                                 status: 'Consumed', // Or invalidated, or cancelled  TODO (we need more data to distinguish. Is this needed?)
-                                spent
+                                spent,
+                                reason: 'byparticipant' 
                             });
                         } else {
                             participations.push({

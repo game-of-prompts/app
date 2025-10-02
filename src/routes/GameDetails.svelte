@@ -129,9 +129,10 @@
             participationIsEnded = await isGameParticipationEnded(game);
             gameEnded = isGameEnded(game);
             if (game.status === GameState.Active) {
-                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
+                participations = await fetchParticipations(game);
+
             } else if (game.status === GameState.Resolution) {
-                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
+                participations = await fetchParticipations(game);
                 participations.forEach(async (item) => {
 
                     const participation = item.commitmentC_Hex;
@@ -160,10 +161,12 @@
                             });
                      }).map(([key, value]) => key);
                 }
+                
             } else if (game.status === GameState.Cancelled_Draining) {
-                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
+                participations = await fetchParticipations(game);
+
             } else if (game.status === GameState.Finalized) {
-                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
+                participations = await fetchParticipations(game);
             }
 
             if (game.status === 'Active') {
@@ -858,8 +861,11 @@
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
                         {@const isExpired = p.status === 'Expired'}
-                        {@const isConsumed = p.status === 'Consumed'}
-                        {@const isCancelled = p.status === 'Consumed'} <!-- For now we don't differenciate between expired and cancelled -->
+                        {@const isSubmitted = p.status === 'Submitted'}
+                        {@const isConsumedByWinner = p.status === 'Consumed' && p.reason === 'bywinner'}
+                        {@const isConsumedByParticipant = p.status === 'Consumed' && p.reason === 'byparticipant'}
+                        {@const isInvalidated = p.status === 'Consumed' && p.reason === 'invalidated'}
+                        {@const isCancelled = p.status === 'Consumed' && p.reason === "cancelled"}
 
                         <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
                             {isCurrentParticipationWinner
