@@ -17,14 +17,14 @@
     import { ErgoPlatform } from '$lib/ergo/platform';
     import { onDestroy, onMount } from 'svelte';
     import { get } from 'svelte/store';
-    import { fetchHistoricalParticipations, fetchParticipations } from "$lib/ergo/fetch";
+    import { fetchParticipations } from "$lib/ergo/fetch";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel, Check } from 'lucide-svelte';
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
@@ -163,7 +163,7 @@
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchParticipations(game.gameId, game.deadlineBlock);
             } else if (game.status === GameState.Finalized) {
-                participations = await fetchHistoricalParticipations(game.gameId, game.deadlineBlock);
+                participations = await fetchParticipations(game.gameId, game.deadlineBlock);
             }
 
             if (game.status === 'Active') {
@@ -858,6 +858,8 @@
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
                         {@const isExpired = p.status === 'Expired'}
+                        {@const isConsumed = p.status === 'Consumed'}
+                        {@const isCancelled = p.status === 'Consumed'} <!-- For now we don't differenciate between expired and cancelled -->
 
                         <div class="participation-card relative rounded-lg shadow-lg overflow-hidden border
                             {isCurrentParticipationWinner
@@ -1009,10 +1011,10 @@
                                             <p class="text-xs mt-1 text-red-400">{claimRefundError[p.boxId]}</p>
                                         {/if}
                                     </div>
-                                {:else if p.spent && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining)}
+                                {:else if isCancelled && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Finalized)}
                                     <div class="info-block sm:col-span-2 lg:col-span-3 mt-2">
                                         <div class="p-3 rounded-md text-sm text-center {$mode === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}">
-                                            <ShieldCheck class="inline-block mr-2 h-5 w-5 text-green-500"/>
+                                            <Check class="inline-block mr-2 h-5 w-5 text-gray-500"/>
                                             A refund has already been requested.
                                         </div>
                                     </div>

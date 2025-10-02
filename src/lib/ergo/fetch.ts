@@ -674,7 +674,7 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
  * @param gameDeadline The deadline block height of the game.
  * @returns A `Promise` with an array of `Participation`.
  */
-export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
+/*export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
     const participations: AnyParticipation[] = [];
     const scriptHash = getGopParticipationTemplateHash();
     
@@ -729,11 +729,20 @@ export async function fetchParticipations(gameNftId: string, gameDeadline: numbe
         }
     }
 
-    console.log(`Found ${participations.length} submitted participations for game ${gameNftId}.`);
-    return participations;
+    const historical_participations = await fetchHistoricalParticipations(gameNftId, gameDeadline);
+    console.log(`Found ${participations.length} submitted and ${historical_participations.length} historical participations for game ${gameNftId}.`);
+    return [...participations, ...historical_participations];
 }
 
-export async function fetchHistoricalParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
+*/
+
+/**
+ * Searches for "Submitted" or "Expired" participations for a specific game.
+ * @param gameNftId The NFT ID of the game.
+ * @param gameDeadline The deadline block height of the game.
+ * @returns A `Promise` with an array of `Participation`.
+ */
+export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
     const participations: AnyParticipation[] = [];
     const scriptHash = getGopParticipationTemplateHash();
     
@@ -771,8 +780,7 @@ export async function fetchHistoricalParticipations(gameNftId: string, gameDeadl
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
                     const expired = box.creationHeight < gameDeadline;
-                    let status: AnyParticipation['status'];
-                    if (expired) {
+                    if (expired && !spent) {
                         participations.push({
                             ...p_base,
                             status: 'Expired',
