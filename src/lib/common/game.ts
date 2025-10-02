@@ -131,6 +131,8 @@ export interface GameFinalized {
     reputationOpinions: ReputationOpinion[];
     judges: string[];
     deadlineBlock: number;
+    judgeFinalizationBlock: number;
+    winnerFinalizationDeadline: number;
 }
 
 /**
@@ -167,10 +169,11 @@ export interface ParticipationExpired extends ParticipationBase {
     spent: boolean;
 }
 
+export type ParticipationConsumedReason = "cancelled"|"invalidated"|"bywinner"|"byparticipant"|"unknown";
 export interface ParticipationConsumed extends ParticipationBase {
     status: 'Consumed';
     spent: true;
-    reason: "cancelled"|"invalidated"|"bywinner"|"byparticipant" 
+    reason: ParticipationConsumedReason
 }
 
 // =================================================================

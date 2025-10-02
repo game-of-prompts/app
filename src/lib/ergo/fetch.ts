@@ -8,13 +8,11 @@ import {
     type GameResolution,
     type GameCancellation,
     type ParticipationBase,
-    type ValidParticipation,
-    type ParticipationInvalidated,
-    type ParticipationExpired,
     type GameFinalized,
     type AnyParticipation,
     type AnyGame,
     type GameContent,
+    type ParticipationConsumedReason,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -36,6 +34,7 @@ import {
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
+import { get } from "svelte/store";
 
 // =================================================================
 // === REPUTATION PROOF UTILITIES
@@ -83,6 +82,18 @@ async function fetchReputationOpinionsForTarget(
     } catch (error) {
         console.error(`Error fetching reputation opinions for target ${targetId}:`, error);
         return [];
+    }
+}
+
+async function getTransactionInfo(transactionId: string): Promise<any> {
+    const url = `${explorer_uri}/api/v1/transactions/${transactionId}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`API response: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error fetching transaction info for ${transactionId}:`, error);
+        return null;
     }
 }
 
@@ -603,6 +614,11 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             continue;  // Skip if no historical data to extract content
         }
 
+        const resolutionBoxes = histBoxes.filter((b) => b.status === "Resolution").sort((a, b) => b.box.creationHeight - a.box.creationHeight);
+        const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] : null;
+        const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
+        const winnerFinalizationGracePeriod = 90; // TODO take from script constants
+
         const finalized: GameFinalized = {
             boxId: currentBox.boxId,
             box: currentBox,
@@ -614,7 +630,9 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             value: BigInt(lastBox.box.value),
             participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            judges
+            judges,
+            judgeFinalizationBlock: judgeFinalizationBlock,
+            winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod
         };
 
         console.log("Finalized game found. Body: ", finalized);
@@ -674,74 +692,6 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
  * @param gameDeadline The deadline block height of the game.
  * @returns A `Promise` with an array of `Participation`.
  */
-/*export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
-    const participations: AnyParticipation[] = [];
-    const scriptHash = getGopParticipationTemplateHash();
-    
-    let offset = 0;
-    const limit = 100;
-    let moreAvailable = true;
-
-    console.log(`Searching for submitted participations for game ${gameNftId}`);
-
-    while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
-        try {
-            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: scriptHash,
-                    registers: {
-                        "R6": gameNftId
-                    }
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`API response was not OK: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const items: Box[] = data.items || [];
-
-            for (const box of items) {
-                if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
-                    console.warn('parseParticipationBox: invalid constants');
-                    continue;
-                }
-                const p_base = await _parseParticipationBox(box);
-                if (p_base) {
-                    participations.push({
-                        ...p_base,
-                        status: box.creationHeight < gameDeadline ? 'Submitted' : 'Expired',
-                        spent: false
-                    });
-                }
-            }
-
-            offset += items.length;
-            moreAvailable = items.length === limit;
-
-        } catch (error) {
-            console.error(`An exception occurred while fetching submitted participations for ${gameNftId}:`, error);
-            moreAvailable = false;
-        }
-    }
-
-    const historical_participations = await fetchHistoricalParticipations(gameNftId, gameDeadline);
-    console.log(`Found ${participations.length} submitted and ${historical_participations.length} historical participations for game ${gameNftId}.`);
-    return [...participations, ...historical_participations];
-}
-
-*/
-
-/**
- * Searches for "Submitted" or "Expired" participations for a specific game.
- * @param gameNftId The NFT ID of the game.
- * @param gameDeadline The deadline block height of the game.
- * @returns A `Promise` with an array of `Participation`.
- */
 export async function fetchParticipations(game: AnyGame): Promise<AnyParticipation[]> {
     const gameNftId = game.gameId;
     const gameDeadline = game.deadlineBlock;
@@ -775,6 +725,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
             const items: Box[] = data.items || [];
 
             for (const box of items) {
+                console.log(box)
                 if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
                     console.warn('parseParticipationBox: invalid constants');
                     continue;
@@ -791,11 +742,27 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                         });
                     } else {
                         if (spent) {
+                            const reason = await (async (): Promise<ParticipationConsumedReason> => {
+                                if (game.status === GameState.Resolution) return "invalidated";
+                                
+                                if (game.status === GameState.Cancelled_Draining) return "cancelled";
+                                
+                                if (game.status === GameState.Finalized) {
+                                    const spentTx = await getTransactionInfo(box.spentTransactionId);
+                                    if (!spentTx) return "unknown";
+                                    
+                                    if (spentTx.inclusionHeight < game.judgeFinalizationBlock) return "invalidated";
+                                    if (spentTx.inclusionHeight < game.winnerFinalizationDeadline) return "bywinner";
+                                    return "byparticipant";
+                                }
+                                
+                                return "unknown";
+                            })();
                             participations.push({
                                 ...p_base,
-                                status: 'Consumed', // Or invalidated, or cancelled  TODO (we need more data to distinguish. Is this needed?)
+                                status: 'Consumed',
                                 spent,
-                                reason: 'byparticipant' 
+                                reason
                             });
                         } else {
                             participations.push({
