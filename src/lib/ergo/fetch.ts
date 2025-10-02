@@ -430,7 +430,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
-            deadlineBlock: 0 // TODO add original deadline
+            deadlineBlock: 0 // TODO add original deadline [from R8 when it uses Coll instead of JSON.]
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
