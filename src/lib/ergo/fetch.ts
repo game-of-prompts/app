@@ -10,7 +10,9 @@ import {
     type ParticipationBase,
     type ValidParticipation,
     type ParticipationInvalidated,
-    AnyParticipation,
+    type ParticipationExpired,
+    type GameFinalized,
+    type AnyParticipation,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
