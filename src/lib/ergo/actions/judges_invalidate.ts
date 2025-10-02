@@ -8,7 +8,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameResolution, type Participation } from '$lib/common/game';
+import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
@@ -28,8 +28,8 @@ const JUDGE_PERIOD_EXTENSION = 30 + 10;
  */
 export async function judges_invalidate(
     game: GameResolution,
-    invalidatedParticipation: Participation,
-    participations: Participation[],
+    invalidatedParticipation: ValidParticipation,
+    participations: ValidParticipation[],
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
@@ -55,7 +55,7 @@ export async function judges_invalidate(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
-    const validParticipations: Participation[] = [];
+    const validParticipations: ValidParticipation[] = [];
     let nextWinnerCandidateCommitment: string | null = null;
     const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);

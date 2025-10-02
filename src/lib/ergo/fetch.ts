@@ -8,8 +8,9 @@ import {
     type GameResolution,
     type GameCancellation,
     type ParticipationBase,
-    type Participation,
+    type ValidParticipation,
     type ParticipationInvalidated,
+    AnyParticipation,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -520,12 +521,13 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
 }
 
 /**
- * Searches for "Submitted" participations for a specific game.
+ * Searches for "Submitted" or "Expired" participations for a specific game.
  * @param gameNftId The NFT ID of the game.
+ * @param gameDeadline The deadline block height of the game.
  * @returns A `Promise` with an array of `Participation`.
  */
-export async function fetchParticipations(gameNftId: string): Promise<Participation[]> {
-    const participations: Participation[] = [];
+export async function fetchParticipations(gameNftId: string, gameDeadline: number): Promise<AnyParticipation[]> {
+    const participations: AnyParticipation[] = [];
     const scriptHash = getGopParticipationTemplateHash();
     
     let offset = 0;
@@ -564,7 +566,7 @@ export async function fetchParticipations(gameNftId: string): Promise<Participat
                 if (p_base) {
                     participations.push({
                         ...p_base,
-                        status: 'Submitted',
+                        status: box.creationHeight < gameDeadline ? 'Submitted' : 'Expired',
                         spent: false
                     });
                 }

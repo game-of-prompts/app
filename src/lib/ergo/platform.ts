@@ -3,8 +3,8 @@ import {
     type GameActive, 
     type GameResolution, 
     type GameCancellation, 
-    type Participation, 
-    type Participation
+    type ValidParticipation, 
+    type ValidParticipation
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames } from './fetch';
 import { create_game } from './actions/create_game';
@@ -144,7 +144,7 @@ export class ErgoPlatform implements Platform {
 
     async resolveGame(
         game: GameActive,
-        participations: Participation[],
+        participations: ValidParticipation[],
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null> {
@@ -178,7 +178,7 @@ export class ErgoPlatform implements Platform {
      */
     async endGame(
         game: GameResolution,
-        participations: Participation[]
+        participations: ValidParticipation[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         return await end_game(game, participations);
@@ -190,8 +190,8 @@ export class ErgoPlatform implements Platform {
      */
     async judgesInvalidate(
         game: GameResolution,
-        invalidatedParticipation: Participation,
-        participations: Participation[],
+        invalidatedParticipation: ValidParticipation,
+        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -211,8 +211,8 @@ export class ErgoPlatform implements Platform {
      */
     async includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipation: Participation,
-        currentResolved: Participation,
+        omittedParticipation: ValidParticipation,
+        currentResolved: ValidParticipation,
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -228,7 +228,7 @@ export class ErgoPlatform implements Platform {
      */
     async claimAfterCancellation(
         game: GameCancellation,
-        participation: Participation
+        participation: ValidParticipation
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Cancelled_Draining') {
@@ -248,7 +248,7 @@ export class ErgoPlatform implements Platform {
      *   */
     async reclaimAfterGrace(
         game: GameActive,
-        participation: Participation
+        participation: ValidParticipation
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         if (game.status !== 'Active') {

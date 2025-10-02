@@ -8,7 +8,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameActive, type Participation } from '$lib/common/game';
+import { type GameActive, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
@@ -30,7 +30,7 @@ const JUDGE_PERIOD = 40;
  */
 export async function resolve_game(
     game: GameActive,
-    participations: Participation[],
+    participations: ValidParticipation[],
     secretS_hex: string,
     judgeProofs: string[]
 ): Promise<string | null> {

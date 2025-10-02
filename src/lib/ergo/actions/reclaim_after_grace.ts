@@ -6,7 +6,7 @@ import {
     ErgoAddress,
 } from '@fleet-sdk/core';
 import { parseBox } from '$lib/ergo/utils'; // Assuming you have a utility function to parse JSON
-import type { GameActive, Participation } from '$lib/common/game'; // Assuming your data types
+import type { GameActive, ValidParticipation } from '$lib/common/game'; // Assuming your data types
 
 // Declaration for the wallet connector (dApp connector)
 declare var ergo: any;
@@ -21,7 +21,7 @@ declare var ergo: any;
  */
 export async function reclaim_after_grace(
     game: GameActive,
-    participation: Participation
+    participation: ValidParticipation
 ): Promise<string> {
     console.log(`[reclaim_after_grace] Initiating reclaim for participation: ${participation.boxId}`);
 

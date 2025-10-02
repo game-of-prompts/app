@@ -7,7 +7,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address } from '$lib/ergo/utils';
-import { type GameResolution, type Participation, type Participation } from '$lib/common/game';
+import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 
@@ -23,8 +23,8 @@ import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from 
  */
 export async function include_omitted_participation(
     game: GameResolution,
-    omittedParticipation: Participation,
-    currentWinnerParticipation: Participation,
+    omittedParticipation: ValidParticipation,
+    currentWinnerParticipation: ValidParticipation,
     newResolverPkHex: string
 ): Promise<string | null> {
 
@@ -44,7 +44,7 @@ export async function include_omitted_participation(
 
     // --- 2. Determinar el nuevo ganador potencial ---
 
-    const getActualScore = (p: Participation | Participation): bigint => {
+    const getActualScore = (p: ValidParticipation | ValidParticipation): bigint => {
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
                 ...hexToBytes(p.solverId_RawBytesHex)!, ...bigintToLongByteArray(BigInt(score)),

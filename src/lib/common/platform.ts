@@ -4,8 +4,8 @@ import type {
     GameActive,
     GameResolution,
     GameCancellation,
-    Participation,
-    Participation
+    ValidParticipation,
+    ValidParticipation
 } from "$lib/common/game";
 import { type Box } from "@fleet-sdk/core";
 
@@ -65,7 +65,7 @@ export interface Platform {
      */
     resolveGame(
         game: GameActive,
-        participations: Participation[],
+        participations: ValidParticipation[],
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null>;
@@ -97,7 +97,7 @@ export interface Platform {
 
     endGame(
         game: GameResolution,
-        participations: Participation[]
+        participations: ValidParticipation[]
     ): Promise<string | null>;
 
     /**
@@ -106,8 +106,8 @@ export interface Platform {
      */
     judgesInvalidate(
         game: GameResolution,
-        invalidatedParticipation: Participation,
-        participations: Participation[],
+        invalidatedParticipation: ValidParticipation,
+        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<bigint>[]
     ): Promise<string | null>
 
@@ -117,8 +117,8 @@ export interface Platform {
      */
     includeOmittedParticipations(
         game: GameResolution,
-        omittedParticipation: Participation,
-        currentResolved: Participation,
+        omittedParticipation: ValidParticipation,
+        currentResolved: ValidParticipation,
         newResolverPkHex: string
     ): Promise<string | null>
 
@@ -129,7 +129,7 @@ export interface Platform {
     */
     claimAfterCancellation(
         game: GameCancellation,
-        participation: Participation
+        participation: ValidParticipation
     ): Promise<string | null>;
 
     /*
@@ -138,7 +138,7 @@ export interface Platform {
     */
     reclaimAfterGrace(
         game: GameActive,
-        participation: Participation
+        participation: ValidParticipation
     ): Promise<string | null>;
 
 

@@ -5,7 +5,7 @@
         type AnyParticipation,
         type GameActive,
         type GameCancellation,
-        type Participation,
+        type ValidParticipation,
         GameState, 
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
@@ -277,7 +277,7 @@
         if (game?.status !== 'Active' || participations.some(p => p.status !== 'Submitted')) return;
         errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.resolveGame(game, participations as Participation[], secret_S_input_resolve, acceptedJudgeNominations);
+            transactionId = await platform.resolveGame(game, participations as ValidParticipation[], secret_S_input_resolve, acceptedJudgeNominations);
         } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
     }
 
@@ -298,7 +298,7 @@
         } finally { isSubmitting = false; }
     }
 
-    async function handleClaimRefund(participation: Participation) {
+    async function handleClaimRefund(participation: ValidParticipation) {
         if (game?.status !== 'Cancelled_Draining' || participation.status !== 'Submitted') return;
         isClaimingRefundFor = participation.boxId;
         claimRefundError[participation.boxId] = null;
@@ -312,7 +312,7 @@
         }
     }
 
-    async function handleReclaimAfterGrace(participation: Participation) {
+    async function handleReclaimAfterGrace(participation: ValidParticipation) {
         if (game?.status !== 'Active' || participation.status !== 'Submitted') return;
 
         isReclaimingGraceFor = participation.boxId;
@@ -334,7 +334,7 @@
         errorMessage = null; 
         isSubmitting = true;
         try {
-            transactionId = await platform.endGame(game, participations as Participation[]);
+            transactionId = await platform.endGame(game, participations as ValidParticipation[]);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
@@ -362,9 +362,9 @@
                 })[0].box;
             });
             
-            const otherParticipations: Participation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
+            const otherParticipations: ValidParticipation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex)
 
-            transactionId = await platform.judgesInvalidate(game, winner_participation as Participation, otherParticipations, judgeInvalidVotesDataInputsBoxes);
+            transactionId = await platform.judgesInvalidate(game, winner_participation as ValidParticipation, otherParticipations, judgeInvalidVotesDataInputsBoxes);
         } catch (e: any) { errorMessage = e.message;
         } finally { isSubmitting = false; }
     }

@@ -154,7 +154,7 @@ export interface ParticipationBase {
  * Representa una participación en estado "Enviada".
  * Extiende la base y añade su estado único.
  */
-export interface Participation extends ParticipationBase {
+export interface ValidParticipation extends ParticipationBase {
     status: 'Submitted';
     spent: false;
 }
@@ -177,7 +177,7 @@ export interface ParticipationExpired extends ParticipationBase {
 export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
-export type AnyParticipation = Participation | ParticipationInvalidated | ParticipationExpired;
+export type AnyParticipation = ValidParticipation | ParticipationInvalidated | ParticipationExpired;
 
 /**
  * Determina si el período de participación de un juego ha terminado.
