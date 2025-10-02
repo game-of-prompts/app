@@ -8,6 +8,7 @@
   
   // Período de gracia en bloques para que el jugador reclame si el juego se atasca.
   val GRACE_PERIOD_IN_BLOCKS = 720L // Aprox. 24 horas
+  val ABANDONED_FUNDS_GRACE_PERIOD = 64800L // 90 días
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
@@ -143,18 +144,18 @@
       // --- Condición 1: Plazo de 90 días superado ---
       // Se comprueba que han pasado 90 días (64800 bloques) desde la fecha límite de resolución.
       val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
-      val isAfter90Days = HEIGHT >= resolutionDeadline + 64800L
+      val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
 
       if (isAfter90Days) {
         // --- Condición 2: Autenticación del creador ---
         // Se extrae la clave pública del creador desde el R8 de la caja del juego y se verifica la firma.
-        val creatorPKBytes = mainGameBox.R8[(Coll[Byte], Long)].get._1
-        val signedByCreator = proveDlog(decodePoint(creatorPKBytes))
+        val resolverPKBytes = mainGameBox.R8[(Coll[Byte], Long)].get._1
+        val signedByCreator = proveDlog(decodePoint(resolverPKBytes))
 
         // --- Condición 3: Destino de los fondos ---
         // Se asegura de que uno de los outputs de la transacción envía los fondos a la dirección del creador.
         val outputGoesToCreator = OUTPUTS.exists({(b:Box) => 
-          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ creatorPKBytes &&
+          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ resolverPKBytes &&
           b.value >= SELF.value
         })
 

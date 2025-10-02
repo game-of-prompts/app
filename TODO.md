@@ -43,8 +43,8 @@
 
 [x] Obtener juegos finalizados y participaciones gastadas
 [x] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
-[] Agregar acción de Obtener fondos tras el periodo de gracia. En caso de que el ganador/resolvedor no reclamen los fondos de la participacion.
 
+[] Agregar en el contrato constante de tiempo que tiene el ganador/resolvedor para obtener la recompensa.   Si no será el creador del juego quien podrá obtenerlo de las participaciones.
 
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 

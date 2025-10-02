@@ -169,7 +169,7 @@ export interface ParticipationExpired extends ParticipationBase {
     spent: boolean;
 }
 
-export type ParticipationConsumedReason = "cancelled"|"invalidated"|"bywinner"|"byparticipant"|"unknown";
+export type ParticipationConsumedReason = "cancelled"|"invalidated"|"bywinner"|"byparticipant"|"abandoned"|"unknown";
 export interface ParticipationConsumed extends ParticipationBase {
     status: 'Consumed';
     spent: true;

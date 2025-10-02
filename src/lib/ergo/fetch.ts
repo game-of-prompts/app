@@ -617,7 +617,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         const resolutionBoxes = histBoxes.filter((b) => b.status === "Resolution").sort((a, b) => b.box.creationHeight - a.box.creationHeight);
         const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] : null;
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-        const winnerFinalizationGracePeriod = 90; // TODO take from script constants
+        const winnerFinalizationGracePeriod = 64800; // 90 Días    TODO take from script constants
 
         const finalized: GameFinalized = {
             boxId: currentBox.boxId,
@@ -743,6 +743,9 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     } else {
                         if (spent) {
                             const reason = await (async (): Promise<ParticipationConsumedReason> => {
+
+                                if (game.status === GameState.Active) return "byparticipant";
+
                                 if (game.status === GameState.Resolution) return "invalidated";
                                 
                                 if (game.status === GameState.Cancelled_Draining) return "cancelled";
@@ -753,7 +756,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                     
                                     if (spentTx.inclusionHeight < game.judgeFinalizationBlock) return "invalidated";
                                     if (spentTx.inclusionHeight < game.winnerFinalizationDeadline) return "bywinner";
-                                    return "byparticipant";
+                                    return "abandoned";  // In case the winner doesn't take it.
                                 }
                                 
                                 return "unknown";
