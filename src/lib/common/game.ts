@@ -164,6 +164,11 @@ export interface ParticipationInvalidated extends ParticipationBase {
     spent: boolean; // Indica si la caja ya fue gastada.
 }
 
+export interface ParticipationExpired extends ParticipationBase {
+    status: 'Expired';
+    spent: false; // No se puede gastar algo que nunca se entregó a tiempo.
+}
+
 // =================================================================
 // === TIPOS DE UNIÓN Y FUNCIONES DE UTILIDAD
 // =================================================================
@@ -172,7 +177,7 @@ export interface ParticipationInvalidated extends ParticipationBase {
 export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
-export type AnyParticipation = Participation | ParticipationInvalidated;
+export type AnyParticipation = Participation | ParticipationInvalidated | ParticipationExpired;
 
 /**
  * Determina si el período de participación de un juego ha terminado.

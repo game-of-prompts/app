@@ -9,7 +9,6 @@ import {
     type GameCancellation,
     type ParticipationBase,
     type Participation,
-    type Participation,
     type ParticipationInvalidated,
 } from "../common/game";
 import { explorer_uri } from "./envs";
