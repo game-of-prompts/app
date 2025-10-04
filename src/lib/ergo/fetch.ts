@@ -34,7 +34,6 @@ import {
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
-import { get } from "svelte/store";
 
 // =================================================================
 // === REPUTATION PROOF UTILITIES

@@ -5,12 +5,9 @@ import type {
     GameResolution,
     GameCancellation,
     ValidParticipation,
-    ValidParticipation
+    AnyGame
 } from "$lib/common/game";
 import { type Box } from "@fleet-sdk/core";
-
-// Un tipo de unión para representar un juego en cualquier estado posible.
-export type AnyGame = GameActive | GameResolution | GameCancellation;
 
 export interface CreateGoPGamePlatformParams {
     gameServiceId: string;

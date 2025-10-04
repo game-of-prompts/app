@@ -3,7 +3,7 @@ import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex }
 import { get } from "svelte/store";
 import { types, connected, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
-import { getReputationProofErgoTreeHex, getReputationProofTemplateHash, getDigitalPublicGoodTemplateHash } from "$lib/ergo/contract";
+import { getReputationProofErgoTreeHex, getReputationProofTemplateHash } from "$lib/ergo/contract";
 import { type Amount, type Box, ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { GAME, JUDGE, PARTICIPATION } from "./types";

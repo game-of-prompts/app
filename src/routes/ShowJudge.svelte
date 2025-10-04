@@ -9,6 +9,7 @@
     import { onDestroy } from 'svelte';
     import Return from './Return.svelte';
     import { update_reputation_proof } from '$lib/ergo/reputation/submit';
+    import { json } from '@sveltejs/kit';
 
 	let proof: ReputationProof | undefined = undefined;
 
@@ -146,12 +147,12 @@
 								
 								<div class="box-content">
 									{#if selectedType === GAME}
-										{@const game = $games.get(box.object_pointer)}
+										{@const game = $games.data.get(box.object_pointer)}
 										{#if game}
                                             <GameCard
                                                     game={game}
                                                     index={0}
-                                                    opinionContent={box.content || 'No content provided.'}
+                                                    opinionContent={JSON.stringify(box.content) || 'No content provided.'}
                                                     isInvited={displayProof && game.judges.includes(displayProof.token_id)}
                                                 />
 										{/if}

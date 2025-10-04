@@ -8,8 +8,8 @@ import {
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames, fetchFinalizedGames } from './fetch';
 import { create_game } from './actions/create_game';
-import { explorer_uri, network_id } from './envs';
-import { address, connected, network, balance } from "../common/store";
+import { CACHE_DURATION_MS, explorer_uri, network_id } from './envs';
+import { address, connected, network, balance, games } from "../common/store";
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
@@ -268,8 +268,11 @@ export class ErgoPlatform implements Platform {
      * Busca todos los juegos en la blockchain, combinando los resultados de cada estado posible.
      * @returns Un `Promise` que resuelve a un `Map` que contiene todos los juegos, usando el ID del juego como clave.
      */
-    async fetchGoPGames(): Promise<Map<string, AnyGame>> {
-        console.log("Buscando todos los juegos en todos los estados...");
+    async fetchGoPGames(force: boolean = false): Promise<Map<string, AnyGame>> {
+        
+        if (!force && (Date.now() - get(games).last_fetch < CACHE_DURATION_MS)) {
+            return get(games).data;
+        }
 
         // Ejecutar todas las búsquedas en paralelo para mayor eficiencia.
         const [activeGames, resolutionGames, cancellationGames, finalizedGames] = await Promise.all([
@@ -288,6 +291,11 @@ export class ErgoPlatform implements Platform {
             ...cancellationGames,
             ...finalizedGames
         ]);
+
+        games.set({
+            data: allGames,
+            last_fetch: Date.now()
+        });
 
         console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
         return allGames;

@@ -49,18 +49,16 @@
         isLoadingApi = true;
         errorMessage = null;
         try {
-            const gamesMap = await platform.fetchGoPGames(offset);
-            const combinedGames = new Map<string, Game>([...gamesMap]);
-            games.set(combinedGames);
+            await platform.fetchGoPGames();
+            
         } catch (error: any) {
             console.error("Error fetching GoP games:", error);
             errorMessage = error.message || "An error occurred while fetching games.";
-            games.set(new Map());
         }
     }
 
     const unsubscribeGames = games.subscribe(async value => {
-        allFetchedItems = value || new Map();
+        allFetchedItems = value.data || new Map();
         await applyFiltersAndSearch(allFetchedItems);
         if (isLoadingApi) isLoadingApi = false;
     });
@@ -76,10 +74,10 @@
     }
 
     onMount(() => {
-        if (get(games).size === 0) {
+        if (get(games).data.size === 0) {
             loadInitialItems();
         } else {
-            allFetchedItems = get(games);
+            allFetchedItems = get(games).data;
             applyFiltersAndSearch(allFetchedItems).then(() => {
                  if (isLoadingApi) isLoadingApi = false;
             });
