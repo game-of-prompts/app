@@ -47,6 +47,14 @@
 [] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
 
 
+[] Allow for P2SH en participantes.
+
+## Permitir pagos a jueces (razonar mas sobre ello)
+
+- A parte del creador y desarrollador, debe de existir un rol de juez, de manera que el porcentaje asignado a juez se reparta entre los jueces nominados.
+- De no ser asi, los jueces solo podrían tener un incentivo economico en caso de que el creador cobre, lo cual va encontra de su proposito.
+
+
 
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
@@ -59,10 +67,11 @@
 #### Servicio para supervisar jueces
 
 
-## Permitir pagos a jueces (razonar mas sobre ello)
 
-- A parte del creador y desarrollador, debe de existir un rol de juez, de manera que el porcentaje asignado a juez se reparta entre los jueces nominados.
-- De no ser asi, los jueces solo podrían tener un incentivo economico en caso de que el creador cobre, lo cual va encontra de su proposito.
+
+
+
+
 
 
 
