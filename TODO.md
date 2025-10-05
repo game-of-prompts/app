@@ -44,8 +44,6 @@
 [x] Obtener juegos finalizados y participaciones gastadas
 [x] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
 
-[] Use CONTEXT.preHeader.timestamp  en lugar de HEIGHT
-[] GameInfo without JSON
 [] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
 
 

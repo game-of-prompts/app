@@ -37,7 +37,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
     const initialCancelledStake = 10_000_000_000n; // 10 ERG
     const gameNftId = "11bbcc11bbcc11bbcc11bbcc11bbcc11bbcc11bbcc11bbcc11bbcc11bbcc11";
     const revealedSecret = stringToBytes("utf8", "the-secret-is-out");
-    
+    const originalDeadline = 600_000;
+
     let cancelledGameBox: Box;
 
     beforeEach(() => {
@@ -68,6 +69,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R9: SLong(BigInt(originalDeadline)).toHex()
             }
         });
         
@@ -104,6 +106,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                         R6: SColl(SByte, revealedSecret).toHex(),
                         R7: SLong(remainingStake).toHex(),
                         R8: cancelledGameBox.additionalRegisters.R8,
+                        R9: SLong(BigInt(originalDeadline)).toHex()
                     }),
                 // Output 1: The penalty paid to the claimer
                 new OutputBuilder(stakePortionToClaim, claimer.address)
@@ -148,6 +151,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R9: SLong(BigInt(originalDeadline)).toHex()
             }
         });
         const futureLockedBox = gameCancellationContract.utxos.toArray()[0];

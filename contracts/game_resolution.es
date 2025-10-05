@@ -20,7 +20,7 @@
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R7: Coll[Long]                 - numericalParams: [deadline, creatorStake, participationFee, resolutionDeadline].
+  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, resolutionDeadline].
   // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
