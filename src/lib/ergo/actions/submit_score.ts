@@ -86,10 +86,10 @@ export async function submit_score(
         participationContractErgoTree
     )
     .setAdditionalRegisters({
-        R4: SColl(SByte, playerPkBytes).toHex(),
+        R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
         R5: SColl(SByte, commitmentC_bytes).toHex(),
         R6: SColl(SByte, gameNftId_bytes).toHex(),
-        R7: SColl(SByte, prependHexPrefix(hexToBytes(solverIdString)!)).toHex(),
+        R7: SColl(SByte, hexToBytes(solverIdString)!).toHex(),
         R8: SColl(SByte, hashLogs_bytes).toHex(),
         R9: SColl(SLong, scoreList).toHex()
     });
