@@ -12,6 +12,7 @@ import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
+import { prependHexPrefix } from '$lib/utils';
 
 // Constant from the game_resolution.es contract for extending the deadline
 const JUDGE_PERIOD_EXTENSION = 30 + 10;
@@ -162,7 +163,7 @@ export async function judges_invalidate(
                 BigInt(game.resolvedCounter - 1),
             ]),
             R8: SPair(
-                SColl(SByte, hexToBytes(game.resolverPK_Hex)!),
+                SColl(SByte, prependHexPrefix(hexToBytes(game.resolverPK_Hex)!)),
                 SLong(BigInt(game.resolverCommission))
             ),
             R9: SPair(

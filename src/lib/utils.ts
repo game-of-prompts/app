@@ -78,7 +78,7 @@ export function getParticipationFee(game: AnyGame): bigint {
     return game.participationFeeNanoErg;
 }
 
-export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string): Uint8Array {
+export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string = "0008cd"): Uint8Array {
   const cleanHex = hexPrefix.replace(/\s+/g, '');
   if (cleanHex.length % 2 !== 0) {
     throw new Error("La cadena hexadecimal debe tener una longitud par.");

@@ -10,6 +10,7 @@ import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBa
 import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
+import { prependHexPrefix } from '$lib/utils';
 
 /**
  * Permite a cualquier usuario incluir una participación que fue omitida
@@ -94,7 +95,7 @@ export async function include_omitted_participation(
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(newWinnerCommitment)!)),
         R6: SConstant(game.box.additionalRegisters.R6), // Preservar jueces
         R7: SColl(SLong, numericalParams).toHex(), // Actualizar contador en R7
-        R8: SPair(SColl(SByte, hexToBytes(newResolverPkHex)!), SLong(BigInt(game.resolverCommission))),
+        R8: SPair(SColl(SByte, prependHexPrefix(hexToBytes(newResolverPkHex)!)), SLong(BigInt(game.resolverCommission))),
         R9: SConstant(game.box.additionalRegisters.R9) // Preservar proveniencia
     });
 

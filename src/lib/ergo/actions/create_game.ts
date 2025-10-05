@@ -10,6 +10,7 @@ import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils'; 
 import { getGopGameActiveErgoTreeHex } from '../contract'; 
 import { stringToBytes } from '@scure/base';
+import { prependHexPrefix } from '$lib/utils';
 
 declare var ergo: any;
 
@@ -88,7 +89,7 @@ export async function create_game(
         // R4: Game state (0: Active)
         R4: SInt(0).toHex(),
         // R5: (Creator's public key, Commission percentage)
-        R5: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
+        R5: SPair(SColl(SByte, prependHexPrefix(creatorPkBytes)), SLong(BigInt(commissionPercentage))).toHex(),
         // R6: Hash of the secret 'S'
         R6: SColl(SByte, hashedSecretBytes).toHex(),
         // R7: Invited judges

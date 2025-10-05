@@ -14,6 +14,7 @@ import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from 
 import { stringToBytes } from '@scure/base';
 import { GAME } from '../reputation/types';
 import { fetchJudges } from '../reputation/fetch';
+import { prependHexPrefix } from '$lib/utils';
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = 40;
@@ -178,7 +179,7 @@ export async function resolve_game(
         R5: SPair(SColl(SByte, secretS_bytes), winnerCandidateCommitment ? SColl(SByte, hexToBytes(winnerCandidateCommitment)!) : SColl(SByte, [])).toHex(),
         R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
-        R8: SPair(SColl(SByte, resolverPkBytes), SLong(BigInt(game.commissionPercentage))).toHex(),
+        R8: SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex(),
         R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
 

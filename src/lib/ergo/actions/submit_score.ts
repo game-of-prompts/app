@@ -9,6 +9,7 @@ import {
 import { SColl, SLong, SByte, SGroupElement } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils';
 import { getGopParticipationErgoTreeHex } from '../contract'; // <-- Importación actualizada
+import { prependHexPrefix } from '$lib/utils';
 
 declare var ergo: any;
 
@@ -88,7 +89,7 @@ export async function submit_score(
         R4: SGroupElement(playerPkBytes).toHex(),
         R5: SColl(SByte, commitmentC_bytes).toHex(),
         R6: SColl(SByte, gameNftId_bytes).toHex(),
-        R7: SColl(SByte, hexToBytes(solverIdString) ?? "").toHex(),
+        R7: SColl(SByte, prependHexPrefix(hexToBytes(solverIdString)!)).toHex(),
         R8: SColl(SByte, hashLogs_bytes).toHex(),
         R9: SColl(SLong, scoreList).toHex()
     });
