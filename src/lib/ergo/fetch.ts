@@ -416,8 +416,11 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         // R7: creatorStake (Long). El stake actual del creador.
         const currentStakeNanoErg = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
         
-        // R8: ReadOnlyInfo (Coll[Byte]). JSON con datos inmutables.
-        const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R8?.renderedValue) || ""), box.boxId, box.assets[0]);
+        // R8: Original deadline (Long).
+        const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
+
+        // R9: ReadOnlyInfo (Coll[Byte]). JSON con datos inmutables.
+        const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9?.renderedValue) || ""), box.boxId, box.assets[0]);
 
         // Valida que los registros esenciales se hayan parseado correctamente
         if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
@@ -440,7 +443,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
-            deadlineBlock: box.additionalRegisters.R9?.renderedValue ?? 0
+            deadlineBlock: originalDeadline
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);

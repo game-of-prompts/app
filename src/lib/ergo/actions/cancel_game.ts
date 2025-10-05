@@ -88,8 +88,10 @@ export async function cancel_game(
         R6: SColl(SByte, secretS_bytes).toHex(),
         // R7: El stake restante del creador
         R7: SLong(newCreatorStake).toHex(),
-        // R8: Información inmutable del juego (transferida desde R9 de la caja activa)
-        R8: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+        // R8: Deadline original
+        R8: SLong(BigInt(game.deadlineBlock)).toHex(),
+        // R9: Información inmutable del juego (transferida desde R9 de la caja activa)
+        R9: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
     });
 
 
