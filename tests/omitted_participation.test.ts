@@ -21,6 +21,7 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { prependHexPrefix } from "$lib/utils";
 
 // --- Utility and Constants Setup ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
@@ -108,8 +109,8 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                 R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
                 R6: SColl(SColl(SByte), []).toHex(),
                 R7: SColl(SLong, numericalParams).toHex(),
-                R8: SPair(SColl(SByte, originalResolver.key.publicKey), SLong(10n)).toHex(),
-                R9: SPair(SColl(SByte, originalResolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+                R8: SPair(SColl(SByte, prependHexPrefix(originalResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, prependHexPrefix(originalResolver.key.publicKey, "0008cd")), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
             }
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
@@ -164,7 +165,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -197,7 +198,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -226,7 +227,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -254,8 +255,8 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                 R5: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
                 R6: SColl(SColl(SByte), []).toHex(),
                 R7: SColl(SLong, initialNumericalParams).toHex(),
-                R8: SPair(SColl(SByte, originalResolver.key.publicKey), SLong(10n)).toHex(),
-                R9: SPair(SColl(SByte, originalResolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+                R8: SPair(SColl(SByte, prependHexPrefix(originalResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, prependHexPrefix(originalResolver.key.publicKey, "0008cd")), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
             }
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
@@ -290,7 +291,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -325,7 +326,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -360,7 +361,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -446,7 +447,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, fakeCommitment)).toHex(), // Using the real secret but fake commitment
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -477,7 +478,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, wrongSecret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -524,7 +525,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -572,7 +573,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, inconsistentCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -603,7 +604,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
@@ -631,7 +632,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
                         R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
                         R6: gameResolutionBox.additionalRegisters.R6,
                         R7: SColl(SLong, updatedNumericalParams).toHex(),
-                        R8: SPair(SColl(SByte, newResolver.key.publicKey), SLong(10n)).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])

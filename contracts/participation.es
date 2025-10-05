@@ -147,15 +147,19 @@
       val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
 
       if (isAfter90Days) {
+        val resolverPK = mainGameBox.R8[(Coll[Byte], Long)].get._1
+
         // --- Condición 2: Autenticación del creador ---
-        // Se extrae la clave pública del creador desde el R8 de la caja del juego y se verifica la firma.
-        val resolverPKBytes = mainGameBox.R8[(Coll[Byte], Long)].get._1
-        val signedByCreator = proveDlog(decodePoint(resolverPKBytes))
+        val prefix = resolverPK.slice(0, 3)
+        val pubKey = resolverPK.slice(3, resolverPK.size)
+
+        val signedByCreator = 
+          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) ||
+          sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
 
         // --- Condición 3: Destino de los fondos ---
-        // Se asegura de que uno de los outputs de la transacción envía los fondos a la dirección del creador.
         val outputGoesToCreator = OUTPUTS.exists({(b:Box) => 
-          b.propositionBytes == P2PK_ERGOTREE_PREFIX ++ resolverPKBytes &&
+          b.propositionBytes == resolverPK &&
           b.value >= SELF.value
         })
 

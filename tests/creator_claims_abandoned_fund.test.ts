@@ -15,6 +15,7 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { hexToBytes } from "$lib/ergo/utils";
+import { prependHexPrefix } from "$lib/utils";
 
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
@@ -71,7 +72,7 @@ describe("Creator Claims Abandoned Funds", () => {
         R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
       },
     });
 
@@ -170,7 +171,7 @@ describe("Creator Claims Abandoned Funds", () => {
         R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
       },
     });
     const wrongGameResolutionBox = gameResolutionContract.utxos.toArray()[1];
@@ -203,7 +204,7 @@ describe("Creator Claims Abandoned Funds", () => {
         R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
         R6: SColl(SColl(SByte), []).toHex(),
         R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
       },
     });
     const wrongStateGameBox = gameResolutionContract.utxos.toArray()[1];

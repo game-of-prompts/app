@@ -21,6 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { prependHexPrefix } from "$lib/utils";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -120,8 +121,8 @@ describe("Game Finalization (end_game)", () => {
             R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
             R6: SColl(SColl(SByte), []).toHex(),
             R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
     });
     
@@ -228,8 +229,8 @@ describe("Game Finalization (end_game)", () => {
             R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(), // Sin ganador
             R6: SColl(SColl(SByte), []).toHex(),
             R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, creator.key.publicKey),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
     });
 
@@ -350,7 +351,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
             R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
     });
     mockChain.jumpTo(resolutionDeadline);
@@ -389,7 +390,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
             R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
     });
     mockChain.jumpTo(resolutionDeadline);

@@ -77,3 +77,22 @@ export function getParticipationFee(game: AnyGame): bigint {
     }
     return game.participationFeeNanoErg;
 }
+
+export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string): Uint8Array {
+  const cleanHex = hexPrefix.replace(/\s+/g, '');
+  if (cleanHex.length % 2 !== 0) {
+    throw new Error("La cadena hexadecimal debe tener una longitud par.");
+  }
+
+  const prefixBytes = new Uint8Array(cleanHex.length / 2);
+  for (let i = 0; i < cleanHex.length; i += 2) {
+    prefixBytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
+  }
+
+  const result = new Uint8Array(prefixBytes.length + originalBytes.length);
+
+  result.set(prefixBytes, 0);
+  result.set(originalBytes, prefixBytes.length);
+
+  return result;
+}

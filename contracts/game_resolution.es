@@ -244,7 +244,12 @@
         }
       } else {
         // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
-        proveDlog(decodePoint(resolverPK))   
+        // Asumiendo que P2PK_ERGOTREE_PREFIX está definido como Coll[Byte](0, 8, -51) o fromBase16("0008cd")
+        val prefix = resolverPK.slice(0, 3)
+        val pubKey = resolverPK.slice(3, resolverPK.size)
+
+        (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) ||
+        sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
       }
     }
 
@@ -292,7 +297,7 @@
           }) */
 
           val resolverGetsPaid = if (finalResolverPayout > 0L) {
-              OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK)})
+              OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == resolverPK})
           } else { true }
           
           val devGetsPaid = if (finalDevPayout > 0L) {
@@ -321,7 +326,7 @@
         // Verificación de las salidas para el caso sin ganador.
         val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
             b.value >= finalResolverPayout &&
-            b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ resolverPK) &&
+            b.propositionBytes == resolverPK &&
             b.tokens.size == 1 && // El resolutor recibe el NFT
             b.tokens(0)._1 == gameNftId
         })
