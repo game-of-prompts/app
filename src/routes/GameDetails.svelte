@@ -956,6 +956,13 @@
                                         {/if}
                                     </div>
                                 </div>
+                                <div class="info-block">
+                                    <span class="info-label">Block</span>
+                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                    <a class="info-value font-mono text-xs">
+                                        {p.creationHeight}
+                                    </a>
+                                </div>
 
                                 {#if canReclaimAfterGrace}
                                     <div class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
