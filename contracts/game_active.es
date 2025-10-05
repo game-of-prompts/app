@@ -183,8 +183,8 @@
           cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
           cancellationBox.R7[Long].get == remainingStake &&
-          cancellationBox.R8[Coll[Byte]].get == gameDetailsJsonHex &&
-          cancellationBox.R9[Long].get == deadline
+          cancellationBox.R8[Long].get == deadline &&
+          cancellationBox.R9[Coll[Byte]].get == gameDetailsJsonHex
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---

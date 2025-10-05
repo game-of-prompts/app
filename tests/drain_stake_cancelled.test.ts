@@ -68,8 +68,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R5: SLong(BigInt(unlockHeight)).toHex(),
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
-                R9: SLong(BigInt(originalDeadline)).toHex()
+                R8: SLong(BigInt(originalDeadline)).toHex(),
+                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
             }
         });
         
@@ -105,8 +105,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                         R5: SLong(newUnlockHeight).toHex(),
                         R6: SColl(SByte, revealedSecret).toHex(),
                         R7: SLong(remainingStake).toHex(),
-                        R8: cancelledGameBox.additionalRegisters.R8,
-                        R9: SLong(BigInt(originalDeadline)).toHex()
+                        R8: SLong(BigInt(originalDeadline)).toHex(),
+                        R9: cancelledGameBox.additionalRegisters.R9,
                     }),
                 // Output 1: The penalty paid to the claimer
                 new OutputBuilder(stakePortionToClaim, claimer.address)
@@ -150,8 +150,8 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R5: SLong(BigInt(futureUnlockHeight)).toHex(),
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
-                R9: SLong(BigInt(originalDeadline)).toHex()
+                R8: SLong(BigInt(originalDeadline)).toHex(),
+                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex() 
             }
         });
         const futureLockedBox = gameCancellationContract.utxos.toArray()[0];

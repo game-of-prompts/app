@@ -144,8 +144,8 @@ describe("Game Cancellation (cancel_game)", () => {
                         R5: SLong(newUnlockHeight).toHex(),
                         R6: SColl(SByte, secret).toHex(), // Se revela el secreto
                         R7: SLong(newCreatorStake).toHex(),
-                        R8: gameBox.additionalRegisters.R9, // Se transfiere ReadOnlyInfo
-                        R9: SLong(BigInt(deadlineBlock)).toHex()
+                        R8: SLong(BigInt(deadlineBlock)).toHex(),
+                        R9: gameBox.additionalRegisters.R9,
                     }),
                 // Salida 1: La penalización pagada al reclamante
                 new OutputBuilder(stakePortionToClaim, claimer.address)
@@ -291,8 +291,8 @@ describe("Game Cancellation (Low Stake)", () => {
                         R5: SLong(newUnlockHeight).toHex(),
                         R6: SColl(SByte, secret).toHex(),
                         R7: SLong(newCreatorStake).toHex(),
-                        R8: gameBox.additionalRegisters.R9,
-                        R9: SLong(BigInt(deadlineBlock)).toHex()
+                        R8: SLong(BigInt(deadlineBlock)).toHex(),
+                        R9: gameBox.additionalRegisters.R9,
                     }),
                 // Salida 1: La penalización para el reclamante.
                 new OutputBuilder(stakePortionToClaim, claimer.address)

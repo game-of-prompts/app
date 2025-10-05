@@ -18,8 +18,8 @@
   // R5: Long        - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
   // R6: Coll[Byte]  - revealedSecret: El secreto 'S' del juego, ya revelado.
   // R7: Long        - creatorStake: La cantidad actual (y decreciente) del stake del creador.
-  // R8: Coll[Byte]  - ReadOnlyInfo: Un JSON (en bytes UTF-8) con datos inmutables del juego
-  // R9 Long         - originalDeadline
+  // R8 Long         - originalDeadline
+  // R9: Coll[Byte]  - ReadOnlyInfo: Un JSON (en bytes UTF-8) con datos inmutables del juego
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -29,8 +29,8 @@
   val unlockHeight = SELF.R5[Long].get
   val revealedSecret = SELF.R6[Coll[Byte]].get
   val currentStake = SELF.R7[Long].get
-  val readOnlyInfo = SELF.R8[Coll[Byte]].get
-  val originalDeadline = SELF.R9[Long].get
+  val originalDeadline = SELF.R8[Long].get
+  val readOnlyInfo = SELF.R9[Coll[Byte]].get
 
 
   // El ID del NFT original del juego se extrae de los tokens de la propia caja.
@@ -63,8 +63,8 @@
       recreatedCancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
       recreatedCancellationBox.R6[Coll[Byte]].get == revealedSecret &&
       recreatedCancellationBox.R7[Long].get == remainingStake &&
-      recreatedCancellationBox.R8[Coll[Byte]].get == readOnlyInfo &&
-      recreatedCancellationBox.R9[Long].get == originalDeadline
+      recreatedCancellationBox.R8[Long].get == originalDeadline &&
+      recreatedCancellationBox.R9[Coll[Byte]].get == readOnlyInfo
     }
     
     cooldownIsOver && claimerGetsPortion && boxIsRecreatedCorrectly
