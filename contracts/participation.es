@@ -14,7 +14,7 @@
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
   // =================================================================
 
-  // R4: GroupElement - playerPK: Clave pública del jugador.
+  // R4: Coll[Byte] - playerPK: Script de gasto del jugador
   // R5: Coll[Byte] - commitmentC: Commitment criptográfico con la puntuación verdadera.
   // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participación.
   // R7: Coll[Byte] - solverId: ID del solver del jugador.
@@ -25,7 +25,7 @@
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
-  val playerPK = SELF.R4[GroupElement].get
+  val playerPK = SELF.R4[Coll[Byte]].get
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
   // =================================================================
@@ -46,7 +46,14 @@
                           gameBoxInData.R6[Coll[Byte]].isDefined &&
                           gameBoxInData.R4[Int].get == 2 // Estado "Cancelado" es 2
         
-        sigmaProp(correctGame) && proveDlog(playerPK)
+        val signedByOwner = {
+          val prefix = playerPK.slice(0, 3)
+          val pubKey = playerPK.slice(3, playerPK.size)
+
+          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == playerPK }))
+        }
+
+        sigmaProp(correctGame) && signedByOwner
       }
     }
     else { sigmaProp(false) }
@@ -64,7 +71,14 @@
         
         val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
 
-        sigmaProp(gracePeriodIsOver) && proveDlog(playerPK)
+        val signedByOwner = {
+          val prefix = playerPK.slice(0, 3)
+          val pubKey = playerPK.slice(3, playerPK.size)
+
+          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == playerPK }))
+        }
+
+        sigmaProp(gracePeriodIsOver) && signedByOwner
       } else {
         sigmaProp(false)
       }

@@ -41,7 +41,7 @@ export function serializedToRendered(serializedValue: string): string {
 
 export function generate_pk_proposition(wallet_pk: string): string {
     const pk = ErgoAddress.fromBase58(wallet_pk).getPublicKeys()[0];
-    const encodedProp = SGroupElement(pk);
+    const encodedProp = SColl(SByte, pk);
     return encodedProp.toHex();
 }
 

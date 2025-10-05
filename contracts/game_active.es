@@ -22,7 +22,7 @@
   // =================================================================
 
   // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Long) - creatorInfo: (Clave pública del creador, Porcentaje de comisión).
+  // R5: (Coll[Byte], Long) - creatorInfo: (Script de gasto del creador, Porcentaje de comisión).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee].

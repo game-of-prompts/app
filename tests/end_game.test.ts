@@ -134,7 +134,7 @@ describe("Game Finalization (end_game)", () => {
             ergoTree: pparticipationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement(party.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, commitment).toHex(),
                 R6: SColl(SByte, gameNftId).toHex(),
                 R7: SColl(SByte, "c3".repeat(32)).toHex(),

@@ -22,6 +22,7 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, generate_pk_proposition, hexToBytes, uint8ArrayToHex } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { prependHexPrefix } from "$lib/utils";
 
 // --- Configuración de Constantes y Carga de Contratos ---
 const contractsDir = path.resolve(__dirname, "..", "contracts");
@@ -156,7 +157,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -172,7 +173,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -321,7 +322,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -337,7 +338,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -463,7 +464,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -479,7 +480,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -609,7 +610,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -625,7 +626,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -750,7 +751,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -766,7 +767,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -909,7 +910,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -925,7 +926,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1048,7 +1049,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( invalidatedWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1064,7 +1065,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1080,7 +1081,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  // We resolved the game 30 blocks ago, still within the judge period.
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( extraParticipant.key.publicKey).toHex(),
+                R4: SColl(SByte,  extraParticipant.key.publicKey).toHex(),
                 R5: SColl(SByte, extraParticipantCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-extra")).toHex(),
@@ -1234,7 +1235,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 1616921,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( pkBytes).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(pkBytes)).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, Buffer.from(gameNftId, "hex")).toHex(),
                 R7: SColl(SByte, invalidatedSolverIdBytes).toHex(),
@@ -1252,7 +1253,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 1616921,
             assets: [],
             additionalRegisters: {
-                R4: SGroupElement( pkBytes).toHex(),
+                R4: SColl(SByte,  prependHexPrefix(pkBytes)).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, hexToBytes(gameNftId)!).toHex(),
                 R7: SColl(SByte, nextSolverIdBytes).toHex(),

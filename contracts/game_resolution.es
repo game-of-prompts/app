@@ -236,8 +236,11 @@
         // Hay candidato a ganador: requerimos que la transacción esté firmada por la clave pública del ganador
         val winnerBoxes = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && box.R5[Coll[Byte]].get == winnerCandidateCommitment })
         if (winnerBoxes.size > 0) {
-          val winnerPK = winnerBoxes(0).R4[GroupElement].get
-          proveDlog(winnerPK)
+          val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get
+          val prefix = winnerPK.slice(0, 3)
+          val pubKey = winnerPK.slice(3, winnerPK.size)
+
+          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK }))
         } else {
           // No se puede verificar la clave del ganador -> denegado
           sigmaProp(false)

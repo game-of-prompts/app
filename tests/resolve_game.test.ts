@@ -140,7 +140,7 @@ describe("Game Resolution (resolve_game)", () => {
       });
 
     participation1_registers = {
-        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte,  participant1.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, commitment1Hex).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
@@ -207,7 +207,7 @@ describe("Game Resolution (resolve_game)", () => {
       assets: [],
       value: participationFee,
       additionalRegisters: {
-        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte,  participant1.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, commitment1Hex).toHex(),
         R6: SColl(SByte, wrongGameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
@@ -245,7 +245,7 @@ describe("Game Resolution (resolve_game)", () => {
       assets: [],
       value: participationFee,
       additionalRegisters: {
-        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte,  participant1.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, wrongCommitment1Hex).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
@@ -278,7 +278,7 @@ describe("Game Resolution (resolve_game)", () => {
       assets: [],
       value: participationFee,
       additionalRegisters: {
-        R4: SGroupElement( participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte,  participant1.address.getPublicKeys()[0]).toHex(),
         R5: SColl(SByte, commitment1Hex).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),

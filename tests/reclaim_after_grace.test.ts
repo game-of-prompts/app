@@ -13,6 +13,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { prependHexPrefix } from "$lib/utils";
 
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 
@@ -87,7 +88,7 @@ describe("Participant Reclaim After Grace Period", () => {
       assets: [],
       creationHeight: mockChain.height,
       additionalRegisters: {
-        R4: SGroupElement(participant.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte, prependHexPrefix(participant.address.getPublicKeys()[0])).toHex(),
         R5: SColl(SByte, "aa".repeat(32)).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, "bb".repeat(8)).toHex(),

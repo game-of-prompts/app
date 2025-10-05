@@ -11,6 +11,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
+import { prependHexPrefix } from "$lib/utils";
 
 // Helper para convertir Uint8Array a una cadena hexadecimal.
 function uint8ArrayToHex(bytes: Uint8Array): string {
@@ -105,7 +106,7 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
       assets: [],
       value: participationFee,
       additionalRegisters: {
-        R4: SGroupElement( playerPkBytes).toHex(),
+        R4: SColl(SByte,  prependHexPrefix(playerPkBytes)).toHex(),
         R5: SColl(SByte, dummyCommitment).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
