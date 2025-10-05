@@ -44,9 +44,8 @@
 [x] Obtener juegos finalizados y participaciones gastadas
 [x] Mostrar en listado y detalles juegos finalizados y participaciones gastadas.
 
-[] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
-
-[] Allow for P2SH en participantes.
+[x] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
+[x] Allow for P2SH en participantes.
 
 ## Permitir pagos a jueces (razonar mas sobre ello)
 
