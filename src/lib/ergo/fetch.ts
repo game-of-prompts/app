@@ -732,7 +732,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                 const p_base = await _parseParticipationBox(box);
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
-                    const expired = box.creationHeight < gameDeadline;
+                    const expired = box.creationHeight > gameDeadline;
                     if (expired && !spent) {
                         participations.push({
                             ...p_base,

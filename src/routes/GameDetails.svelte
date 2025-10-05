@@ -24,7 +24,7 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel, Check } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel, Check, CheckCircle } from 'lucide-svelte';
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
@@ -860,6 +860,7 @@
                         {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && p.status === 'Submitted'}
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
+                        {@const reclaimedAfterGrace = isGracePeriodOver && isCurrentUserParticipant && p.spent}
                         {@const isExpired = p.status === 'Expired'}
                         {@const isSubmitted = p.status === 'Submitted'}
                         {@const isConsumedByWinner = p.status === 'Consumed' && p.reason === 'bywinner'}
@@ -992,6 +993,16 @@
                                         {#if reclaimGraceError[p.boxId]}
                                             <p class="text-xs mt-1 text-red-400">{reclaimGraceError[p.boxId]}</p>
                                         {/if}
+                                    </div>
+                                {/if}
+                                {#if reclaimedAfterGrace}
+                                    <div class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
+                                        <div class="my-2 p-3 rounded-md text-sm bg-blue-600/30 text-blue-300 border border-blue-500/50 flex items-center">
+                                            <CheckCircle class="mr-2 h-5 w-5"/> 
+                                            <p class="font-medium">
+                                                Your participation fee has been successfully reclaimed after the grace period.
+                                            </p>
+                                        </div>
                                     </div>
                                 {/if}
 
