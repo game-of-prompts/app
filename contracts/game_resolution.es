@@ -11,6 +11,7 @@
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
   val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
+  val MAX_SCORE_LIST = 10
 
 
   // =================================================================
@@ -75,7 +76,9 @@
         // Se verifica que la caja de participación enviada sea válida para este juego
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
                                 omittedWinnerBox.R6[Coll[Byte]].get == gameNftId &&
-                                omittedWinnerBox.creationInfo._1 < deadline
+                                omittedWinnerBox.creationInfo._1 < deadline &&
+                                omittedWinnerBox.value >= participationFee &&
+                                omittedWinnerBox.R9[Coll[Long]].get.size <= MAX_SCORE_LIST
 
         if (omittedBoxIsValid) {
           // Se calcula el puntaje de la nueva participación revelando el secreto

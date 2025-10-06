@@ -16,6 +16,7 @@
   val COOLDOWN_IN_BLOCKS = 30L
   val JUDGE_PERIOD = 30L
   val MIN_BOX_VALUE = 1000000L
+  val MAX_SCORE_LIST = 10
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
@@ -102,7 +103,7 @@
               val correctParticipationFee = winnerCandidateBox.value >= participationFee
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
-              validScoreExists && correctParticipationFee && createdBeforeDeadline
+              validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
             }
           }
 

@@ -19,7 +19,7 @@
   // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participación.
   // R7: Coll[Byte] - solverId: ID del solver del jugador.
   // R8: Coll[Byte] - hashLogs: Hash de los logs del juego del jugador.
-  // R9: Coll[Long] - scoreList: Lista de puntuaciones, una de las cuales es la verdadera.
+  // R9: Coll[Long] - scoreList: Lista de puntuaciones, una de las cuales es la verdadera. (max 10 según esté definido en el contrato principal)
   
   // =================================================================
   // === EXTRACCIÓN DE VALORES
