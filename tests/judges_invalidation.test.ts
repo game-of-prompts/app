@@ -387,8 +387,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         const currentHeight = mockChain.height;
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
 
         const tx = new TransactionBuilder(currentHeight)
             .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
@@ -533,8 +532,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n; // 2 - 1
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -677,8 +675,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n; // 2 - 1
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
         
         mockChain.newBlocks(41); // Advance beyond the judge period
 
@@ -815,8 +812,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n; // 2 - 1
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -992,8 +988,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const decrementedCounter = 1n; // 2 - 1
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1165,8 +1160,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = 1616961n + JUDGE_PERIOD;
-        const decrementedCounter = 1n;
-        const newNumericalParams = [1616920n, 1000000n, 1000000n, extendedDeadline, decrementedCounter];
+        const newNumericalParams = [1616920n, 1000000n, 1000000n, extendedDeadline];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
