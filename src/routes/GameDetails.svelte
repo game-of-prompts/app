@@ -279,10 +279,11 @@
     }
 
     async function handleResolveGame() {
-        if (game?.status !== 'Active' || participations.some(p => p.status !== 'Submitted')) return;
+        if (game?.status !== 'Active') return;
         errorMessage = null; isSubmitting = true;
         try {
-            transactionId = await platform.resolveGame(game, participations as ValidParticipation[], secret_S_input_resolve, acceptedJudgeNominations);
+            const valid_participations = participations.filter((p) => p.status === 'Submitted')
+            transactionId = await platform.resolveGame(game, valid_participations as ValidParticipation[], secret_S_input_resolve, acceptedJudgeNominations);
         } catch (e: any) { errorMessage = e.message; } finally { isSubmitting = false; }
     }
 
