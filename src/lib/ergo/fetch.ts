@@ -13,6 +13,7 @@ import {
     type AnyGame,
     type GameContent,
     type ParticipationConsumedReason,
+    type MalformedParticipationReason,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -702,7 +703,7 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
 }
 
 /**
- * Searches for "Submitted" or "Expired" participations for a specific game.
+ * Searches for "Submitted" or "Malformed" participations for a specific game.
  * @param gameNftId The NFT ID of the game.
  * @param gameDeadline The deadline block height of the game.
  * @returns A `Promise` with an array of `Participation`.
@@ -749,11 +750,21 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
                     const expired = box.creationHeight > gameDeadline;
-                    if (expired && !spent) {
+                    const max_scores_exceeded = p_base.scoreList.length > 10;
+                    const wrong_commitment = false; // TODO Make this if the secret is revealed.
+                    const malformed = expired || wrong_commitment || max_scores_exceeded;
+                    if (malformed && !spent) {
+                        const reason = await (async (): Promise<MalformedParticipationReason> => {
+                            if (expired) return "expired";
+                            if (wrong_commitment) return "wrongcommitment";
+                            if (max_scores_exceeded) return "maxscores";
+                            return "unknown";
+                        })();
                         participations.push({
                             ...p_base,
-                            status: 'Expired',
-                            spent
+                            status: 'Malformed',
+                            spent,
+                            reason
                         });
                     } else {
                         if (spent) {

@@ -32,6 +32,10 @@ export async function submit_score(
     hashLogsHex: string
 ): Promise<string | null> {
 
+    if (scoreList.length > 10) {
+        throw new Error("La lista de puntuaciones no puede tener más de 10 elementos.");
+    }
+
     console.log("Intentando enviar puntuación con los parámetros:", {
         gameNftIdHex,
         scoreList: scoreList.map(s => s.toString()),

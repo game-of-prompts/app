@@ -862,7 +862,7 @@
                         {@const isGracePeriodOver = game.status === GameState.Active && participationIsEnded && currentHeight > game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
                         {@const canReclaimAfterGrace = isGracePeriodOver && isCurrentUserParticipant && !p.spent}
                         {@const reclaimedAfterGrace = isGracePeriodOver && isCurrentUserParticipant && p.spent}
-                        {@const isExpired = p.status === 'Expired'}
+                        {@const isMalformed = p.status === 'Malformed'}
                         {@const isSubmitted = p.status === 'Submitted'}
                         {@const isConsumedByWinner = p.status === 'Consumed' && p.reason === 'bywinner'}
                         {@const isConsumedByParticipant = p.status === 'Consumed' && p.reason === 'byparticipant'}
@@ -873,7 +873,7 @@
                             {isCurrentParticipationWinner
                                 ? 'winner-card border-green-500/50'
                                 : ($mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200')}
-                            {isExpired ? ($mode === 'dark' ? 'bg-gray-700 border-gray-800 opacity-70' : 'bg-gray-200 border-gray-300 opacity-70') : ''}">
+                            {isMalformed ? ($mode === 'dark' ? 'bg-gray-700 border-gray-800 opacity-70' : 'bg-gray-200 border-gray-300 opacity-70') : ''}">
 
                             {#if isCurrentParticipationWinner}
                                 <div class="winner-badge">
@@ -882,9 +882,9 @@
                                 </div>
                             {/if}
                             
-                            {#if isExpired}
+                            {#if isMalformed}
                                 <div class="expired-badge absolute top-6 right-16 bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                                    EXPIRED
+                                    MALFORMED
                                 </div>
                             {/if}
                             
@@ -1046,11 +1046,33 @@
                                 {/if}
                             </div>
 
-                            {#if isExpired && isCurrentUserParticipant}
+                            {#if isMalformed && isCurrentUserParticipant}
                                 <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
                                     <p class="text-xs {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'}">
                                         You will be able to claim a refund after the game is finalized and the grace period has ended. This allows you to withdraw your funds along with other participants whose entries were not used for the prize.
                                     </p>
+                                </div>
+                            {/if}
+
+                            {#if isMalformed}
+                                <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
+                                    {#if p.reason === 'expired'}
+                                        <p class="text-xs {$mode === 'dark' ? 'text-orange-400' : 'text-orange-600'}">
+                                            <strong>Invalid participation:</strong> The participation was received outside the participation period and could not be processed.
+                                        </p>
+                                    {:else if p.reason === 'wrongcommitment'}
+                                        <p class="text-xs {$mode === 'dark' ? 'text-orange-400' : 'text-orange-600'}">
+                                            <strong>Invalid participation:</strong> There was an inconsistency when verifying the participation's data.
+                                        </p>
+                                    {:else if p.reason === 'maxscores'}
+                                        <p class="text-xs {$mode === 'dark' ? 'text-orange-400' : 'text-orange-600'}">
+                                            <strong>Invalid participation:</strong> The participation reached the maximum possible score, which is not eligible for the prize according to the game rules.
+                                        </p>
+                                    {:else if p.reason === 'unknown'}
+                                        <p class="text-xs {$mode === 'dark' ? 'text-orange-400' : 'text-orange-600'}">
+                                            <strong>Invalid participation:</strong> The participation could not be processed due to an unknown error.
+                                        </p>
+                                    {/if}
                                 </div>
                             {/if}
                         </div>

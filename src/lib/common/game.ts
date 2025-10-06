@@ -168,9 +168,11 @@ export interface ValidParticipation extends ParticipationBase {
     spent: false;
 }
 
-export interface ParticipationExpired extends ParticipationBase {
-    status: 'Expired';
-    spent: boolean;
+export type MalformedParticipationReason = "expired"|"wrongcommitment"|"maxscores"|"unknown";
+export interface MalformedParticipation extends ParticipationBase {
+    status: 'Malformed';
+    spent: false;
+    reason: MalformedParticipationReason;
 }
 
 export type ParticipationConsumedReason = "cancelled"|"invalidated"|"bywinner"|"byparticipant"|"abandoned"|"unknown";
@@ -188,7 +190,7 @@ export interface ParticipationConsumed extends ParticipationBase {
 export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
-export type AnyParticipation = ValidParticipation | ParticipationExpired | ParticipationConsumed;
+export type AnyParticipation = ValidParticipation | MalformedParticipation | ParticipationConsumed;
 
 /**
  * Determina si el período de participación de un juego ha terminado.
