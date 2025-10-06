@@ -286,7 +286,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         // R7: Coll[Long] -> [deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter]
         const r7Array = getArrayFromValue(box.additionalRegisters.R7?.renderedValue);
         const numericalParams = parseLongColl(r7Array);
-        if (!numericalParams || numericalParams.length < 5) throw new Error("R7 does not contain the 5 expected numerical parameters.");
+        if (!numericalParams || numericalParams.length < 4) throw new Error("R7 does not contain the 4 expected numerical parameters.");
         console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
 
