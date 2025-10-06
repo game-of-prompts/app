@@ -131,7 +131,6 @@ export async function judges_invalidate(
         throw new Error("Participaciones invalidas. Esto no debería de haber ocurrido.");  // Should never happen.
     }
 
-    console.log(`Número de participaciones válidas: ${validParticipations.length}`);
     console.log(`Ganador candidato determinado con compromiso: ${nextWinnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Prepare data for the new resolution box ---
@@ -166,19 +165,10 @@ export async function judges_invalidate(
                 SLong(BigInt(game.resolverCommission))
             ),
             R9: SPair(
-                SColl(SByte, hexToBytes(game.originalCreatorPK_Hex)!),
+                SColl(SByte, prependHexPrefix(hexToBytes(game.originalCreatorPK_Hex)!)),
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
             ),
         });
-
-    console.log("registers output ", [
-                BigInt(game.deadlineBlock),
-                BigInt(game.creatorStakeNanoErg),
-                BigInt(game.participationFeeNanoErg),
-                BigInt(newDeadline)
-            ])
-
-    console.log("dataInputs ", dataInputs)
         
     // --- 5. Build and Submit the Transaction ---
     const userAddress = await ergo.get_change_address();
@@ -188,11 +178,6 @@ export async function judges_invalidate(
     const inputs = [parseBox(game.box), parseBox(invalidatedParticipation.box), ...utxos];
 
     try {
-        console.log("INPUTS ", inputs)
-        console.log("OUTPUTS ", recreatedGameBox)
-        console.log("DATA INPUTS ", dataInputs)
-
-        console.log("Current height: ", currentHeight)
 
         const unsignedTransaction = new TransactionBuilder(currentHeight)
             .from(inputs)
@@ -202,14 +187,12 @@ export async function judges_invalidate(
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        console.log("Unsigned transaction: ", unsignedTransaction.toEIP12Object())
 
         const signedTransaction = await Promise.race([
             ergo.sign_tx(unsignedTransaction.toEIP12Object()),
             new Promise((_, reject) => setTimeout(() => reject(new Error("sign_tx timeout")), 15000))
         ]);
 
-        console.log("Signed transaction: ", signedTransaction)
 
         const txId = await ergo.submit_tx(signedTransaction);
 
