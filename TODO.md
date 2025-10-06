@@ -47,9 +47,7 @@
 [x] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
 [x] Allow for P2SH en participantes.
 
-[] Limite de 10 puntuaciones en participation.es
-
-[] Invalidas (expirada, score_list > 10, invalid commitment, etc ...) 
+[x] Limite de 10 puntuaciones en participation.es
 
 ## Permitir pagos a jueces (razonar mas sobre ello)
 
