@@ -46,8 +46,6 @@ export async function resolve_game(
         return boxWrapper ? [boxWrapper.box] : [];
     });
 
-    console.warn("Judge proofs ", judgeProofs, dataMap, judgeProofBoxes)
-
     if (!Array.isArray(participations)) {
         throw new Error("El listado de participaciones proporcionado es inválido.");
     }
@@ -66,9 +64,6 @@ export async function resolve_game(
 
     const resolverAddressString = await ergo.get_change_address();
     const resolverPkBytes = ErgoAddress.fromBase58(resolverAddressString).getPublicKeys()[0];
-    if (!resolverPkBytes || uint8ArrayToHex(resolverPkBytes) !== game.gameCreatorPK_Hex) {
-        throw new Error("La resolución debe ser iniciada desde la billetera del creador original del juego.");
-    }
 
     if (!Array.isArray(judgeProofBoxes)) {
         throw new Error("El listado de cajas de prueba de los jueces es inválido.");
@@ -86,7 +81,6 @@ export async function resolve_game(
 
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
-    let resolvedCounter = 0;
     let winnerCandidateCommitment: string | null = null;
     let winnerCandidateBox: Box<Amount> | null = null;
 
@@ -142,8 +136,6 @@ export async function resolve_game(
             console.warn(`No se pudo encontrar una puntuación válida para la participación ${p.boxId}. Será omitida.`);
             continue;
         }
-        
-        resolvedCounter++;
 
         // Si la participación es válida, se considera para determinar al ganador.
         if (actualScore > maxScore) {
@@ -153,7 +145,6 @@ export async function resolve_game(
         }
     }
 
-    console.log(`Número de participaciones válidas: ${resolvedCounter}`);
     console.log(`Ganador candidato determinado con compromiso: ${winnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Construir las Salidas de la Transacción ---
@@ -165,10 +156,18 @@ export async function resolve_game(
         BigInt(game.deadlineBlock), 
         game.creatorStakeNanoErg, 
         game.participationFeeNanoErg,
-        resolutionDeadline,
-        resolvedCounter
+        resolutionDeadline
     ];
     
+    let winnerCommitmentBytes = null;
+    if (winnerCandidateCommitment) {
+        winnerCommitmentBytes = hexToBytes(winnerCandidateCommitment);
+        if (!winnerCommitmentBytes) throw new Error("Fallo al convertir commitmentC a bytes.");
+    }
+    else {
+        winnerCommitmentBytes = new Uint8Array();
+    }
+
     const resolutionBoxOutput = new OutputBuilder(
         game.creatorStakeNanoErg,
         resolutionErgoTree
@@ -176,11 +175,11 @@ export async function resolve_game(
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Estado: Resuelto (1)
-        R5: SPair(SColl(SByte, secretS_bytes), winnerCandidateCommitment ? SColl(SByte, hexToBytes(winnerCandidateCommitment)!) : SColl(SByte, [])).toHex(),
+        R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex(),
         R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex(),
-        R9: SPair(SColl(SByte, hexToBytes(game.gameCreatorPK_Hex)!), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
+        R9: SPair(SColl(SByte, prependHexPrefix(hexToBytes(game.gameCreatorPK_Hex)!)), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
 
     // --- 4. Construir y Enviar la Transacción ---    

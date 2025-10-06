@@ -34,7 +34,7 @@
 
   val gameState = SELF.R4[Int].get
   val creatorInfo = SELF.R5[(Coll[Byte], Long)].get
-  val gameCreatorPK = creatorInfo._1
+  val gameCreatorScript = creatorInfo._1
   
   val secretHash = SELF.R6[Coll[Byte]].get
   
@@ -130,7 +130,7 @@
               resolutionBox.R7[Coll[Long]].get(2) == participationFee &&
               resolutionBox.R7[Coll[Long]].get(3) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
-              resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorPK, gameDetailsJsonHex)
+              resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorScript, gameDetailsJsonHex)
             }
             
             val judgesAreValid = {
