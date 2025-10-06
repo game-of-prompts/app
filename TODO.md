@@ -47,6 +47,8 @@
 [x] Allow for P2SH -> en lugar de usar proveDLog para comprobar que el creador/resolvedor es el firmante, comprueba que alguno de los INPUTS tiene ese mismo propositionBytes.
 [x] Allow for P2SH en participantes.
 
+[] Limite de 10 puntuaciones en participation.es
+
 ## Permitir pagos a jueces (razonar mas sobre ello)
 
 - A parte del creador y desarrollador, debe de existir un rol de juez, de manera que el porcentaje asignado a juez se reparta entre los jueces nominados.
@@ -94,6 +96,3 @@ Teoricamente se permite un numero ilimitado de participaciones.
 ### Poker
 
 ### Contratos satélite
-
-### Rey de pista: tras terminar la competición se crea otra, de forma que parte del premio va como vote inicial y se debe intentar superar al ganador anterior.
-    ¿Como se vuelve a generar un nuevo secreto? con esto: ¿nuevo game service? ¿los parámetros pueden variar?
