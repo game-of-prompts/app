@@ -80,8 +80,7 @@ export async function include_omitted_participation(
         BigInt(game.deadlineBlock), 
         game.creatorStakeNanoErg, 
         game.participationFeeNanoErg,
-        BigInt(game.resolutionDeadline),
-        BigInt(game.resolvedCounter)
+        BigInt(game.resolutionDeadline)
     ];
     numericalParams[4] += 1n; // Incrementar el resolvedCounter
 

@@ -159,8 +159,7 @@ export async function judges_invalidate(
                 BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
-                BigInt(newDeadline),
-                BigInt(game.resolvedCounter - 1),
+                BigInt(newDeadline)
             ]),
             R8: SPair(
                 SColl(SByte, prependHexPrefix(hexToBytes(game.resolverPK_Hex)!)),
@@ -176,8 +175,7 @@ export async function judges_invalidate(
                 BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
-                BigInt(newDeadline),
-                BigInt(game.resolvedCounter - 1),
+                BigInt(newDeadline)
             ])
 
     console.log("dataInputs ", dataInputs)

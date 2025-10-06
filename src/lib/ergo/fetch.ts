@@ -289,7 +289,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const numericalParams = parseLongColl(r7Array);
         if (!numericalParams || numericalParams.length < 4) throw new Error("R7 does not contain the 4 expected numerical parameters.");
         console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline, resolvedCounter] = numericalParams;
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline] = numericalParams;
 
         // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
@@ -317,7 +317,6 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             status: GameState.Resolution, 
             gameId,
             resolutionDeadline: Number(resolutionDeadline), 
-            resolvedCounter: Number(resolvedCounter), 
             revealedS_Hex, 
             winnerCandidateCommitment: winnerCandidateCommitment || null, 
             judges,

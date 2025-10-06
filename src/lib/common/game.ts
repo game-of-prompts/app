@@ -80,7 +80,6 @@ export interface GameResolution {
     status: 'Resolution';
     gameId: string;
     resolutionDeadline: number;
-    resolvedCounter: number;
     revealedS_Hex: string;
     winnerCandidateCommitment: string|null;
     judges: string[];
