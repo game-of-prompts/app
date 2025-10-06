@@ -126,9 +126,11 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         // R5 (previously R4): creatorInfo (creator PK, commission)
         const r5Value = JSON.parse(box.additionalRegisters.R5?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
         if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
-        const gameCreatorPK_Hex = parseCollByteToHex(r5Value[0]);
+        const gameCreatorScript_Hex = parseCollByteToHex(r5Value[0]);
         const commissionPercentage = parseInt(r5Value[1], 10);
-        if (!gameCreatorPK_Hex || isNaN(commissionPercentage)) throw new Error("Could not parse R5.");
+        if (!gameCreatorScript_Hex || isNaN(commissionPercentage)) throw new Error("Could not parse R5.");
+
+        const gameCreatorPK_Hex = gameCreatorScript_Hex.slice(0, 6) == "0008cd" ? gameCreatorScript_Hex.slice(6, gameCreatorScript_Hex.length) : null
 
         // R6 secretHash
         const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
@@ -162,6 +164,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             status: GameState.Active,
             gameId,
             gameCreatorPK_Hex,
+            gameCreatorScript_Hex,
             commissionPercentage,
             secretHash,
             judges,
@@ -290,17 +293,21 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         if (!r8Value || r8Value.length < 2) throw new Error("R8 is not a valid tuple.");
-        const resolverPK_Hex = parseCollByteToHex(r8Value[0]);
+        const resolverScript_Hex = parseCollByteToHex(r8Value[0]);
         const resolverCommission = parseInt(r8Value[1], 10);
-        if (!resolverPK_Hex || isNaN(resolverCommission)) throw new Error("Could not parse R8.");
+        if (!resolverScript_Hex || isNaN(resolverCommission)) throw new Error("Could not parse R8.");
+
+        const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
 
         // R9: (Coll[Byte], Coll[Byte]) -> originalCreatorPK_Hex, gameDetailsHex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
         if (!r9Value || r9Value.length < 2) throw new Error("R9 is not a valid tuple.");
-        const originalCreatorPK_Hex = parseCollByteToHex(r9Value[0]);
+        const originalCreatorScript_Hex = parseCollByteToHex(r9Value[0]);
         const gameDetailsHex = r9Value[1];
-        if (!originalCreatorPK_Hex || !gameDetailsHex) throw new Error("Could not parse R9.");
+        if (!originalCreatorScript_Hex || !gameDetailsHex) throw new Error("Could not parse R9.");
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
+
+        const originalCreatorPK_Hex = originalCreatorScript_Hex.slice(0, 6) == "0008cd" ? originalCreatorScript_Hex.slice(6, originalCreatorScript_Hex.length) : null
         
         return {
             platform: new ErgoPlatform(), 
@@ -317,8 +324,10 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             creatorStakeNanoErg, 
             participationFeeNanoErg,
             resolverPK_Hex, 
+            resolverScript_Hex,
             resolverCommission, 
             originalCreatorPK_Hex, 
+            originalCreatorScript_Hex,
             content, 
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
@@ -654,16 +663,19 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
 
 async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBase | null> {
     try {
-        const playerPK_Hex = box.additionalRegisters.R4?.renderedValue;
+        const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
         const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
         const gameNftId = box.additionalRegisters.R6?.renderedValue;
         const solverId_RawBytesHex = box.additionalRegisters.R7?.renderedValue;
         const hashLogs_Hex = box.additionalRegisters.R8?.renderedValue;
         const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
 
-        if (!playerPK_Hex || !commitmentC_Hex || !gameNftId || !solverId_RawBytesHex || !hashLogs_Hex) {
+        if (!playerScript_Hex || !commitmentC_Hex || !gameNftId || !solverId_RawBytesHex || !hashLogs_Hex) {
             throw new Error("Invalid participation registers.");
         }
+
+        const playerPK_Hex = playerScript_Hex.slice(0, 6) == "0008cd" ? playerScript_Hex.slice(6, playerScript_Hex.length) : null
+
 
         const participationBase: ParticipationBase = {
             boxId: box.boxId,
@@ -673,6 +685,7 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
             value: BigInt(box.value),
             gameNftId,
             playerPK_Hex,
+            playerScript_Hex,
             commitmentC_Hex,
             solverId_RawBytesHex,
             solverId_String: solverId_RawBytesHex, 

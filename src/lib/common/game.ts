@@ -56,7 +56,8 @@ export interface GameActive {
     platform: ErgoPlatform;
     status: 'Active';
     gameId: string;
-    gameCreatorPK_Hex: string;
+    gameCreatorPK_Hex: string|null;
+    gameCreatorScript_Hex: string
     commissionPercentage: number;
     secretHash: string;
     judges: string[];
@@ -86,9 +87,11 @@ export interface GameResolution {
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
-    resolverPK_Hex: string;
+    resolverPK_Hex: string|null;
+    resolverScript_Hex: string
     resolverCommission: number;
-    originalCreatorPK_Hex: string;
+    originalCreatorPK_Hex: string|null;
+    originalCreatorScript_Hex: string
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
@@ -146,7 +149,8 @@ export interface ParticipationBase {
     creationHeight: number;
     value: bigint;
     gameNftId: string;
-    playerPK_Hex: string;
+    playerPK_Hex: string|null;
+    playerScript_Hex: string,
     commitmentC_Hex: string;
     solverId_RawBytesHex: string;
     solverId_String?: string;
