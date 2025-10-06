@@ -1049,7 +1049,7 @@
                             {#if isMalformed && isCurrentUserParticipant}
                                 <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
                                     <p class="text-xs {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'}">
-                                        You will be able to claim a refund after the game is finalized and the grace period has ended. This allows you to withdraw your funds along with other participants whose entries were not used for the prize.
+                                        The funds will be awarded to the winner if the competition concludes successfully. If there is no winner, the funds will be allocated to the creator/resolver. Participants may only claim a refund if the competition is canceled..
                                     </p>
                                 </div>
                             {/if}
