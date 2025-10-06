@@ -388,4 +388,41 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
+  it("should FAIL if the winning participation has more than 10 scores", () => {
+    const currentHeight = mockChain.height;
+
+    // Create a list of 11 scores
+    const tooManyScores = Array.from({ length: 11 }, (_, i) => BigInt(i + 1));
+    
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      ergoTree: participationSubmittedErgoTree.toHex(),
+      assets: [],
+      value: participationFee,
+      additionalRegisters: {
+        R4: SColl(SByte, participant1.address.getPublicKeys()[0]).toHex(),
+        R5: SColl(SByte, commitment1Hex).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
+        R8: SColl(SByte, stringToBytes("utf8", "logs1")).toHex(),
+        R9: SColl(SLong, tooManyScores).toHex(), // Using the list with 11 scores
+      },
+    });
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()
+      ])
+      .to([gameBoxOutput])
+      .withDataFrom([participationContract.utxos.toArray()[1]]) // Use the new invalid box
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+  
 });

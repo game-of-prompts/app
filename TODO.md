@@ -49,6 +49,8 @@
 
 [] Limite de 10 puntuaciones en participation.es
 
+[] Invalidas (expirada, score_list > 10, invalid commitment, etc ...) 
+
 ## Permitir pagos a jueces (razonar mas sobre ello)
 
 - A parte del creador y desarrollador, debe de existir un rol de juez, de manera que el porcentaje asignado a juez se reparta entre los jueces nominados.
