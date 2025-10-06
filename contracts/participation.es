@@ -127,10 +127,6 @@
         // 3. Verificar que la transacción recrea la caja del juego correctamente según las reglas de invalidación.
         val recreatedGameBox = recreatedGameBoxes(0)
         
-        // El contador de participantes resueltos debe disminuir en 1.
-        val oldResolvedCounter = mainGameBox.R7[Coll[Long]].get(4)
-        val counterIsDecreased = recreatedGameBox.R7[Coll[Long]].get(4) == oldResolvedCounter - 1  // Esta comprobación nos asegura que la acción realizada es una invalidación por los jueces.
-        
         // Los fondos de esta caja deben ser devueltos al pozo de premios en la nueva caja del juego.
         val fundsAreReturned = recreatedGameBox.value >= mainGameBox.value + SELF.value
         
@@ -138,7 +134,7 @@
         val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
         val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
 
-        counterIsDecreased && fundsAreReturned && winnerIsChanged
+        fundsAreReturned && winnerIsChanged
       } else { false }
     }
     else { false }
