@@ -161,11 +161,11 @@ export async function judges_invalidate(
                 BigInt(newDeadline)
             ]),
             R8: SPair(
-                SColl(SByte, prependHexPrefix(hexToBytes(game.resolverPK_Hex)!)),
+                SColl(SByte, hexToBytes(game.resolverScript_Hex)!),
                 SLong(BigInt(game.resolverCommission))
             ),
             R9: SPair(
-                SColl(SByte, prependHexPrefix(hexToBytes(game.originalCreatorPK_Hex)!)),
+                SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
             ),
         });
