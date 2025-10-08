@@ -305,9 +305,8 @@
           judgesHashedScripts.forall({
               (addressHash: Coll[Byte]) => 
                 OUTPUTS.exists({
-                  (b:Box) => 
-                    blake2b256(b.propositionBytes) == addressHash // TODO Esto requiere conocer el Script completo, sería conveniente enviarlo a una caja que permita al juez mostrar su Script
-                    && b.value >= payoutPerJudge
+                  (b:Box) => blake2b256(b.propositionBytes) == addressHash &&  // TODO Esto requiere conocer el Script completo, sería conveniente enviarlo a una caja que permita al juez mostrar su Script
+                             b.value >= perJudgeComission
                   })
             })
       } else { true }
