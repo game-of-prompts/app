@@ -58,6 +58,7 @@ describe("Game Resolution (resolve_game)", () => {
   // --- Estado del Juego ---
   let secret: Uint8Array;
   let gameNftId: string;
+  const perJudgeCommission = 1n;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
   const creatorStake = 2_000_000_000n;
@@ -125,7 +126,7 @@ describe("Game Resolution (resolve_game)", () => {
 
     winnerCandidateCommitment = commitment1Hex;
 
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
 
     // OUTPUT(0)
     gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
@@ -307,7 +308,7 @@ describe("Game Resolution (resolve_game)", () => {
   
     const creator_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
     const wrongGameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
@@ -341,7 +342,7 @@ describe("Game Resolution (resolve_game)", () => {
 
     const creator_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
     const gameBoxOutputWithAnyWinner = new OutputBuilder(creatorStake, gameResolutionContract.address) 

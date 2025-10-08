@@ -256,7 +256,6 @@
           }
         } else {
           // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
-          // Asumiendo que P2PK_ERGOTREE_PREFIX está definido como Coll[Byte](0, 8, -51) o fromBase16("0008cd")
           val prefix = resolverPK.slice(0, 3)
           val pubKey = resolverPK.slice(3, resolverPK.size)
 
