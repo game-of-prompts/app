@@ -49,9 +49,10 @@
 
 [x] Limite de 10 puntuaciones en participation.es
 
+[] Permitir pagos a jueces
+
 [] Compatibilizar con P2SH y P2S  para direcciones de jugadores y creador.
 
-[] Permitir pagos a jueces
 [] Razonar sobre sistema de reputación
 [] ¿Compatibilizar jueces.R7 con direcciones P2PK y P2S?
 
@@ -92,7 +93,7 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
 
-### Permitir otros tokens en lugar de ERG. Bolsa de tokens con coste de participación para cada token.
+### Permitir otros TOKENS en lugar de ERG. Bolsa de tokens con coste de participación para cada token.
 
 ### Gastar participaciones en lotes
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
