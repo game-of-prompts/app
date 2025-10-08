@@ -26,7 +26,7 @@
   // R5: (Coll[Byte], Long) - creatorInfo: (Script de gasto del creador, Porcentaje de comisión).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee].
+  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComission].
   // R9: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
 
   // =================================================================
@@ -43,6 +43,8 @@
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
+  val perJudgeComission = numericalParams(3)
+
   val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
   
   val gameNft = SELF.tokens(0)
@@ -129,7 +131,8 @@
               resolutionBox.R7[Coll[Long]].get(0) == deadline &&
               resolutionBox.R7[Coll[Long]].get(1) == creatorStake &&
               resolutionBox.R7[Coll[Long]].get(2) == participationFee &&
-              resolutionBox.R7[Coll[Long]].get(3) >= HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R7[Coll[Long]].get(3) == perJudgeComission &&
+              resolutionBox.R7[Coll[Long]].get(4) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorScript, gameDetailsJsonHex)
             }

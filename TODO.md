@@ -49,8 +49,13 @@
 
 [x] Limite de 10 puntuaciones en participation.es
 
-[] Permitir pagos a jueces
+[] Compatibilizar con P2SH y P2S  para direcciones de jugadores y creador.
 
+[] Permitir pagos a jueces
+[] Razonar sobre sistema de reputación
+[] ¿Compatibilizar jueces.R7 con direcciones P2PK y P2S?
+
+[] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 

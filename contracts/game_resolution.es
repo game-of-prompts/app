@@ -21,7 +21,7 @@
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, resolutionDeadline].
+  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, perJudgeComission, resolutionDeadline].
   // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
@@ -40,7 +40,8 @@
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val resolutionDeadline = numericalParams(3)
+  val perJudgeComission = numericalParams(3)
+  val resolutionDeadline = numericalParams(4)
 
   val resolverInfo = SELF.R8[(Coll[Byte], Long)].get
   val resolverPK = resolverInfo._1
@@ -144,7 +145,8 @@
                 recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&
                 recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&
                 recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
-                recreatedGameBox.R7[Coll[Long]].get(3) == resolutionDeadline &&
+                recreatedGameBox.R7[Coll[Long]].get(3) == perJudgeComission &&
+                recreatedGameBox.R7[Coll[Long]].get(4) == resolutionDeadline &&
                 recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&
                 recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
               }
@@ -265,12 +267,13 @@
       // Valores comunes para ambos casos (con y sin ganador)
       val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+      val judge_amount = participatingJudges.size
       
-      // --- MEJORA 3: Manejar el caso CON y SIN ganador ---
+      // --- Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitment != Coll[Byte]()) {
         // --- CASO 1: HAY UN GANADOR DECLARADO ---
 
-        // --- MEJORA 1: Verificación segura del input del ganador ---
+        // -- Verificación segura del input del ganador ---
         val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
 
         // Solo continuamos si se encuentra exactamente una caja de participación para el ganador.
@@ -278,8 +281,9 @@
         
           // La lógica de cálculo de pagos es la misma que la original.
           val resolverCommission = prizePool * commissionPercentage / 100L
+          val judgeCommission = prizePool * perJudgeComission / 100L
           val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-          val winnerBasePrize = prizePool - resolverCommission - devCommission
+          val winnerBasePrize = prizePool - resolverCommission - judgeCommission - devCommission
 
           val winnerGetsBasePrize = winnerBasePrize >= MIN_ERG_BOX
 
@@ -316,20 +320,26 @@
           sigmaProp(false)
         }
       } else {
-        // --- CASO 2: NO HAY GANADOR DECLARADO ---
+        // --- NO HAY GANADOR DECLARADO ---
 
-        // El resolutor reclama el stake del creador y el pozo de premios, pagando la comisión del dev.
+        // El resolutor reclama el stake del creador y el pozo de premios, pagando las comisiones.
         val totalValue = prizePool + creatorStake
+        val judgeCommission = prizePool * perJudgeComission / 100L
         val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
 
-        // Lógica de polvo para la comisión del desarrollador.
+        // 1. Calcular cuánto se pierde por ser "polvo" para el DEV
         val devForfeits = if (devCommission < MIN_ERG_BOX && devCommission > 0L) { devCommission } else { 0L }
         val finalDevPayout = devCommission - devForfeits
         
-        // El resolutor se lleva todo lo demás.
-        val finalResolverPayout = totalValue - finalDevPayout
+        // 2. Calcular cuánto se pierde por ser "polvo" para el JUEZ
+        val judgeForfeits = if (judgeCommission < MIN_ERG_BOX*judge_amount && judgeCommission > 0L) { judgeCommission } else { 0L }
+        val finalJudgePayout = judgeCommission - judgeForfeits
+        
+        // 3. El resolutor se lleva todo lo demás. Los fondos "forfeited" se quedan implícitamente en el total.
+        val finalResolverPayout = totalValue - finalDevPayout - finalJudgePayout
 
-        // Verificación de las salidas para el caso sin ganador.
+        // --- Verificación de las salidas ---
+
         val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
             b.value >= finalResolverPayout &&
             b.propositionBytes == resolverPK &&
@@ -337,11 +347,35 @@
             b.tokens(0)._1 == gameNftId
         })
         
+        // TODO ¿Porque no sacar el devs y judge gets paid fuera de si hay o no ganador?
+
         val devGetsPaid = if (finalDevPayout > 0L) {
             OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
         } else { true }
         
-        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid)
+        val judgeGetsPaid = if (finalJudgePayout > 0L) {
+            val judgeProofDataInputs = CONTEXT.dataInputs
+            .filter({(box: Box) =>
+              // box.propositionBytes == REPUTATION_PROOF_BOX && 
+              box.tokens.size == 1 &&
+              // box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
+              box.R5[Coll[Byte]].get == gameNftId &&
+              box.R6[(Boolean, Long)].get._1 &&
+              participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
+            })
+            val judgesHashedScripts = judgeProofDataInputs.map({(box: Box) => box.R7})  // Extract P2SH addresses
+            
+            // Check if all the judges have an OUTPUT that contains their P2SH address.
+            judgesHashedScripts.filter({
+                (address: Coll[Byte]) => 
+                  OUTPUTS.exists({
+                    (b:Box) => 
+                      blake2b256(b.propositionBytes) == address  // TODO Como se P2SH deberías comprobar si b.propositionBYtes == hasOf(address)   ¿?
+                    })
+              }).size == judgesHashedScripts.size
+        } else { true }
+        
+        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgeGetsPaid)
       }
     } else {
       sigmaProp(false)
