@@ -57,6 +57,8 @@
 
 [] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
+[] Agregar dirección del jugador en el commitment
+
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
 
@@ -89,6 +91,8 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - N: factor constante.
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
+
+### Permitir otros tokens en lugar de ERG. Bolsa de tokens con coste de participación para cada token.
 
 ### Gastar participaciones en lotes
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.

@@ -232,113 +232,139 @@
 
   // ### Acción 3: Finalización del Juego
   val action3_endGame = {
-    // Requerimos autorización explícita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),
-    // si NO hay candidato, debe firmar el resolver.
-
-    // Determinamos una SigmaProp que representa la autorización del que llama a finalizar
-    val authorizedToEnd: SigmaProp = {
-      if (winnerCandidateCommitment != Coll[Byte]()) {
-        // Hay candidato a ganador: requerimos que la transacción esté firmada por la clave pública del ganador
-        val winnerBoxes = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && box.R5[Coll[Byte]].get == winnerCandidateCommitment })
-        if (winnerBoxes.size > 0) {
-          val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get
-          val prefix = winnerPK.slice(0, 3)
-          val pubKey = winnerPK.slice(3, winnerPK.size)
-
-          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK }))
-        } else {
-          // No se puede verificar la clave del ganador -> denegado
-          sigmaProp(false)
-        }
-      } else {
-        // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
-        // Asumiendo que P2PK_ERGOTREE_PREFIX está definido como Coll[Byte](0, 8, -51) o fromBase16("0008cd")
-        val prefix = resolverPK.slice(0, 3)
-        val pubKey = resolverPK.slice(3, resolverPK.size)
-
-        (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) ||
-        sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
-      }
-    }
-
     // La condición principal no cambia: solo se puede finalizar después del deadline.
     if (isAfterResolutionDeadline && OUTPUTS.size > 0) {
 
-      // Valores comunes para ambos casos (con y sin ganador)
+      // Requerimos autorización explícita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),
+      // si NO hay candidato, debe firmar el resolver.
+      val authorizedToEnd: SigmaProp = {
+        if (winnerCandidateCommitment != Coll[Byte]()) {
+          // Hay candidato a ganador: requerimos que la transacción esté firmada por la clave pública del ganador
+          val winnerBoxes = INPUTS.filter({ (box: Box) => 
+              blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
+              box.R5[Coll[Byte]].get == winnerCandidateCommitment 
+          })
+          if (winnerBoxes.size > 0) {
+            val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get
+            val prefix = winnerPK.slice(0, 3)
+            val pubKey = winnerPK.slice(3, winnerPK.size)
+
+            (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK }))
+          } else {
+            // Si no se encuentra la caja del ganador, la autorización falla
+            sigmaProp(false)
+          }
+        } else {
+          // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
+          // Asumiendo que P2PK_ERGOTREE_PREFIX está definido como Coll[Byte](0, 8, -51) o fromBase16("0008cd")
+          val prefix = resolverPK.slice(0, 3)
+          val pubKey = resolverPK.slice(3, resolverPK.size)
+
+          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) ||
+          sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
+        }
+      }
+
+      // --- Valores y cálculos comunes para AMBOS CASOS (con y sin ganador) ---
       val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH })
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       val judge_amount = participatingJudges.size
+
+      // --- LÓGICA DE PAGO A JUECES Y DEV ---
+      // Esta lógica ahora se aplica tanto si hay ganador como si no.
+      val perJudgeCommission = prizePool * perJudgeComission / 100L
+      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+
+      // 1. Calcular payout final para el DEV (manejando polvo)
+      val devForfeits = if (devCommission < MIN_ERG_BOX && devCommission > 0L) { devCommission } else { 0L }
+      val finalDevPayout = devCommission - devForfeits
       
+      // 2. Calcular payout final para los JUECES (manejando polvo)
+      val totalJudgeComission = perJudgeCommission * judge_amount
+      val judgesForfeits = if (perJudgeComission < MIN_ERG_BOX && perJudgeComission > 0L) { totalJudgeComission } else { 0L } // Si el pago por juez es polvo, se pierde TODA la comisión.
+      val finalJudgesPayout = totalJudgeComission - judgesForfeits
+      
+      // 3. Verificación de que el DEV recibe su pago
+      val devGetsPaid = if (finalDevPayout > 0L) {
+          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
+      } else { true }
+      
+      // 4. Verificación de que los JUECES reciben su pago
+      val judgesGetsPaid = if (finalJudgesPayout > 0L) {
+
+          val judgesHashedScripts = CONTEXT.dataInputs
+            .filter({(box: Box) =>
+              box.tokens.size == 1 &&
+              box.R5[Coll[Byte]].get == gameNftId &&
+              box.R6[(Boolean, Long)].get._1 &&
+              participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
+            })
+            .map({(box: Box) => box.R7[Coll[Byte]].get})
+
+          // Comprobar que todos los jueces que participaron tienen una salida a su dirección P2SH
+          judgesHashedScripts.forall({
+              (addressHash: Coll[Byte]) => 
+                OUTPUTS.exists({
+                  (b:Box) => 
+                    blake2b256(b.propositionBytes) == addressHash // TODO Esto requiere conocer el Script completo, sería conveniente enviarlo a una caja que permita al juez mostrar su Script
+                    && b.value >= payoutPerJudge
+                  })
+            })
+      } else { true }
+
+
       // --- Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitment != Coll[Byte]()) {
         // --- CASO 1: HAY UN GANADOR DECLARADO ---
+        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })  // TODO Verify commitment with the box data.  Maybe is an impostor
 
-        // -- Verificación segura del input del ganador ---
-        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
-
-        // Solo continuamos si se encuentra exactamente una caja de participación para el ganador.
-        if (winnerBoxes.size > 0) {  // Maybe there are more than one box with the same commitment, but at least one. (it's secure because the commitment includes the public key)
-        
-          // La lógica de cálculo de pagos es la misma que la original.
+        if (winnerBoxes.size > 0) {
+          val winnerBox = winnerBoxes(0)
+          val winnerPK = winnerBox.R4[Coll[Byte]].get
           val resolverCommission = prizePool * commissionPercentage / 100L
-          val judgeCommission = prizePool * perJudgeComission / 100L
-          val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-          val winnerBasePrize = prizePool - resolverCommission - judgeCommission - devCommission
+          
+          // El premio se calcula restando los payouts finales (que ya consideran el polvo)
+          val winnerBasePrize = prizePool - resolverCommission - finalJudgesPayout - finalDevPayout
 
           val winnerGetsBasePrize = winnerBasePrize >= MIN_ERG_BOX
 
-          val intermediateDevPayout = if (winnerGetsBasePrize) { devCommission } else { 0L }
-          val intermediateResolverPayout = if (winnerGetsBasePrize) { creatorStake + resolverCommission } else { creatorStake }
-          val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { prizePool + creatorStake }
+          // El payout del dev y los jueces ya está decidido. Solo calculamos el del ganador y el resolver.
+          val intermediateWinnerPayout = if (winnerGetsBasePrize) { winnerBasePrize } else { 0L }
+          val intermediateResolverPayout = if (winnerGetsBasePrize) { creatorStake + resolverCommission } else { creatorStake }  // We now that the creator stake > MIN_ERG_BOX
 
-          val devForfeits = if (intermediateDevPayout < MIN_ERG_BOX && intermediateDevPayout > 0L) { intermediateDevPayout } else { 0L }
+          // Manejo de polvo para el resolver
           val resolverForfeits = if (intermediateResolverPayout < MIN_ERG_BOX && intermediateResolverPayout > 0L) { intermediateResolverPayout } else { 0L }
-
-          val finalDevPayout = intermediateDevPayout - devForfeits
           val finalResolverPayout = intermediateResolverPayout - resolverForfeits
-          val finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits
+          
+          // Lo que pierde el resolver por ser polvo, lo gana el ganador
+          val finalWinnerPrize = intermediateWinnerPayout + resolverForfeits
 
-          val winnerGetsPaid = true /* Signs the winner, so we don't need to check it again.
-           .exists({ (b: Box) =>
+          // Verificación de la salida del ganador
+          val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
               b.value >= finalWinnerPrize &&
-              b.propositionBytes == (P2PK_ERGOTREE_PREFIX ++ winnerPK) &&
-              b.tokens.size == 1 && // Buena práctica: asegurar que solo está el NFT
+              b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
+              b.tokens.size == 1 &&
               b.tokens(0)._1 == gameNftId
-          }) */
+          })
 
           val resolverGetsPaid = if (finalResolverPayout > 0L) {
               OUTPUTS.exists({(b:Box) => b.value >= finalResolverPayout && b.propositionBytes == resolverPK})
           } else { true }
           
-          val devGetsPaid = if (finalDevPayout > 0L) {
-              OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
-          } else { true }
-
-          authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && devGetsPaid)
+          // La condición final AHORA SÍ incluye la validación de los jueces.
+          authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && devGetsPaid && judgesGetsPaid)
         } else {
-          // Si no se encuentra la caja del ganador, la transacción es inválida.
           sigmaProp(false)
         }
       } else {
-        // --- NO HAY GANADOR DECLARADO ---
+        // --- CASO 2: NO HAY GANADOR DECLARADO ---
 
-        // El resolutor reclama el stake del creador y el pozo de premios, pagando las comisiones.
+        // El resolutor reclama el stake del creador y el pozo de premios.
         val totalValue = prizePool + creatorStake
-        val judgeCommission = prizePool * perJudgeComission / 100L
-        val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-
-        // 1. Calcular cuánto se pierde por ser "polvo" para el DEV
-        val devForfeits = if (devCommission < MIN_ERG_BOX && devCommission > 0L) { devCommission } else { 0L }
-        val finalDevPayout = devCommission - devForfeits
         
-        // 2. Calcular cuánto se pierde por ser "polvo" para el JUEZ
-        val judgeForfeits = if (judgeCommission < MIN_ERG_BOX*judge_amount && judgeCommission > 0L) { judgeCommission } else { 0L }
-        val finalJudgePayout = judgeCommission - judgeForfeits
-        
-        // 3. El resolutor se lleva todo lo demás. Los fondos "forfeited" se quedan implícitamente en el total.
-        val finalResolverPayout = totalValue - finalDevPayout - finalJudgePayout
-
-        // --- Verificación de las salidas ---
+        // Las comisiones de dev y jueces ya se han calculado y validado fuera.
+        // El resolutor se lleva todo lo demás.
+        val finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout
 
         val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
             b.value >= finalResolverPayout &&
@@ -347,35 +373,8 @@
             b.tokens(0)._1 == gameNftId
         })
         
-        // TODO ¿Porque no sacar el devs y judge gets paid fuera de si hay o no ganador?
-
-        val devGetsPaid = if (finalDevPayout > 0L) {
-            OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
-        } else { true }
-        
-        val judgeGetsPaid = if (finalJudgePayout > 0L) {
-            val judgeProofDataInputs = CONTEXT.dataInputs
-            .filter({(box: Box) =>
-              // box.propositionBytes == REPUTATION_PROOF_BOX && 
-              box.tokens.size == 1 &&
-              // box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
-              box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[(Boolean, Long)].get._1 &&
-              participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
-            })
-            val judgesHashedScripts = judgeProofDataInputs.map({(box: Box) => box.R7})  // Extract P2SH addresses
-            
-            // Check if all the judges have an OUTPUT that contains their P2SH address.
-            judgesHashedScripts.filter({
-                (address: Coll[Byte]) => 
-                  OUTPUTS.exists({
-                    (b:Box) => 
-                      blake2b256(b.propositionBytes) == address  // TODO Como se P2SH deberías comprobar si b.propositionBYtes == hasOf(address)   ¿?
-                    })
-              }).size == judgesHashedScripts.size
-        } else { true }
-        
-        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgeGetsPaid)
+        // La condición final ya incluye las validaciones movidas fuera.
+        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
       }
     } else {
       sigmaProp(false)
