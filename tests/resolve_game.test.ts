@@ -193,7 +193,7 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); 
     
     const r7 = newResolutionBox.additionalRegisters.R7;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
     expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
@@ -385,7 +385,7 @@ describe("Game Resolution (resolve_game)", () => {
     expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex()); 
     
     const r7 = newResolutionBox.additionalRegisters.R7;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, resolutionDeadline];
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
     expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
