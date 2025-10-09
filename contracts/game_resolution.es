@@ -220,7 +220,7 @@
           val nextCandidateCommitment = foldResult._2
 
           val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
-          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(3) >= resolutionDeadline + JUDGE_PERIOD
+          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(4) >= resolutionDeadline + JUDGE_PERIOD
           val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
           val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
           
