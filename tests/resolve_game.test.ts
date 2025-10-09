@@ -111,7 +111,7 @@ describe("Game Resolution (resolve_game)", () => {
         R5: SPair(SColl(SByte, creatorPkBytes), SLong(creator_commission_percentage)).toHex(),
         R6: SColl(SByte, hashedSecret).toHex(),
         R7: SColl(SColl(SByte), []).toHex(),
-        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
+        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission]).toHex(),
         R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
       }
     })
