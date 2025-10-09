@@ -97,7 +97,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
         omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
 
-        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
@@ -153,7 +153,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -186,7 +186,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should fail with an omitted participant who is not the new winner", () => {
         setupScenario(1000n, 800n);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -215,7 +215,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         const lateCreationHeight = Number(game_deadline) + 1;
         setupScenario(1000n, 1200n, lateCreationHeight);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -314,7 +314,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         const earlierCreationHeight = 500_000; // Earlier than the default 600_000
         setupScenario(1000n, 1000n, earlierCreationHeight);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -349,7 +349,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         const laterCreationHeight = 650_000; // Later than the default 600_000 used for currentWinnerBox
         setupScenario(1000n, 1000n, laterCreationHeight);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -435,7 +435,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
 
         mockChain.newBlocks(10);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -466,7 +466,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         // Use a different secret that won't match the omitted participant's commitment
         const wrongSecret = stringToBytes("utf8", "wrong-secret-for-omitted-test");
         
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -513,7 +513,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         });
         const wrongGameParticipantBox = participationContract.utxos.toArray()[2]; // Third box
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -561,7 +561,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         });
         const inconsistentParticipantBox = participationContract.utxos.toArray()[2];
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -592,7 +592,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         // Move chain past the resolution deadline
         mockChain.newBlocks(300); // Now at 800_310, past the deadline of 800_200
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -620,7 +620,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should handle omitted participant with zero score correctly", () => {
         setupScenario(1000n, 0n); // Current winner: 1000, Omitted: 0
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -665,7 +665,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         });
         const wrongGameParticipantBox = participationContract.utxos.toArray()[2]; // Third box
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -709,7 +709,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         });
         const wrongGameParticipantBox = participationContract.utxos.toArray()[2]; // Third box
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
