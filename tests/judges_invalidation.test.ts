@@ -131,7 +131,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -225,7 +225,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -295,7 +295,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -387,7 +387,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         const currentHeight = mockChain.height;
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
 
         const tx = new TransactionBuilder(currentHeight)
             .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
@@ -436,7 +436,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -532,7 +532,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -581,7 +581,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -675,7 +675,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
         
         mockChain.newBlocks(41); // Advance beyond the judge period
 
@@ -721,7 +721,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -812,7 +812,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -879,7 +879,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 2n];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -988,7 +988,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1060,7 +1060,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge1TokenId = "2da371e44ef2083041fa048a55db55f7013d81f3c12ac79c3f814a282e1c7839";
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [1616920n, 1000000n, 1000000n, 1616961n, 2n];
+        const numericalParams: bigint[] = [1616920n, 1000000n, 1000000n, 1n, 1616961n];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
         const pkBytes = Buffer.from("02910cc52aa89e392d2715fc556aea54d5d4d81ccca937a11481771d37395c39b7", "hex");
         const jsonBytes = stringToBytes("utf8", '{"title":"TEST V1","description":"","imageURL":"","webLink":"","serviceId":"d19a3da7d5a202f11a330dc5557c27ca0faa175ed59ee5ffaced72e6cb226858b72d","mirrorUrls":[]}');
@@ -1160,7 +1160,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = 1616961n + JUDGE_PERIOD;
-        const newNumericalParams = [1616920n, 1000000n, 1000000n, extendedDeadline];
+        const newNumericalParams = [1616920n, 1000000n, 1000000n, 1n, extendedDeadline];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])

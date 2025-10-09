@@ -243,7 +243,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should set the omitted participant as the winner when there is no current winner", () => {
         omittedCommitment = createCommitment("solver-omitted", 1000n, "logs-omitted", secret);
 
-        const initialNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 0n];
+        const initialNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
@@ -279,7 +279,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
 
         mockChain.newBlocks(10);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
