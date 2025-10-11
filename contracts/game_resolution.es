@@ -22,7 +22,7 @@
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, perJudgeComission, resolutionDeadline].
+  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, perJudgeComissionPercentage, resolutionDeadline].
   // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
@@ -41,7 +41,7 @@
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val perJudgeComission = numericalParams(3)
+  val perJudgeComissionPercentage = numericalParams(3)
   val resolutionDeadline = numericalParams(4)
 
   val resolverInfo = SELF.R8[(Coll[Byte], Long)].get
@@ -146,7 +146,7 @@
                 recreatedGameBox.R7[Coll[Long]].get(0) == deadline &&
                 recreatedGameBox.R7[Coll[Long]].get(1) == creatorStake &&
                 recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
-                recreatedGameBox.R7[Coll[Long]].get(3) == perJudgeComission &&
+                recreatedGameBox.R7[Coll[Long]].get(3) == perJudgeComissionPercentage &&
                 recreatedGameBox.R7[Coll[Long]].get(4) == resolutionDeadline &&
                 recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&
                 recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
@@ -272,7 +272,7 @@
 
       // --- LÓGICA DE PAGO A JUECES Y DEV ---
       // Esta lógica ahora se aplica tanto si hay ganador como si no.
-      val perJudgeCommission = prizePool * perJudgeComission / 100L
+      val perJudgeComission = prizePool * perJudgeComissionPercentage / 100L
       val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
 
       // 1. Calcular payout final para el DEV (manejando polvo)
@@ -280,7 +280,7 @@
       val finalDevPayout = devCommission - devForfeits
       
       // 2. Calcular payout final para los JUECES (manejando polvo)
-      val totalJudgeComission = perJudgeCommission * judge_amount
+      val totalJudgeComission = perJudgeComission * judge_amount
       val judgesForfeits = if (perJudgeComission < MIN_ERG_BOX && perJudgeComission > 0L) { totalJudgeComission } else { 0L } // Si el pago por juez es polvo, se pierde TODA la comisión.
       val finalJudgesPayout = totalJudgeComission - judgesForfeits
       

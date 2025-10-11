@@ -93,7 +93,7 @@ describe("Game Finalization (end_game)", () => {
   const gameResolutionSourceWithHash = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_SCRIPT_HASH+`", pparticipationScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-    .replace("`+REDEEM_SCRIPT_HASH+`", redeemErgoTree.toHex())
+    .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     
