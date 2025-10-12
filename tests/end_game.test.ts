@@ -430,7 +430,7 @@ describe("Game Finalization (end_game)", () => {
     expect(mockChain.execute(transaction, { signers: [creator], throw: false })).to.be.false;
   });
 
-it("Should correctly distribute commissions to participating judges when finalizing the game", () => {
+  it("Should correctly distribute commissions to participating judges when finalizing the game", () => {
     // --- Arrange (Preparación del Escenario con Jueces) ---
 
     // 1. Crear actores y contratos. Es crucial añadir el contrato de `reputation_proof`
