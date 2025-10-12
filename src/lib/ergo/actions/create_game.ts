@@ -24,6 +24,7 @@ declare var ergo: any;
  * @param commissionPercentage - The commission percentage for the creator.
  * @param judges - An array of reputation token IDs for invited judges.
  * @param gameDetailsJson - A JSON string with game details (title, description, etc.).
+ * @param perJudgeComissionPercentage - The commission percentage for each judge.
  * @returns The ID of the submitted transaction.
  */
 export async function create_game(
@@ -34,7 +35,8 @@ export async function create_game(
     participationFeeNanoErg: bigint,
     commissionPercentage: number,
     judges: string[],
-    gameDetailsJson: string
+    gameDetailsJson: string,
+    perJudgeComissionPercentage: number, 
 ): Promise<string | null> {
 
     console.log("Attempting to create a game with the new contracts (GameActive):", {
@@ -95,7 +97,7 @@ export async function create_game(
         // R7: Invited judges
         R7: SColl(SColl(SByte), judgesColl).toHex(),
         // R8: [deadline, creator's stake, participation fee]
-        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg]).toHex(),
+        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage]).toHex(),
         // R9: Game details in JSON format (as bytes)
         R9: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
     });

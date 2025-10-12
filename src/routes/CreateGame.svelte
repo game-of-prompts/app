@@ -30,6 +30,7 @@
     let creatorStakeErg: number | undefined;
     let participationFeeErg: number | undefined;
     let commissionPercentage: number | undefined;
+    let perJudgeComissionPercentage: number | undefined;
     let transactionId: string | null = null;
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
@@ -103,7 +104,7 @@
         errorMessage = null;
         transactionId = null;
 
-        if (!gameServiceId.trim() || !gameSecret.trim() || !gameTitle.trim() || !deadlineBlock || creatorStakeErg === undefined || participationFeeErg === undefined || commissionPercentage === undefined) {
+        if (!gameServiceId.trim() || !gameSecret.trim() || !gameTitle.trim() || !deadlineBlock || creatorStakeErg === undefined || participationFeeErg === undefined || commissionPercentage === undefined || perJudgeComissionPercentage === undefined) {
             errorMessage = "Please fill all required fields correctly.";
             isSubmitting = false;
             return;
@@ -152,6 +153,7 @@
                 commissionPercentage: Math.round(commissionPercentage),
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
+                perJudgeComissionPercentage: Math.round(perJudgeComissionPercentage)
             });
             transactionId = result;
         } catch (error: any) {
@@ -239,7 +241,11 @@
                     </div>
                     <div class="form-group">
                         <Label for="commissionPercentage">Creator Commission (%)</Label>
-                        <Input id="commissionPercentage" bind:value={commissionPercentage} type="number" min="0" max="100" step="0.1" placeholder="e.g., 5 for 5%" required />
+                        <Input id="commissionPercentage" bind:value={commissionPercentage} type="number" min="0" max="100" step="0.1" placeholder="e.g., 20 for 20%" required />
+                    </div>
+                    <div class="form-group">
+                        <Label for="perJudgeComissionPercentage">Judge Commission (%)</Label>
+                        <Input id="perJudgeComissionPercentage" bind:value={perJudgeComissionPercentage} type="number" min="0" max="100" step="0.1" placeholder="e.g., 1 for 1%" required />
                     </div>
                     <div class="form-group lg:col-span-2">
                         <div class="repeater-container">

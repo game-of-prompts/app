@@ -36,6 +36,7 @@ interface CreateGoPGamePlatformParams {
     commissionPercentage: number;
     judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
+    perJudgeComissionPercentage: number;
 }
 
 export class ErgoPlatform implements Platform {
@@ -114,7 +115,8 @@ export class ErgoPlatform implements Platform {
                 params.participationFeeNanoErg,
                 params.commissionPercentage,
                 params.judges,
-                params.gameDetailsJson
+                params.gameDetailsJson,
+                params.perJudgeComissionPercentage
             );
         } catch (error) {
             console.error("Error en el método de plataforma createGoPGame:", error);
