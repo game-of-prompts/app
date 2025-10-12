@@ -543,6 +543,34 @@
         cleanupTimers();
         unsubscribeGameDetail();
     });
+
+        // Función de utilidad para limitar los porcentajes a [0, 100]
+    function clampPct(v) {
+        return Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0));
+    }
+
+    // === Cálculo de distribución de premios ===
+    // Datos base según el tipo de juego
+    let creatorPct = 0;
+    let judgesTotalPct = 0;
+    let developersPct = 0;
+    let winnerPct = 0;
+
+    if (game.status === 'Active') {
+        creatorPct = Number(game.commissionPercentage ?? 0);
+        judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
+        developersPct = 2; // Ejemplo: fondo de desarrollo fijo
+    } else if (game.status === 'Resolution') {
+        creatorPct = Number(game.resolverCommission ?? 0);
+        judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
+        developersPct = 2; // mismo fondo de desarrollo
+    }
+
+    // El porcentaje del ganador es lo que queda
+    const totalPct = creatorPct + judgesTotalPct + developersPct;
+    winnerPct = Math.max(0, 100 - totalPct);
+
+    const overAllocated = totalPct > 100 ? (totalPct - 100).toFixed(2) : 0;
 </script>
 
 {#if game}
@@ -689,6 +717,45 @@
                             <span class="info-value font-mono text-xs break-all">{game.revealedS_Hex}</span>
                         </div>
                     {/if}
+
+                    {#if game.status === 'Resolution' || game.status === 'Active'}
+                        <div class="form-group lg:col-span-2">
+                            <Label>Prize Distribution</Label>
+
+                            <div class="distribution-bar">
+                                <div class="bar-segment winner" style:width="{clampPct(winnerPct)}%" title="Winner(s): {winnerPct.toFixed(2)}%"></div>
+                                <div class="bar-segment creator" style:width="{clampPct(creatorPct)}%" title="Creator: {creatorPct.toFixed(2)}%"></div>
+                                <div class="bar-segment judges" style:width="{clampPct(judgesTotalPct)}%" title="Judges Total: {judgesTotalPct.toFixed(2)}%"></div>
+                                <div class="bar-segment developers" style:width="{clampPct(developersPct)}%" title="Dev Fund: {developersPct.toFixed(2)}%"></div>
+                            </div>
+
+                            <div class="distribution-legend">
+                                <div class="legend-item">
+                                    <div class="legend-color winner"></div>
+                                    <span>Winner(s) ({winnerPct.toFixed(2)}%)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color creator"></div>
+                                    <span>{game.status === 'Resolution' ? 'Resolver' : 'Creator'} ({creatorPct.toFixed(2)}%)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color judges"></div>
+                                    <span>Judges ({judgesTotalPct.toFixed(2)}%)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color developers"></div>
+                                    <span>Dev Fund ({developersPct.toFixed(2)}%)</span>
+                                </div>
+                            </div>
+
+                            {#if overAllocated > 0}
+                                <p class="text-xs mt-2 text-red-500">
+                                    Warning: Total commission exceeds 100% by {overAllocated}%! The winner's prize will be 0.
+                                </p>
+                            {/if}
+                        </div>
+                    {/if}
+
 
                 </div>
             {/if}
@@ -1419,4 +1486,31 @@
     .timeleft.ended {
         opacity: 0.7;
     }
+
+    /* Prize Distribution Bar Styles */
+    .distribution-bar {
+        @apply w-full h-4 flex overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800;
+        border: 1px solid theme('colors.slate.500 / 0.2');
+    }
+    .bar-segment {
+        @apply h-full transition-all duration-300 ease-in-out;
+    }
+    .bar-segment.winner { background-color: #22c55e; } /* green-500 */
+    .bar-segment.creator { background-color: #3b82f6; } /* blue-500 */
+    .bar-segment.judges { background-color: #eab308; } /* yellow-500 */
+    .bar-segment.developers { background-color: #a855f7; } /* purple-500 */
+
+    .distribution-legend {
+        @apply flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground;
+    }
+    .legend-item {
+        @apply flex items-center gap-2;
+    }
+    .legend-color {
+        @apply w-3 h-3 rounded-full;
+    }
+    .legend-color.winner { background-color: #22c55e; }
+    .legend-color.creator { background-color: #3b82f6; }
+    .legend-color.judges { background-color: #eab308; }
+    .legend-color.developers { background-color: #a855f7; }
 </style>
