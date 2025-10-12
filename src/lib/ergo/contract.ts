@@ -13,6 +13,8 @@ import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?ra
 import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
+import REDEEM_P2SH_SCRIPT from '../../../contracts/redeemP2SH.es?raw';
+
 import { PARTICIPATION } from "./reputation/types";
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
@@ -54,6 +56,7 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
+        .replace(/`\+REDEEM_SCRIPT_HASH\+`/g, uint8ArrayToHex(blake2b256(compile(REDEEM_P2SH_SCRIPT).toHex())))
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, PARTICIPATION);
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
