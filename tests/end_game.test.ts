@@ -93,7 +93,7 @@ describe("Game Finalization (end_game)", () => {
   
   // --- Variables para el Estado de la Prueba ---
   let gameNftId: string;
-  const winnerCommitment = "a1".repeat(32);
+  const winnerCommitment = "a1".repeat(32);  // Pueden ser falsos, ya que en este punto ya no se validan.
   const loserCommitment = "b2".repeat(32);
 
   let gameResolutionContract: ReturnType<MockChain["newParty"]>;
@@ -200,6 +200,86 @@ describe("Game Finalization (end_game)", () => {
     
     expect(winner.balance.tokens[0].tokenId).to.equal(gameNftId);
 
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+  });
+
+  it("Should successfully finalize the game and distribute funds correctly with P2SH winner", () => {
+    // --- Arrange ---
+    // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
+    const dummyWinnerScript = compile("sigmaProp(true)"); // Un script que cualquiera puede gastar
+    const winnerContract = mockChain.addParty(dummyWinnerScript.toHex(), "WinnerContract");
+    const facilitator = mockChain.newParty("Facilitator");
+    facilitator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+
+    const winnerScriptHash = blake2b256(dummyWinnerScript.bytes);
+    
+    // 2. Crear una caja "prueba" que pertenece al contrato ganador. Gastar esta caja es la autorización.
+    winnerContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: SAFE_MIN_BOX_VALUE,
+        ergoTree: dummyWinnerScript.toHex(),
+        assets: [],
+        additionalRegisters: {},
+    });
+    const winnerProofBox = winnerContract.utxos.toArray()[0];
+
+    participationContract.utxos.clear();
+    participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, prependHexPrefix(winnerScriptHash, "0001d4")).toHex(),
+                R5: SColl(SByte, winnerCommitment).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, "c3".repeat(32)).toHex(),
+                R8: SColl(SByte, "d4".repeat(32)).toHex(),
+                R9: SColl(SLong, [100n]).toHex(),
+            },
+        });
+  
+    mockChain.jumpTo(resolutionDeadline + 1);
+    
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const finalParticipationBoxes = participationContract.utxos.toArray();
+
+    // --- Act ---
+    const prizePool = finalParticipationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+    
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
+      .from([gameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .to([
+        // El premio se envía a la dirección del contrato ganador
+        new OutputBuilder(finalWinnerPrize, winnerContract.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(finalResolverPayout, resolver.address),
+        new OutputBuilder(finalDevPayout, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(facilitator.address) // El cambio va al firmante (facilitator)
+      .build();
+
+    // --- Assert ---
+    // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
+    expect(mockChain.execute(transaction, { signers: [facilitator] })).to.be.true;
+
+    // El contrato ganador recibe el premio. Su balance inicial de SAFE_MIN_BOX_VALUE fue gastado.
+    expect(winnerContract.balance.nanoergs).to.equal(finalWinnerPrize);
+    expect(developer.balance.nanoergs).to.equal(finalDevPayout);
+    expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
+    expect(loser.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
+    
+    expect(winnerContract.balance.tokens[0].tokenId).to.equal(gameNftId);
+    
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
