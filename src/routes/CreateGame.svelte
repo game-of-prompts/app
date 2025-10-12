@@ -59,7 +59,6 @@
         if (mirrors.length === 0) addMirror(); // Always keep at least one input
     }
 
-
     // --- Logic functions
     $: {
         if (deadlineValue > 0) {
@@ -98,6 +97,19 @@
         if (ergValue === undefined || ergValue === null || isNaN(ergValue)) return BigInt(0);
         return BigInt(Math.round(ergValue * 1000000000));
     }
+
+    // --- Prize Distribution Reactive Variables ---
+    function asNumber(v: any) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    function clampPct(v: number) { return Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0)); }
+    $: judgesCount = judges.filter(e => e.value && e.value.trim()).length;
+    $: creatorPct = asNumber(commissionPercentage);
+    $: perJudgePct = asNumber(perJudgeComissionPercentage);
+    $: judgesTotalPct = judgesCount * perJudgePct;
+    const developersPct = 5;
+    $: totalAllocated = creatorPct + judgesTotalPct + developersPct;
+    $: winnerPctRaw = 100 - totalAllocated;
+    $: winnerPct = winnerPctRaw < 0 ? 0 : winnerPctRaw;
+    $: overAllocated = totalAllocated > 100 ? +(totalAllocated - 100).toFixed(3) : 0;
 
     async function handleSubmit() {
         isSubmitting = true;
@@ -268,7 +280,38 @@
                             {/if}
                         </div>
                     </div>
-                </div>
+
+                    <div class="form-group lg:col-span-2">
+                        <Label>Prize Distribution Preview</Label>
+                        <div class="distribution-bar">
+                            <div class="bar-segment winner" style:width="{clampPct(winnerPct)}%" title="Winner(s): {winnerPct.toFixed(2)}%"></div>
+                            <div class="bar-segment creator" style:width="{clampPct(creatorPct)}%" title="Creator: {creatorPct.toFixed(2)}%"></div>
+                            <div class="bar-segment judges" style:width="{clampPct(judgesTotalPct)}%" title="Judges Total: {judgesTotalPct.toFixed(2)}%"></div>
+                            <div class="bar-segment developers" style:width="{clampPct(developersPct)}%" title="Dev Fund: {developersPct.toFixed(2)}%"></div>
+                        </div>
+                        <div class="distribution-legend">
+                            <div class="legend-item">
+                                <div class="legend-color winner"></div>
+                                <span>Winner(s) ({winnerPct.toFixed(2)}%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color creator"></div>
+                                <span>Creator ({creatorPct.toFixed(2)}%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color judges"></div>
+                                <span>Judges ({judgesTotalPct.toFixed(2)}%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color developers"></div>
+                                <span>Dev Fund ({developersPct.toFixed(2)}%)</span>
+                            </div>
+                        </div>
+                        {#if overAllocated > 0}
+                            <p class="text-xs mt-2 text-red-500">Warning: Total commission exceeds 100% by {overAllocated}%! The winner's prize will be 0.</p>
+                        {/if}
+                    </div>
+                    </div>
             </section>
 
             <section class="form-section">
@@ -314,7 +357,7 @@
             <div class="form-actions mt-2 flex justify-end">
                  <Button on:click={handleSubmit}
                     size="lg"
-                    disabled={ isSubmitting || !gameServiceId.trim() || !gameSecret.trim() || !gameTitle.trim() || !deadlineBlock || creatorStakeErg === undefined || participationFeeErg === undefined || commissionPercentage === undefined }
+                    disabled={ isSubmitting || !gameServiceId.trim() || !gameSecret.trim() || !gameTitle.trim() || !deadlineBlock || creatorStakeErg === undefined || participationFeeErg === undefined || commissionPercentage === undefined || overAllocated > 0 }
                     class="w-full sm:w-auto text-base">
                     {isSubmitting ? 'Submitting...' : 'Create Game'}
                 </Button>
@@ -403,4 +446,31 @@
     .repeater-item > :global(input) {
         @apply flex-grow;
     }
+
+    /* Prize Distribution Bar Styles */
+    .distribution-bar {
+        @apply w-full h-4 flex overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800;
+        border: 1px solid theme('colors.slate.500 / 0.2');
+    }
+    .bar-segment {
+        @apply h-full transition-all duration-300 ease-in-out;
+    }
+    .bar-segment.winner { background-color: #22c55e; } /* green-500 */
+    .bar-segment.creator { background-color: #3b82f6; } /* blue-500 */
+    .bar-segment.judges { background-color: #eab308; } /* yellow-500 */
+    .bar-segment.developers { background-color: #a855f7; } /* purple-500 */
+
+    .distribution-legend {
+        @apply flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground;
+    }
+    .legend-item {
+        @apply flex items-center gap-2;
+    }
+    .legend-color {
+        @apply w-3 h-3 rounded-full;
+    }
+    .legend-color.winner { background-color: #22c55e; }
+    .legend-color.creator { background-color: #3b82f6; }
+    .legend-color.judges { background-color: #eab308; }
+    .legend-color.developers { background-color: #a855f7; }
 </style>
