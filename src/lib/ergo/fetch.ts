@@ -151,7 +151,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
         if (!numericalParams || numericalParams.length < 3) throw new Error("R8 does not contain the 3 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg] = numericalParams;
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage] = numericalParams;
 
         // R9 (previously R8): gameDetailsJsonHex
         const gameDetailsHex = box.additionalRegisters.R9?.renderedValue;
@@ -174,7 +174,8 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             participationFeeNanoErg,
             content,
             value: BigInt(box.value),
-            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
+            perJudgeComissionPercentage: perJudgeComissionPercentage
         };
         
         return gameActive;
@@ -289,7 +290,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const numericalParams = parseLongColl(r7Array);
         if (!numericalParams || numericalParams.length < 4) throw new Error("R7 does not contain the 4 expected numerical parameters.");
         console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, resolutionDeadline] = numericalParams;
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, resolutionDeadline] = numericalParams;
 
         // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
         const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
@@ -330,7 +331,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             originalCreatorScript_Hex,
             content, 
             value: BigInt(box.value),
-            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId)
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
+            perJudgeComissionPercentage: perJudgeComissionPercentage
         };
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);

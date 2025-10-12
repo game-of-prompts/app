@@ -64,6 +64,7 @@ export interface GameActive {
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
+    perJudgeComissionPercentage: bigint;
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
@@ -86,6 +87,7 @@ export interface GameResolution {
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
+    perJudgeComissionPercentage: bigint;
     resolverPK_Hex: string|null;
     resolverScript_Hex: string
     resolverCommission: number;

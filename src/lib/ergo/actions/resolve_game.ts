@@ -156,6 +156,7 @@ export async function resolve_game(
         BigInt(game.deadlineBlock), 
         game.creatorStakeNanoErg, 
         game.participationFeeNanoErg,
+        game.perJudgeComissionPercentage,
         resolutionDeadline
     ];
     
