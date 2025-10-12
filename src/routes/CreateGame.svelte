@@ -311,7 +311,7 @@
                             <p class="text-xs mt-2 text-red-500">Warning: Total commission exceeds 100% by {overAllocated}%! The winner's prize will be 0.</p>
                         {/if}
                     </div>
-                    </div>
+                </div>
             </section>
 
             <section class="form-section">
