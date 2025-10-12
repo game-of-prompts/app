@@ -293,7 +293,6 @@ describe("Game Finalization (end_game)", () => {
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
-  
 
   it("Should fail if a non-winner (loser) tries to sign when a winner is declared", () => {
     // --- Arrange ---
