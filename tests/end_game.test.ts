@@ -184,7 +184,7 @@ describe("Game Finalization (end_game)", () => {
         new OutputBuilder(finalDevPayout, developer.address),
       ])
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
-      .sendChangeTo(resolver.address)
+      .sendChangeTo(winner.address)
       .build();
 
     // --- Assert ---
