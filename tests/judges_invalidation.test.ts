@@ -34,6 +34,14 @@ const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
 const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
 
 const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
+
+
+const redeemScriptSource = fs.readFileSync(
+  path.join(contractsDir, "redeemP2SH.es"),
+  "utf-8"
+);
+const redeemErgoTree = compile(redeemScriptSource);
+
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
@@ -98,6 +106,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
             .replace("`+PARTICIPATION_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationErgoTree.bytes)))
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(compile(REPUTATION_PROOF_SOURCE).bytes)))
+            .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
         gameResolutionErgoTree = compile(resolutionSource);

@@ -19,7 +19,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { bigintToLongByteArray } from "$lib/ergo/utils";
+import { bigintToLongByteArray, uint8ArrayToHex } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
 
@@ -27,6 +27,13 @@ import { prependHexPrefix } from "$lib/utils";
 const contractsDir = path.resolve(__dirname, "..", "contracts");
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
 const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
+
+const redeemScriptSource = fs.readFileSync(
+  path.join(contractsDir, "redeemP2SH.es"),
+  "utf-8"
+);
+const redeemErgoTree = compile(redeemScriptSource);
+
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
 // Helper to create a commitment hash
@@ -80,6 +87,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
         const resolutionSource = GAME_RESOLUTION_TEMPLATE
             .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
             .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
+            .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
             .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
             .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
 

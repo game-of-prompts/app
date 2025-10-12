@@ -26,6 +26,12 @@ function uint8ArrayToHex(bytes: Uint8Array): string {
 const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
 const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 
+const redeemScriptSource = fs.readFileSync(
+  path.join(contractsDir, "redeemP2SH.es"),
+  "utf-8"
+);
+const redeemErgoTree = compile(redeemScriptSource);
+
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const ABANDON_PERIOD_IN_BLOCKS = 64800;
 
@@ -55,6 +61,7 @@ describe("Creator Claims Abandoned Funds", () => {
     const resolutionSource = GAME_RESOLUTION_TEMPLATE
       .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
       .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
+      .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
       .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     gameResolutionErgoTree = compile(resolutionSource);

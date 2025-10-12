@@ -51,18 +51,10 @@ const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version:
 const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
 const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
 
-const redeemScriptSource = `{
-  // R4: Coll[Byte] - Blake2b256 hash of the final recipient's contract
-  val recipientScriptHash = SELF.R4[Coll[Byte]].get
-
-  // La transacción que gasta esta caja debe tener exactamente una salida.
-  val singleOutput = OUTPUTS.size == 1
-
-  // El hash del script del destinatario (OUTPUTS(0)) debe coincidir con el que guardamos en R4.
-  val correctRecipient = blake2b256(OUTPUTS(0).propositionBytes) == recipientScriptHash
-
-  sigmaProp(singleOutput && correctRecipient)
-}`;
+const redeemScriptSource = fs.readFileSync(
+  path.join(contractsDir, "redeemP2SH.es"),
+  "utf-8"
+);
 const redeemErgoTree = compile(redeemScriptSource);
 
 
