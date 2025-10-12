@@ -49,7 +49,7 @@
 
 [x] Limite de 10 puntuaciones en participation.es
 
-[] Permitir pagos a jueces
+[x] Permitir pagos a jueces
 
 [] Compatibilizar con P2SH y P2S  para direcciones de jugadores y creador.
 
