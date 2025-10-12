@@ -38,6 +38,7 @@
     import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
+    import { dev_fee } from "$lib/ergo/contract";
 
 
     // --- COMPONENT STATE ---
@@ -559,11 +560,11 @@
     if (game.status === 'Active') {
         creatorPct = Number(game.commissionPercentage ?? 0);
         judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
-        developersPct = 2; // Ejemplo: fondo de desarrollo fijo
+        developersPct = Number(dev_fee);
     } else if (game.status === 'Resolution') {
         creatorPct = Number(game.resolverCommission ?? 0);
         judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
-        developersPct = 2; // mismo fondo de desarrollo
+        developersPct = Number(dev_fee);
     }
 
     // El porcentaje del ganador es lo que queda
