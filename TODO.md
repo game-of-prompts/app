@@ -51,13 +51,19 @@
 
 [x] Permitir pagos a jueces
 
-[] Razonar sobre sistema de reputación
+[x] Razonar sobre sistema de reputación
 
 [] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
 [] Agregar dirección del jugador en el commitment
 
 [] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
+
+[] Soporte multi-token
+
+[] Modificar score en base a altura (incentiva participar antes)
+
+[] Lotes de participaciones (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
 
 
 ##### game-service-factory
@@ -90,12 +96,7 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - DEADLINE: deadline de la competición.
 - HEIGHT: altura donde se agregó la participación.
 
-### Permitir otros TOKENS en lugar de ERG. Bolsa de tokens con coste de participación para cada token.
-
 ### Gastar participaciones en lotes
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
 Teoricamente se permite un numero ilimitado de participaciones.
 
-### Poker
-
-### Contratos satélite
