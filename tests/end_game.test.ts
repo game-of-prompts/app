@@ -22,6 +22,7 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
+import { network } from "$lib/common/store";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -204,7 +205,6 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
-  /*
   it("Should successfully finalize the game and distribute funds correctly with a complex Script winner", () => {
     // --- Arrange ---
     // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
@@ -212,8 +212,6 @@ describe("Game Finalization (end_game)", () => {
     const winnerContract = mockChain.addParty(dummyWinnerScript.toHex(), "WinnerContract");
     const facilitator = mockChain.newParty("Facilitator");
     facilitator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
-
-    const winnerScriptHash = blake2b256(dummyWinnerScript.bytes);
     
     // 2. Crear una caja "prueba" que pertenece al contrato ganador. Gastar esta caja es la autorización.
     winnerContract.addUTxOs({
@@ -232,7 +230,7 @@ describe("Game Finalization (end_game)", () => {
             ergoTree: pparticipationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix(winnerScriptHash, "0001d4")).toHex(),
+                R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, gameNftId).toHex(),
                 R7: SColl(SByte, "c3".repeat(32)).toHex(),
@@ -277,14 +275,12 @@ describe("Game Finalization (end_game)", () => {
     expect(winnerContract.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
     expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
-    expect(loser.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
     
     expect(winnerContract.balance.tokens[0].tokenId).to.equal(gameNftId);
     
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
-  */
 
   it("Should fail if the resolution deadline has not been reached", () => {
     // --- Arrange ---

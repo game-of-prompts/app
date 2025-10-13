@@ -250,8 +250,13 @@
             val prefix = winnerPK.slice(0, 3)
             val addr_content = winnerPK.slice(3, winnerPK.size)
 
-            (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(addr_content))) || 
-            (sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK })))
+            val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
+            if (isP2PK) {
+              proveDlog(decodePoint(addr_content))
+            }
+            else {
+              sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK }))
+            }
           } else {
             // Si no se encuentra la caja del ganador, la autorización falla
             sigmaProp(false)
@@ -261,8 +266,13 @@
           val prefix = resolverPK.slice(0, 3)
           val addr_content = resolverPK.slice(3, resolverPK.size)
 
-          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(addr_content))) ||
-          (sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK })))
+          val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
+          if (isP2PK) {
+            proveDlog(decodePoint(addr_content))
+          }
+          else {
+            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
+          }
         }
       }
 
