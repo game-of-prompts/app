@@ -10,8 +10,6 @@
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   val REDEEM_SCRIPT_HASH = fromBase16("`+REDEEM_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
-  val P2SH_ERGOTREE_PREFIX = fromBase16("0001d4")
-  val P2S_ERGOTREE_PREFIX = fromBase16("0000")
   val MIN_ERG_BOX = 1000000L
   val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
   val MAX_SCORE_LIST = 10
@@ -253,8 +251,7 @@
             val addr_content = winnerPK.slice(3, winnerPK.size)
 
             (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(addr_content))) || 
-            (sigmaProp(prefix == P2SH_ERGOTREE_PREFIX && INPUTS.exists({ (box: Box) => blake2b256(box.propositionBytes) == addr_content }))) ||
-            (sigmaProp(prefix == P2S_ERGOTREE_PREFIX && INPUTS.exists({ (box: Box) => box.propositionBytes == addr_content })))
+            (sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK })))
           } else {
             // Si no se encuentra la caja del ganador, la autorización falla
             sigmaProp(false)
@@ -265,8 +262,7 @@
           val addr_content = resolverPK.slice(3, resolverPK.size)
 
           (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(addr_content))) ||
-          (sigmaProp(prefix == P2SH_ERGOTREE_PREFIX && INPUTS.exists({ (box: Box) => blake2b256(box.propositionBytes) == addr_content }))) ||
-          (sigmaProp(prefix == P2S_ERGOTREE_PREFIX && INPUTS.exists({ (box: Box) => box.propositionBytes == addr_content })))
+          (sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK })))
         }
       }
 
