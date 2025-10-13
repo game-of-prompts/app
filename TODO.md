@@ -52,7 +52,6 @@
 [x] Permitir pagos a jueces
 
 [] Razonar sobre sistema de reputación
-[] ¿Compatibilizar jueces.R7 con direcciones P2PK y P2S?
 
 [] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
