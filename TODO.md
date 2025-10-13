@@ -51,8 +51,6 @@
 
 [x] Permitir pagos a jueces
 
-[] Compatibilizar con P2SH y P2S  para direcciones de jugadores y creador.
-
 [] Razonar sobre sistema de reputación
 [] ¿Compatibilizar jueces.R7 con direcciones P2PK y P2S?
 
