@@ -282,6 +282,82 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
+  it("Should successfully finalize the game and distribute funds correctly with a pk Script winner without any proveDlog pk input script", () => {
+    // --- Arrange ---
+    // 1. Create a simple "anyone-can-spend" contract to hold the fee box.
+    const anyoneCanSpendScript = compile("sigmaProp(true)");
+    const feeBoxHolder = mockChain.addParty(anyoneCanSpendScript.toHex(), "FeeBoxHolder");
+    
+    // 2. Fund this contract with just enough ERG to pay the transaction fee.
+    // The winner will spend this box.
+    feeBoxHolder.addUTxOs({
+      creationHeight: mockChain.height,
+      value: RECOMMENDED_MIN_FEE_VALUE,
+      ergoTree: anyoneCanSpendScript.toHex(),
+      assets: [],
+      additionalRegisters: {}
+    });
+    const feeBox = feeBoxHolder.utxos.toArray()[0];
+
+    // 3. Jump forward in time, past the resolution deadline, to enable the finalization path.
+    mockChain.jumpTo(resolutionDeadline + 1);
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos.toArray();
+    const initialWinnerBalance = winner.balance.nanoergs;
+
+    // --- Act ---
+    // Calculate the final fund distribution according to the contract's rules.
+    const prizePool = participationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+    
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+    
+    const transaction = new TransactionBuilder(mockChain.height)
+      // The inputs are the contract boxes and the special feeBox.
+      // Crucially, NO standard P2PK box from the 'winner' party is included.
+      .from([gameBox, ...participationBoxes, feeBox])
+      .to([
+        // The outputs distribute the funds and the game NFT as defined by the contract logic.
+        new OutputBuilder(finalWinnerPrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(finalResolverPayout, resolver.address),
+        new OutputBuilder(finalDevPayout, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      // Since the feeBox value equals the fee, there is no change.
+      // If feeBox had more value, the change would go to the winner.
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    // The transaction is valid and signed ONLY by the winner.
+    // Their signature is required to build a valid transaction, but the contract's logic
+    // does not depend on their signature for validation because the deadline has passed.
+    expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
+    
+    // Verify that all parties received the correct amount of ERG.
+    // The winner's new balance is their initial balance plus the prize.
+    // They didn't have to spend any of their own funds to pay the fee.
+    expect(winner.balance.nanoergs).to.equal(initialWinnerBalance + finalWinnerPrize);
+    expect(developer.balance.nanoergs).to.equal(finalDevPayout);
+    expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
+    
+    // The creator's balance remains untouched.
+    expect(creator.balance.nanoergs).to.equal(RECOMMENDED_MIN_FEE_VALUE);
+    
+    // Verify the winner received the game NFT.
+    expect(winner.balance.tokens[0].tokenId).to.equal(gameNftId);
+    
+    // The contract boxes and the fee box have been successfully spent.
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+    expect(feeBoxHolder.utxos.length).to.equal(0);
+  });
+
   it("Should fail if the resolution deadline has not been reached", () => {
     // --- Arrange ---
     expect(mockChain.height).to.be.below(resolutionDeadline);
