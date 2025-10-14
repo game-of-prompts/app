@@ -53,7 +53,7 @@
 
 [x] Razonar sobre sistema de reputación
 
-[] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
+[x] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
 [] Agregar dirección del jugador en el commitment
 
