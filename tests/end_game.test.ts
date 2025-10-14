@@ -52,12 +52,6 @@ const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version:
 const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
 const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
 
-const redeemScriptSource = fs.readFileSync(
-  path.join(contractsDir, "redeemP2SH.es"),
-  "utf-8"
-);
-const redeemErgoTree = compile(redeemScriptSource);
-
 
 // --- Suite de Pruebas ---
 
@@ -86,7 +80,6 @@ describe("Game Finalization (end_game)", () => {
   const gameResolutionSourceWithHash = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_SCRIPT_HASH+`", pparticipationScriptHash)
     .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-    .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     
@@ -699,20 +692,6 @@ describe("Game Finalization (end_game)", () => {
     // Final winner gets base + resolver forfeits
     const finalWinnerPrize = intermediateWinnerPayout + resolverForfeits;
 
-    console.log("Prize Pool:", prizePool);
-    console.log("Resolver Commission:", resolverCommission, resolverCommissionPercent);
-    console.log("Stake for Resolver:", creatorStake);
-    console.log("Dev Commission:", devCommission, "5");
-    console.log("Per Judge Commission:", perJudgeCommission, perJudgeCommissionPercent);
-    console.log("---");
-
-    console.log("Final Winner Prize:", finalWinnerPrize, finalWinnerPrize < MIN_ERG_BOX);
-    console.log("Final Resolver Payout:", finalResolverPayout, finalResolverPayout < MIN_ERG_BOX);
-    console.log("Final Dev Payout:", finalDevPayout, finalDevPayout < MIN_ERG_BOX);
-    console.log("Final Judges Payout:", finalJudgesPayout, finalJudgesPayout < MIN_ERG_BOX);
-    console.log("Per Judge Payout:", perJudgePayout, perJudgePayout < MIN_ERG_BOX);
-
-
     // Now build outputs conditionally (skip dust outputs)
     const outputs = [
       new OutputBuilder(finalWinnerPrize, winner.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
@@ -723,7 +702,7 @@ describe("Game Finalization (end_game)", () => {
       outputs.push(new OutputBuilder(finalDevPayout, developer.address));
     }
 
-    if (finalJudgesPayout > 0n) {
+    /* TODO if (finalJudgesPayout > 0n) {
       // Assuming one judge for simplicity; loop over judgesTokenIds if multiple
       outputs.push(
         new OutputBuilder(perJudgePayout, redeemErgoTree.toHex())
@@ -733,7 +712,7 @@ describe("Game Finalization (end_game)", () => {
         new OutputBuilder(perJudgePayout, redeemErgoTree.toHex())
           .setAdditionalRegisters({ R4: SColl(SByte, judge2ScriptHash).toHex() })
       );
-    }
+    } */
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([gameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()])

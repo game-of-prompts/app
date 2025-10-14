@@ -48,12 +48,6 @@ const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
   "utf-8"
 );
 
-const redeemScriptSource = fs.readFileSync(
-  path.join(contractsDir, "redeemP2SH.es"),
-  "utf-8"
-);
-const redeemErgoTree = compile(redeemScriptSource);
-
 // that always fails is created to allow the `game_active` contract to compile.
 const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }";   // Not needed.
 const PARTICIPATION_TEMPLATE = fs.readFileSync(
@@ -97,8 +91,7 @@ describe("Game Creation (create_game)", () => {
   // 4. `game_resolution`: Depends on participation hashes.
   const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
     .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-    .replace("`+REDEEM_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(redeemErgoTree.toHex())))
+    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script¡
     .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
   const gameResolutionErgoTree = compile(gameResolutionSource);

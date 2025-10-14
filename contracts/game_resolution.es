@@ -8,7 +8,6 @@
   val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
-  val REDEEM_SCRIPT_HASH = fromBase16("`+REDEEM_SCRIPT_HASH+`")
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
   val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
@@ -289,7 +288,12 @@
       }
 
       // --- Valores y cálculos comunes para AMBOS CASOS (con y sin ganador) ---
-      val participations = INPUTS.filter({ (box: Box) => blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH })
+      val participations = INPUTS.filter({ 
+              (box: Box) => 
+                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
+                box.R6[Coll[Byte]].get == gameNftId
+            })
+
       val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
       val judge_amount = participatingJudges.size
 
@@ -315,7 +319,7 @@
       // 4. Verificación de que los JUECES reciben su pago
       val judgesGetsPaid = if (finalJudgesPayout > 0L) {
 
-          val judgesHashedScripts = CONTEXT.dataInputs
+          val judgesScripts = CONTEXT.dataInputs
             .filter({(box: Box) =>
               box.tokens.size == 1 &&
               box.R5[Coll[Byte]].get == gameNftId &&
@@ -325,11 +329,10 @@
             .map({(box: Box) => box.R7[Coll[Byte]].get})
 
           // Comprobar que todos los jueces que participaron tienen una salida a su dirección P2SH
-          judgesHashedScripts.forall({
-              (judgeAddressHash: Coll[Byte]) => 
+          judgesScripts.forall({
+              (judgeAddress: Coll[Byte]) => 
                 OUTPUTS.exists({
-                  (b:Box) => blake2b256(b.propositionBytes) == REDEEM_SCRIPT_HASH &&
-                             b.R4[Coll[Byte]].get == judgeAddressHash &&
+                  (b:Box) => b.propositionBytes == judgeAddress &&
                              b.value >= perJudgeComission
                   })
             })
@@ -339,43 +342,67 @@
       // --- Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitment != Coll[Byte]()) {
         // --- CASO 1: HAY UN GANADOR DECLARADO ---
-        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })  // TODO Verify commitment with the box data.  Maybe is an impostor
+        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
 
-        if (winnerBoxes.size > 0) {
+        if (winnerBoxes.size == 1) {
           val winnerBox = winnerBoxes(0)
-          val winnerPK = winnerBox.R4[Coll[Byte]].get
-          val resolverCommission = prizePool * commissionPercentage / 100L
-          
-          // El premio se calcula restando los payouts finales (que ya consideran el polvo)
-          val finalWinnerPrize = prizePool - resolverCommission - finalJudgesPayout - finalDevPayout
 
-          if (finalWinnerPrize >= MIN_ERG_BOX) {
+          val validWinner = {
+            val pBoxScoreList = winnerBox.R9[Coll[Long]].get
+            val pBoxCommitment = winnerBox.R5[Coll[Byte]].get
+            val pBoxSolverId = winnerBox.R7[Coll[Byte]].get
+            val pBoxLogsHash = winnerBox.R8[Coll[Byte]].get
 
-            // Verificación de la salida del ganador
-            val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
-                b.value >= finalWinnerPrize &&
-                b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
-                b.tokens.size == 1 &&
-                b.tokens(0)._1 == gameNftId
+            val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
+              if (scoreAcc) { scoreAcc } else {
+                val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
+                if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
+              }
             })
 
-            val finalResolverPayout = creatorStake + resolverCommission  // We know creator_stake > MIN_ERG_BOX.
-            val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
-                b.value >= finalResolverPayout && 
-                b.propositionBytes == resolverPK
-            })
+            val correctParticipationFee = winnerBox.value >= participationFee
+            val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline
+
+            validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
+          }
+
+          if (validWinner) {
+            val winnerPK = winnerBox.R4[Coll[Byte]].get
+            val resolverCommission = prizePool * commissionPercentage / 100L
             
-            authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && devGetsPaid && judgesGetsPaid)
-          } 
-          else {
-            // On this scenario (winner_prize < MIN_ERG_BOX) the winner price is sent to the resolver.
-            val finalResolverPayout = creatorStake + resolverCommission + finalWinnerPrize
-            val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
-                b.value >= finalResolverPayout && 
-                b.propositionBytes == resolverPK
-            })
-            
-            authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
+            // El premio se calcula restando los payouts finales (que ya consideran el polvo)
+            val finalWinnerPrize = prizePool - resolverCommission - finalJudgesPayout - finalDevPayout
+
+            if (finalWinnerPrize >= MIN_ERG_BOX) {
+
+              // Verificación de la salida del ganador
+              val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
+                  b.value >= finalWinnerPrize &&
+                  b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
+                  b.tokens.size == 1 &&
+                  b.tokens(0)._1 == gameNftId
+              })
+
+              val finalResolverPayout = creatorStake + resolverCommission  // We know creator_stake > MIN_ERG_BOX.
+              val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
+                  b.value >= finalResolverPayout && 
+                  b.propositionBytes == resolverPK
+              })
+              
+              authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && devGetsPaid && judgesGetsPaid)
+            } 
+            else {
+              // On this scenario (winner_prize < MIN_ERG_BOX) the winner price is sent to the resolver.
+              val finalResolverPayout = creatorStake + resolverCommission + finalWinnerPrize
+              val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
+                  b.value >= finalResolverPayout && 
+                  b.propositionBytes == resolverPK
+              })
+              
+              authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
+            }
+          } else {
+            sigmaProp(false)
           }
           
         } else {
