@@ -52,12 +52,11 @@ export async function judges_invalidate(
         throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
     }
 
-    const dataInputs = [...(judgeVoteDataInputs.map(e => parseBox(e))), ...participations.map(p => parseBox(p.box))];
-
     // --- 2. Determinar el ganador y filtrar participaciones (lógica off-chain) ---
     let maxScore = -1n;
     const validParticipations: ValidParticipation[] = [];
     let nextWinnerCandidateCommitment: string | null = null;
+    let nextWinnerCandidatePBox: Box<Amount> | null = null;
     const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
     if (!participationErgoTreeBytes) {
@@ -120,21 +119,19 @@ export async function judges_invalidate(
         if (actualScore > maxScore) {
             maxScore = actualScore;
             nextWinnerCandidateCommitment = p.commitmentC_Hex;
+            nextWinnerCandidatePBox = pBox;
         }
-    }
-
-    if (!nextWinnerCandidateCommitment) {
-        // throw new Error("No se pudo determinar un ganador entre las participaciones válidas.");
-    }
-
-    if (validParticipations.length !== participations.length)  {
-        throw new Error("Participaciones invalidas. Esto no debería de haber ocurrido.");  // Should never happen.
     }
 
     console.log(`Ganador candidato determinado con compromiso: ${nextWinnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Prepare data for the new resolution box ---
     
+    const dataInputs = [
+    ...judgeVoteDataInputs.map(e => parseBox(e)),
+    ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
+    ];
+
     // The invalidated candidate's value is added back to the game box's value
     const newGameBoxValue = game.value + invalidatedParticipation.value;
     const newDeadline = BigInt(game.resolutionDeadline + JUDGE_PERIOD_EXTENSION);
