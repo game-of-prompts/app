@@ -85,9 +85,7 @@
                 box.R5[Coll[Byte]].get == winnerCandidateCommitment
             })
 
-            if (winnerCandidateBoxes.size != 1) {
-              false
-            } else {
+            if (winnerCandidateBoxes.size == 1) {
               val winnerCandidateBox = winnerCandidateBoxes(0)
 
               val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get
@@ -107,6 +105,7 @@
 
               validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
             }
+            else { false }
           }
 
         if (sIsCorrectlyRevealed && transitionsToResolutionScript && winnerCandidateValid) {

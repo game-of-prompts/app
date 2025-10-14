@@ -193,39 +193,51 @@
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
       
       if (votesAreValid && recreatedGameBoxes.size == 1) {
-        
         val recreatedGameBox = recreatedGameBoxes(0)
-        val participantInputs = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH})
+
+        val newCandidateCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+        val winnerCandidateValid = if (newCandidateCommitment == Coll[Byte]()) { true } 
+          else {
+            val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ 
+              (box: Box) => 
+                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
+                box.R6[Coll[Byte]].get == gameNftId &&
+                box.R5[Coll[Byte]].get == newCandidateCommitment
+            })
+
+            if (winnerCandidateBoxes.size == 1) {
+              val winnerCandidateBox = winnerCandidateBoxes(0)
+
+              val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get
+              val pBoxCommitment = winnerCandidateBox.R5[Coll[Byte]].get
+              val pBoxSolverId = winnerCandidateBox.R7[Coll[Byte]].get
+              val pBoxLogsHash = winnerCandidateBox.R8[Coll[Byte]].get
+
+              val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
+                if (scoreAcc) { scoreAcc } else {
+                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
+                  if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
+                }
+              })
+
+              val correctParticipationFee = winnerCandidateBox.value >= participationFee
+              val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
+
+              validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
+            }
+            else { false }
+          }
+          
         val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
-        if (invalidatedCandidateBoxes.size == 1) {
+        
+        if (winnerCandidateValid && invalidatedCandidateBoxes.size == 1) {
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
-          val initialFoldState = (-1L, Coll[Byte]()) // (maxScore, nextCandidateCommitment)
-          // TODO Check
-          // todo filter participantInputs with:  ¿?
-          //   -  val correctParticipationFee = pBox.value >= participationFee
-          //   -  val pBox.creationHeight <= game.resolutionDeadline
-          // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
-          val foldResult = participantInputs.fold(initialFoldState, { (acc: (Long, Coll[Byte]), pBox: Box) =>
-              if (pBox.R5[Coll[Byte]].get != winnerCandidateCommitment) {  // In case is duplicated, ignore the invalidated candidate box
-                  val scoreCheckResult = pBox.R9[Coll[Long]].get.fold((-1L, false), { (scoreAcc: (Long, Boolean), score: Long) =>
-                      if (scoreAcc._2) { scoreAcc } else {
-                          val testCommitment = blake2b256(pBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ pBox.R8[Coll[Byte]].get ++ revealedS)
-                          if (testCommitment == pBox.R5[Coll[Byte]].get) { (score, true) } else { scoreAcc }
-                      }
-                  })
-                  val actualScore = scoreCheckResult._1
-                  if (actualScore > acc._1) { (actualScore, pBox.R5[Coll[Byte]].get) } else { acc }
-              } else { acc }
-          })
-          val nextCandidateCommitment = foldResult._2
-
           val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
-          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(4) >= resolutionDeadline + JUDGE_PERIOD
-          val candidateIsReset = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2 == nextCandidateCommitment
+          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(4) >= resolutionDeadline + JUDGE_PERIOD  // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
           val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
           
-          fundsReturnedToPool && deadlineIsExtended && candidateIsReset && gameStateIsPreserved
+          fundsReturnedToPool && deadlineIsExtended && gameStateIsPreserved
         } else { false }
       } else { false }
     } else { false }
