@@ -23,6 +23,7 @@ import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
 import { network } from "$lib/common/store";
+import { bigintToLongByteArray } from "$lib/ergo/utils";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -87,8 +88,8 @@ describe("Game Finalization (end_game)", () => {
   
   // --- Variables para el Estado de la Prueba ---
   let gameNftId: string;
-  const winnerCommitment = "a1".repeat(32);  // Pueden ser falsos, ya que en este punto ya no se validan.
-  const loserCommitment = "b2".repeat(32);
+  let winnerCommitment: string
+  let loserCommitment: string;
 
   let gameResolutionContract: ReturnType<MockChain["newParty"]>;
   let participationContract: ReturnType<MockChain["newParty"]>;
@@ -115,9 +116,81 @@ describe("Game Finalization (end_game)", () => {
     // Crear y distribuir el Game NFT
     gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
 
+        
+    // 1. Crear las cajas de participación (ganador y perdedor)
+
+    const createCommitment = (solverId: string, score: bigint, logs: string, secret: Uint8Array): Uint8Array => {
+        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...secret]));
+    };
+
+    const createParticipation = (
+        party: any, 
+        commitment: string, 
+        solverId: string, 
+        hashLogs: string,
+        scoreList: bigint[]
+    ) => {
+        participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
+                R5: SColl(SByte, commitment).toHex(),       
+                R6: SColl(SByte, gameNftId).toHex(),          
+                R7: SColl(SByte, Buffer.from(solverId, "utf8").toString("hex")).toHex(), 
+                R8: SColl(SByte, hashLogs).toHex(),      
+                R9: SColl(SLong, scoreList).toHex(),       
+            },
+        });
+    };
+
+    const winnerSolverId = "player-alpha-7";
+    const winnerTrueScore = 9500n;
+    const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
+    const winnerSecret = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
+    const winnerHashLogsHex = Buffer.from(winnerHashLogsBytes).toString("hex");
+
+    const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
+
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerLogs, winnerSecret);
+    winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
+
+    createParticipation(
+        winner, 
+        winnerCommitment, 
+        winnerSolverId, 
+        winnerHashLogsHex, 
+        winnerScoreList
+    );
+
+    const loserSolverId = "player-beta-3";
+    const loserTrueScore = 2100n;
+    const loserLogs = "Log del juego para el perdedor: error en nivel 1.";
+    const loserSecret = new Uint8Array([9, 10, 11, 12, 13, 14, 15, 16]);
+
+    const loserHashLogsBytes = blake2b256(stringToBytes("utf8", loserLogs));
+    const loserHashLogsHex = Buffer.from(loserHashLogsBytes).toString("hex");
+
+    const loserScoreList = [500n, 1100n, 2100n, 3000n];
+
+    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserLogs, loserSecret);
+    loserCommitment = Buffer.from(loserCommitmentBytes).toString("hex");
+
+    createParticipation(
+        loser,
+        loserCommitment,
+        loserSolverId,
+        loserHashLogsHex,
+        loserScoreList
+    );
+
+
+    // 2. Crear la caja del juego en estado de resolución
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
-    
-    // 1. Crear la caja del juego en estado de resolución
     gameResolutionContract.addUTxOs({
         creationHeight: mockChain.height,
         value: creatorStake,
@@ -132,26 +205,7 @@ describe("Game Finalization (end_game)", () => {
             R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
         },
     });
-    
-    // 2. Crear las cajas de participación (ganador y perdedor)
-    const createParticipation = (party: any, commitment: string) => {
-        participationContract.addUTxOs({
-            creationHeight: mockChain.height,
-            value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
-            assets: [],
-            additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
-                R5: SColl(SByte, commitment).toHex(),
-                R6: SColl(SByte, gameNftId).toHex(),
-                R7: SColl(SByte, "c3".repeat(32)).toHex(),
-                R8: SColl(SByte, "d4".repeat(32)).toHex(),
-                R9: SColl(SLong, [100n]).toHex(),
-            },
-        });
-    };
-    createParticipation(winner, winnerCommitment);
-    createParticipation(loser, loserCommitment);
+
   });
 
   it("Should successfully finalize the game and distribute funds correctly", () => {
