@@ -65,6 +65,7 @@
 
 [] Lotes de participaciones (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
 
+[] Incentivo del 10% para quien ejecute la invalidación por jueces??   PROS: Incentiva su ejecución. CONTRAS: Los jueces esperarán a ser los últimos en disparar para tomarlo. UNA SOLUCIÓN PUEDE SER TENER QUE ESPERAR 5 BLOQUES A EJECUTAR LA ACCIÓN ... PERO ES COMPLICARSE MUCHO...
 
 ##### game-service-factory
 [] Game obfuscated
