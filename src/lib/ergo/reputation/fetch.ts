@@ -267,7 +267,7 @@ export async function fetchReputationProofByTokenId(
         const primaryBox = rpBoxes[0];
 
         const r6_parsed = parseR6(primaryBox.additionalRegisters.R6?.renderedValue ?? "");
-        const owner_hash_serialized = primaryBox.additionalRegisters.R7?.serializedValue ?? "";
+        const ergoTreeSerialized = primaryBox.additionalRegisters.R7?.serializedValue ?? "";
 
         // compute whether current user can spend (same method as fetchReputationProofs)
         let userR7SerializedHex: string | null = null;
@@ -277,8 +277,7 @@ export async function fetchReputationProofByTokenId(
                 const userAddress = ErgoAddress.fromBase58(change_address);
                 const propositionBytes = hexToBytes(userAddress.ergoTree);
                 if (propositionBytes) {
-                    const hashedProposition = blake2b256(propositionBytes);
-                    userR7SerializedHex = SColl(SByte, hashedProposition).toHex();
+                    userR7SerializedHex = SColl(SByte, propositionBytes).toHex();
                 }
             } catch (err) {
                 console.warn("Could not compute user R7 serialized hash:", err);
@@ -289,9 +288,8 @@ export async function fetchReputationProofByTokenId(
             token_id: tokenId,
             type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
             total_amount: r6_parsed.totalSupply,
-            blake_owner_script: serializedToRendered(owner_hash_serialized),
-            owner_hash_serialized,
-            can_be_spend: userR7SerializedHex ? owner_hash_serialized === userR7SerializedHex : false,
+            owner_ergotree: primaryBox.additionalRegisters.R7?.renderedValue ?? "",
+            can_be_spend: userR7SerializedHex ? ergoTreeSerialized === userR7SerializedHex : false,
             current_boxes: [],
             number_of_boxes: 0,
             network: Network.ErgoMainnet,

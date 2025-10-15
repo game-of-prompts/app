@@ -7,15 +7,9 @@ import {
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { dev_addr_base58, dev_fee } from '../contract';
+import { judges } from '$lib/common/store'; // <-- asegúrate de que esta importación exista
+import { get } from 'svelte/store';
 
-/**
- * Construye y envía la transacción para finalizar un juego.
- * Valida que el firmante es la parte autorizada (ganador o resolutor).
- * Los pagos que no alcanzan el mínimo (polvo) se redirigen al beneficiario principal.
- * @param game El objeto que representa la caja del juego a finalizar.
- * @param participations Un array con las cajas de participación resueltas.
- * @returns El ID de la transacción enviada.
- */
 export async function end_game(
     game: GameResolution,
     participations: ValidParticipation[]
@@ -32,18 +26,15 @@ export async function end_game(
     const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment) ?? null;
 
     // --- 2. Verificación del Firmante ---
-    // Esta lógica se basa en los tests: solo el ganador o el resolutor pueden firmar.
     let requiredSignerAddress: string;
 
     if (winnerParticipation === null) {
-        // Si no hay ganador, solo el RESOLUTOR puede firmar.
         requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex);
         console.log(`Caso: Sin ganador. Se requiere la firma del resolutor: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
             throw new Error(`Firma inválida. Solo el resolutor (${requiredSignerAddress}) puede ejecutar esta transacción.`);
         }
     } else {
-        // Si hay un ganador, solo el GANADOR puede firmar.
         requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
         console.log(`Caso: Con ganador. Se requiere la firma del ganador: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
@@ -52,8 +43,20 @@ export async function end_game(
     }
     console.log(`Verificación de firmante exitosa. Usuario conectado: ${userAddress}`);
 
-    // --- 3. Lógica de Cálculo de Pagos ---
+    // --- 3. Lógica de Cálculo de Pagos (ahora incluyendo JUECES) ---
     const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
+
+    const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
+    const perJudgePct = BigInt(perJudgePctNumber);
+
+    const judge_count = BigInt((game.judges ?? []).length);
+
+    const perJudgeCommission = (prizePool * perJudgePct) / 100n;
+    const totalJudgeCommission = perJudgeCommission * judge_count;
+
+    // Política de polvo para jueces: si el pago por juez es polvo, se pierde TODA la comisión de jueces.
+    const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < SAFE_MIN_BOX_VALUE) ? totalJudgeCommission : 0n;
+    const finalJudgesPayout = totalJudgeCommission - judgesForfeits;
 
     let finalWinnerPrize = 0n;
     let finalResolverPayout = 0n;
@@ -64,13 +67,16 @@ export async function end_game(
         const totalValue = prizePool + game.creatorStakeNanoErg;
         const devCommission = (prizePool * dev_fee) / 100n;
         const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
-        
+
         finalDevPayout = devCommission - devForfeits;
-        finalResolverPayout = totalValue - finalDevPayout;
+
+        // Restar también la comisión de jueces pagable (finalJudgesPayout)
+        finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
         console.log("--- Resumen de Pagos (Sin Ganador) ---");
-        console.log(`Pago Final Resolver: ${finalResolverPayout} (incluye NFT)`);
+        console.log(`Pago Final Resolver: ${finalResolverPayout} (incluye NFT si aplica)`);
         console.log(`Pago Final Dev: ${finalDevPayout}`);
+        console.log(`Pago Total Jueces (a repartir): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
         console.log("---------------------------------------");
 
     } else {
@@ -78,25 +84,45 @@ export async function end_game(
         const creatorStake = game.creatorStakeNanoErg;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
         const devCommission = (prizePool * dev_fee) / 100n;
-        const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+        // El prize disponible para el ganador se calcula restando resolver, dev y COMISION TOTAL DE JUECES
+        const winnerBasePrize = prizePool - resolverCommission - devCommission - totalJudgeCommission;
 
         const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
 
-        const intermediateDevPayout = winnerGetsBasePrize ? devCommission : 0n;
-        const intermediateResolverPayout = winnerGetsBasePrize ? (creatorStake + resolverCommission) : creatorStake;
-        const intermediateWinnerPayout = winnerGetsBasePrize ? winnerBasePrize : (prizePool + creatorStake);
+        // Si el ganador no puede recibir su parte base (es polvo), se evita pagar dev/resolver,
+        // pero los jueces **siguen** cobrando si su per-judge es suficiente (finalJudgesPayout).
+        let intermediateDevPayout: bigint;
+        let intermediateResolverPayout: bigint;
+        let intermediateWinnerPayout: bigint;
+
+        if (winnerGetsBasePrize) {
+            intermediateDevPayout = devCommission;
+            intermediateResolverPayout = creatorStake + resolverCommission;
+            intermediateWinnerPayout = winnerBasePrize;
+        } else {
+            // El comportamiento que tenías: dev/resolver no cobran su comisión variable,
+            // el creador recupera su stake pero debemos descontar la comisión total de jueces
+            intermediateDevPayout = 0n;
+            intermediateResolverPayout = creatorStake;
+            // El ganador recibe el prizePool + stake menos la comisión (siempre se pagan jueces si aplican).
+            intermediateWinnerPayout = prizePool + creatorStake - totalJudgeCommission;
+        }
 
         const devForfeits = (intermediateDevPayout > 0n && intermediateDevPayout < SAFE_MIN_BOX_VALUE) ? intermediateDevPayout : 0n;
         const resolverForfeits = (intermediateResolverPayout > 0n && intermediateResolverPayout < SAFE_MIN_BOX_VALUE) ? intermediateResolverPayout : 0n;
 
         finalDevPayout = intermediateDevPayout - devForfeits;
         finalResolverPayout = intermediateResolverPayout - resolverForfeits;
+
+        // Los forfeits de dev/resolver van al ganador (como ya tenías)
         finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits;
 
-        console.log("--- Resumen de Pagos (nanoErgs) ---");
+        console.log("--- Resumen de Pagos (Con Ganador) ---");
         console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
         console.log(`Pago Final Resolver: ${finalResolverPayout}`);
         console.log(`Pago Final Dev: ${finalDevPayout}`);
+        console.log(`Pago Total Jueces (a repartir): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
         console.log("------------------------------------");
     }
 
@@ -116,6 +142,7 @@ export async function end_game(
         const resolverOutput = new OutputBuilder(finalResolverPayout, resolverAddressString);
         
         if (winnerParticipation === null) {
+            // cuando no hay ganador, el resolver se lleva el NFT
             resolverOutput.addTokens([gameNft]);
         }
         outputs.push(resolverOutput);
@@ -127,6 +154,40 @@ export async function end_game(
         );
     }
 
+    const dataInputs: any[] = [];
+    if (perJudgeCommission > 0n && perJudgeCommission >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
+        for (const tokenId of game.judges) {
+            const js = get(judges).data.get(tokenId)
+            if (!js) {
+                console.warn(`[end_game] No se encontró información de juez para token ${tokenId}, se omite.`);
+                continue;
+            }
+            const judgeErgoTree = js.owner_ergotree;
+            const judgeDatabox = js.current_boxes && js.current_boxes[0];
+
+            if (!judgeErgoTree) {
+                console.warn(`[end_game] judgeErgoTree vacío para token ${tokenId}, se omite.`);
+                continue;
+            }
+
+            // Añadir output por juez con la comisión por juez
+            outputs.push(
+                new OutputBuilder(perJudgeCommission, judgeErgoTree)
+            );
+
+            // Si hay datainput, lo parseamos y lo añadimos a datainputs
+            if (judgeDatabox) {
+                try {
+                    dataInputs.push(parseBox(judgeDatabox.box));
+                } catch (err) {
+                    console.warn(`[end_game] fallo parseando datainput del juez ${tokenId}:`, err);
+                }
+            }
+        }
+    } else {
+        console.log("[end_game] No se crean salidas para jueces (comisión por juez es 0 o polvo o no hay jueces).");
+    }
+
     // --- 5. Construcción y Envío de la Transacción ---
     const utxos = await ergo.get_utxos();
     const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box))];
@@ -134,6 +195,7 @@ export async function end_game(
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from([...inputs, ...utxos])
         .to(outputs)
+        .withDataFrom(dataInputs)
         .sendChangeTo(userAddress) // El cambio va al firmante autorizado
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()

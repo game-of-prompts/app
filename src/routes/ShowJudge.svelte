@@ -81,7 +81,7 @@
 				<li><strong>Token ID:</strong> {displayProof.token_id}</li>
 				<li><strong>Burned:</strong> {total_burned_string(displayProof)} ERG</li>
 				<li><strong>Total Amount:</strong> {displayProof.total_amount}</li>
-				<li><strong>Owner Address:</strong> {displayProof.blake_owner_script}</li>
+				<li><strong>Owner Address:</strong> {displayProof.owner_ergotree}</li>
 			</ul>
 
 			{#if proof && get(reputation_proof)?.token_id !== proof.token_id}
