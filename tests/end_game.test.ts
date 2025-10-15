@@ -711,7 +711,7 @@ describe("Game Finalization (end_game)", () => {
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
             R4: SInt(1).toHex(),
-            R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
+            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
             R6: SColl(SColl(SByte), judgesTokenIds).toHex(),
             R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, perJudgeCommissionPercent, BigInt(resolutionDeadline)]).toHex(),
             R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
