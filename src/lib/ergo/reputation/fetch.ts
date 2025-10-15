@@ -5,22 +5,11 @@ import { types, connected, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import { getReputationProofErgoTreeHex, getReputationProofTemplateHash } from "$lib/ergo/contract";
 import { type Amount, type Box, ErgoAddress, SByte, SColl } from "@fleet-sdk/core";
-import { blake2b256 } from "@fleet-sdk/crypto";
 import { GAME, JUDGE, PARTICIPATION } from "./types";
 
 const ergo_tree = getReputationProofErgoTreeHex();
 const ergo_tree_hash = getReputationProofTemplateHash();
 
-
-function parseR6(r6RenderedValue: string): { isLocked: boolean; totalSupply: number } {
-    try {
-        const [lockedStr, supplyStr] = r6RenderedValue.replace(/[()\[\]]/g, '').split(',');
-        return { isLocked: lockedStr.trim() === 'true', totalSupply: Number(supplyStr.trim()) };
-    } catch (e) {
-        console.warn("Could not parse R6 tuple, returning defaults:", r6RenderedValue, e);
-        return { isLocked: true, totalSupply: 0 };
-    }
-}
 
 export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {
     try {
@@ -121,7 +110,7 @@ function createRPBoxFromApiBox(box: Box<Amount>, tokenId: string, availableTypes
         token_id: tokenId,
         token_amount: Number(box.assets[0].amount),
         object_pointer: object_pointer_for_box,
-        is_locked: parseR6(box.additionalRegisters.R6.renderedValue).isLocked,
+        is_locked: box.additionalRegisters.R6.renderedValue,
         polarization: box.additionalRegisters.R8?.renderedValue === 'true',
         content: box_content,
     };
@@ -154,8 +143,7 @@ export async function fetchReputationProofs(
             const userAddress = ErgoAddress.fromBase58(change_address);
             const propositionBytes = hexToBytes(userAddress.ergoTree);
             if (propositionBytes) {
-                const hashedProposition = blake2b256(propositionBytes);
-                registers["R7"] = uint8ArrayToHex(hashedProposition);
+                registers["R7"] = uint8ArrayToHex(propositionBytes);
             }
         } else {
              // If no user address, cannot fetch user-specific proofs. Return empty.
@@ -266,7 +254,6 @@ export async function fetchReputationProofByTokenId(
         // Use the first matching rpBox as the primary box to read R6 / R7 values for summary fields
         const primaryBox = rpBoxes[0];
 
-        const r6_parsed = parseR6(primaryBox.additionalRegisters.R6?.renderedValue ?? "");
         const ergoTreeSerialized = primaryBox.additionalRegisters.R7?.serializedValue ?? "";
 
         // compute whether current user can spend (same method as fetchReputationProofs)
@@ -284,10 +271,18 @@ export async function fetchReputationProofByTokenId(
             }
         }
 
+        const tokenResponse = await fetch(`${explorer_uri}/api/v1/tokens/${tokenId}`);
+        if (!tokenResponse.ok) {
+            console.error(`Error al obtener la cantidad emitida del token ${tokenId}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        const emissionAmount = Number(tokenData.emissionAmount || 0);
+
         const proof: ReputationProof = {
             token_id: tokenId,
             type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
-            total_amount: r6_parsed.totalSupply,
+            total_amount: emissionAmount,
             owner_ergotree: primaryBox.additionalRegisters.R7?.renderedValue ?? "",
             can_be_spend: userR7SerializedHex ? ergoTreeSerialized === userR7SerializedHex : false,
             current_boxes: [],

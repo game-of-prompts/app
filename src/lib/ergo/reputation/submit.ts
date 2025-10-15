@@ -11,7 +11,6 @@ import {
     SBool,
     SLong
 } from '@fleet-sdk/core';
-import { blake2b256 } from '@fleet-sdk/crypto';
 import { getReputationProofAddress }  from "$lib/ergo/contract";
 import { SString, hexToBytes, parseBox } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
@@ -94,13 +93,12 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
     if (!propositionBytes) {
         throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
     }
-    const hashedProposition = blake2b256(propositionBytes);
 
     new_proof_output.setAdditionalRegisters({
         R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
         R5: SColl(SByte, hexToBytes(object_pointer) ?? "").toHex(),
-        R6: tupleToSerialized(is_locked, total_supply),
-        R7: SColl(SByte, hashedProposition).toHex(),
+        R6: booleanToSerializer(is_locked),
+        R7: SColl(SByte, propositionBytes).toHex(),
         R8: booleanToSerializer(polarization),
         R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
     });
@@ -195,7 +193,6 @@ export async function update_reputation_proof(
     if (!propositionBytes) {
         throw new Error(`Could not get proposition bytes from address ${creatorAddressString}.`);
     }
-    const hashedProposition = blake2b256(propositionBytes);
 
     if (input_proof.token_amount - token_amount > 0) {
         outputs.push(
@@ -207,8 +204,8 @@ export async function update_reputation_proof(
             .setAdditionalRegisters({
                 R4: SColl(SByte, hexToBytes(input_proof.type.tokenId) ?? "").toHex(),
                 R5: SColl(SByte, hexToBytes(input_proof.object_pointer) ?? "").toHex(),
-                R6: tupleToSerialized(input_proof.is_locked, total_supply),
-                R7: SColl(SByte, hashedProposition).toHex(),
+                R6: booleanToSerializer(input_proof.is_locked),
+                R7: SColl(SByte, propositionBytes).toHex(),
                 R8: booleanToSerializer(input_proof.polarization),
                 R9: SString(typeof(input_proof.content) === "object" ? JSON.stringify(input_proof.content): input_proof.content ?? "")
             })
@@ -218,8 +215,8 @@ export async function update_reputation_proof(
     new_proof_output.setAdditionalRegisters({
         R4: SColl(SByte, hexToBytes(type_nft_id) ?? "").toHex(),
         R5: SColl(SByte, hexToBytes(object_pointer) ?? "").toHex(),
-        R6: tupleToSerialized(is_locked, total_supply),
-        R7: SColl(SByte, hashedProposition).toHex(),
+        R6: booleanToSerializer(is_locked),
+        R7: SColl(SByte, propositionBytes).toHex(),
         R8: booleanToSerializer(polarization),
         R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
     });
