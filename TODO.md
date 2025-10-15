@@ -55,7 +55,7 @@
 
 [x] Verificar si action2_judgesInvalidate recreatedGameBox está completo.
 
-[] Revisar pago a jueces.
+[x] Revisar pago a jueces.
 
 [] Agregar dirección del jugador en el commitment
 
