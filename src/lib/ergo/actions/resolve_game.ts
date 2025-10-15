@@ -133,7 +133,7 @@ export async function resolve_game(
         }
 
         if (!scoreIsValid) {
-            console.warn(`No se pudo encontrar una puntuación válida para la participación ${p.boxId}. Será omitida.`);
+            console.warn(`No se pudo encontrar una puntuación válida para la participación ${p.commitmentC_Hex}. Será omitida.`);
             continue;
         }
 
