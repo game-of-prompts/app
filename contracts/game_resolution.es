@@ -233,7 +233,7 @@
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
           val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
-          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(4) >= resolutionDeadline + JUDGE_PERIOD  // New deadline should be HEIGHT + JUDGE_PERIOD, not resolutionDeadline + JUDGE_PERIOD
+          val deadlineIsExtended = recreatedGameBox.R7[Coll[Long]].get(4) >= HEIGHT + JUDGE_PERIOD
           val gameStateIsPreserved = recreatedGameBox.R4[Int].get == gameState && gameState == 1
           
           fundsReturnedToPool && deadlineIsExtended && gameStateIsPreserved

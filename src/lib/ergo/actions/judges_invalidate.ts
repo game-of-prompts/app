@@ -134,7 +134,7 @@ export async function judges_invalidate(
 
     // The invalidated candidate's value is added back to the game box's value
     const newGameBoxValue = game.value + invalidatedParticipation.value;
-    const newDeadline = BigInt(game.resolutionDeadline + JUDGE_PERIOD_EXTENSION);
+    const newDeadline = BigInt(currentHeight + JUDGE_PERIOD_EXTENSION);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
     const secretS_bytes = hexToBytes(game.revealedS_Hex)!;
 
