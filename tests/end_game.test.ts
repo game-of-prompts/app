@@ -657,8 +657,9 @@ describe("Game Finalization (end_game)", () => {
     // 2. Crear tokens de reputación y hashes de scripts para los jueces.
     const judge1ReputationTokenId = Buffer.from(randomBytes(32)).toString("hex");
     const judge2ReputationTokenId = Buffer.from(randomBytes(32)).toString("hex");
-    const judge1ScriptHash = blake2b256(judge1.address.ergoTree);
-    const judge2ScriptHash = blake2b256(judge2.address.ergoTree);
+    const judge1Script = prependHexPrefix(judge1.address.getPublicKeys()[0]);
+    const judge2Script = prependHexPrefix(judge2.address.getPublicKeys()[0]);
+
 
     // 3. Crear las cajas de reputación de los jueces AÑADIÉNDOLAS AL ESTADO de la mockChain.
     //    Este es el cambio clave. Estas cajas ahora existen "en la cadena" antes de la Tx.
@@ -673,7 +674,7 @@ describe("Game Finalization (end_game)", () => {
                 R4: SColl(SByte, stringToBytes("hex", dummyTypeNftId)).toHex(),
                 R5: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(), // Vinculada al juego
                 R6: SPair(SBool(true), SLong(100n)).toHex(), // Votó 'true'
-                R7: SColl(SByte, judge1ScriptHash).toHex(), // Hash de su script de pago
+                R7: SColl(SByte, judge1Script).toHex(), // Hash de su script de pago
                 R8: SBool(true).toHex(),
                 R9: SColl(SByte, new Uint8Array(0)).toHex()
             }
@@ -689,7 +690,7 @@ describe("Game Finalization (end_game)", () => {
                 R4: SColl(SByte, stringToBytes("hex", dummyTypeNftId)).toHex(),
                 R5: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R6: SPair(SBool(true), SLong(95n)).toHex(),
-                R7: SColl(SByte, judge2ScriptHash).toHex(), // Hash de su script de pago
+                R7: SColl(SByte, judge2Script).toHex(), // Hash de su script de pago
                 R8: SBool(true).toHex(),
                 R9: SColl(SByte, new Uint8Array(0)).toHex()
             }
@@ -768,17 +769,15 @@ describe("Game Finalization (end_game)", () => {
       outputs.push(new OutputBuilder(finalDevPayout, developer.address));
     }
 
-    /* TODO if (finalJudgesPayout > 0n) {
+    if (finalJudgesPayout > 0n) {
       // Assuming one judge for simplicity; loop over judgesTokenIds if multiple
       outputs.push(
-        new OutputBuilder(perJudgePayout, redeemErgoTree.toHex())
-          .setAdditionalRegisters({ R4: SColl(SByte, judge1ScriptHash).toHex() })
+        new OutputBuilder(perJudgePayout, judge1.address)
       );
       outputs.push(
-        new OutputBuilder(perJudgePayout, redeemErgoTree.toHex())
-          .setAdditionalRegisters({ R4: SColl(SByte, judge2ScriptHash).toHex() })
+        new OutputBuilder(perJudgePayout, judge2.address)
       );
-    } */
+    }
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([gameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()])
@@ -795,8 +794,6 @@ describe("Game Finalization (end_game)", () => {
     expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
     expect(developer.balance.nanoergs).to.equal(finalDevPayout);
     expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
-    // expect(judge1.balance.nanoergs).to.equal(perJudgePayout);  // Primero deberían gastar redeemScript <-- TODO
-    // expect(judge2.balance.nanoergs).to.equal(perJudgePayout);
     
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
