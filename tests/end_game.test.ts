@@ -88,6 +88,7 @@ describe("Game Finalization (end_game)", () => {
   
   // --- Variables para el Estado de la Prueba ---
   let gameNftId: string;
+  let secret: Uint8Array;
   let winnerCommitment: string
   let loserCommitment: string;
 
@@ -116,18 +117,20 @@ describe("Game Finalization (end_game)", () => {
     // Crear y distribuir el Game NFT
     gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
 
+    secret = stringToBytes("utf8", "game-secret")
+
         
     // 1. Crear las cajas de participación (ganador y perdedor)
 
-    const createCommitment = (solverId: string, score: bigint, logs: string, secret: Uint8Array): Uint8Array => {
-        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...secret]));
+    const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, secret: Uint8Array): Uint8Array => {
+        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...secret]));
     };
 
     const createParticipation = (
         party: any, 
         commitment: string, 
         solverId: string, 
-        hashLogs: string,
+        hashLogs: Uint8Array,
         scoreList: bigint[]
     ) => {
         participationContract.addUTxOs({
@@ -156,35 +159,34 @@ describe("Game Finalization (end_game)", () => {
 
     const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
 
-    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerLogs, winnerSecret);
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, secret);
     winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
 
     createParticipation(
         winner, 
         winnerCommitment, 
         winnerSolverId, 
-        winnerHashLogsHex, 
+        winnerHashLogsBytes, 
         winnerScoreList
     );
 
     const loserSolverId = "player-beta-3";
     const loserTrueScore = 2100n;
     const loserLogs = "Log del juego para el perdedor: error en nivel 1.";
-    const loserSecret = new Uint8Array([9, 10, 11, 12, 13, 14, 15, 16]);
 
     const loserHashLogsBytes = blake2b256(stringToBytes("utf8", loserLogs));
     const loserHashLogsHex = Buffer.from(loserHashLogsBytes).toString("hex");
 
     const loserScoreList = [500n, 1100n, 2100n, 3000n];
 
-    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserLogs, loserSecret);
+    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserHashLogsBytes, secret);
     loserCommitment = Buffer.from(loserCommitmentBytes).toString("hex");
 
     createParticipation(
         loser,
         loserCommitment,
         loserSolverId,
-        loserHashLogsHex,
+        loserHashLogsBytes,
         loserScoreList
     );
 
@@ -198,7 +200,7 @@ describe("Game Finalization (end_game)", () => {
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
             R4: SInt(1).toHex(), // Estado: Resolución
-            R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, winnerCommitment)).toHex(),
+            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
             R6: SColl(SColl(SByte), []).toHex(),
             R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
             R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
