@@ -95,6 +95,34 @@ describe("Game Finalization (end_game)", () => {
   let gameResolutionContract: ReturnType<MockChain["newParty"]>;
   let participationContract: ReturnType<MockChain["newParty"]>;
 
+
+  const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, secret: Uint8Array): Uint8Array => {
+      return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...secret]));
+  };
+
+  const createParticipation = (
+      party: any, 
+      commitment: string, 
+      solverId: string, 
+      hashLogs: Uint8Array,
+      scoreList: bigint[]
+  ) => {
+      participationContract.addUTxOs({
+          creationHeight: mockChain.height,
+          value: participationFee,
+          ergoTree: pparticipationErgoTree.toHex(),
+          assets: [],
+          additionalRegisters: {
+              R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
+              R5: SColl(SByte, commitment).toHex(),       
+              R6: SColl(SByte, gameNftId).toHex(),          
+              R7: SColl(SByte, Buffer.from(solverId, "utf8").toString("hex")).toHex(), 
+              R8: SColl(SByte, hashLogs).toHex(),      
+              R9: SColl(SLong, scoreList).toHex(),       
+          },
+      });
+  };
+
   beforeEach(() => {
     mockChain.reset({clearParties: true});
     mockChain.jumpTo(800_000);
@@ -122,40 +150,11 @@ describe("Game Finalization (end_game)", () => {
         
     // 1. Crear las cajas de participación (ganador y perdedor)
 
-    const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, secret: Uint8Array): Uint8Array => {
-        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...secret]));
-    };
-
-    const createParticipation = (
-        party: any, 
-        commitment: string, 
-        solverId: string, 
-        hashLogs: Uint8Array,
-        scoreList: bigint[]
-    ) => {
-        participationContract.addUTxOs({
-            creationHeight: mockChain.height,
-            value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
-            assets: [],
-            additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
-                R5: SColl(SByte, commitment).toHex(),       
-                R6: SColl(SByte, gameNftId).toHex(),          
-                R7: SColl(SByte, Buffer.from(solverId, "utf8").toString("hex")).toHex(), 
-                R8: SColl(SByte, hashLogs).toHex(),      
-                R9: SColl(SLong, scoreList).toHex(),       
-            },
-        });
-    };
-
     const winnerSolverId = "player-alpha-7";
     const winnerTrueScore = 9500n;
     const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
-    const winnerSecret = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 
     const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
-    const winnerHashLogsHex = Buffer.from(winnerHashLogsBytes).toString("hex");
 
     const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
 
@@ -175,7 +174,6 @@ describe("Game Finalization (end_game)", () => {
     const loserLogs = "Log del juego para el perdedor: error en nivel 1.";
 
     const loserHashLogsBytes = blake2b256(stringToBytes("utf8", loserLogs));
-    const loserHashLogsHex = Buffer.from(loserHashLogsBytes).toString("hex");
 
     const loserScoreList = [500n, 1100n, 2100n, 3000n];
 
@@ -273,6 +271,18 @@ describe("Game Finalization (end_game)", () => {
     const winnerProofBox = winnerContract.utxos.toArray()[0];
 
     participationContract.utxos.clear();
+
+    const winnerSolverId = "player-alpha-7";
+    const winnerTrueScore = 9500n;
+    const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
+
+    const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
+
+    const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
+
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, secret);
+    winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
+
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
@@ -282,9 +292,9 @@ describe("Game Finalization (end_game)", () => {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, gameNftId).toHex(),
-                R7: SColl(SByte, "c3".repeat(32)).toHex(),
-                R8: SColl(SByte, "d4".repeat(32)).toHex(),
-                R9: SColl(SLong, [100n]).toHex(),
+                R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+                R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+                R9: SColl(SLong, winnerScoreList).toHex(),
             },
         });
   
