@@ -169,6 +169,11 @@ export async function resolve_game(
         winnerCommitmentBytes = new Uint8Array();
     }
 
+    const gameCreatorScript = hexToBytes(game.gameCreatorScript_Hex!)!;
+
+    if (!gameCreatorScript) throw new Error("Fallo al convertir gameCreatorScript a bytes.");
+
+
     const resolutionBoxOutput = new OutputBuilder(
         game.creatorStakeNanoErg,
         resolutionErgoTree
@@ -180,7 +185,7 @@ export async function resolve_game(
         R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
         R7: SColl(SLong, newNumericalParams).toHex(),
         R8: SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex(),
-        R9: SPair(SColl(SByte, prependHexPrefix(hexToBytes(game.gameCreatorPK_Hex)!)), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
+        R9: SPair(SColl(SByte, gameCreatorScript), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
     });
 
     // --- 4. Construir y Enviar la Transacción ---    
