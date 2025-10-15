@@ -118,7 +118,7 @@
               box.tokens.size == 1 &&
               // box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
               box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[(Boolean, Long)].get._1
+              box.R6[Boolean].get
             })
           val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
 

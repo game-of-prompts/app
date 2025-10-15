@@ -323,7 +323,7 @@
             .filter({(box: Box) =>
               box.tokens.size == 1 &&
               box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[(Boolean, Long)].get._1 &&
+              box.R6[Boolean].get &&
               participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
             })
             .map({(box: Box) => box.R7[Coll[Byte]].get})
