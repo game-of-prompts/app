@@ -673,7 +673,7 @@ describe("Game Finalization (end_game)", () => {
             additionalRegisters: {
                 R4: SColl(SByte, stringToBytes("hex", dummyTypeNftId)).toHex(),
                 R5: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(), // Vinculada al juego
-                R6: SPair(SBool(true), SLong(100n)).toHex(), // Votó 'true'
+                R6: SBool(true).toHex(), // Votó 'true'
                 R7: SColl(SByte, judge1Script).toHex(), // Hash de su script de pago
                 R8: SBool(true).toHex(),
                 R9: SColl(SByte, new Uint8Array(0)).toHex()
@@ -689,7 +689,7 @@ describe("Game Finalization (end_game)", () => {
             additionalRegisters: {
                 R4: SColl(SByte, stringToBytes("hex", dummyTypeNftId)).toHex(),
                 R5: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
-                R6: SPair(SBool(true), SLong(95n)).toHex(),
+                R6: SBool(true).toHex(),
                 R7: SColl(SByte, judge2Script).toHex(), // Hash de su script de pago
                 R8: SBool(true).toHex(),
                 R9: SColl(SByte, new Uint8Array(0)).toHex()

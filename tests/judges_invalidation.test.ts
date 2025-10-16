@@ -196,7 +196,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -212,7 +212,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -355,7 +355,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -371,7 +371,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -531,7 +531,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -547,7 +547,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -861,7 +861,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -877,7 +877,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1003,7 +1003,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1019,7 +1019,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, dummyInvalidInvalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1147,7 +1147,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1163,7 +1163,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1291,7 +1291,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1307,7 +1307,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1433,7 +1433,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1449,7 +1449,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1576,7 +1576,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1592,7 +1592,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1718,7 +1718,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(), // Vota contra el candidato
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
@@ -1734,7 +1734,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1_000_000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: generate_pk_proposition("9fwQGg6pPjibqhEZDVopd9deAHXNsWU4fjAHFYLAKexdVCDhYEs"),
                     R8: SBool(false).toHex(),  // Considera inválido al candidato
                     R9: SColl(SByte, new Uint8Array(0)).toHex(),
