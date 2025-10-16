@@ -68,6 +68,7 @@ export interface GameActive {
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
+    reputation: number;
 }
 
 /**
@@ -96,6 +97,7 @@ export interface GameResolution {
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];
+    reputation: number;
 }
 
 /**
@@ -117,6 +119,7 @@ export interface GameCancellation {
     deadlineBlock: number;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
+    reputation: number;
 }
 
 /**
@@ -137,6 +140,7 @@ export interface GameFinalized {
     deadlineBlock: number;
     judgeFinalizationBlock: number;
     winnerFinalizationDeadline: number;
+    reputation: number;
 }
 
 /**
@@ -158,6 +162,7 @@ export interface ParticipationBase {
     hashLogs_Hex: string;
     scoreList: bigint[];
     reputationOpinions: ReputationOpinion[];
+    reputation: number;
 }
 
 /**

@@ -35,6 +35,8 @@ import {
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
+import { get } from "svelte/store";
+import { judges as judgesStore } from "../common/store";
 
 // =================================================================
 // === REPUTATION PROOF UTILITIES
@@ -158,6 +160,8 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
+        const reputation = judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
+
         const gameActive: GameActive = {
             platform: new ErgoPlatform(),
             boxId: box.boxId,
@@ -175,7 +179,8 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             content,
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            perJudgeComissionPercentage: perJudgeComissionPercentage
+            perJudgeComissionPercentage: perJudgeComissionPercentage,
+            reputation: reputation
         };
         
         return gameActive;

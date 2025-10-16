@@ -2,7 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { reputation_proof, games } from '$lib/common/store';
 	import { get } from 'svelte/store';
-	import { total_burned_string, type ReputationProof, type RPBox } from '$lib/ergo/reputation/objects';
+	import { total_burned_string, type Judge, type RPBox } from '$lib/ergo/reputation/objects';
 	import { GAME, PARTICIPATION, JUDGE } from '$lib/ergo/reputation/types';
 	import { judge_detail } from "$lib/common/store";
     import GameCard from './GameCard.svelte';
@@ -11,7 +11,7 @@
     import { update_reputation_proof } from '$lib/ergo/reputation/submit';
     import { json } from '@sveltejs/kit';
 
-	let proof: ReputationProof | undefined = undefined;
+	let proof: Judge | undefined = undefined;
 
 	const unsubscribeDetail = judge_detail.subscribe(value => { proof = value ?? undefined });
 

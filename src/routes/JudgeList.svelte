@@ -1,7 +1,7 @@
 <script lang="ts">
     import JudgeCard from './JudgeCard.svelte';
     import { ErgoPlatform } from '$lib/ergo/platform';
-    import { type ReputationProof } from '$lib/ergo/reputation/objects';
+    import { type Judge } from '$lib/ergo/reputation/objects';
     import { judges } from '$lib/common/store';
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from 'lucide-svelte';
@@ -11,18 +11,18 @@
     import { fetchJudges, fetchReputationProofs } from '$lib/ergo/reputation/fetch';
 
     let platform = new ErgoPlatform();
-    let allFetchedItems: Map<string, ReputationProof> = new Map();
-    let listedItems: Map<string, ReputationProof> | null = null;
+    let allFetchedItems: Map<string, Judge> = new Map();
+    let listedItems: Map<string, Judge> | null = null;
     let errorMessage: string | null = null;
     let isLoadingApi: boolean = true;
     let isFiltering: boolean = false;
     let searchQuery: string = "";
     let offset: number = 0;
 
-    export let filterJudge: ((item: ReputationProof) => Promise<boolean>) | null = null;
+    export let filterJudge: ((item: Judge) => Promise<boolean>) | null = null;
 
-    async function applyFiltersAndSearch(sourceItems: Map<string, ReputationProof>) {
-        const filteredItemsMap = new Map<string, ReputationProof>();
+    async function applyFiltersAndSearch(sourceItems: Map<string, Judge>) {
+        const filteredItemsMap = new Map<string, Judge>();
         for (const [id, item] of sourceItems.entries()) {
             let shouldAdd = true;
             if (filterJudge) {

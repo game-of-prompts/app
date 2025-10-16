@@ -1,4 +1,4 @@
-import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/ergo/reputation/objects";
+import { Network, type RPBox, type Judge, type TypeNFT } from "$lib/ergo/reputation/objects";
 import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex } from "$lib/ergo/utils";
 import { get } from "svelte/store";
 import { types, connected, judges } from "$lib/common/store";
@@ -121,9 +121,9 @@ export async function fetchReputationProofs(
     all: boolean, 
     type: "game" | "participation" | "judge",
     value: string | null
-): Promise<Map<string, ReputationProof>> {
+): Promise<Map<string, Judge>> {
 
-    const proofs = new Map<string, ReputationProof>();
+    const proofs = new Map<string, Judge>();
     const tokenIdsToFetch = new Set<string>();
     
     // Build search criteria
@@ -215,7 +215,7 @@ export async function fetchReputationProofByTokenId(
     tokenId: string,
     ergo: any,
     options: { ignoreOwnerHashConflict?: boolean } = {}
-): Promise<ReputationProof | null> {
+): Promise<Judge | null> {
     const availableTypes = await fetchTypeNfts();
 
     try {
@@ -279,7 +279,10 @@ export async function fetchReputationProofByTokenId(
         const tokenData = await tokenResponse.json();
         const emissionAmount = Number(tokenData.emissionAmount || 0);
 
-        const proof: ReputationProof = {
+        const burned_value = rpBoxes.reduce((acc, b) => acc + Number(b.value), 0);
+        const subjective = 1;  // Scored by the local judge reputation script. User must run it, or be based on a GoT  proof maintained by the GoP devs.
+
+        const proof: Judge = {
             token_id: tokenId,
             type: { tokenId: "", boxId: '', typeName: "N/A", description: "...", schemaURI: "", isRepProof: false, box: null },
             total_amount: emissionAmount,
@@ -288,7 +291,8 @@ export async function fetchReputationProofByTokenId(
             current_boxes: [],
             number_of_boxes: 0,
             network: Network.ErgoMainnet,
-            data: {}
+            data: {},
+            reputation: burned_value * subjective
         };
 
         // Build current_boxes from all returned items (not only rpBoxes) — createRPBoxFromApiBox will skip non-RP boxes.
@@ -322,7 +326,7 @@ export async function fetchReputationProofByTokenId(
     }
 }
 
-export async function fetchJudges(force: boolean = false): Promise<Map<string, ReputationProof>> {
+export async function fetchJudges(force: boolean = false): Promise<Map<string, Judge>> {
     try {
         if (!force && (Date.now() - get(judges).last_fetch < CACHE_DURATION_MS)) {
             console.log("Using cached Judges (data is fresh).");

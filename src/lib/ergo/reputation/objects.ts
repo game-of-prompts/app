@@ -12,7 +12,7 @@ export interface TypeNFT {
     box: Box<Amount>|null;
 }
 
-export interface ReputationProof {
+interface ReputationProof {
     token_id: string;
     type: TypeNFT;  // SELF identification of the proof type (by Type NFT)
     total_amount: number;
@@ -22,6 +22,10 @@ export interface ReputationProof {
     number_of_boxes: number;
     network: Network;
     data: object;
+}
+
+export interface Judge extends ReputationProof {
+    reputation: number;
 }
 
 export interface RPBox {

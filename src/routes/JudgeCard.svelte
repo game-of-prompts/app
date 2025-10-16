@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button";
-	import { total_burned_string, type ReputationProof } from "$lib/ergo/reputation/objects";
+	import { total_burned_string, type Judge } from "$lib/ergo/reputation/objects";
 	import { judge_detail } from "$lib/common/store";
 
-	export let judge: ReputationProof;
+	export let judge: Judge;
 	export let index: number;
 
 	$: isEven = index % 2 === 0;

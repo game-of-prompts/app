@@ -35,7 +35,7 @@
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
     import { fetchJudges, fetchReputationProofByTokenId } from "$lib/ergo/reputation/fetch";
-    import { type RPBox, type ReputationProof } from "$lib/ergo/reputation/objects";
+    import { type RPBox, type Judge } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
     import { dev_fee } from "$lib/ergo/contract";
@@ -45,7 +45,7 @@
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
-    let participationVotes: Map<string, Map<string, ReputationProof>> = new Map();
+    let participationVotes: Map<string, Map<string, Judge>> = new Map();
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
     let currentHeight: number = 0;
@@ -137,7 +137,7 @@
                 participations.forEach(async (item) => {
 
                     const participation = item.commitmentC_Hex;
-                    const votes = new Map<string, ReputationProof>(
+                    const votes = new Map<string, Judge>(
                         Array.from(get(judges).data.entries()).filter(([key, judge]) => {
                             return judge.current_boxes.some((box) => {
                                 return box.object_pointer === participation && box.type.tokenId === PARTICIPATION;
@@ -599,6 +599,11 @@
                     </div>
 
                     <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
+                        <div class="stat-block">
+                            <Users class="stat-icon"/>
+                            <span>{game.reputation}</span>
+                            <span class="stat-label">Reputation</span>
+                        </div>
                         <div class="stat-block">
                             <Edit class="stat-icon"/>
                             <span>{formatErg(getParticipationFee(game))} ERG</span>
