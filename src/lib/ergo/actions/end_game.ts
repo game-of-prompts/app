@@ -54,7 +54,6 @@ export async function end_game(
     const perJudgeCommission = (prizePool * perJudgePct) / 100n;
     const totalJudgeCommission = perJudgeCommission * judge_count;
 
-    // Política de polvo para jueces: si el pago por juez es polvo, se pierde TODA la comisión de jueces.
     const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < SAFE_MIN_BOX_VALUE) ? totalJudgeCommission : 0n;
     const finalJudgesPayout = totalJudgeCommission - judgesForfeits;
 
@@ -70,10 +69,10 @@ export async function end_game(
 
         finalDevPayout = devCommission - devForfeits;
 
-        // Restar también la comisión de jueces pagable (finalJudgesPayout)
         finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
         console.log("--- Resumen de Pagos (Sin Ganador) ---");
+        console.log(`Premio total: ${prizePool}`);
         console.log(`Pago Final Resolver: ${finalResolverPayout} (incluye NFT si aplica)`);
         console.log(`Pago Final Dev: ${finalDevPayout}`);
         console.log(`Pago Total Jueces (a repartir): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
@@ -85,13 +84,10 @@ export async function end_game(
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
         const devCommission = (prizePool * dev_fee) / 100n;
 
-        // El prize disponible para el ganador se calcula restando resolver, dev y COMISION TOTAL DE JUECES
         const winnerBasePrize = prizePool - resolverCommission - devCommission - totalJudgeCommission;
 
         const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
 
-        // Si el ganador no puede recibir su parte base (es polvo), se evita pagar dev/resolver,
-        // pero los jueces **siguen** cobrando si su per-judge es suficiente (finalJudgesPayout).
         let intermediateDevPayout: bigint;
         let intermediateResolverPayout: bigint;
         let intermediateWinnerPayout: bigint;
@@ -101,11 +97,8 @@ export async function end_game(
             intermediateResolverPayout = creatorStake + resolverCommission;
             intermediateWinnerPayout = winnerBasePrize;
         } else {
-            // El comportamiento que tenías: dev/resolver no cobran su comisión variable,
-            // el creador recupera su stake pero debemos descontar la comisión total de jueces
             intermediateDevPayout = 0n;
             intermediateResolverPayout = creatorStake;
-            // El ganador recibe el prizePool + stake menos la comisión (siempre se pagan jueces si aplican).
             intermediateWinnerPayout = prizePool + creatorStake - totalJudgeCommission;
         }
 
@@ -115,10 +108,10 @@ export async function end_game(
         finalDevPayout = intermediateDevPayout - devForfeits;
         finalResolverPayout = intermediateResolverPayout - resolverForfeits;
 
-        // Los forfeits de dev/resolver van al ganador (como ya tenías)
-        finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits;
+        finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits + judgesForfeits;
 
         console.log("--- Resumen de Pagos (Con Ganador) ---");
+        console.log(`Premio total: ${prizePool}`);
         console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
         console.log(`Pago Final Resolver: ${finalResolverPayout}`);
         console.log(`Pago Final Dev: ${finalDevPayout}`);
@@ -160,14 +153,14 @@ export async function end_game(
             const js = get(judges).data.get(tokenId)
             if (!js) {
                 console.warn(`[end_game] No se encontró información de juez para token ${tokenId}, se omite.`);
-                continue;
+                throw new Error(`No se encontró información de juez para token ${tokenId}`);
             }
             const judgeErgoTree = js.owner_ergotree;
             const judgeDatabox = js.current_boxes && js.current_boxes[0];
 
             if (!judgeErgoTree) {
                 console.warn(`[end_game] judgeErgoTree vacío para token ${tokenId}, se omite.`);
-                continue;
+                throw new Error(`judgeErgoTree vacío para token ${tokenId}`);
             }
 
             // Añadir output por juez con la comisión por juez
@@ -177,11 +170,10 @@ export async function end_game(
 
             // Si hay datainput, lo parseamos y lo añadimos a datainputs
             if (judgeDatabox) {
-                try {
-                    dataInputs.push(parseBox(judgeDatabox.box));
-                } catch (err) {
-                    console.warn(`[end_game] fallo parseando datainput del juez ${tokenId}:`, err);
-                }
+                dataInputs.push(parseBox(judgeDatabox.box));
+            }
+            else {
+                throw new Error('[end_game] JudgeDatabox vacío')
             }
         }
     } else {
@@ -207,7 +199,7 @@ export async function end_game(
         const signedTransaction = await ergo.sign_tx(unsignedTransaction);
         const txId = await ergo.submit_tx(signedTransaction);
 
-        console.log(`✅ ¡Éxito! Transacción de finalización enviada. ID: ${txId}`);
+        console.log(`¡Éxito! Transacción de finalización enviada. ID: ${txId}`);
         return txId;
     } 
     catch (error) {
