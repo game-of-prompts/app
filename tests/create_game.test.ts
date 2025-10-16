@@ -101,6 +101,8 @@ describe("Game Creation (create_game)", () => {
   const gameActiveSource = GAME_ACTIVE_TEMPLATE
     .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
     .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
+    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
     .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash); // Dependency added for completeness.
   
   gameActiveErgoTree = compile(gameActiveSource);
