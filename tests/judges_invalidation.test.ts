@@ -716,7 +716,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 additionalRegisters: {
                     R4: SColl(SByte, dummyTypeNftId).toHex(),
                     R5: SColl(SByte, invalidatedCommitment).toHex(),
-                    R6: SPair(SBool(true), SLong(1000000n)).toHex(),
+                    R6: SBool(true).toHex(),
                     R7: SColl(SByte, judgePropositionBytes).toHex(),
                     R8: SBool(false).toHex(),
                     R9: SColl(SByte, nullBytes).toHex(),
