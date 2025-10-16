@@ -176,11 +176,14 @@
       })
 
       // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
-      val allVotesAreUnique = judgeVotes.map({(box: Box) => box.tokens(0)._1}).indices.forall { (i: Int) =>
+      val allVotesAreUnique = {
+        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
+        judgeVoteTokens.indices.forall { (i: Int) =>
             !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
                 otherToken == judgeVoteTokens(i)
             }))
         }
+      }
 
       val hasRequiredVotes = {
         val requiredVotes =

@@ -128,10 +128,13 @@
             })
 
           // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
-          val allVotesAreUnique = judgeVotes.map({(box: Box) => box.tokens(0)._1}).indices.forall { (i: Int) =>
-            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
-                otherToken == judgeVoteTokens(i)
-            }))
+          val allVotesAreUnique = {
+            val judgeVoteTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
+            judgeVoteTokens.indices.forall { (i: Int) =>
+                !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
+                    otherToken == judgeVoteTokens(i)
+                }))
+            }
           }
 
           val resolutionBoxIsValid = {
@@ -147,16 +150,8 @@
               resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
               resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorScript, gameDetailsJsonHex)
             }
-            
-            val judgesAreValid = {
-              val sameSize = invitedJudges.size == participatingJudgesTokens.size
-              val areTheSame = invitedJudges.forall({(tokenId: Coll[Byte]) => 
-                  participatingJudgesTokens.exists({(jToken: Coll[Byte]) => jToken == tokenId})
-              })
-              sameSize && areTheSame
-            }
 
-          judgesAreValid && resolutionBoxIsValid && allVotesAreUnique
+          resolutionBoxIsValid && allVotesAreUnique
         } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.
       } else { false }  // There should be exactly one resolution box.
     } else { false }  // Deadline not reached.
