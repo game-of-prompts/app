@@ -165,8 +165,8 @@
     if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
       
       val judgeVotes = CONTEXT.dataInputs.filter({
-        (b:Box) => 
-          blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
+        (box: Box) => 
+          blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
           box.tokens.size > 0 &&
           box.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID &&
           box.R5[Coll[Byte]].get == winnerCandidateCommitment &&
