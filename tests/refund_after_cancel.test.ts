@@ -12,6 +12,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
+import { PARTICIPATION } from "$lib/ergo/reputation/types";
 
 // Helper para convertir Uint8Array a una cadena hexadecimal.
 function uint8ArrayToHex(bytes: Uint8Array): string {
@@ -39,6 +40,8 @@ const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationEr
 const gameActiveSource = GAME_ACTIVE_SOURCE
     .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", "0".repeat(64)) // No es relevante para este test
     .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
+    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
     .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
 const gameActiveErgoTree = compile(gameActiveSource);
 
