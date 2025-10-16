@@ -155,6 +155,7 @@ export async function judges_invalidate(
                 BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
+                BigInt(game.perJudgeComissionPercentage),
                 BigInt(newDeadline)
             ]),
             R8: SPair(
