@@ -60,9 +60,12 @@ describe("Participant Reclaim After Grace Period", () => {
       .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
     const gameResolutionErgoTree = compile(resolutionSource);
     const resolutionHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-    const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
-      .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
-      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash);
+    const gameActiveSource = GAME_ACTIVE_TEMPLATE
+        .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
+        .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
+        .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
+        .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
+        .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash);
     const gameActiveErgoTree = compile(gameActiveSource);
 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActive");

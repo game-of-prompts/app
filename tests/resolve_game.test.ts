@@ -6,7 +6,7 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SLong, SPair, SInt, SGroupElement } from "@fleet-sdk/serializer";
+import { SByte, SColl, SLong, SPair, SInt } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -38,7 +38,12 @@ const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
     .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
 const gameResolutionErgoTree = compile(gameResolutionSource);
 const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-const gameActiveSource = GAME_ACTIVE_TEMPLATE.replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash).replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash).replace("`+PARTICIPATION_SUBMITED_SCRIPT_HASH+`", participationScriptHash).replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
+const gameActiveSource = GAME_ACTIVE_TEMPLATE
+    .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
+    .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
+    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
+    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
+    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
 const gameActiveErgoTree = compile(gameActiveSource);
 
 
