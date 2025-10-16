@@ -163,31 +163,34 @@
   // ### Acción 2: Invalidación por Jueces
   val action2_judgesInvalidate = {
     if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
-      val judgeVotes = CONTEXT.dataInputs.filter({(b:Box) => blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH})
-      val requiredVotes =
-        if (participatingJudges.size == 0) 0
-        else participatingJudges.size / 2 + 1
+      
+      val judgeVotes = CONTEXT.dataInputs.filter({
+        (b:Box) => 
+          blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
+          box.tokens.size > 0 &&
+          box.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID &&
+          box.R5[Coll[Byte]].get == winnerCandidateCommitment &&
+          box.R6[Boolean].get && // Is locked
+          box.R8[Boolean].get == false && // Negative vote, invalidates winner candidate
+          participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})  // Is nominated
+      })
 
-      val votesAreValid = if (judgeVotes.size < requiredVotes) { false } else {
-        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
-        
-        val allVotesAreUnique = judgeVoteTokens.indices.forall { (i: Int) =>
+      // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
+      val allVotesAreUnique = judgeVotes.map({(box: Box) => box.tokens(0)._1}).indices.forall { (i: Int) =>
             !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
                 otherToken == judgeVoteTokens(i)
             }))
         }
 
-        val votesIntegrity = judgeVotes.forall( { (voteBox: Box) =>
-          
-          val allJudgesParticipate = participatingJudges.exists({ (pJudge: Coll[Byte]) => pJudge == voteBox.tokens(0)._1 })
-          val isGoProofType = voteBox.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID
-          val correctVoteTargetCommitment = voteBox.R5[Coll[Byte]].get == winnerCandidateCommitment
-          
-          allJudgesParticipate && isGoProofType && correctVoteTargetCommitment
-        })
+      val hasRequiredVotes = {
+        val requiredVotes =
+          if (participatingJudges.size == 0) 0
+          else participatingJudges.size / 2 + 1
 
-        allVotesAreUnique && votesIntegrity
+        judgeVotes.size >= requiredVotes
       }
+
+      val votesAreValid = allVotesAreUnique && hasRequiredVotes
 
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
       
@@ -319,16 +322,16 @@
       // 4. Verificación de que los JUECES reciben su pago
       val judgesGetsPaid = if (finalJudgesPayout > 0L) {
 
+          // Get some of the judge boxes, take into account that can be any of them.
           val judgesScripts = CONTEXT.dataInputs
             .filter({(box: Box) =>
-              box.tokens.size == 1 &&
-              box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[Boolean].get &&
+              blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && 
+              box.tokens.size > 0 &&
               participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
             })
             .map({(box: Box) => box.R7[Coll[Byte]].get})
 
-          // Comprobar que todos los jueces que participaron tienen una salida a su dirección P2SH
+          // Comprobar que todos los jueces que participaron tienen una salida a su dirección P2S
           judgesScripts.forall({
               (judgeAddress: Coll[Byte]) => 
                 OUTPUTS.exists({
@@ -336,6 +339,8 @@
                              b.value >= perJudgeComission
                   })
             })
+
+          // No es necesario comprobar unicidad, ni en el conjunto de scripts, ni en los outputs, ya que se asegura de que todos reciben como minimo su parte y el monto total deberá cuadrar.
       } else { true }
 
 

@@ -14,7 +14,7 @@ import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 
-import { PARTICIPATION } from "./reputation/types";
+import { GAME, PARTICIPATION } from "./reputation/types";
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -67,13 +67,14 @@ function ensureGameActiveCompiled(): void {
     const resolutionHash = getGopGameResolutionScriptHash();
     const cancellationHash = getGopGameCancellationScriptHash();
     const participationHash = getGopParticipationScriptHash();
-    const resolvedHash = getGopParticipationScriptHash();
+    const reputationHash = getReputationProofScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
         .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
         .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
-        .replace(/`\+PARTICIPATION_SUBMITED_SCRIPT_HASH\+`/g, participationHash)
-        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, resolvedHash);
+        .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
+        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash)
+        .replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, GAME);
         
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }

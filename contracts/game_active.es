@@ -11,6 +11,9 @@
   // Hash del script de las participaciones.
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")
 
+  val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
+  val ACCEPT_GAME_INVITATION_TYPE_ID = fromBase16("`+ACCEPT_GAME_INVITATION_TYPE_ID+`");
+
   // Constantes para la acción de cancelación.
   val STAKE_DENOMINATOR = 5L
   val COOLDOWN_IN_BLOCKS = 30L
@@ -112,21 +115,30 @@
           
           // --- Judge validation ---
           val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
+          
           val judgeProofDataInputs = CONTEXT.dataInputs
             .filter({(box: Box) =>
-              // box.propositionBytes == REPUTATION_PROOF_BOX && 
-              box.tokens.size == 1 &&
-              // box.R4[Coll[Byte]].get == ACCPET_GAME_JUDGE_INVITATION_PUBLIC_GOOD_REPUTATION_SYSTEM_NFT_ID &&
+              blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && 
+              box.tokens.size > 0 &&
+              box.R4[Coll[Byte]].get == ACCEPT_GAME_INVITATION_TYPE_ID &&
               box.R5[Coll[Byte]].get == gameNftId &&
-              box.R6[Boolean].get
+              box.R6[Boolean].get && // Is locked
+              box.R8[Boolean].get && // Positive vote, judge accepts the game invitation
+              invitedJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})  // Is nominated
             })
-          val participatingJudgesTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})
+
+          // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
+          val allVotesAreUnique = judgeVotes.map({(box: Box) => box.tokens(0)._1}).indices.forall { (i: Int) =>
+            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
+                otherToken == judgeVoteTokens(i)
+            }))
+          }
 
           val resolutionBoxIsValid = {
               resolutionBox.value >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
-              resolutionBox.R6[Coll[Coll[Byte]]].get == participatingJudgesTokens &&
+              resolutionBox.R6[Coll[Coll[Byte]]].get == invitedJudges &&
               resolutionBox.R7[Coll[Long]].get(0) == deadline &&
               resolutionBox.R7[Coll[Long]].get(1) == creatorStake &&
               resolutionBox.R7[Coll[Long]].get(2) == participationFee &&
@@ -144,7 +156,7 @@
               sameSize && areTheSame
             }
 
-          judgesAreValid && resolutionBoxIsValid
+          judgesAreValid && resolutionBoxIsValid && allVotesAreUnique
         } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.
       } else { false }  // There should be exactly one resolution box.
     } else { false }  // Deadline not reached.
