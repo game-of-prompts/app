@@ -955,6 +955,12 @@
                                     MALFORMED
                                 </div>
                             {/if}
+
+                            {#if isInvalidated}
+                                <div class="expired-badge absolute top-6 right-16 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                    DISQUALIFIED
+                                </div>
+                            {/if}
                             
                             <div class="card-header p-4 border-b {$mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}">
                                 <div class="flex items-center justify-between">
@@ -1118,6 +1124,15 @@
                                 <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
                                     <p class="text-xs {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'}">
                                         The funds will be awarded to the winner if the competition concludes successfully. If there is no winner, the funds will be allocated to the creator/resolver. Participants may only claim a refund if the competition is canceled..
+                                    </p>
+                                </div>
+                            {/if}
+
+                            {#if isInvalidated && isCurrentUserParticipant}
+                                <div class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4">
+                                    <p class="text-xs {$mode === 'dark' ? 'text-red-400' : 'text-red-600'}">
+                                        Your participation was <strong>disqualified</strong> because the majority of judges deemed it malicious after attempting to reproduce its result. 
+                                        Since participations are deterministic, the judges invalidate any that cannot be correctly replicated.
                                     </p>
                                 </div>
                             {/if}
