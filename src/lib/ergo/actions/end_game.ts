@@ -15,6 +15,11 @@ export async function end_game(
     participations: ValidParticipation[]
 ): Promise<string> {
 
+    // TODO     EL ERROR ESTÁ EN QUE METE COMO INPUT LA CAJA GASTADA DE LA PARTICIPACION INVALIDADA
+    // HABRÍA QUE FILTRAR ESA PARTICPACION, TENER EN CUENTA EL VALOR TOTAL QUE HAY EN EL JUEGO EN EL PRIZE POOL (TAMBIEN EN EL CONTRATO)
+    // Y POR ULTIMO TENER EN CUENTA QUE AHORA EL JUEZ ESPERA RECIBIR SU COMISIÓN AUNQUE SEA POLVO (TAMBIEN EN EL CONTRATO)   - DE MOMENTO ESTO LO PODEMOS PROBAR CON SAFE_MIN_BOX_VALUE.
+    console.log(`[end_game] Participaciones: ${participations.length}`)
+
     console.log(`[end_game] Iniciando finalización del juego: ${game.boxId}`);
     const currentHeight = await ergo.get_current_height();
     const userAddress = await ergo.get_change_address();
@@ -44,7 +49,7 @@ export async function end_game(
     console.log(`Verificación de firmante exitosa. Usuario conectado: ${userAddress}`);
 
     // --- 3. Lógica de Cálculo de Pagos (ahora incluyendo JUECES) ---
-    const prizePool = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
+    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeNanoErg;
 
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
     const perJudgePct = BigInt(perJudgePctNumber);
@@ -148,7 +153,7 @@ export async function end_game(
     }
 
     const dataInputs: any[] = [];
-    if (perJudgeCommission > 0n && perJudgeCommission >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
+    if (perJudgeCommission >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
         for (const tokenId of game.judges) {
             const js = get(judges).data.get(tokenId)
             if (!js) {

@@ -341,7 +341,8 @@
         errorMessage = null; 
         isSubmitting = true;
         try {
-            transactionId = await platform.endGame(game, participations as ValidParticipation[]);
+            const valid_participations = participations.filter((p) => p.status === 'Submitted');
+            transactionId = await platform.endGame(game, valid_participations as ValidParticipation[]);
         } catch (e: any) { 
             errorMessage = e.message;
         } finally { 
