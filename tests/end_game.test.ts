@@ -96,12 +96,12 @@ describe("Game Finalization (end_game)", () => {
   let participationContract: ReturnType<MockChain["newParty"]>;
 
 
-  const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, secret: Uint8Array): Uint8Array => {
-      return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...secret]));
+  const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, ergotree: Uint8Array, secret: Uint8Array): Uint8Array => {
+      return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...ergotree, ...secret]));
   };
 
   const createParticipation = (
-      party: any, 
+      ergotree: Uint8Array, 
       commitment: string, 
       solverId: string, 
       hashLogs: Uint8Array,
@@ -113,7 +113,7 @@ describe("Game Finalization (end_game)", () => {
           ergoTree: pparticipationErgoTree.toHex(),
           assets: [],
           additionalRegisters: {
-              R4: SColl(SByte, prependHexPrefix(party.address.getPublicKeys()[0])).toHex(),
+              R4: SColl(SByte, ergotree).toHex(),
               R5: SColl(SByte, commitment).toHex(),       
               R6: SColl(SByte, gameNftId).toHex(),          
               R7: SColl(SByte, Buffer.from(solverId, "utf8").toString("hex")).toHex(), 
@@ -158,11 +158,13 @@ describe("Game Finalization (end_game)", () => {
 
     const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
 
-    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, secret);
+    const winer_ergotree = prependHexPrefix(winner.address.getPublicKeys()[0])
+
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, winer_ergotree, secret);
     winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
 
     createParticipation(
-        winner, 
+        winer_ergotree, 
         winnerCommitment, 
         winnerSolverId, 
         winnerHashLogsBytes, 
@@ -177,11 +179,13 @@ describe("Game Finalization (end_game)", () => {
 
     const loserScoreList = [500n, 1100n, 2100n, 3000n];
 
-    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserHashLogsBytes, secret);
+    const loser_ergotree = prependHexPrefix(loser.address.getPublicKeys()[0]);
+
+    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserHashLogsBytes, loser_ergotree, secret);
     loserCommitment = Buffer.from(loserCommitmentBytes).toString("hex");
 
     createParticipation(
-        loser,
+        loser_ergotree,
         loserCommitment,
         loserSolverId,
         loserHashLogsBytes,
@@ -280,7 +284,7 @@ describe("Game Finalization (end_game)", () => {
 
     const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
 
-    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, secret);
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, dummyWinnerScript.bytes, secret);
     winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
 
     participationContract.addUTxOs({
@@ -299,7 +303,25 @@ describe("Game Finalization (end_game)", () => {
         });
   
     mockChain.jumpTo(resolutionDeadline + 1);
+
+    gameResolutionContract.utxos.clear();
     
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), // Estado: Resolución
+            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(),
+            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+
     const gameBox = gameResolutionContract.utxos.toArray()[0];
     const finalParticipationBoxes = participationContract.utxos.toArray();
 
