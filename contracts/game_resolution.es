@@ -300,7 +300,11 @@
                 box.R6[Coll[Byte]].get == gameNftId
             })
 
-      val prizePool = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+      val prizePool = {
+        val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
+        val contractPrize = SELF.value - creatorStake
+        participationsAmount + contractPrize
+      }
       val judge_amount = participatingJudges.size
 
       // --- LÓGICA DE PAGO A JUECES Y DEV ---
