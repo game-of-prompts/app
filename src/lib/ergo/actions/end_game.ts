@@ -15,9 +15,6 @@ export async function end_game(
     participations: ValidParticipation[]
 ): Promise<string> {
 
-    // TODO     EL ERROR ESTÁ EN QUE METE COMO INPUT LA CAJA GASTADA DE LA PARTICIPACION INVALIDADA
-    // HABRÍA QUE FILTRAR ESA PARTICPACION, TENER EN CUENTA EL VALOR TOTAL QUE HAY EN EL JUEGO EN EL PRIZE POOL (TAMBIEN EN EL CONTRATO)
-    // Y POR ULTIMO TENER EN CUENTA QUE AHORA EL JUEZ ESPERA RECIBIR SU COMISIÓN AUNQUE SEA POLVO (TAMBIEN EN EL CONTRATO)   - DE MOMENTO ESTO LO PODEMOS PROBAR CON SAFE_MIN_BOX_VALUE.
     console.log(`[end_game] Participaciones: ${participations.length}`)
 
     console.log(`[end_game] Iniciando finalización del juego: ${game.boxId}`);
