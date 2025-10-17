@@ -48,8 +48,11 @@ export async function include_omitted_participation(
     const getActualScore = (p: ValidParticipation | ValidParticipation): bigint => {
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!, ...bigintToLongByteArray(BigInt(score)),
-                ...hexToBytes(p.hashLogs_Hex)!, ...secretS_bytes
+                ...hexToBytes(p.solverId_RawBytesHex)!, 
+                ...bigintToLongByteArray(BigInt(score)),
+                ...hexToBytes(p.hashLogs_Hex)!, 
+                ...hexToBytes(p.playerScript_Hex)!,
+                ...secretS_bytes
             ]);
             if (uint8ArrayToHex(fleetBlake2b256(dataToHash)) === p.commitmentC_Hex) return score;
         }

@@ -98,6 +98,7 @@ export async function judges_invalidate(
                 ...hexToBytes(p.solverId_RawBytesHex)!,   // TODO CHECK Buffer.from(p.solverId_RawBytesHex, 'utf-8'),
                 ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
+                ...hexToBytes(p.playerScript_Hex)!,
                 ...secretS_bytes
             ]);
             const testCommitment = fleetBlake2b256(dataToHash);

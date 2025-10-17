@@ -122,6 +122,7 @@ export async function resolve_game(
                 ...hexToBytes(p.solverId_RawBytesHex)!,
                 ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
+                ...hexToBytes(p.playerScript_Hex)!,
                 ...secretS_bytes
             ]);
             const testCommitment = fleetBlake2b256(dataToHash);

@@ -85,7 +85,7 @@
           // Se calcula el puntaje de la nueva participación revelando el secreto
           val newScore = omittedWinnerBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
             if (acc._2) { acc } else {
-              val testCommitment = blake2b256(omittedWinnerBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ omittedWinnerBox.R8[Coll[Byte]].get ++ revealedS)
+              val testCommitment = blake2b256(omittedWinnerBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ omittedWinnerBox.R8[Coll[Byte]].get ++ omittedWinnerBox.R4[Coll[Byte]].get ++ revealedS)
               if (testCommitment == omittedWinnerBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
             }
           })._1
@@ -360,6 +360,7 @@
           val winnerBox = winnerBoxes(0)
 
           val validWinner = {
+            val pBoxErgotree = winnerBox.R4[Coll[Byte]].get
             val pBoxScoreList = winnerBox.R9[Coll[Long]].get
             val pBoxCommitment = winnerBox.R5[Coll[Byte]].get
             val pBoxSolverId = winnerBox.R7[Coll[Byte]].get
@@ -367,7 +368,7 @@
 
             val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
               if (scoreAcc) { scoreAcc } else {
-                val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
+                val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
                 if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
               }
             })
