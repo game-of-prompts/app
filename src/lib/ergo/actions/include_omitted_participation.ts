@@ -64,9 +64,7 @@ export async function include_omitted_participation(
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
             ),
     });
-
-    // SALIDA(1): La nueva caja de participación resuelta
-    const participationErgoTree = getGopParticipationErgoTreeHex();
+    
     const pBox = parseBox(omittedParticipation.box);
 
     // --- 4. Construir y Enviar la Transacción ---
