@@ -95,7 +95,12 @@ describe("Omitted Participation Inclusion", () => {
         mockChain.reset({ clearParties: true });
     });
 
-    const setupScenario = (winnerScore: bigint, omittedScore: bigint, omittedCreationHeight: number = 600_000) => {
+    const setupScenario = (
+            winnerScore: bigint, 
+            omittedScore: bigint, 
+            omittedCreationHeight: number = 600_000,
+            omittedScores: bigint[] = []
+        ) => {
         gameResolutionContract.utxos.clear();
         participationContract.utxos.clear();
 
@@ -150,7 +155,7 @@ describe("Omitted Participation Inclusion", () => {
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
                 R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
-                R9: SColl(SLong, [omittedScore]).toHex(),
+                R9: SColl(SLong, [omittedScore, ...omittedScores]).toHex(),
             }
         });
         omittedParticipantBox = participationContract.utxos.toArray()[1];
@@ -663,23 +668,7 @@ describe("Omitted Participation Inclusion", () => {
     });
 
     it("should pass if the omitted participant has 10 scores", () => {
-        setupScenario(1000n, 1200n);
-        
-        participationContract.addUTxOs({
-            ergoTree: participationErgoTree.toHex(),
-            assets: [],
-            value: 1_000_000n,
-            creationHeight: 600_000,
-            additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
-                R5: SColl(SByte, omittedCommitment).toHex(),
-                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(), // Wrong gameNftId
-                R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
-                R9: SColl(SLong, [1200n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n]).toHex(),
-            }
-        });
-        const wrongGameParticipantBox = participationContract.utxos.toArray()[2]; // Third box
+        setupScenario(1000n, 1200n, 590_000, [1n,2n,3n,4n,5n,6n,7n,8n,9n]);
 
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
@@ -697,7 +686,7 @@ describe("Omitted Participation Inclusion", () => {
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
-            .withDataFrom([currentWinnerBox, wrongGameParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -707,23 +696,7 @@ describe("Omitted Participation Inclusion", () => {
     });
 
     it("should fail if the omitted participant has more than 10 scores", () => {
-        setupScenario(1000n, 1200n);
-        
-        participationContract.addUTxOs({
-            ergoTree: participationErgoTree.toHex(),
-            assets: [],
-            value: 1_000_000n,
-            creationHeight: 600_000,
-            additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
-                R5: SColl(SByte, omittedCommitment).toHex(),
-                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(), // Wrong gameNftId
-                R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
-                R9: SColl(SLong, [1200n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]).toHex(),
-            }
-        });
-        const wrongGameParticipantBox = participationContract.utxos.toArray()[2]; // Third box
+        setupScenario(1000n, 1200n, 590_000, [1n,2n,3n,4n,5n,6n,7n,8n,9n,10n]);
 
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
@@ -741,7 +714,7 @@ describe("Omitted Participation Inclusion", () => {
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
-            .withDataFrom([currentWinnerBox, wrongGameParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
