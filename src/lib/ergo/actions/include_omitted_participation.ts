@@ -11,6 +11,7 @@ import { type GameResolution, type ValidParticipation, type ValidParticipation }
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { prependHexPrefix } from '$lib/utils';
+import { stringToBytes } from '@scure/base';
 
 /**
  * Permite a cualquier usuario incluir una participación que fue omitida
@@ -59,7 +60,7 @@ export async function include_omitted_participation(
         throw new Error(`No se pudo validar ninguna puntuación para la participación ${p.boxId}`);
     };
 
-    const currentWinnerScore = currentWinnerParticipation ? getActualScore(currentWinnerParticipation) : -1;
+    const currentWinnerScore = currentWinnerParticipation ? getActualScore(currentWinnerParticipation) : BigInt(-1);
     const omittedScore = getActualScore(omittedParticipation);
 
     let newWinnerCommitment = game.winnerCandidateCommitment;
@@ -81,11 +82,11 @@ export async function include_omitted_participation(
     // Extraer y actualizar los parámetros numéricos de R7
     const numericalParams = [
         BigInt(game.deadlineBlock), 
-        game.creatorStakeNanoErg, 
-        game.participationFeeNanoErg,
+        BigInt(game.creatorStakeNanoErg), 
+        BigInt(game.participationFeeNanoErg),
+        BigInt(game.perJudgeComissionPercentage),
         BigInt(game.resolutionDeadline)
     ];
-    numericalParams[4] += 1n; // Incrementar el resolvedCounter
 
     const recreatedGameBox = new OutputBuilder(
         BigInt(game.value),
@@ -95,10 +96,13 @@ export async function include_omitted_participation(
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Preservar estado (1: Resolved)
         R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(newWinnerCommitment)!)),
-        R6: SConstant(game.box.additionalRegisters.R6), // Preservar jueces
+        R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
         R7: SColl(SLong, numericalParams).toHex(), // Actualizar contador en R7
         R8: SPair(SColl(SByte, prependHexPrefix(hexToBytes(newResolverPkHex)!)), SLong(BigInt(game.resolverCommission))),
-        R9: SConstant(game.box.additionalRegisters.R9) // Preservar proveniencia
+        R9: SPair(
+                SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
+                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+            ),
     });
 
     // SALIDA(1): La nueva caja de participación resuelta
