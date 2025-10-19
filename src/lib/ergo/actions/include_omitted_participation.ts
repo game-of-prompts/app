@@ -25,7 +25,7 @@ import { prependHexPrefix } from '$lib/utils';
 export async function include_omitted_participation(
     game: GameResolution,
     omittedParticipation: ValidParticipation,
-    currentWinnerParticipation: ValidParticipation,
+    currentWinnerParticipation: ValidParticipation|null,
     newResolverPkHex: string
 ): Promise<string | null> {
 
@@ -59,16 +59,16 @@ export async function include_omitted_participation(
         throw new Error(`No se pudo validar ninguna puntuación para la participación ${p.boxId}`);
     };
 
-    const currentWinnerScore = getActualScore(currentWinnerParticipation);
+    const currentWinnerScore = currentWinnerParticipation ? getActualScore(currentWinnerParticipation) : -1;
     const omittedScore = getActualScore(omittedParticipation);
 
     let newWinnerCommitment = game.winnerCandidateCommitment;
 
-    if (omittedScore > currentWinnerScore) {
+    if (currentWinnerParticipation === null || omittedScore > currentWinnerScore) {
         newWinnerCommitment = omittedParticipation.commitmentC_Hex;
     } else if (omittedScore === currentWinnerScore) {
         // Regla de desempate: la participación creada antes gana.
-        if (omittedParticipation.creationHeight < currentWinnerParticipation.creationHeight) {
+        if (omittedParticipation.creationHeight < currentWinnerParticipation!.creationHeight) {
             newWinnerCommitment = omittedParticipation.commitmentC_Hex;
         }
     }
@@ -119,7 +119,7 @@ export async function include_omitted_participation(
     const utxos: InputBox[] = await ergo.get_utxos();
     
     const inputs = [parseBox(game.box), pBox, ...utxos];
-    const dataInputs = [parseBox(currentWinnerParticipation.box)];
+    const dataInputs = currentWinnerParticipation ? [parseBox(currentWinnerParticipation.box)] : [];
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)

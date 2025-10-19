@@ -378,30 +378,62 @@
     }
 
     async function handleIncludeOmitted() {
-        const selectedOmittedBoxId = "";
-        if (game?.status !== 'Resolution' || !selectedOmittedBoxId) return;
-        errorMessage = null; 
+        console.log("handleIncludeOmitted called");
+
+        if (!game || game.status !== 'Resolution') return;
+
+        errorMessage = null;
         isSubmitting = true;
+
         try {
-            const omittedParticipation = participations.find(p => p.boxId === selectedOmittedBoxId);
-            if (!omittedParticipation || omittedParticipation.status !== 'Submitted') {
-                throw new Error("La participación seleccionada no se ha encontrado.");
+            // Filtrar participaciones con estado "Submitted"
+            const submittedParticipations = participations.filter(
+                p => p.status === 'Submitted'
+            ) as ValidParticipation[];
+
+            if (submittedParticipations.length === 0) {
+                throw new Error("No hay participaciones enviadas.");
             }
 
-            const currentWinner = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment && p.status === 'Submitted') as ValidParticipation | undefined;
-            if (!currentWinner) {
-                throw new Error("Ganador no encontrado.");
+            // Obtener la participación con el score más alto
+            const omittedParticipation = submittedParticipations.reduce((best, current) =>
+                current.score > best.score ? current : best
+            );
+
+            // Buscar el ganador actual (puede no existir)
+            const currentWinner = participations.find(
+                p => p.commitmentC_Hex === game.winnerCandidateCommitment && p.status === 'Submitted'
+            ) as ValidParticipation | undefined;
+
+            // Si ya hay ganador y es el mismo que la participación más alta, salimos
+            if (currentWinner && omittedParticipation.commitmentC_Hex === currentWinner.commitmentC_Hex) {
+                console.log("La participación con mayor score ya es el ganador actual. No se hace nada.");
+                return;
             }
 
+            // Continuar con la inclusión de omitidos (tanto si no hay ganador como si el mejor no coincide)
             const userAddress = get(address);
             if (!userAddress) {
                 throw new Error("Cartera no conectada.");
             }
-            const newResolverPkHex = uint8ArrayToHex(ErgoAddress.fromBase58(userAddress).getPublicKeys()[0]);
-            transactionId = await platform.includeOmittedParticipations(game, omittedParticipation, currentWinner, newResolverPkHex);
-        } catch (e: any) { 
+
+            const newResolverPkHex = uint8ArrayToHex(
+                ErgoAddress.fromBase58(userAddress).getPublicKeys()[0]
+            );
+
+            transactionId = await platform.includeOmittedParticipations(
+                game,
+                omittedParticipation,
+                currentWinner ?? null, // pasa null si no hay ganador actual
+                newResolverPkHex
+            );
+
+            console.log("Transacción enviada:", transactionId);
+
+        } catch (e: any) {
             errorMessage = e.message;
-        } finally { 
+            console.error("Error en handleIncludeOmitted:", e);
+        } finally {
             isSubmitting = false;
         }
     }

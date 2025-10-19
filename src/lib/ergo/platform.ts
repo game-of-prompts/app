@@ -214,7 +214,7 @@ export class ErgoPlatform implements Platform {
     async includeOmittedParticipations(
         game: GameResolution,
         omittedParticipation: ValidParticipation,
-        currentResolved: ValidParticipation,
+        currentResolved: ValidParticipation|null,
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
