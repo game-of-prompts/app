@@ -37,56 +37,10 @@ export async function include_omitted_participation(
     if (currentHeight >= game.resolutionDeadline) {
         throw new Error("No se pueden incluir participaciones después de que finalice el período de los jueces.");
     }
-    if (!omittedParticipation) {
-        throw new Error("Se debe proporcionar una participación omitida.");
-    }
-
-    const secretS_bytes = hexToBytes(game.revealedS_Hex);
-    if (!secretS_bytes) throw new Error("El secreto 'S' del juego es inválido.");
-
-    // --- 2. Determinar el nuevo ganador potencial ---
-
-    const getActualScore = (p: ValidParticipation | ValidParticipation): bigint => {
-        for (const score of p.scoreList) {
-            const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!, 
-                ...bigintToLongByteArray(BigInt(score)),
-                ...hexToBytes(p.hashLogs_Hex)!, 
-                ...hexToBytes(p.playerScript_Hex)!,
-                ...secretS_bytes
-            ]);
-            if (uint8ArrayToHex(fleetBlake2b256(dataToHash)) === p.commitmentC_Hex) return score;
-        }
-        throw new Error(`No se pudo validar ninguna puntuación para la participación ${p.boxId}`);
-    };
-
-    const currentWinnerScore = currentWinnerParticipation ? getActualScore(currentWinnerParticipation) : BigInt(-1);
-    const omittedScore = getActualScore(omittedParticipation);
-
-    let newWinnerCommitment = game.winnerCandidateCommitment;
-
-    if (currentWinnerParticipation === null || omittedScore > currentWinnerScore) {
-        newWinnerCommitment = omittedParticipation.commitmentC_Hex;
-    } else if (omittedScore === currentWinnerScore) {
-        // Regla de desempate: la participación creada antes gana.
-        if (omittedParticipation.creationHeight < currentWinnerParticipation!.creationHeight) {
-            newWinnerCommitment = omittedParticipation.commitmentC_Hex;
-        }
-    }
 
     // --- 3. Construir las Salidas de la Transacción ---
-    
-    // SALIDA(0): La caja del juego de resolución, recreada y actualizada
-    const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
-    
-    // Extraer y actualizar los parámetros numéricos de R7
-    const numericalParams = [
-        BigInt(game.deadlineBlock), 
-        BigInt(game.creatorStakeNanoErg), 
-        BigInt(game.participationFeeNanoErg),
-        BigInt(game.perJudgeComissionPercentage),
-        BigInt(game.resolutionDeadline)
-    ];
+
+    const resolutionErgoTree = getGopGameResolutionErgoTreeHex();;
 
     const recreatedGameBox = new OutputBuilder(
         BigInt(game.value),
@@ -95,9 +49,15 @@ export async function include_omitted_participation(
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Preservar estado (1: Resolved)
-        R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, hexToBytes(newWinnerCommitment)!)),
+        R5: SPair(SColl(SByte, hexToBytes(game.revealedS_Hex)!), SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex)!)),
         R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
-        R7: SColl(SLong, numericalParams).toHex(), // Actualizar contador en R7
+        R7: SColl(SLong, [
+            BigInt(game.deadlineBlock), 
+            BigInt(game.creatorStakeNanoErg), 
+            BigInt(game.participationFeeNanoErg),
+            BigInt(game.perJudgeComissionPercentage),
+            BigInt(game.resolutionDeadline)
+        ]).toHex(),
         R8: SPair(SColl(SByte, prependHexPrefix(hexToBytes(newResolverPkHex)!)), SLong(BigInt(game.resolverCommission))),
         R9: SPair(
                 SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
@@ -108,26 +68,17 @@ export async function include_omitted_participation(
     // SALIDA(1): La nueva caja de participación resuelta
     const participationErgoTree = getGopParticipationErgoTreeHex();
     const pBox = parseBox(omittedParticipation.box);
-    const participationOutput = new OutputBuilder(BigInt(pBox.value), participationErgoTree)
-        .setAdditionalRegisters({
-                R4: SColl(SByte, hexToBytes(omittedParticipation.playerPK_Hex) ?? "").toHex(),
-                R5: SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex) ?? "").toHex(),
-                R6: SColl(SByte, hexToBytes(omittedParticipation.gameNftId) ?? "").toHex(),
-                R7: SColl(SByte, (hexToBytes(omittedParticipation.solverId_String ?? "")) ?? "").toHex(), 
-                R8: SColl(SByte, hexToBytes(omittedParticipation.hashLogs_Hex) ?? "").toHex(),
-                R9: SColl(SLong, omittedParticipation.scoreList.map(s => BigInt(s))).toHex()
-        });
 
     // --- 4. Construir y Enviar la Transacción ---
     const userAddress = pkHexToBase58Address(newResolverPkHex);
     const utxos: InputBox[] = await ergo.get_utxos();
     
-    const inputs = [parseBox(game.box), pBox, ...utxos];
-    const dataInputs = currentWinnerParticipation ? [parseBox(currentWinnerParticipation.box)] : [];
+    const inputs = [parseBox(game.box), ...utxos];
+    const dataInputs = currentWinnerParticipation ? [parseBox(currentWinnerParticipation.box), pBox] : [pBox];
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
-        .to([recreatedGameBox, participationOutput])
+        .to([recreatedGameBox])
         .withDataFrom(dataInputs)
         .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
