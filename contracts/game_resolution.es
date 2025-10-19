@@ -4,6 +4,7 @@
   // =================================================================
 
   val JUDGE_PERIOD = 30L 
+  val CREATOR_OMISSION_NO_PENALTY_PERIOD = 5L  // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize creator after this period. UI must control this constants correctly to avoid malicious contract configurations.
   val DEV_ADDR = PK("`+DEV_ADDR+`")
   val DEV_COMMISSION_PERCENTAGE = 5L
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
@@ -22,8 +23,8 @@
   // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
   // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, perJudgeComissionPercentage, resolutionDeadline].
-  // R8: (Coll[Byte], Long)         - resolverInfo: (Clave pública del "Resolvedor", % de comisión).
-  // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Clave pública del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
+  // R8: (Coll[Byte], Long)         - resolverInfo: (Script de gasto del "Resolvedor", % de comisión).
+  // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Script de gasto del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -155,6 +156,13 @@
                 recreatedGameBox.R7[Coll[Long]].get(2) == participationFee &&
                 recreatedGameBox.R7[Coll[Long]].get(3) == perJudgeComissionPercentage &&
                 recreatedGameBox.R7[Coll[Long]].get(4) == resolutionDeadline &&
+                (
+                  recreatedGameBox.R8[(Coll[Byte], Long)].get._1 == resolverPK ||   // Maintains original resolver if within no-penalty period
+                  (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT  // Allows changing resolver after no-penalty period. 
+                  /* Must be strictly after (not equal to) the no-penalty period, ensuring exactly CREATOR_OMISSION_NO_PENALTY_PERIOD blocks have passed 
+                     since the latest invalidation transaction (or resolution transaction). This guarantees the creator has sufficient time to include any previously omitted participation.
+                     After this period, anyone is allowed to add a participation — even one that is invalid or has a lower score than the last declared candidate. */
+                ) && 
                 recreatedGameBox.R8[(Coll[Byte], Long)].get._2 == commissionPercentage &&
                 recreatedGameBox.R9[(Coll[Byte], Coll[Byte])].get == SELF.R9[(Coll[Byte], Coll[Byte])].get
               }
