@@ -512,6 +512,7 @@
 
     function getActualScore(p: AnyParticipation, secretHex: Uint8Array | undefined): bigint | null {
         if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
+        const pBoxErgotree = hexToBytes(p.box.additionalRegisters.R4?.renderedValue || "");
         const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
         const pBox_R7_solverIdHex_raw = parseCollByteToHex(p.box.additionalRegisters.R7?.renderedValue);
         const pBox_R8_hashLogsHex_raw = parseCollByteToHex(p.box.additionalRegisters.R8?.renderedValue);
@@ -529,7 +530,7 @@
         if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) return null;
         for (const scoreAttempt of pBox_scoreList) {
             const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
-            const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...secretHex]);
+            const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...pBoxErgotree, ...secretHex]);
             const testCommitmentBytes = fleetBlake2b256(dataToHash);
             if (uint8ArrayToHex(testCommitmentBytes) === pBox_R5_commitmentHex) return scoreAttempt;
         }
