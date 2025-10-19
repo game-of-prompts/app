@@ -63,6 +63,8 @@
 
 [] Controlar BUG en invalidación por jueces; para resolverlo se ha tenido que omitir la siguiente participacion candidata.
 
+[]  En accion end_game, asegurar que el ganador como minimo obtiene el coste de participar, aunque las comisiones del resto tengan que ser menores (de lo contrario se desincentivaría a participar el primero ya que obligaría al jugador a especular que habrá otros jugadores tambien).
+
 En caso de que los jueces omitan una participación candidata despues de invalidar la actual, el creador podría perder su staking, pero él no fue quien decidió omitir la segunda ... ¿como se podría resolver esto? ¿Tiene x tiempo para declarar la siguiente? ¿los jueces podrían perder poder? ...
 Tal vez lo mejor sería dejar N bloques de perdon para el creador, de forma que cualquiera puede agregar una omitida, pero no puede cambiar el resolver actual.
 En ese tiempo el creador o resolver actual puede colocar la mas alta, despues de ese tiempo quien coloque una mas alta que la nombrada podrá nominarse como resolvedor.
