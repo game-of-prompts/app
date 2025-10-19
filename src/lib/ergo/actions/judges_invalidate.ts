@@ -34,9 +34,6 @@ export async function judges_invalidate(
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string | null> {
 
-
-    participations = [];  // TODO REMOVE THIS LINE AFTER TESTING. Judges should be able to add the next candidate.
-
     console.log(`Initiating candidate invalidation for the game: ${game.boxId}`);
 
     // --- 1. Preliminary checks ---
