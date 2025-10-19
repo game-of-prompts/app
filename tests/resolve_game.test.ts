@@ -13,6 +13,7 @@ import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { prependHexPrefix } from "$lib/utils";
 
 // Helper functions and contract loading remain the same...
 function uint8ArrayToHex(bytes: Uint8Array): string {
@@ -124,10 +125,12 @@ describe("Game Resolution (resolve_game)", () => {
 
     const resolvedorPkBytes = creatorPkBytes;
 
+    const participantErgotree = prependHexPrefix(participant1.address.getPublicKeys()[0]);
+
     // --- Creación de las cajas `participation.es` ---
     score1 = 1000n;
     commitment1Hex = uint8ArrayToHex(blake2b256(
-        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...secret])
+        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...participantErgotree, ...secret])
     ));
 
     winnerCandidateCommitment = commitment1Hex;
@@ -147,7 +150,7 @@ describe("Game Resolution (resolve_game)", () => {
       });
 
     participation1_registers = {
-        R4: SColl(SByte,  participant1.address.getPublicKeys()[0]).toHex(),
+        R4: SColl(SByte,  participantErgotree).toHex(),
         R5: SColl(SByte, commitment1Hex).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
