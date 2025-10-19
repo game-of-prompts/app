@@ -32,11 +32,11 @@ const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participat
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 
 // Helper to create a commitment hash
-const createCommitment = (solverId: string, score: bigint, logs: string, secret: Uint8Array): Uint8Array => {
-    return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...secret]));
+const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
+    return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
 };
 
-describe("Omitted Participation Inclusion (updated rules)", () => {
+describe("Omitted Participation Inclusion", () => {
     let mockChain: MockChain;
 
     // --- Actors ---
@@ -96,8 +96,14 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     });
 
     const setupScenario = (winnerScore: bigint, omittedScore: bigint, omittedCreationHeight: number = 600_000) => {
-        winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", secret);
-        omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", secret);
+        gameResolutionContract.utxos.clear();
+        participationContract.utxos.clear();
+
+        const winnerErgotree = prependHexPrefix(currentWinnerPlayer.address.getPublicKeys()[0]);
+        const omittedErgotree = prependHexPrefix(omittedPlayer.address.getPublicKeys()[0]);
+
+        winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", winnerErgotree, secret);
+        omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", omittedErgotree, secret);
 
         const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
@@ -123,7 +129,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             creationHeight: 600_000,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  currentWinnerPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  winnerErgotree).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
@@ -139,7 +145,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: omittedCreationHeight,
             additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  omittedErgotree).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -243,7 +249,8 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     });
 
     it("should set the omitted participant as the winner when there is no current winner", () => {
-        omittedCommitment = createCommitment("solver-omitted", 1000n, "logs-omitted", secret);
+        const omittedErgotree = omittedPlayer.address.getPublicKeys()[0];
+        omittedCommitment = createCommitment("solver-omitted", 1000n, "logs-omitted", omittedErgotree, secret);
 
         const initialNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
 
@@ -269,7 +276,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  omittedErgotree).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -379,10 +386,15 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should fail if the omitted participant has a commitment created with a fake secret", () => {
         // Create a fake secret and use it to create a fake commitment
         const fakeSecret = stringToBytes("utf8", "fake-secret-for-cheating");
-        const fakeCommitment = createCommitment("solver-omitted", 1200n, "logs-omitted", fakeSecret);
+
+        const ommitedErgotree = omittedPlayer.address.getPublicKeys()[0];
+
+        const fakeCommitment = createCommitment("solver-omitted", 1200n, "logs-omitted", ommitedErgotree, fakeSecret);
+
+        const currentWinnerErgotree = currentWinnerPlayer.address.getPublicKeys()[0];
 
         // Setup the current winner normally
-        winnerCommitment = createCommitment("solver-winner", 1000n, "logs-winner", secret);
+        winnerCommitment = createCommitment("solver-winner", 1000n, "logs-winner", currentWinnerErgotree, secret);
 
         const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, BigInt(resolutionDeadline), 1n];
 
@@ -408,7 +420,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             creationHeight: mockChain.height - 10,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  currentWinnerPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  currentWinnerErgotree).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
@@ -425,7 +437,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, ommitedErgotree).toHex(),
                 R5: SColl(SByte, fakeCommitment).toHex(), // Using fake commitment here
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
@@ -543,8 +555,10 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
     it("should fail if omitted participant's commitment doesn't match its stored data", () => {
         setupScenario(1000n, 1200n);
 
+        const ommitedErgotree = omittedPlayer.address.getPublicKeys()[0];
+
         // Create a commitment that doesn't match the stored data
-        const inconsistentCommitment = createCommitment("different-solver", 1200n, "logs-omitted", secret);
+        const inconsistentCommitment = createCommitment("different-solver", 1200n, "logs-omitted", ommitedErgotree, secret);
 
         // Create omitted participant with inconsistent data
         participationContract.addUTxOs({
@@ -553,7 +567,7 @@ describe("Omitted Participation Inclusion (updated rules)", () => {
             value: 1_000_000n,
             creationHeight: 600_000,
             additionalRegisters: {
-                R4: SColl(SByte,  omittedPlayer.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte,  ommitedErgotree).toHex(),
                 R5: SColl(SByte, inconsistentCommitment).toHex(), // Doesn't match the solver name below
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(), // Different from commitment

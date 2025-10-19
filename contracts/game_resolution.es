@@ -113,19 +113,27 @@
                 val currentCandidateBox = currentCandidateBoxes(0)
                 
                 // Se calcula el puntaje del candidato actual de forma segura
-                val currentScore = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
+                val currentCandidateScoreTuple = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
                   if (acc._2) { acc } else {
-                    val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ revealedS)
+                    val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ currentCandidateBox.R4[Coll[Byte]].get ++ revealedS)
                     if (testCommitment == currentCandidateBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
                   }
-                })._1
+                })
 
-                // Se determina el nuevo ganador comparando puntajes y alturas de bloque
-                if (newScore > currentScore || (newScore == currentScore && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
-                  omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
+                val currentScore = currentCandidateScoreTuple._1
+                val validCurrentCandidate = currentCandidateScoreTuple._2 && currentScore != -1L
+
+                if (validCurrentCandidate) {
+                  // Se determina el nuevo ganador comparando puntajes y alturas de bloque
+                  if (newScore > currentScore || (newScore == currentScore && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
+                    omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
+                  } else {
+                    Coll[Byte]() // El actual sigue siendo el mejor
+                  }
                 } else {
-                  Coll[Byte]() // El actual sigue siendo el mejor
+                  Coll[Byte]() // El candidato actual no es válido, transacción inválida.
                 }
+
               } else {
                 // Si hay un compromiso pero no se provee la caja en dataInputs (o hay más de una), la transacción es inválida.
                 Coll[Byte]()
