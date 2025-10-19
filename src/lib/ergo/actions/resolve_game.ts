@@ -5,6 +5,8 @@ import {
     type Box,
     RECOMMENDED_MIN_FEE_VALUE,
     type Amount,
+    BOX_VALUE_PER_BYTE,
+    SAFE_MIN_BOX_VALUE
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
@@ -174,19 +176,89 @@ export async function resolve_game(
 
     if (!gameCreatorScript) throw new Error("Fallo al convertir gameCreatorScript a bytes.");
 
+    // Helpers
+    const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
+    const isHex = (s: string) => typeof s === 'string' && /^0x?[0-9a-fA-F]+$/.test(s);
 
+    // devuelve número de bytes representados por la cadena hex (sin prefijo)
+    const hexBytesLen = (hexStr: string): number => {
+    if (!hexStr) return 0;
+    const h = stripHexPrefix(hexStr);
+    return Math.ceil(h.length / 2);
+    };
+
+    // max para BigInt
+    const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
+
+    // CONSTANTES (ajustalas según tu entorno)
+    const BASE_BOX_OVERHEAD = 60;          // bytes aprox. (header, value, creationHeight, etc.)
+    const PER_TOKEN_BYTES = 40;            // aproximación por token: 32 (id) + 8 (amount)
+    const PER_REGISTER_OVERHEAD = 1;       // bytes por índice/encabezado de registro
+    const SIZE_MARGIN = 120;               // margen de seguridad en bytes
+
+    // --- construí aquí los hex de los registros igual que los vas a poner en setAdditionalRegisters ---
+    const r4Hex = SInt(1).toHex();
+    const r5Hex = SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex();
+    const r6Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex();
+    const r7Hex = SColl(SLong, newNumericalParams).toHex();
+    const r8Hex = SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex();
+    const r9Hex = SPair(SColl(SByte, gameCreatorScript), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex();
+
+    // Conteos y tamaños
+    const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];
+
+    // tamaño del ergoTree (puede ser hex o fuente legible); detectamos si es hex:
+    let ergoTreeBytes = 0;
+    if (typeof resolutionErgoTree === 'string' && isHex(resolutionErgoTree)) {
+    ergoTreeBytes = hexBytesLen(resolutionErgoTree);
+    } else {
+    // si no es hex, calculamos bytes de la cadena UTF-8
+    ergoTreeBytes = new TextEncoder().encode(String(resolutionErgoTree || '')).length;
+    }
+
+    // tamaño tokens
+    const tokens = Array.isArray(game.box.assets) ? game.box.assets : [];
+    const tokensCount = tokens.length;
+    const tokensBytes = 1 + tokensCount * PER_TOKEN_BYTES; // 1 byte para count + cada token
+
+    // tamaño registros (sumando overhead por registro)
+    let registersBytes = 0;
+    for (const h of registersHex) {
+    const len = hexBytesLen(h);
+    registersBytes += len + PER_REGISTER_OVERHEAD;
+    }
+
+    // tamaño total estimado
+    const totalEstimatedSize = BigInt(
+    BASE_BOX_OVERHEAD
+    + ergoTreeBytes
+    + tokensBytes
+    + registersBytes
+    + SIZE_MARGIN
+    );
+
+    // mínimo requerido en nanoErgs
+    const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;
+
+    // valor actual de la caja (asegurate que sea BigInt)
+    const originalValue = BigInt(game.box.value);
+
+    // seleccionar el mayor entre originalValue, minRequiredValue y SAFE_MIN_BOX_VALUE
+    const resolutionBoxValue = maxBigInt(originalValue, minRequiredValue, SAFE_MIN_BOX_VALUE);
+
+    // Ahora construís la salida con ese value (no se usa setValue después)
     const resolutionBoxOutput = new OutputBuilder(
-        game.creatorStakeNanoErg,
-        resolutionErgoTree
+    resolutionBoxValue,
+    resolutionErgoTree
     )
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
-        R4: SInt(1).toHex(), // Estado: Resuelto (1)
-        R5: SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex(),
-        R6: SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(),
-        R7: SColl(SLong, newNumericalParams).toHex(),
-        R8: SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex(),
-        R9: SPair(SColl(SByte, gameCreatorScript), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex()
+    R4: r4Hex,
+    R5: r5Hex,
+    R6: r6Hex,
+    R7: r7Hex,
+    R8: r8Hex,
+    R9: r9Hex
     });
 
     // --- 4. Construir y Enviar la Transacción ---    
