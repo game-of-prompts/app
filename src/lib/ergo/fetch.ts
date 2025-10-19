@@ -755,7 +755,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                 const p_base = await _parseParticipationBox(box);
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
-                    const expired = box.creationHeight > gameDeadline;
+                    const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
                     const wrong_commitment = false; // TODO Make this if the secret is revealed.
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
