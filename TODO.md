@@ -61,6 +61,12 @@
 
 [x] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
+[] Controlar BUG en invalidación por jueces; para resolverlo se ha tenido que omitir la siguiente participacion candidata.
+
+En caso de que los jueces omitan una participación candidata despues de invalidar la actual, el creador podría perder su staking, pero él no fue quien decidió omitir la segunda ... ¿como se podría resolver esto? ¿Tiene x tiempo para declarar la siguiente? ¿los jueces podrían perder poder? ...
+Tal vez lo mejor sería dejar N bloques de perdon para el creador, de forma que cualquiera puede agregar una omitida, pero no puede cambiar el resolver actual.
+En ese tiempo el creador o resolver actual puede colocar la mas alta, despues de ese tiempo quien coloque una mas alta que la nombrada podrá nominarse como resolvedor.
+ 
 [] Soporte multi-token
 
 [] Modificar score en base a altura (incentiva participar antes)
