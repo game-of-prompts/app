@@ -19,7 +19,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { bigintToLongByteArray, uint8ArrayToHex } from "$lib/ergo/utils";
+import { bigintToLongByteArray } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
 
@@ -54,7 +54,7 @@ describe("Omitted Participation Inclusion", () => {
     let participationErgoTree: ReturnType<typeof compile>;
 
     // --- Game State Variables ---
-    const resolutionDeadline = 800_200;
+    const resolutionDeadline = 800_030;  // initial height + 30 (JUDGE_PERIOD)
     const gameNftId = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22";
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
     const game_deadline = 700_700n;
