@@ -99,7 +99,8 @@ describe("Omitted Participation Inclusion", () => {
             winnerScore: bigint, 
             omittedScore: bigint, 
             omittedCreationHeight: number = 600_000,
-            omittedScores: bigint[] = []
+            omittedScores: bigint[] = [],
+            newBlocks: number = 10
         ) => {
         gameResolutionContract.utxos.clear();
         participationContract.utxos.clear();
@@ -160,8 +161,70 @@ describe("Omitted Participation Inclusion", () => {
         });
         omittedParticipantBox = participationContract.utxos.toArray()[1];
 
-        mockChain.newBlocks(10);
+        mockChain.newBlocks(newBlocks);
     };
+
+    it("Must maintain the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
+        setupScenario(1000n, 1200n, 600_000, [], 1);
+
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(originalResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+        const newGameBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newGameBox.additionalRegisters.R5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
+        expect(newGameBox.additionalRegisters.R7).to.equal(SColl(SLong, updatedNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R8).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
+    });
+
+
+    it("Fails if not maintains the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
+        setupScenario(1000n, 1200n, 600_000, [], 1);
+
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: gameResolutionBox.additionalRegisters.R6,
+                        R7: SColl(SLong, updatedNumericalParams).toHex(),
+                        R8: SPair(SColl(SByte, prependHexPrefix(newResolver.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+                        R9: gameResolutionBox.additionalRegisters.R9
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+    });
 
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
