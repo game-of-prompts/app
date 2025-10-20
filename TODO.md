@@ -61,9 +61,9 @@
 
 [x] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
-[]  En accion end_game, asegurar que el ganador como minimo obtiene el coste de participar, aunque las comisiones del resto tengan que ser menores (de lo contrario se desincentivaría a participar el primero ya que obligaría al jugador a especular que habrá otros jugadores tambien).
-
 [x] Durante N bloques tras una invalidación la acción de omisión no permite modificar el creador/resolver actual.  Esto permite al creador actualizar la participacion candidata sin ser penalizado.
+
+[]  En accion end_game, asegurar que el ganador como minimo obtiene el coste de participar, aunque las comisiones del resto tengan que ser menores (de lo contrario se desincentivaría a participar el primero ya que obligaría al jugador a especular que habrá otros jugadores tambien).
 
 [] Utilizar variables de entorno definidas en el código. Obtener las variables de cada juego de fetch.ts y validarlas.
  
