@@ -38,6 +38,8 @@ export async function include_omitted_participation(
         throw new Error("No se pueden incluir participaciones después de que finalice el período de los jueces.");
     }
 
+    const resolverErgoTree = (((game.resolutionDeadline - game.constants.JUDGE_PERIOD) + game.constants.CREATOR_OMISSION_NO_PENALTY_PERIOD) < currentHeight) ? prependHexPrefix(hexToBytes(newResolverPkHex)!) : hexToBytes(game.resolverScript_Hex)!;
+
     // --- 3. Construir las Salidas de la Transacción ---
 
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();;
@@ -58,7 +60,7 @@ export async function include_omitted_participation(
             BigInt(game.perJudgeComissionPercentage),
             BigInt(game.resolutionDeadline)
         ]).toHex(),
-        R8: SPair(SColl(SByte, prependHexPrefix(hexToBytes(newResolverPkHex)!)), SLong(BigInt(game.resolverCommission))),
+        R8: SPair(SColl(SByte, resolverErgoTree), SLong(BigInt(game.resolverCommission))),
         R9: SPair(
                 SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))

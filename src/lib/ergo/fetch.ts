@@ -14,6 +14,7 @@ import {
     type GameContent,
     type ParticipationConsumedReason,
     type MalformedParticipationReason,
+    DefaultGameConstants,
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -180,7 +181,8 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
-            reputation: reputation
+            reputation: reputation,
+            constants: DefaultGameConstants
         };
         
         return gameActive;
@@ -337,7 +339,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             content, 
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            perJudgeComissionPercentage: perJudgeComissionPercentage
+            perJudgeComissionPercentage: perJudgeComissionPercentage,
+            constants: DefaultGameConstants,
         };
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);
@@ -459,7 +462,8 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
-            deadlineBlock: originalDeadline
+            deadlineBlock: originalDeadline,
+            constants: DefaultGameConstants,
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
@@ -650,7 +654,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges,
             judgeFinalizationBlock: judgeFinalizationBlock,
-            winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod
+            winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
+            constants: DefaultGameConstants,
         };
 
         console.log("Finalized game found. Body: ", finalized);

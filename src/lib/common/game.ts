@@ -42,6 +42,35 @@ export interface GameContent {
     mirrorUrls?: string[];
 }
 
+export interface GameConstants {
+    JUDGE_PERIOD: number;
+    CREATOR_OMISSION_NO_PENALTY_PERIOD: number;
+    MAX_SCORE_LIST: number;
+    DEV_COMMISSION_PERCENTAGE: number;
+    STAKE_DENOMINATOR: number;
+    COOLDOWN_IN_BLOCKS: number;
+    PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD: number;
+    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: number;
+
+    PARTICIPATION_TYPE_ID: string;
+    ACCEPT_GAME_INVITATION_TYPE_ID: string;
+    DEV_SCRIPT: string;
+}
+
+export const DefaultGameConstants: GameConstants = {
+    JUDGE_PERIOD: 30,
+    CREATOR_OMISSION_NO_PENALTY_PERIOD: 5,
+    MAX_SCORE_LIST: 10,
+    DEV_COMMISSION_PERCENTAGE: 5,
+    STAKE_DENOMINATOR: 5,
+    COOLDOWN_IN_BLOCKS: 30,
+    PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD: 64800, // 90 días
+    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: 720, // Aprox. 24 horas
+    PARTICIPATION_TYPE_ID: "PARTICIPATION_TYPE_ID", // Placeholder, debe reemplazarse con el valor real
+    ACCEPT_GAME_INVITATION_TYPE_ID: "ACCEPT_GAME_INVITATION_TYPE_ID", // Placeholder, debe reemplazarse con el valor real
+    DEV_SCRIPT: "DEV_ADDR" // Placeholder, debe reemplazarse con el valor real
+};
+
 // =================================================================
 // === NUEVAS INTERFACES POR ESTADO DE JUEGO
 // =================================================================
@@ -69,6 +98,7 @@ export interface GameActive {
     value: bigint;
     reputationOpinions: ReputationOpinion[];
     reputation: number;
+    constants: GameConstants;
 }
 
 /**
@@ -98,6 +128,7 @@ export interface GameResolution {
     value: bigint;
     reputationOpinions: ReputationOpinion[];
     reputation: number;
+    constants: GameConstants;
 }
 
 /**
@@ -120,6 +151,7 @@ export interface GameCancellation {
     reputationOpinions: ReputationOpinion[];
     judges: string[];
     reputation: number;
+    constants: GameConstants;
 }
 
 /**
@@ -141,6 +173,7 @@ export interface GameFinalized {
     judgeFinalizationBlock: number;
     winnerFinalizationDeadline: number;
     reputation: number;
+    constants: GameConstants;
 }
 
 /**
@@ -162,7 +195,6 @@ export interface ParticipationBase {
     hashLogs_Hex: string;
     scoreList: bigint[];
     reputationOpinions: ReputationOpinion[];
-    reputation: number;
 }
 
 /**
