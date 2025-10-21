@@ -301,6 +301,38 @@ describe("Game Finalization (end_game)", () => {
                 R9: SColl(SLong, winnerScoreList).toHex(),
             },
         });
+
+
+    // Other participants
+    participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
+                R5: SColl(SByte, "ab".repeat(32)).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+                R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+                R9: SColl(SLong, winnerScoreList).toHex(),
+            },
+        });
+
+    participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
+                R5: SColl(SByte, "cd".repeat(32)).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+                R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+                R9: SColl(SLong, winnerScoreList).toHex(),
+            },
+        });
   
     mockChain.jumpTo(resolutionDeadline + 1);
 
