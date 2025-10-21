@@ -1,6 +1,4 @@
 import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
-import { prependHexPrefix } from "$lib/utils";
-import { ErgoAddress } from "@fleet-sdk/core";
 
 export interface GameConstants {
     JUDGE_PERIOD: number;
