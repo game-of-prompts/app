@@ -395,6 +395,201 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
+  it("Should successfully finalize the game and distribute funds correctly with only a complex Script winner (unique participation)", () => {
+    // --- Arrange ---
+    // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
+    const dummyWinnerScript = compile("sigmaProp(true)"); // Un script que cualquiera puede gastar
+    const winnerContract = mockChain.addParty(dummyWinnerScript.toHex(), "WinnerContract");
+    const facilitator = mockChain.newParty("Facilitator");
+    facilitator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    
+    // 2. Crear una caja "prueba" que pertenece al contrato ganador. Gastar esta caja es la autorización.
+    winnerContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: SAFE_MIN_BOX_VALUE,
+        ergoTree: dummyWinnerScript.toHex(),
+        assets: [],
+        additionalRegisters: {},
+    });
+    const winnerProofBox = winnerContract.utxos.toArray()[0];
+
+    participationContract.utxos.clear();
+
+    const winnerSolverId = "player-alpha-7";
+    const winnerTrueScore = 9500n;
+    const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
+
+    const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
+
+    const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
+
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, dummyWinnerScript.bytes, secret);
+    winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
+
+    participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
+                R5: SColl(SByte, winnerCommitment).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+                R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+                R9: SColl(SLong, winnerScoreList).toHex(),
+            },
+        });
+  
+    mockChain.jumpTo(resolutionDeadline + 1);
+
+    gameResolutionContract.utxos.clear();
+    
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), // Estado: Resolución
+            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(),
+            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const finalParticipationBoxes = participationContract.utxos.toArray();
+
+    // --- Act ---
+    const prizePool = finalParticipationBoxes.reduce((acc, p) => acc + p.value, 0n);
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
+      .from([gameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .to([
+        // El premio se envía a la dirección del contrato ganador
+        new OutputBuilder(prizePool, winnerContract.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(creatorStake, resolver.address)
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(facilitator.address) // El cambio va al firmante (facilitator)
+      .build();
+
+    // --- Assert ---
+    // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
+    expect(mockChain.execute(transaction, { signers: [facilitator] })).to.be.true;
+
+    // El contrato ganador recibe el premio. Su balance inicial de SAFE_MIN_BOX_VALUE fue gastado.
+    expect(winnerContract.balance.nanoergs).to.equal(prizePool);
+    expect(resolver.balance.nanoergs).to.equal(creatorStake);
+    
+    expect(winnerContract.balance.tokens[0].tokenId).to.equal(gameNftId);
+    
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+  });
+
+  it("Should fail finalize the game and distribute funds with only a complex Script winner  (unique participation) but sending comissions to resolver and developer", () => {
+    // --- Arrange ---
+    // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
+    const dummyWinnerScript = compile("sigmaProp(true)"); // Un script que cualquiera puede gastar
+    const winnerContract = mockChain.addParty(dummyWinnerScript.toHex(), "WinnerContract");
+    const facilitator = mockChain.newParty("Facilitator");
+    facilitator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    
+    // 2. Crear una caja "prueba" que pertenece al contrato ganador. Gastar esta caja es la autorización.
+    winnerContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: SAFE_MIN_BOX_VALUE,
+        ergoTree: dummyWinnerScript.toHex(),
+        assets: [],
+        additionalRegisters: {},
+    });
+    const winnerProofBox = winnerContract.utxos.toArray()[0];
+
+    participationContract.utxos.clear();
+
+    const winnerSolverId = "player-alpha-7";
+    const winnerTrueScore = 9500n;
+    const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
+
+    const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
+
+    const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
+
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, dummyWinnerScript.bytes, secret);
+    winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
+
+    participationContract.addUTxOs({
+            creationHeight: mockChain.height,
+            value: participationFee,
+            ergoTree: pparticipationErgoTree.toHex(),
+            assets: [],
+            additionalRegisters: {
+                R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
+                R5: SColl(SByte, winnerCommitment).toHex(),
+                R6: SColl(SByte, gameNftId).toHex(),
+                R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+                R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+                R9: SColl(SLong, winnerScoreList).toHex(),
+            },
+        });
+
+    mockChain.jumpTo(resolutionDeadline + 1);
+
+    gameResolutionContract.utxos.clear();
+    
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(), // Estado: Resolución
+            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+            R6: SColl(SColl(SByte), []).toHex(),
+            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
+            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
+            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+        },
+    });
+
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const finalParticipationBoxes = participationContract.utxos.toArray();
+
+    // --- Act ---
+    const prizePool = finalParticipationBoxes.reduce((acc, p) => acc + p.value, 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+    
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
+      .from([gameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .to([
+        // El premio se envía a la dirección del contrato ganador
+        new OutputBuilder(finalWinnerPrize, winnerContract.address).addTokens([{ tokenId: gameNftId, amount: 1n }]),
+        new OutputBuilder(finalResolverPayout, resolver.address),
+        new OutputBuilder(finalDevPayout, developer.address),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(facilitator.address) // El cambio va al firmante (facilitator)
+      .build();
+
+    // --- Assert ---
+    // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
+    expect(mockChain.execute(transaction, { signers: [facilitator], throw: false })).to.be.false;
+  });
+  
   it("Should successfully finalize the game and distribute funds correctly with a pk Script winner without any proveDlog pk input script", () => {
     // --- Arrange ---
     // 1. Create a simple "anyone-can-spend" contract to hold the fee box.
