@@ -6,9 +6,9 @@ import {
 } from '@fleet-sdk/core';
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
-import { dev_addr_base58, dev_fee } from '../contract';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
+import { DefaultGameConstants } from '$lib/common/constants';
 
 export async function end_game(
     game: GameResolution,
@@ -59,7 +59,7 @@ export async function end_game(
     const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < SAFE_MIN_BOX_VALUE) ? totalJudgeCommission : 0n;
     const finalJudgesPayoutTent = totalJudgeCommission - judgesForfeits;
 
-    const devCommission = (prizePool * dev_fee) / 100n;
+    const devCommission = (prizePool * BigInt(game.constants.DEV_COMMISSION_PERCENTAGE)) / 100n;
     const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
     const finalDevPayoutTent = devCommission - devForfeits;
 
@@ -135,15 +135,13 @@ export async function end_game(
     const gameNft = game.box.assets[0];
 
     if (winnerParticipation !== null && finalWinnerPrize > 0n) {
-        const winnerAddressString = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
         outputs.push(
-            new OutputBuilder(finalWinnerPrize, winnerAddressString).addTokens([gameNft])
+            new OutputBuilder(finalWinnerPrize, winnerParticipation.playerScript_Hex).addTokens([gameNft])
         );
     }
 
     if (finalResolverPayout > 0n) {
-        const resolverAddressString = pkHexToBase58Address(game.resolverPK_Hex);
-        const resolverOutput = new OutputBuilder(finalResolverPayout, resolverAddressString);
+        const resolverOutput = new OutputBuilder(finalResolverPayout, game.resolverScript_Hex);
         
         if (winnerParticipation === null) {
             resolverOutput.addTokens([gameNft]);
@@ -153,7 +151,7 @@ export async function end_game(
 
     if (finalDevPayout > 0n) {
         outputs.push(
-            new OutputBuilder(finalDevPayout, dev_addr_base58)
+            new OutputBuilder(finalDevPayout, game.constants.DEV_SCRIPT)
         );
     }
 

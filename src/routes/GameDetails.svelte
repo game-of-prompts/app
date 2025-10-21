@@ -38,7 +38,6 @@
     import { type RPBox, type Judge } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
-    import { dev_fee } from "$lib/ergo/contract";
 
 
     // --- COMPONENT STATE ---
@@ -591,15 +590,18 @@
     let developersPct = 0;
     let winnerPct = 0;
 
-    if (game.status === 'Active') {
-        creatorPct = Number(game.commissionPercentage ?? 0);
-        judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
-        developersPct = Number(dev_fee);
-    } else if (game.status === 'Resolution') {
-        creatorPct = Number(game.resolverCommission ?? 0);
-        judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
-        developersPct = Number(dev_fee);
+    if (game) {
+        if (game.status === 'Active') {
+            creatorPct = Number(game.commissionPercentage ?? 0);
+            judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
+            developersPct = Number(game.constants.DEV_COMMISSION_PERCENTAGE ?? 0);
+        } else if (game.status === 'Resolution') {
+            creatorPct = Number(game.resolverCommission ?? 0);
+            judgesTotalPct = Number(game.perJudgeComissionPercentage ?? 0n) * game.judges.length;
+            developersPct = Number(game.constants.DEV_COMMISSION_PERCENTAGE ?? 0);
+        }
     }
+
 
     // El porcentaje del ganador es lo que queda
     const totalPct = creatorPct + judgesTotalPct + developersPct;

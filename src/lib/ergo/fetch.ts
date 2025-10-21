@@ -13,8 +13,7 @@ import {
     type AnyGame,
     type GameContent,
     type ParticipationConsumedReason,
-    type MalformedParticipationReason,
-    DefaultGameConstants,
+    type MalformedParticipationReason
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -38,6 +37,7 @@ import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
 import { get } from "svelte/store";
 import { judges as judgesStore } from "../common/store";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 // =================================================================
 // === REPUTATION PROOF UTILITIES

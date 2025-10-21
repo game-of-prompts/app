@@ -15,11 +15,12 @@
   val ACCEPT_GAME_INVITATION_TYPE_ID = fromBase16("`+ACCEPT_GAME_INVITATION_TYPE_ID+`");
 
   // Constantes para la acción de cancelación.
-  val STAKE_DENOMINATOR = 5L
-  val COOLDOWN_IN_BLOCKS = 30L
-  val JUDGE_PERIOD = 30L
-  val MIN_BOX_VALUE = 1000000L
-  val MAX_SCORE_LIST = 10
+  val STAKE_DENOMINATOR   = `+STAKE_DENOMINATOR+`L
+  val COOLDOWN_IN_BLOCKS  = `+COOLDOWN_IN_BLOCKS+`L
+  val JUDGE_PERIOD        = `+JUDGE_PERIOD+`L
+  val MAX_SCORE_LIST      = `+MAX_SCORE_LIST+`L
+
+  val MIN_BOX_VALUE       = 1000000L
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)

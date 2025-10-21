@@ -3,16 +3,19 @@
   // === CONSTANTES Y HASHES DE SCRIPTS
   // =================================================================
 
-  val JUDGE_PERIOD = 30L 
-  val CREATOR_OMISSION_NO_PENALTY_PERIOD = 5L  // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize creator after this period. UI must control this constants correctly to avoid malicious contract configurations.
-  val DEV_ADDR = PK("`+DEV_ADDR+`")
-  val DEV_COMMISSION_PERCENTAGE = 5L
+  val JUDGE_PERIOD = `+JUDGE_PERIOD+`L
+  val CREATOR_OMISSION_NO_PENALTY_PERIOD = `+CREATOR_OMISSION_NO_PENALTY_PERIOD+`L  // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize creator after this period. UI must control this constants correctly to avoid malicious contract configurations.
+  val DEV_SCRIPT = fromBase16("`+DEV_SCRIPT+`")
+  val DEV_COMMISSION_PERCENTAGE = `+DEV_COMMISSION_PERCENTAGE+`L
+
+  val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
+  val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L
+
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
+  
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   val MIN_ERG_BOX = 1000000L
-  val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
-  val MAX_SCORE_LIST = 10
 
 
   // =================================================================
@@ -339,7 +342,7 @@
       
       // 3. Verificación de que el DEV recibe su pago
       val devGetsPaid = if (finalDevPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
+          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_SCRIPT})
       } else { true }
       
       // 4. Verificación de que los JUECES reciben su pago
@@ -418,7 +421,7 @@
 
             // Ajustar las verificaciones de pago para usar los valores ajustados
             val adjustedDevGetsPaid = if (adjustedDevPayout > 0L) {
-                OUTPUTS.exists({(b:Box) => b.value >= adjustedDevPayout && b.propositionBytes == DEV_ADDR.propBytes})
+                OUTPUTS.exists({(b:Box) => b.value >= adjustedDevPayout && b.propositionBytes == DEV_SCRIPT})
             } else { true }
 
             val adjustedJudgesGetsPaid = if (adjustedJudgesPayout > 0L) {

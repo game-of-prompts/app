@@ -14,7 +14,7 @@ import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 
-import { GAME, PARTICIPATION } from "./reputation/types";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -24,10 +24,6 @@ let _gameActive: { ergoTree?: ErgoTree, templateHash?: string } = {};
 let _gameResolution: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
-
-// --- Dev fee/config ---
-export const dev_addr_base58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD"
-export const dev_fee = 5n;
 
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS
@@ -51,10 +47,15 @@ function ensureGameResolutionCompiled(): void {
     const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
     let source = GAME_RESOLUTION_SOURCE
-        .replace(/`\+DEV_ADDR\+`/g, dev_addr_base58)
-        .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
-        .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, PARTICIPATION);
+        .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
+        .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
+        .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
+        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, DefaultGameConstants.DEV_COMMISSION_PERCENTAGE.toString())
+        .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
+        .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, DefaultGameConstants.PARTICIPATION_TYPE_ID)
+        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString());
+
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
@@ -70,12 +71,19 @@ function ensureGameActiveCompiled(): void {
     const reputationHash = getReputationProofScriptHash();
 
     let source = GAME_ACTIVE_SOURCE
+        // Hashes de scripts
         .replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash)
         .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash)
-        .replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, GAME);
-        
+        .replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, DefaultGameConstants.ACCEPT_GAME_INVITATION_TYPE_ID)
+
+        // Constantes numéricas del contrato
+        .replace(/`\+STAKE_DENOMINATOR\+`/g, DefaultGameConstants.STAKE_DENOMINATOR.toString())
+        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
+        .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
+        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+            
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
