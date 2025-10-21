@@ -65,7 +65,7 @@
 
 [x]  En accion end_game, asegurar que el ganador como minimo obtiene el coste de participar, aunque las comisiones del resto tengan que ser 0 (de lo contrario se desincentivaría a participar el primero ya que obligaría al jugador a especular que habrá otros jugadores tambien).
 
-[] Utilizar variables de entorno definidas en el código. Obtener las variables de cada juego de fetch.ts y validarlas.
+[x] Utilizar variables de entorno definidas en el código. Obtener las variables de cada juego de fetch.ts y validarlas.
  
 [] Soporte multi-token
 
