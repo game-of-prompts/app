@@ -33,7 +33,12 @@ let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: s
 
 function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
-    _participation.ergoTree = compile(PARTICIPATION_SUBMITTED_SOURCE, { version: ergoTreeVersion });
+
+    const source = PARTICIPATION_SUBMITTED_SOURCE
+        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString())
+        .replace(/`\+ABANDONED_FUNDS_GRACE_PERIOD\+`/g, DefaultGameConstants.PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD.toString());
+
+    _participation.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
 function ensureGameCancellationCompiled(): void {
@@ -51,7 +56,7 @@ function ensureGameResolutionCompiled(): void {
     ensureParticipationCompiled(); // Dependencia transitiva
     const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
-    
+
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
