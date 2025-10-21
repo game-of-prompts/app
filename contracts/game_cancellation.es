@@ -4,9 +4,11 @@
   // =================================================================
 
   // Denominador para calcular la porción del stake a drenar en cada acción.
-  val STAKE_DENOMINATOR = 5L
+  val STAKE_DENOMINATOR = `+STAKE_DENOMINATOR+`L
+
   // Período de enfriamiento en bloques entre cada acción de drenaje.
-  val COOLDOWN_IN_BLOCKS = 30L
+  val COOLDOWN_IN_BLOCKS = `+COOLDOWN_IN_BLOCKS+`L
+
   // Valor mínimo en nanoErgs que debe tener una caja para ser válida.
   val MinErg = 1000000L // 0.001 ERG
 

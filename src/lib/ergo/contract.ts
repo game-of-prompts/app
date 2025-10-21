@@ -38,7 +38,12 @@ function ensureParticipationCompiled(): void {
 
 function ensureGameCancellationCompiled(): void {
     if (_gameCancellation.ergoTree) return;
-    _gameCancellation.ergoTree = compile(GAME_CANCELLATION_SOURCE, { version: ergoTreeVersion });
+    
+    let source = GAME_CANCELLATION_SOURCE
+        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
+        .replace(/`\+STAKE_DENOMINATOR\+`/g, DefaultGameConstants.STAKE_DENOMINATOR.toString());
+
+    _gameCancellation.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
 function ensureGameResolutionCompiled(): void {
@@ -46,6 +51,7 @@ function ensureGameResolutionCompiled(): void {
     ensureParticipationCompiled(); // Dependencia transitiva
     const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
+    
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
