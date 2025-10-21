@@ -7,7 +7,7 @@ import {
 import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { dev_addr_base58, dev_fee } from '../contract';
-import { judges } from '$lib/common/store'; // <-- asegúrate de que esta importación exista
+import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
 
 export async function end_game(
@@ -45,7 +45,7 @@ export async function end_game(
     }
     console.log(`Verificación de firmante exitosa. Usuario conectado: ${userAddress}`);
 
-    // --- 3. Lógica de Cálculo de Pagos (ahora incluyendo JUECES) ---
+    // --- 3. Lógica de Cálculo de Pagos ---
     const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeNanoErg;
 
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
@@ -57,19 +57,25 @@ export async function end_game(
     const totalJudgeCommission = perJudgeCommission * judge_count;
 
     const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < SAFE_MIN_BOX_VALUE) ? totalJudgeCommission : 0n;
-    const finalJudgesPayout = totalJudgeCommission - judgesForfeits;
+    const finalJudgesPayoutTent = totalJudgeCommission - judgesForfeits;
+
+    const devCommission = (prizePool * dev_fee) / 100n;
+    const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
+    const finalDevPayoutTent = devCommission - devForfeits;
 
     let finalWinnerPrize = 0n;
     let finalResolverPayout = 0n;
     let finalDevPayout = 0n;
+    let finalJudgesPayout = 0n;
+    let finalPerJudge = 0n;
 
     if (winnerParticipation === null) {
         // --- CASO: NO HAY GANADOR ---
         const totalValue = prizePool + game.creatorStakeNanoErg;
-        const devCommission = (prizePool * dev_fee) / 100n;
-        const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
 
-        finalDevPayout = devCommission - devForfeits;
+        finalDevPayout = finalDevPayoutTent;
+        finalJudgesPayout = finalJudgesPayoutTent;
+        finalPerJudge = perJudgeCommission;
 
         finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
@@ -84,33 +90,36 @@ export async function end_game(
         // --- CASO: SÍ HAY GANADOR ---
         const creatorStake = game.creatorStakeNanoErg;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
-        const devCommission = (prizePool * dev_fee) / 100n;
 
-        const winnerBasePrize = prizePool - resolverCommission - devCommission - totalJudgeCommission;
+        const tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayoutTent - finalDevPayoutTent;
 
-        const winnerGetsBasePrize = winnerBasePrize >= SAFE_MIN_BOX_VALUE;
+        const participationFee = game.participationFeeNanoErg
 
-        let intermediateDevPayout: bigint;
-        let intermediateResolverPayout: bigint;
-        let intermediateWinnerPayout: bigint;
+        let adjustedWinnerPrize: bigint;
+        let adjustedResolverComm: bigint;
+        let adjustedDevPayout: bigint;
+        let adjustedJudgesPayout: bigint;
+        let adjustedPerJudge: bigint;
 
-        if (winnerGetsBasePrize) {
-            intermediateDevPayout = devCommission;
-            intermediateResolverPayout = creatorStake + resolverCommission;
-            intermediateWinnerPayout = winnerBasePrize;
+        if (tentativeWinnerPrize < participationFee) {
+            adjustedWinnerPrize = prizePool;
+            adjustedResolverComm = 0n;
+            adjustedDevPayout = 0n;
+            adjustedJudgesPayout = 0n;
+            adjustedPerJudge = 0n;
         } else {
-            intermediateDevPayout = 0n;
-            intermediateResolverPayout = creatorStake;
-            intermediateWinnerPayout = prizePool + creatorStake - totalJudgeCommission;
+            adjustedWinnerPrize = tentativeWinnerPrize;
+            adjustedResolverComm = resolverCommission;
+            adjustedDevPayout = finalDevPayoutTent;
+            adjustedJudgesPayout = finalJudgesPayoutTent;
+            adjustedPerJudge = perJudgeCommission;
         }
 
-        const devForfeits = (intermediateDevPayout > 0n && intermediateDevPayout < SAFE_MIN_BOX_VALUE) ? intermediateDevPayout : 0n;
-        const resolverForfeits = (intermediateResolverPayout > 0n && intermediateResolverPayout < SAFE_MIN_BOX_VALUE) ? intermediateResolverPayout : 0n;
-
-        finalDevPayout = intermediateDevPayout - devForfeits;
-        finalResolverPayout = intermediateResolverPayout - resolverForfeits;
-
-        finalWinnerPrize = intermediateWinnerPayout + devForfeits + resolverForfeits + judgesForfeits;
+        finalResolverPayout = creatorStake + adjustedResolverComm;
+        finalWinnerPrize = adjustedWinnerPrize;
+        finalDevPayout = adjustedDevPayout;
+        finalJudgesPayout = adjustedJudgesPayout;
+        finalPerJudge = adjustedPerJudge;
 
         console.log("--- Resumen de Pagos (Con Ganador) ---");
         console.log(`Premio total: ${prizePool}`);
@@ -137,7 +146,6 @@ export async function end_game(
         const resolverOutput = new OutputBuilder(finalResolverPayout, resolverAddressString);
         
         if (winnerParticipation === null) {
-            // cuando no hay ganador, el resolver se lleva el NFT
             resolverOutput.addTokens([gameNft]);
         }
         outputs.push(resolverOutput);
@@ -150,7 +158,7 @@ export async function end_game(
     }
 
     const dataInputs: any[] = [];
-    if (perJudgeCommission >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
+    if (finalPerJudge >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
         for (const tokenId of game.judges) {
             const js = get(judges).data.get(tokenId)
             if (!js) {
@@ -167,7 +175,7 @@ export async function end_game(
 
             // Añadir output por juez con la comisión por juez
             outputs.push(
-                new OutputBuilder(perJudgeCommission, judgeErgoTree)
+                new OutputBuilder(finalPerJudge, judgeErgoTree)
             );
 
             // Si hay datainput, lo parseamos y lo añadimos a datainputs
