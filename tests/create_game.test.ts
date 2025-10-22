@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
-  ErgoAddress as Address,
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder
@@ -15,45 +14,8 @@ import {
   SPair
 } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
-
-/**
- * Utility function to convert a Uint8Array to a hex string.
- * This is necessary for comparing script hashes and register values,
- * which are handled as hex strings.
- */
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-// --- Constants and File Loading ---
-
-// Developer's address for the commission, required by the `game_resolution` contract.
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-
-// Resolve the path to the contracts directory to load the source files.
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-
-// Load the source code of each ErgoScript contract.
-// They are read as plain text to allow placeholder replacement before compilation.
-const GAME_ACTIVE_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_active.es"),
-  "utf-8"
-);
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_resolution.es"),
-  "utf-8"
-);
-
-// that always fails is created to allow the `game_active` contract to compile.
-const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }";   // Not needed.
-const PARTICIPATION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "participation.es"),
-  "utf-8"
-);
+import { getGopGameActiveErgoTree } from "$lib/ergo/contract";
 
 
 // --- Test Suite ---
@@ -75,37 +37,7 @@ describe("Game Creation (create_game)", () => {
   // Compilation is done once for the entire test suite.
   let gameActiveErgoTree: ReturnType<typeof compile>;
   
-  // --- Dynamic Contract Compilation ---
-  // ErgoScript contracts often depend on each other.
-  // The `game_active` contract needs to know the hash of other contracts it can transition to.
-  // Therefore, we compile in order of dependency, injecting the necessary hashes.
-
-  // 1. `participation`: No dependencies.
-  const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-  const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
-  
-  // 3. `game_cancellation`: Mock with no dependencies.
-  const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
-  const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-  
-  // 4. `game_resolution`: Depends on participation hashes.
-  const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script¡
-    .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-  const gameResolutionErgoTree = compile(gameResolutionSource);
-  const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-
-  // 5. `game_active`: This is the main contract and depends on all others.
-  const gameActiveSource = GAME_ACTIVE_TEMPLATE
-    .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
-    .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash); // Dependency added for completeness.
-  
-  gameActiveErgoTree = compile(gameActiveSource);
+  gameActiveErgoTree = getGopGameActiveErgoTree();
   
   // Initialize the chain and actors before each test.
   beforeEach(() => {

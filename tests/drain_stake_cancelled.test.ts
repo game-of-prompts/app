@@ -3,6 +3,7 @@ import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
     Box,
+    ErgoTree,
     OutputBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder
@@ -16,10 +17,7 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 import { stringToBytes } from "@scure/base";
-
-// --- Utility and Constants Setup ---
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
+import { getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 
 describe("Game Stake Draining (drain_cancelled_game)", () => {
     let mockChain: MockChain;
@@ -31,7 +29,7 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
 
 
     // --- Contract Compilation ---
-    let gameCancellationErgoTree: ReturnType<typeof compile>;
+    let gameCancellationErgoTree: ErgoTree = getGopGameCancellationErgoTree();
 
     // --- Game Parameters for the Test ---
     const initialCancelledStake = 10_000_000_000n; // 10 ERG
@@ -48,9 +46,6 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
         
         // The claimer needs funds to pay the transaction fee.
         claimer.addBalance({ nanoergs: 1_000_000_000n });
-
-        // Compile the cancellation contract.
-        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
         
         gameCancellationContract = mockChain.addParty(gameCancellationErgoTree.toHex(), "GameCancellationContract");
 

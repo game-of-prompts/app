@@ -177,3 +177,4 @@ export const getReputationProofTemplateHash = () => getTemplateHash(_reputationP
 export const getReputationProofScriptHash = () => getScriptHash(_reputationProof, ensureReputationProofCompiled);
 export function getReputationProofAddress(): Address { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toAddress(networkType); }
 export function getReputationProofErgoTreeHex(): string { ensureReputationProofCompiled(); return _reputationProof.ergoTree!.toHex(); }
+export function getReputationProofErgoTree(): ErgoTree { ensureReputationProofCompiled(); return _reputationProof.ergoTree!; }

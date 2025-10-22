@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
-import { compile } from "@fleet-sdk/compiler";
 import {
     Box,
+    ErgoTree,
     OutputBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder
@@ -13,30 +13,13 @@ import {
     SLong,
     SPair,
     SInt,
-    SBool,
-    SGroupElement
-} from "@fleet-sdk/serializer";
+    SBool} from "@fleet-sdk/serializer";
 import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { bigintToLongByteArray, generate_pk_proposition, hexToBytes, uint8ArrayToHex } from "$lib/ergo/utils";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { bigintToLongByteArray, generate_pk_proposition, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
-// --- Configuración de Constantes y Carga de Contratos ---
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-
-const DIGITAL_PUBLIC_GOOD_SCRIPT = fs.readFileSync(path.join(contractsDir, "reputation_system", "digital_public_good.es"), "utf-8")
-const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version: 1 });
-const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
-const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
-
-const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
-
-
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
 const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
 // Helper para crear un hash de compromiso
@@ -62,9 +45,9 @@ describe("Game Resolution Invalidation by Judges", () => {
     let reputationProofContract: ReturnType<MockChain["newParty"]>;
     
     // --- ErgoTrees de Contratos ---
-    let gameResolutionErgoTree: ReturnType<typeof compile>;
-    let participationErgoTree: ReturnType<typeof compile>;
-    let reputationProofErgoTree: ReturnType<typeof compile>;
+    let gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
+    let participationErgoTree: ErgoTree = getGopParticipationErgoTree();
+    let reputationProofErgoTree: ErgoTree = getGopGameResolutionErgoTree();
 
     // --- Estado del Juego ---
     const currentHeight = 800_000;
@@ -75,7 +58,6 @@ describe("Game Resolution Invalidation by Judges", () => {
     let gameResolutionBox: Box;
     let invalidatedWinnerBox: Box;
     let nextWinnerBox: Box;
-    let extraParticipantBox: Box;
     let judge1ReputationBox: Box;
     let judge2ReputationBox: Box;
 
@@ -90,20 +72,6 @@ describe("Game Resolution Invalidation by Judges", () => {
     beforeEach(() => {
         mockChain.reset({clearParties: true});
         mockChain.jumpTo(currentHeight);
-
-        // --- Compilar Contratos ---
-        participationErgoTree = compile(PARTICIPATION_SOURCE);
-        
-        // Asumimos que no necesitamos el hash de 'submitted' para este test
-        const dummySubmittedHash = "0".repeat(64);
-
-        const resolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(participationErgoTree.bytes)))
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", uint8ArrayToHex(blake2b256(compile(REPUTATION_PROOF_SOURCE).bytes)))
-            .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-        gameResolutionErgoTree = compile(resolutionSource);
-        reputationProofErgoTree = compile(REPUTATION_PROOF_SOURCE);
     });
 
     it("should successfully invalidate the current winner with a majority of judge votes (2 out of 3)", () => {

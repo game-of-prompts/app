@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
-import { compile } from "@fleet-sdk/compiler";
 import {
   Box,
   ErgoTree,
@@ -8,28 +7,11 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SGroupElement, SInt, SLong, SPair } from "@fleet-sdk/serializer";
-import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
-import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
+import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
-
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-const ABANDON_PERIOD_IN_BLOCKS = 64800;
-
-let gameResolutionErgoTree: null|ErgoTree = null;
 
 describe("Creator Claims Abandoned Funds", () => {
   let mockChain: MockChain;
@@ -44,20 +26,16 @@ describe("Creator Claims Abandoned Funds", () => {
   const resolutionDeadline = 800_200;
   const gameNftId = "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f417";
 
+  const ABANDON_PERIOD_IN_BLOCKS = 64800;
+
+  let gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
+  let participationErgoTree: ErgoTree = getGopParticipationErgoTree();
+
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
     creator = mockChain.newParty("GameCreator");
     participant = mockChain.newParty("Participant");
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
-
-    const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-    const participationHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
-    const resolutionSource = GAME_RESOLUTION_TEMPLATE
-      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
-      .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-      .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-      .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-    gameResolutionErgoTree = compile(resolutionSource);
 
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");

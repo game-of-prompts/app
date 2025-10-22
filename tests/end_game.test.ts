@@ -3,6 +3,7 @@ import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
   ErgoAddress as Address,
+  ErgoTree,
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   SAFE_MIN_BOX_VALUE,
@@ -17,49 +18,22 @@ import {
   SPair
 } from "@fleet-sdk/serializer";
 import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
-import { network } from "$lib/common/store";
 import { bigintToLongByteArray } from "$lib/ergo/utils";
-
-/**
- * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
- */
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-// --- Constantes y Carga de Archivos ---
-
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-
-const PARTICIPATION_SOURCE = fs.readFileSync(
-  path.join(contractsDir, "participation.es"),
-  "utf-8"
-);
-
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(
-  path.join(contractsDir, "game_resolution.es"),
-  "utf-8"
-);
-
-const DIGITAL_PUBLIC_GOOD_SCRIPT = fs.readFileSync(path.join(contractsDir, "reputation_system", "digital_public_good.es"), "utf-8")
-const digitalPublicGoodErgoTree = compile(DIGITAL_PUBLIC_GOOD_SCRIPT, { version: 1 });
-const digital_public_good_script_hash = digitalPublicGoodErgoTree.toHex();
-const REPUTATION_PROOF_SOURCE = fs.readFileSync(path.join(contractsDir, "reputation_system", "reputation_proof.es"), "utf-8").replace(/`\+DIGITAL_PUBLIC_GOOD_SCRIPT_HASH\+`/g, digital_public_good_script_hash);
-
+import { DefaultGameConstants } from "$lib/common/constants";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
 
 // --- Suite de Pruebas ---
 
 describe("Game Finalization (end_game)", () => {
   const mockChain = new MockChain({ height: 800_000 });
 
-  const devErgoTree = Address.fromBase58(DEV_ADDR_BASE58).ergoTree;
+  const devErgoTree = DefaultGameConstants.DEV_SCRIPT;
+  const gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
+  const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
+  const reputationProofErgoTree: ErgoTree = getReputationProofErgoTree();
+
 
   let resolver: ReturnType<MockChain["newParty"]>;
   let creator: ReturnType<MockChain["newParty"]>;
@@ -74,17 +48,6 @@ describe("Game Finalization (end_game)", () => {
   const participationFee = 100_000_000n;
   const resolverCommissionPercent = 10;
 
-  // --- Compilación Dinámica de Contratos ---
-  const pparticipationErgoTree = compile(PARTICIPATION_SOURCE);
-  const pparticipationScriptHash = uint8ArrayToHex(blake2b256(pparticipationErgoTree.bytes));
-  
-  const gameResolutionSourceWithHash = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", pparticipationScriptHash)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-    .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-    
-  const gameResolutionErgoTree = compile(gameResolutionSourceWithHash);
   
   // --- Variables para el Estado de la Prueba ---
   let gameNftId: string;
@@ -110,7 +73,7 @@ describe("Game Finalization (end_game)", () => {
       participationContract.addUTxOs({
           creationHeight: mockChain.height,
           value: participationFee,
-          ergoTree: pparticipationErgoTree.toHex(),
+          ergoTree: participationErgoTree.toHex(),
           assets: [],
           additionalRegisters: {
               R4: SColl(SByte, ergotree).toHex(),
@@ -136,7 +99,7 @@ describe("Game Finalization (end_game)", () => {
 
     // --- Partes de Contrato en la MockChain ---
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
-    participationContract = mockChain.addParty(pparticipationErgoTree.toHex(), "ParticipationContract");
+    participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
@@ -290,7 +253,7 @@ describe("Game Finalization (end_game)", () => {
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
@@ -307,7 +270,7 @@ describe("Game Finalization (end_game)", () => {
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
@@ -322,7 +285,7 @@ describe("Game Finalization (end_game)", () => {
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
@@ -429,7 +392,7 @@ describe("Game Finalization (end_game)", () => {
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
@@ -527,7 +490,7 @@ describe("Game Finalization (end_game)", () => {
     participationContract.addUTxOs({
             creationHeight: mockChain.height,
             value: participationFee,
-            ergoTree: pparticipationErgoTree.toHex(),
+            ergoTree: participationErgoTree.toHex(),
             assets: [],
             additionalRegisters: {
                 R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
@@ -900,7 +863,6 @@ describe("Game Finalization (end_game)", () => {
     const judge2 = mockChain.newParty("Judge2");
     
     // Compilamos el ErgoTree de `reputation_proof` para poder añadirlo a la mockChain
-    const reputationProofErgoTree = compile(REPUTATION_PROOF_SOURCE);
     const reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProofContract");
 
     // 2. Crear tokens de reputación y hashes de scripts para los jueces.
