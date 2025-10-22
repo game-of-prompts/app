@@ -15,13 +15,8 @@ import {
     SPair
 } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
-
-// --- Configuración de Utilidades y Constantes ---
-const contractsDir = path.resolve(__dirname, "..", "contracts");
+import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 
 /**
  * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
@@ -31,13 +26,6 @@ const contractsDir = path.resolve(__dirname, "..", "contracts");
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");
 }
-
-// --- Carga de Plantillas de Contratos ---
-// Se cargan todos los contratos necesarios para la prueba.
-const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
-const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 
 // Dirección de desarrollador para comisiones, requerida por game_resolution.es
 const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
@@ -76,30 +64,11 @@ describe("Game Cancellation (cancel_game)", () => {
 
         // --- Compilación de Contratos en Orden de Dependencia ---
 
-        // 1. Compilar contratos sin dependencias de hash.
-        const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-        const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
+        // Compilar el contrato de cancelación.
+        gameCancellationErgoTree = getGopGameCancellationErgoTree();
 
-        const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-            .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-        const gameResolutionErgoTree = compile(gameResolutionSource);
-        const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-
-        // 3. Compilar el contrato de cancelación.
-        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
-        const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-
-        // 4. Finalmente, compilar el contrato principal del juego con todos los hashes necesarios.
-        const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
-            .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
-            .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-            .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
-        gameActiveErgoTree = compile(finalGameActiveSource);
+        // Finalmente, compilar el contrato principal del juego con todos los hashes necesarios.
+        gameActiveErgoTree = getGopGameActiveErgoTree();
 
         // --- Creación de la Caja del Juego ---
         // Se crea la caja `game_active` inicial que será cancelada en la prueba.
@@ -229,27 +198,8 @@ describe("Game Cancellation (Low Stake)", () => {
         claimer.addBalance({ nanoergs: 1_000_000_000n });
 
         // --- Compilación de Contratos ---
-        const participationSubmittedSource = PARTICIPATION_TEMPLATE
-        const participationSubmittedErgoTree = compile(participationSubmittedSource);
-        const participationSubmittedScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
-        const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationSubmittedScriptHash)
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-            .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-        const gameResolutionErgoTree = compile(gameResolutionSource);
-        const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-        gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
-        const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-        const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-        const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
-        const finalGameActiveSource = GAME_ACTIVE_TEMPLATE
-            .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
-            .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-            .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
-        gameActiveErgoTree = compile(finalGameActiveSource);
+        gameCancellationErgoTree = getGopGameCancellationErgoTree();
+        gameActiveErgoTree = getGopGameActiveErgoTree();
 
         // --- Creación de la Caja del Juego con Stake Bajo ---
         game.addUTxOs({

@@ -10,7 +10,7 @@ import { network_id } from "./envs";
 import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
 import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
-import PARTICIPATION_SUBMITTED_SOURCE from '../../../contracts/participation.es?raw';
+import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 
@@ -34,7 +34,7 @@ let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: s
 function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
 
-    const source = PARTICIPATION_SUBMITTED_SOURCE
+    const source = PARTICIPATION_SOURCE
         .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString())
         .replace(/`\+ABANDONED_FUNDS_GRACE_PERIOD\+`/g, DefaultGameConstants.PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD.toString());
 
@@ -126,24 +126,28 @@ export const getGopGameActiveTemplateHash = () => getTemplateHash(_gameActive, e
 export const getGopGameActiveScriptHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
 export function getGopGameActiveAddress(): Address { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toAddress(networkType); }
 export function getGopGameActiveErgoTreeHex(): string { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toHex(); }
+export function getGopGameActiveErgoTree(): ErgoTree { ensureGameActiveCompiled(); return _gameActive.ergoTree!; }
 
 // --- Game Resolution ---
 export const getGopGameResolutionTemplateHash = () => getTemplateHash(_gameResolution, ensureGameResolutionCompiled);
 export const getGopGameResolutionScriptHash = () => getScriptHash(_gameResolution, ensureGameResolutionCompiled);
 export function getGopGameResolutionAddress(): Address { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toAddress(networkType); }
 export function getGopGameResolutionErgoTreeHex(): string { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toHex(); }
+export function getGopGameResolutionErgoTree(): ErgoTree { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!; }
 
 // --- Game Cancellation ---
 export const getGopGameCancellationTemplateHash = () => getTemplateHash(_gameCancellation, ensureGameCancellationCompiled);
 export const getGopGameCancellationScriptHash = () => getScriptHash(_gameCancellation, ensureGameCancellationCompiled);
 export function getGopGameCancellationAddress(): Address { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toAddress(networkType); }
 export function getGopGameCancellationErgoTreeHex(): string { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!.toHex(); }
+export function getGopGameCancellationErgoTree(): ErgoTree { ensureGameCancellationCompiled(); return _gameCancellation.ergoTree!; }
 
 // --- Participation Submitted ---
 export const getGopParticipationTemplateHash = () => getTemplateHash(_participation, ensureParticipationCompiled);
 export const getGopParticipationScriptHash = () => getScriptHash(_participation, ensureParticipationCompiled);
 export function getGopParticipationAddress(): Address { ensureParticipationCompiled(); return _participation.ergoTree!.toAddress(networkType); }
 export function getGopParticipationErgoTreeHex(): string { ensureParticipationCompiled(); return _participation.ergoTree!.toHex(); }
+export function getGopParticipationErgoTree(): ErgoTree { ensureParticipationCompiled(); return _participation.ergoTree!; }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)
