@@ -232,6 +232,7 @@
             if (winnerCandidateBoxes.size == 1) {
               val winnerCandidateBox = winnerCandidateBoxes(0)
 
+              val pBoxErgotree = winnerCandidateBox.R4[Coll[Byte]].get
               val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get
               val pBoxCommitment = winnerCandidateBox.R5[Coll[Byte]].get
               val pBoxSolverId = winnerCandidateBox.R7[Coll[Byte]].get
@@ -239,7 +240,7 @@
 
               val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
                 if (scoreAcc) { scoreAcc } else {
-                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ revealedS)
+                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
                   if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
                 }
               })
