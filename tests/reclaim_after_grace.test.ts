@@ -7,28 +7,20 @@ import {
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SGroupElement, SInt, SLong, SPair } from "@fleet-sdk/serializer";
+import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
-
-const contractsDir = path.resolve(__dirname, "..", "contracts");
+import { DefaultGameConstants } from "$lib/common/constants";
+import { getGopGameActiveErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");
 }
 
-const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
-const GAME_CANCELLATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
 
-
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-const GRACE_PERIOD_IN_BLOCKS = 720;
+const GRACE_PERIOD_IN_BLOCKS = DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS;
 
 describe("Participant Reclaim After Grace Period", () => {
   let mockChain: MockChain;
@@ -38,35 +30,21 @@ describe("Participant Reclaim After Grace Period", () => {
   let participationContract: ReturnType<MockChain["newParty"]>;
   let gameActiveBox: Box;
   let participationBox: Box;
+
   const creatorStake = 1_000_000_000n;
   const participationFee = 1_000_000_000n;
   const deadlineBlock = 800_200;
+  
   const gameNftId = "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f417";
+
+  const participationErgoTree = getGopParticipationErgoTree();
+  const gameActiveErgoTree = getGopGameActiveErgoTree();
 
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
     creator = mockChain.newParty("GameCreator");
     participant = mockChain.newParty("Participant");
     participant.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
-
-    const participationErgoTree = compile(PARTICIPATION_TEMPLATE);
-    const participationHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
-    const gameCancellationErgoTree = compile(GAME_CANCELLATION_TEMPLATE);
-    const cancellationHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-    const resolutionSource = GAME_RESOLUTION_TEMPLATE
-      .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
-      .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-      .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-      .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-    const gameResolutionErgoTree = compile(resolutionSource);
-    const resolutionHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-    const gameActiveSource = GAME_ACTIVE_TEMPLATE
-        .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", resolutionHash)
-        .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", cancellationHash)
-        .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-        .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-        .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash);
-    const gameActiveErgoTree = compile(gameActiveSource);
 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActive");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
