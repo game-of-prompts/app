@@ -1,53 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
-import { compile } from "@fleet-sdk/compiler";
 import {
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
   TransactionBuilder,
 } from "@fleet-sdk/core";
-import { SByte, SColl, SLong, SInt, SGroupElement } from "@fleet-sdk/serializer";
+import { SByte, SColl, SLong, SInt } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
-
-// Helper para convertir Uint8Array a una cadena hexadecimal.
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-// =================================================================
-// === CARGA Y COMPILACIÓN DE CONTRATOS
-// =================================================================
-
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-
-// Cargar el código fuente de los contratos ErgoScript
-const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
-const GAME_CANCELLATION_SOURCE = fs.readFileSync(path.join(contractsDir, "game_cancellation.es"), "utf-8");
-const GAME_ACTIVE_SOURCE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
-
-// Compilar los contratos a ErgoTree
-const participationErgoTree = compile(PARTICIPATION_SOURCE);
-const participationScriptHash = uint8ArrayToHex(blake2b256(participationErgoTree.bytes));
-const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
-const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-
-// Inyectar hashes en el contrato 'game_active.es' (necesario para la consistencia del entorno de prueba)
-const gameActiveSource = GAME_ACTIVE_SOURCE
-    .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", "0".repeat(64)) // No es relevante para este test
-    .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
-const gameActiveErgoTree = compile(gameActiveSource);
+import { getGopGameCancellationErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
 
 describe("Participation Contract: Refund after Game Cancellation", () => {
   let mockChain: MockChain;
+
+  const participationErgoTree = getGopParticipationErgoTree();
+  const gameCancellationErgoTree = getGopGameCancellationErgoTree();
 
   // --- Actores ---
   let player: ReturnType<MockChain["newParty"]>;
