@@ -14,39 +14,12 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
+import { getGopGameActiveErgoTree, getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
 // Helper functions and contract loading remain the same...
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");
 }
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-const GAME_ACTIVE_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_active.es"), "utf-8");
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
-const GAME_CANCELLATION_SOURCE = "{ sigmaProp(false) }";  // Not needed
-
-
-// Contract compilation remains the same...
-const participationSubmittedErgoTree = compile(PARTICIPATION_SOURCE);
-const participationScriptHash = uint8ArrayToHex(blake2b256(participationSubmittedErgoTree.bytes));
-const gameCancellationErgoTree = compile(GAME_CANCELLATION_SOURCE);
-const gameCancellationScriptHash = uint8ArrayToHex(blake2b256(gameCancellationErgoTree.bytes));
-const gameResolutionSource = GAME_RESOLUTION_TEMPLATE
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64)) // No se usa en este script
-    .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-const gameResolutionErgoTree = compile(gameResolutionSource);
-const gameResolutionScriptHash = uint8ArrayToHex(blake2b256(gameResolutionErgoTree.bytes));
-const gameActiveSource = GAME_ACTIVE_TEMPLATE
-    .replace("`+GAME_RESOLUTION_SCRIPT_HASH+`", gameResolutionScriptHash)
-    .replace("`+GAME_CANCELLATION_SCRIPT_HASH+`", gameCancellationScriptHash)
-    .replace("`+ACCEPT_GAME_INVITATION_TYPE_ID+`", PARTICIPATION)
-    .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-    .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationScriptHash);
-const gameActiveErgoTree = compile(gameActiveSource);
-
 
 describe("Game Resolution (resolve_game)", () => {
   let mockChain: MockChain;
@@ -61,6 +34,9 @@ describe("Game Resolution (resolve_game)", () => {
   let participationContract: ReturnType<MockChain["addParty"]>;
   let gameResolutionContract: ReturnType<MockChain["addParty"]>;
 
+  const participationSubmittedErgoTree = getGopParticipationErgoTree();
+  const gameResolutionErgoTree = getGopGameResolutionErgoTree();
+  const gameActiveErgoTree = getGopGameActiveErgoTree();
 
   // --- Estado del Juego ---
   let secret: Uint8Array;
@@ -71,14 +47,9 @@ describe("Game Resolution (resolve_game)", () => {
   const creatorStake = 2_000_000_000n;
   const resolutionDeadline = BigInt(deadlineBlock + 40);  // Seems that the mockchain goes various blocks forward when executing the tx!
   let commitment1Hex: string;
-  let commitment2Hex: string;
   let gameBoxOutput: OutputBuilder;
-  let participation1Output: OutputBuilder;
-  let participation2Output: OutputBuilder;
   let score1: bigint;
-  let score2: bigint;
   let participation1_registers: Record<string, string>;
-  let participation2_registers: Record<string, string>;
   let winnerCandidateCommitment: string;
 
   afterEach(() => {
