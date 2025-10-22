@@ -3,6 +3,7 @@ import { MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
     Box,
+    ErgoTree,
     OutputBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder
@@ -12,24 +13,13 @@ import {
     SColl,
     SLong,
     SPair,
-    SInt,
-    SGroupElement
-} from "@fleet-sdk/serializer";
+    SInt} from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray } from "$lib/ergo/utils";
 import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
-
-// --- Utility and Constants Setup ---
-const contractsDir = path.resolve(__dirname, "..", "contracts");
-const GAME_RESOLUTION_TEMPLATE = fs.readFileSync(path.join(contractsDir, "game_resolution.es"), "utf-8");
-const PARTICIPATION_SOURCE = fs.readFileSync(path.join(contractsDir, "participation.es"), "utf-8");
-
-
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
 // Helper to create a commitment hash
 const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
@@ -50,8 +40,8 @@ describe("Omitted Participation Inclusion", () => {
     let participationContract: ReturnType<MockChain["addParty"]>;
     
     // --- Contract ErgoTrees ---
-    let gameResolutionErgoTree: ReturnType<typeof compile>;
-    let participationErgoTree: ReturnType<typeof compile>;
+    const gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
+    const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
 
     // --- Game State Variables ---
     const resolutionDeadline = 800_030;  // initial height + 30 (JUDGE_PERIOD)
@@ -75,17 +65,6 @@ describe("Omitted Participation Inclusion", () => {
         omittedPlayer = mockChain.newParty("OmittedPlayer");
 
         newResolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 3n });
-
-        participationErgoTree = compile(PARTICIPATION_SOURCE);
-        const participationHash = Buffer.from(blake2b256(participationErgoTree.bytes)).toString("hex");
-
-        const resolutionSource = GAME_RESOLUTION_TEMPLATE
-            .replace("`+PARTICIPATION_SCRIPT_HASH+`", participationHash)
-            .replace("`+REPUTATION_PROOF_SCRIPT_HASH+`", "0".repeat(64))
-            .replace("`+PARTICIPATION_TYPE_ID+`", PARTICIPATION)
-            .replace("`+DEV_ADDR+`", DEV_ADDR_BASE58);
-
-        gameResolutionErgoTree = compile(resolutionSource);
 
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
