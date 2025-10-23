@@ -29,6 +29,15 @@
   // R8: (Coll[Byte], Long)         - resolverInfo: (Script de gasto del "Resolvedor", % de comisión).
   // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Script de gasto del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
 
+
+  // -- NEW --
+  // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
+  // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
+  // R7: Coll[Coll[Byte]]   - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
+  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline].
+  // R9: Coll[Coll[Byte]]   - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador original, Script de gasto del resolvedor)
+
   // =================================================================
   // === EXTRACCIÓN DE VALORES
   // =================================================================
