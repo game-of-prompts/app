@@ -19,7 +19,7 @@
   val COOLDOWN_IN_BLOCKS  = `+COOLDOWN_IN_BLOCKS+`L
   val JUDGE_PERIOD        = `+JUDGE_PERIOD+`L
   val MAX_SCORE_LIST      = `+MAX_SCORE_LIST+`L
-  val OPEN_CEREMONY_BLOCKS = `+OPEN_CEREMONY_BLOCKS+`L
+  val OPEN_CEREMONY_BLOCKS = 5L  // ¿Debería de depender del número de bloques de juego activo?
 
   val MIN_BOX_VALUE       = 1000000L
 
