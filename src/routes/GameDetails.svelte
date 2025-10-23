@@ -748,6 +748,10 @@
                         <span class="info-value font-mono text-xs break-all" title={game.content.serviceId}>{game.content.serviceId}</span>
                     </div>
                     <div class="info-block">
+                        <span class="info-label">Indeterminisim index</span>
+                        <span class="info-value font-mono text-xs break-all">{game.content.indetermismIndex}</span>
+                    </div> 
+                    <div class="info-block">
                         <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
                         <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
                             {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}

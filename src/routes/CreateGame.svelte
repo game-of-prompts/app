@@ -23,6 +23,7 @@
     let gameDescription: string = "";
     let gameImageURL: string = "";
     let gameWebLink: string = "";
+    let indetermismIndex: number = 1;
     let deadlineValue: number;
     let deadlineUnit: 'days' | 'minutes' = 'days';
     let deadlineBlock: number | undefined;
@@ -153,6 +154,7 @@
             webLink: gameWebLink,
             serviceId: gameServiceId,
             mirrorUrls: mirrorUrlsArray,
+            indetermismIndex: indetermismIndex
         });
 
         try {
@@ -222,6 +224,10 @@
                             </button>
                         </div>
                         <p class="text-xs mt-1 text-muted-foreground">This will be hashed. Keep the original S safe.</p>
+                    </div>
+                    <div class="form-group">
+                        <Label for="indetermismIndex">Indetermism Index</Label>
+                        <Input id="indetermismIndex" type="number" bind:value={indetermismIndex} min="1" step="1" placeholder="Number of executions for reproducibility" required />
                     </div>
                 </div>
             </section>

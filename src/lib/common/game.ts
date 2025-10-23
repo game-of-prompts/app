@@ -41,6 +41,7 @@ export interface GameContent {
     imageURL?: string;
     webLink?: string;
     mirrorUrls?: string[];
+    indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
 }
 
 // =================================================================
