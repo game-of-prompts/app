@@ -33,6 +33,8 @@
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage].
   // R9: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
 
+  // Note: The game seed that must be used to reproduce the random scenario for all participants is derived from the game ID (token ID).
+
   // =================================================================
   // === EXTRACCIÓN DE VALORES
   // =================================================================
