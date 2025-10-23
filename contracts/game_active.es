@@ -19,7 +19,7 @@
   val COOLDOWN_IN_BLOCKS  = `+COOLDOWN_IN_BLOCKS+`L
   val JUDGE_PERIOD        = `+JUDGE_PERIOD+`L
   val MAX_SCORE_LIST      = `+MAX_SCORE_LIST+`L
-  val OPEN_CEREMONY_BLOCKS = 5L  // ¿Debería de depender del número de bloques de juego activo?
+  val OPEN_CEREMONY_BLOCKS = 5L
 
   val MIN_BOX_VALUE       = 1000000L
 
@@ -28,19 +28,11 @@
   // =================================================================
 
   // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Long) - creatorInfo: (Script de gasto del creador, Porcentaje de comisión).
-  // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
-  // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage].
-  // R9: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
-
-  // -- NEW --
-  // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
-  // R9: Coll[Coll[Byte]]   - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador)
+  // R9: (Coll[Byte], Coll[Byte]) - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador)
 
   // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).
 
@@ -49,18 +41,30 @@
   // =================================================================
 
   val gameState = SELF.R4[Int].get
-  val creatorInfo = SELF.R5[(Coll[Byte], Long)].get
-  val gameCreatorScript = creatorInfo._1
   
+  // R5: (Seed, Ceremony deadline)
+  val seedInfo = SELF.R5[(Coll[Byte], Long)].get
+  val gameSeed = seedInfo._1
+  val ceremonyDeadline = seedInfo._2
+
+  // R6: Hash del secreto 'S'
   val secretHash = SELF.R6[Coll[Byte]].get
   
+  // R7: Jueces invitados
+  val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
+
+  // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
   val numericalParams = SELF.R8[Coll[Long]].get
   val deadline = numericalParams(0)
   val creatorStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val perJudgeComission = numericalParams(3)
+  val perJudgeComissionPercentage = numericalParams(3)
+  val creatorComissionPercentage = numericalParams(4)
 
-  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
+  // R9: (gameDetailsJsonHex, gameCreatorScript)
+  val gameProvenance = SELF.R9[(Coll[Byte], Coll[Byte])].get
+  val gameDetailsJsonHex = gameProvenance._1
+  val gameCreatorScript = gameProvenance._2
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -84,9 +88,9 @@
         val resolutionBox = resolutionBoxes(0)
         
         // La estructura de la nueva caja de resolución es (Coll[Byte], Coll[Byte])
-        val r5Tuple = resolutionBox.R5[(Coll[Byte], Coll[Byte])].get
-        val revealedS = r5Tuple._1
-        val winnerCandidateCommitment = r5Tuple._2
+        val r6Tuple = resolutionBox.R6[(Coll[Byte], Coll[Byte])].get
+        val revealedS = r6Tuple._1
+        val winnerCandidateCommitment = r6Tuple._2
 
         val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash
         val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH
@@ -126,9 +130,7 @@
 
         if (sIsCorrectlyRevealed && transitionsToResolutionScript && winnerCandidateValid) {
           
-          // --- Judge validation ---
-          val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
-          
+          // --- Judge validation ---          
           val judgeProofDataInputs = CONTEXT.dataInputs
             .filter({(box: Box) =>
               blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && 
@@ -154,14 +156,17 @@
               resolutionBox.value >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
-              resolutionBox.R6[Coll[Coll[Byte]]].get == invitedJudges &&
-              resolutionBox.R7[Coll[Long]].get(0) == deadline &&
-              resolutionBox.R7[Coll[Long]].get(1) == creatorStake &&
-              resolutionBox.R7[Coll[Long]].get(2) == participationFee &&
-              resolutionBox.R7[Coll[Long]].get(3) == perJudgeComission &&
-              resolutionBox.R7[Coll[Long]].get(4) >= HEIGHT + JUDGE_PERIOD &&
-              resolutionBox.R8[(Coll[Byte], Long)].get._2 == creatorInfo._2 &&
-              resolutionBox.R9[(Coll[Byte], Coll[Byte])].get == (gameCreatorScript, gameDetailsJsonHex)
+              resolutionBox.R5[Coll[Byte]].get == gameSeed &&
+              resolutionBox.R7[Coll[Coll[Byte]]].get == invitedJudges &&
+              resolutionBox.R8[Coll[Long]].get(0) == deadline &&
+              resolutionBox.R8[Coll[Long]].get(1) == creatorStake &&
+              resolutionBox.R8[Coll[Long]].get(2) == participationFee &&
+              resolutionBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(4) >= creatorComissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
+              resolutionBox.R9[Coll[Coll[Byte]]].get(1) == gameCreatorScript &&
+              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 3 // The third element is the resolver script (who will receive the funds), could be the creator's one or a different one.
             }
 
           resolutionBoxIsValid && allVotesAreUnique
@@ -225,52 +230,64 @@
   // === ACCIÓN 3: OPEN CEREMONY (Reproducción temprana con nueva semilla)
   // =================================================================
   //
-  // Esta acción permite reproducir el contrato dentro del período inicial (OPEN_CEREMONY_BLOCKS)
+  // Esta acción permite reproducir el contrato dentro del período inicial (hasta ceremonyDeadline)
   // desde la creación, para agregar entropía adicional al 'seed'.
   //
   // Condiciones:
-  //   - Debe ocurrir antes de (creationHeight + OPEN_CEREMONY_BLOCKS)
-  //   - Se mantiene todo igual salvo el registro R6 (la semilla actualizada)
-  //   - updated_seed = blake2b256(old_seed ++ INPUTS(0).boxId)
+  //   - Debe ocurrir antes de 'ceremonyDeadline' (definido en R5._2)
+  //   - Se mantiene todo igual salvo el registro R5._1 (la semilla actualizada)
+  //   - updated_seed = blake2b256(old_seed ++ INPUTS(0).id)
   //   - El script de salida debe ser idéntico (SELF mismo script)
   //   - El NFT y valores deben preservarse
   //
-  /* val action3_openCeremony = {
-    val creationHeight = SELF.creationInfo._1
-    val openCeremonyActive = HEIGHT <= creationHeight + OPEN_CEREMONY_BLOCKS
+  val action3_openCeremony = {
+    // Usa ceremonyDeadline del nuevo R5
+    val openCeremonyActive = HEIGHT < ceremonyDeadline
 
-    // La caja de salida debe ser una copia del contrato actual, excepto R6
-    val out = OUTPUTS(0)
-    val sameScript = out.propositionBytes == SELF.propositionBytes
+    if (openCeremonyActive && OUTPUTS.size > 0) {
+      // La caja de salida debe ser una copia del contrato actual, excepto R5._1
+      val out = OUTPUTS.filter({ (box: Box) => 
+        blake2b256(box.propositionBytes) == blake2b256(SELF.propositionBytes)
+      })(0)
 
-    // El NFT debe preservarse
-    val sameNFT = out.tokens(0)._1 == gameNftId
-    val sameValue = out.value >= MIN_BOX_VALUE && out.value == SELF.value
+      // El NFT debe preservarse
+      val sameNFT = out.tokens(0)._1 == gameNftId
+      val sameValue = out.value >= MIN_BOX_VALUE && out.value == SELF.value
+      val sameTokens = (out.tokens.size == SELF.tokens.size) &&
+        (out.tokens.slice(1, out.tokens.size).zip(SELF.tokens.slice(1, SELF.tokens.size)).forall({ (pair: ((Coll[Byte], Long), (Coll[Byte], Long))) =>
+          val outToken = pair._1
+          val selfToken = pair._2
+          outToken._1 == selfToken._1 && outToken._2 >= selfToken._2
+        }))
 
-    // Calculamos la nueva semilla
-    val old_seed = SELF.R[Coll[Byte]].get
-    val updated_seed = blake2b256(concat(old_seed, INPUTS(0).id))
+      // Calculamos la nueva semilla (gameSeed es R5._1)
+      val updated_seed = blake2b256(gameSeed ++ INPUTS(0).id)
 
-    // Validar que R6 del output sea igual al updated_seed
-    val validUpdatedSeed = out.R[Coll[Byte]].get == updated_seed
+      // Validar que R5._1 del output sea igual al updated_seed
+      val outR5 = out.R5[(Coll[Byte], Long)].get
+      val validUpdatedSeed = outR5._1 == updated_seed
+      // Validar que R5._2 (deadline) no cambie
+      val sameCeremonyDeadline = outR5._2 == ceremonyDeadline
 
-    // Todos los demás registros deben permanecer iguales
-    val sameR4 = out.R4[Int].get == SELF.R4[Int].get
-    val sameR5 = out.R5[(Coll[Byte], Long)].get == SELF.R5[(Coll[Byte], Long)].get
-    val sameR6 = out.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get
-    val sameR7 = out.R7[Coll[Coll[Byte]]].get == SELF.R7[Coll[Coll[Byte]]].get
-    val sameR8 = out.R8[Coll[Long]].get == SELF.R8[Coll[Long]].get
-    val sameR9 = out.R9[Coll[Byte]].get == SELF.R9[Coll[Byte]].get
-  
-      openCeremonyActive &&
-      sameScript &&
+      // Todos los demás registros deben permanecer iguales
+      val sameR4 = out.R4[Int].get == gameState
+      val sameR6 = out.R6[Coll[Byte]].get == secretHash
+      val sameR7 = out.R7[Coll[Coll[Byte]]].get == invitedJudges
+      val sameR8 = out.R8[Coll[Long]].get == numericalParams
+      val sameR9 = out.R9[(Coll[Byte], Coll[Byte])].get == gameProvenance
+    
       sameNFT &&
       sameValue &&
       validUpdatedSeed &&
-      sameR4 && sameR5 && sameR6 && sameR7 && sameR8 && sameR9
-  } */
+      sameCeremonyDeadline && // Check R5._2
+      sameR4 && sameR6 && sameR7 && sameR8 && sameR9 // Check R4, R6-R9
+    } else {
+      false
+    }
+  }
 
   val game_active = gameState == 0
-  val actions = action1_transitionToResolution || action2_transitionToCancellation // || action3_openCeremony
+  // Se descomenta action3_openCeremony para que sea una acción válida
+  val actions = action1_transitionToResolution || action2_transitionToCancellation || action3_openCeremony
   sigmaProp(game_active && actions)
 }
