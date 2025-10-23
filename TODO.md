@@ -69,6 +69,8 @@
  
 [] Normalizar registros entre game_active y game_resolution
 
+[] Plantear la necesidad de registrar creator script ¿porque no solo resolver script? ¿porque simplemente quien quiera que lo cambie y ya ... ?  el creador podría agregar su prueba de reputación entre el resto de información del juego
+
 [] Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
     - Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
     - Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
