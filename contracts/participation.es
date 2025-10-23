@@ -93,7 +93,7 @@
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
-      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
 
       // 1. Verificar que esta participación pertenece a la caja del juego que se está gastando.
       val gameLinkIsValid = mainGameBox.tokens(0)._1 == gameNftIdInSelf && mainGameBox.R4[Int].get == 1
@@ -112,14 +112,14 @@
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
-      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
 
       // 1. Verificar que la invalidación ocurre antes del deadline de resolución.
       val isBeforeDeadline = HEIGHT < resolutionDeadline
       
       // 2. Verificar que ESTA caja es la candidata a ganadora que se está invalidando.
       //    El commitment en R5 de esta caja debe coincidir con el del candidato en la caja del juego.
-      val winnerCandidateCommitment = mainGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+      val winnerCandidateCommitment = mainGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
       val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
 
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
@@ -131,7 +131,7 @@
         val fundsAreReturned = recreatedGameBox.value >= mainGameBox.value + SELF.value
         
         // El nuevo candidato a ganador debe ser diferente al de esta caja.
-        val newWinnerCommitment = recreatedGameBox.R5[(Coll[Byte], Coll[Byte])].get._2
+        val newWinnerCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
         val winnerIsChanged = newWinnerCommitment != winnerCandidateCommitment
 
         fundsAreReturned && winnerIsChanged
@@ -153,11 +153,11 @@
       
       // --- Condición 1: Plazo de 90 días superado ---
       // Se comprueba que han pasado 90 días (64800 bloques) desde la fecha límite de resolución.
-      val resolutionDeadline = mainGameBox.R7[Coll[Long]].get(3)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
       val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
 
       if (isAfter90Days) {
-        val resolverPK = mainGameBox.R8[(Coll[Byte], Long)].get._1
+        val resolverPK = mainGameBox.R8[Coll[Coll[Byte]]].get(2)
 
         // --- Condición 2: Autenticación del creador ---
         val prefix = resolverPK.slice(0, 3)
