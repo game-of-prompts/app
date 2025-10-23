@@ -90,18 +90,35 @@ describe("Game Creation (create_game)", () => {
     // Set the additional registers with the game information,
     // following the specification in `game_active.es`.
     .setAdditionalRegisters({
-        // R4: Game state (0: Active)
-        R4: SInt(0).toHex(),
-        // R5: (Creator's public key, Commission percentage)
-        R5: SPair(SColl(SByte, creatorPkBytes), SLong(BigInt(commissionPercentage))).toHex(),
-        // R6: Hash of the secret 'S'
-        R6: SColl(SByte, hashedSecret).toHex(),
-        // R7: Invited judges (empty in this test)
-        R7: SColl(SColl(SByte), []).toHex(),
-        // R8: [deadline, creator's stake, participation fee]
-        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
-        // R9: Game details in JSON format (converted to bytes)
-        R9: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
+      // R4: Game state (0: Active)
+      R4: SInt(0).toHex(),
+
+      // R5: (Seed, Ceremony deadline)
+      R5: SPair(
+        SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")),
+        SLong(BigInt(deadlineBlock + 50))
+      ).toHex(),
+
+      // R6: Hash of the secret 'S'
+      R6: SColl(SByte, hashedSecret).toHex(),
+
+      // R7: Invited judges (empty in this test)
+      R7: SColl(SColl(SByte), []).toHex(),
+
+      // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+      R8: SColl(SLong, [
+        BigInt(deadlineBlock),
+        creatorStake,
+        participationFee,
+        500n,  // 5.00% comisión por juez
+        1000n  // 10.00% comisión del creador
+      ]).toHex(),
+
+      // R9: (Detalles del juego, Script del creador)
+      R9: SPair(
+        SColl(SByte, stringToBytes("utf8", gameDetailsJson)), // JSON con detalles del juego
+        SColl(SByte, creatorPkBytes) // Script de gasto del creador (placeholder)
+      ).toHex()
     });
 
     // Build the transaction.
