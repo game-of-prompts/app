@@ -19,6 +19,7 @@
   val COOLDOWN_IN_BLOCKS  = `+COOLDOWN_IN_BLOCKS+`L
   val JUDGE_PERIOD        = `+JUDGE_PERIOD+`L
   val MAX_SCORE_LIST      = `+MAX_SCORE_LIST+`L
+  val OPEN_CEREMONY_BLOCKS = `+OPEN_CEREMONY_BLOCKS+`L
 
   val MIN_BOX_VALUE       = 1000000L
 
@@ -33,7 +34,7 @@
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage].
   // R9: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
 
-  // Note: The game seed that must be used to reproduce the random scenario for all participants is derived from the game ID (token ID).
+  // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -212,7 +213,56 @@
     }
   }
 
+  // =================================================================
+  // === ACCIÓN 3: OPEN CEREMONY (Reproducción temprana con nueva semilla)
+  // =================================================================
+  //
+  // Esta acción permite reproducir el contrato dentro del período inicial (OPEN_CEREMONY_BLOCKS)
+  // desde la creación, para agregar entropía adicional al 'seed'.
+  //
+  // Condiciones:
+  //   - Debe ocurrir antes de (creationHeight + OPEN_CEREMONY_BLOCKS)
+  //   - Se mantiene todo igual salvo el registro R6 (la semilla actualizada)
+  //   - updated_seed = blake2b256(old_seed ++ INPUTS(0).boxId)
+  //   - El script de salida debe ser idéntico (SELF mismo script)
+  //   - El NFT y valores deben preservarse
+  //
+  /* val action3_openCeremony = {
+    val creationHeight = SELF.creationInfo._1
+    val openCeremonyActive = HEIGHT <= creationHeight + OPEN_CEREMONY_BLOCKS
+
+    // La caja de salida debe ser una copia del contrato actual, excepto R6
+    val out = OUTPUTS(0)
+    val sameScript = out.propositionBytes == SELF.propositionBytes
+
+    // El NFT debe preservarse
+    val sameNFT = out.tokens(0)._1 == gameNftId
+    val sameValue = out.value >= MIN_BOX_VALUE && out.value == SELF.value
+
+    // Calculamos la nueva semilla
+    val old_seed = SELF.R[Coll[Byte]].get
+    val updated_seed = blake2b256(concat(old_seed, INPUTS(0).id))
+
+    // Validar que R6 del output sea igual al updated_seed
+    val validUpdatedSeed = out.R[Coll[Byte]].get == updated_seed
+
+    // Todos los demás registros deben permanecer iguales
+    val sameR4 = out.R4[Int].get == SELF.R4[Int].get
+    val sameR5 = out.R5[(Coll[Byte], Long)].get == SELF.R5[(Coll[Byte], Long)].get
+    val sameR6 = out.R6[Coll[Byte]].get == SELF.R6[Coll[Byte]].get
+    val sameR7 = out.R7[Coll[Coll[Byte]]].get == SELF.R7[Coll[Coll[Byte]]].get
+    val sameR8 = out.R8[Coll[Long]].get == SELF.R8[Coll[Long]].get
+    val sameR9 = out.R9[Coll[Byte]].get == SELF.R9[Coll[Byte]].get
+  
+      openCeremonyActive &&
+      sameScript &&
+      sameNFT &&
+      sameValue &&
+      validUpdatedSeed &&
+      sameR4 && sameR5 && sameR6 && sameR7 && sameR8 && sameR9
+  } */
+
   val game_active = gameState == 0
-  val actions = action1_transitionToResolution || action2_transitionToCancellation
+  val actions = action1_transitionToResolution || action2_transitionToCancellation // || action3_openCeremony
   sigmaProp(game_active && actions)
 }
