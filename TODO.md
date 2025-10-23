@@ -67,6 +67,8 @@
 
 [x] Utilizar variables de entorno definidas en el código. Obtener las variables de cada juego de fetch.ts y validarlas.
  
+[] Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
+
 [] Soporte multi-token
 
 [] La reputación de un juez en un juego debe de reducirse en caso de que el juego, aun pudiendo invalidar la participación, no lo terminara haciendo.
