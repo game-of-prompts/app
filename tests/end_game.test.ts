@@ -398,7 +398,6 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
-
   it("Should successfully finalize the game and distribute funds correctly with only a complex Script winner (unique participation)", () => {
     // --- Arrange ---
     // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
@@ -516,7 +515,7 @@ describe("Game Finalization (end_game)", () => {
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
-/*
+
   it("Should fail finalize the game and distribute funds with only a complex Script winner  (unique participation) but sending comissions to resolver and developer", () => {
     // --- Arrange ---
     // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
@@ -574,12 +573,33 @@ describe("Game Finalization (end_game)", () => {
         ergoTree: gameResolutionErgoTree.toHex(),
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
-            R4: SInt(1).toHex(), // Estado: Resolución
-            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
-            R6: SColl(SColl(SByte), []).toHex(),
-            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R4: SInt(1).toHex(),
+
+            R5: SColl(SByte, hexToBytes("d4e3a7b9c1f08a6b2e5d4c3f9b8a7e1d2c3f4b5a6e7c8d9f0b1a2c3d4e5f6789") ?? "").toHex(),
+
+            R6: SPair(
+                SColl(SByte, secret),
+                SColl(SByte, winnerCommitment)
+            ).toHex(),
+
+            // participatingJudges (vacío)
+            R7: SColl(SColl(SByte), []).toHex(),
+
+            // numericalParameters:
+            R8: SColl(SLong, [
+                BigInt(deadline),
+                creatorStake,
+                participationFee,
+                0n,        // perJudgeComissionPercentage
+                resolverCommissionPercent,        // creatorComissionPercentage
+                BigInt(resolutionDeadline)
+            ]).toHex(),
+
+            R9: SColl(SColl(SByte), [
+                stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+                prependHexPrefix(creator.key.publicKey, "0008cd"), // Script del creador original
+                prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
+            ]).toHex()
         },
     });
 
@@ -613,7 +633,7 @@ describe("Game Finalization (end_game)", () => {
     // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
     expect(mockChain.execute(transaction, { signers: [facilitator], throw: false })).to.be.false;
   });
-  
+  /*
   it("Should successfully finalize the game and distribute funds correctly with a pk Script winner without any proveDlog pk input script", () => {
     // --- Arrange ---
     // 1. Create a simple "anyone-can-spend" contract to hold the fee box.
