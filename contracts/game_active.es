@@ -40,7 +40,7 @@
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
-  // R9: Coll[Coll[Byte]]   - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador)
+  // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador)
 
 
   // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).

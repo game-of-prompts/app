@@ -18,19 +18,6 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 
-/**
- * Función de utilidad para convertir un Uint8Array a una cadena hexadecimal.
- * @param bytes El array de bytes a convertir.
- * @returns La representación hexadecimal en formato string.
- */
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
-
-// Dirección de desarrollador para comisiones, requerida por game_resolution.es
-const DEV_ADDR_BASE58 = "9ejNy2qoifmzfCiDtEiyugthuXMriNNPhNKzzwjPtHnrK3esvbD";
-
-
 describe("Game Cancellation (cancel_game)", () => {
     let mockChain: MockChain;
 
@@ -78,12 +65,36 @@ describe("Game Cancellation (cancel_game)", () => {
             assets: [{ tokenId: gameNftId, amount: 1n }],
             creationHeight: mockChain.height,
             additionalRegisters: {
+                // R4: Integer - Estado del juego (0: Active, 1: Resolved, 2: Cancelled)
                 R4: SInt(0).toHex(),
-                R5: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
+
+                // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline)
+                R5: SPair(
+                    SColl(SByte, "ab".repeat(32)),           // seed (bytes del seed)
+                    SLong(BigInt(800_005))
+                ).toHex(),
+
+                // R6: Coll[Byte] - secretHash
                 R6: SColl(SByte, hashedSecret).toHex(),
+
+                // R7: Coll[Coll[Byte]] - invitedJudgesReputationProofs
                 R7: SColl(SColl(SByte), []).toHex(),
-                R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
-                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+
+                // R8: Coll[Long] - numericalParameters
+                // [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+                R8: SColl(SLong, [
+                    BigInt(deadlineBlock),
+                    creatorStake,
+                    1_000_000n,                // participationFee
+                    500n,                      // perJudgeComissionPercentage (ejemplo 5.00%)
+                    1000n                      // creatorComissionPercentage (ejemplo 10.00%)
+                ]).toHex(),
+
+                // R9: (Coll[Byte], Coll[Byte]) - gameProvenance: (Detalles JSON/Hex, Script del creador)
+                R9: SPair(
+                    SColl(SByte, stringToBytes("utf8", "{}")), // Detalles JSON
+                    SColl(SByte, creator.key.publicKey)                                     // Script del creador (placeholder)
+                ).toHex(),
             }
         });
 
@@ -116,7 +127,7 @@ describe("Game Cancellation (cancel_game)", () => {
                         R6: SColl(SByte, secret).toHex(), // Se revela el secreto
                         R7: SLong(newCreatorStake).toHex(),
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
-                        R9: gameBox.additionalRegisters.R9,
+                        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
                     }),
                 // Salida 1: La penalización pagada al reclamante
                 new OutputBuilder(stakePortionToClaim, claimer.address)
