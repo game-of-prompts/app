@@ -279,18 +279,18 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
-        const newR5 = newGameBox.additionalRegisters.R5;
-        expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        const newR6 = newGameBox.additionalRegisters.R6;
+        expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
         
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
-        const newR7 = newGameBox.additionalRegisters.R7;
-        expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
+        const newR8 = newGameBox.additionalRegisters.R8;
+        expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
         expect(participationContract.utxos.toArray().find(b => b.boxId === invalidatedWinnerBox.boxId)).to.be.undefined;
     });
-/*
+
     it("should successfully invalidate the current winner with a majority of judge votes (1 out of 1)", () => {
         // --- Crear Estado Inicial del Juego ---
 
@@ -344,7 +344,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                     numericalParams[1],         // creatorStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    SLong(10n),                 // creatorComissionPercentage
+                    10n,                 // creatorComissionPercentage
                     BigInt(numericalParams[4])  // resolutionDeadline
                 ]).toHex(),
 
@@ -430,18 +430,48 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [
+                                BigInt(numericalParams[0]), // deadline
+                                numericalParams[1],         // creatorStake
+                                numericalParams[2],         // participationFee
+                                numericalParams[3],         // perJudgeCommissionPercent
+                                10n,                 // creatorComissionPercentage
+                                extendedDeadline // resolutionDeadline
+                            ]
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
                 new OutputBuilder(newFunds, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
-                    .setAdditionalRegisters({
-                        ...gameResolutionBox.additionalRegisters,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(), // Nuevo candidato
-                        R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
-                    })
+                    .setAdditionalRegisters(
+                        {
+                            // Estado del juego
+                            R4: SInt(1).toHex(),
+
+                            // Nuevo SEED (32 bytes aleatorios)
+                            R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+
+                            // (revealedSecretS, winnerCandidateCommitment)
+                            R6: SPair(
+                                SColl(SByte, secret),
+                                SColl(SByte, nextWinnerCommitment)
+                            ).toHex(),
+
+                            // participatingJudges
+                            R7: SColl(SColl(SByte), judges).toHex(),
+
+                            // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                            R8: SColl(SLong, newNumericalParams).toHex(),
+
+                            // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
+                            R9: SColl(SColl(SByte), [
+                                stringToBytes("utf8", "{}"),                     // detalles del juego
+                                prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
+                        }
+                    )
             ])
             .withDataFrom([judge1ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
@@ -460,12 +490,12 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
-        const newR5 = newGameBox.additionalRegisters.R5;
-        expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        const newR6= newGameBox.additionalRegisters.R6;
+        expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
         
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
-        const newR7 = newGameBox.additionalRegisters.R7;
-        expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
+        const newR8 = newGameBox.additionalRegisters.R8;
+        expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
@@ -507,11 +537,25 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
-                R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
-                R6: SColl(SColl(SByte), judges).toHex(),
-                R7: SColl(SLong, numericalParams).toHex(),
-                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
-                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+                R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                R6: SPair(
+                        SColl(SByte, secret),
+                        SColl(SByte, invalidatedCommitment)
+                    ).toHex(),
+                R7: SColl(SColl(SByte), judges).toHex(),
+                R8: SColl(SLong, [
+                    BigInt(numericalParams[0]), // deadline
+                    numericalParams[1],         // creatorStake
+                    numericalParams[2],         // participationFee
+                    numericalParams[3],         // perJudgeCommissionPercent
+                    10n,                 // creatorComissionPercentage
+                    BigInt(numericalParams[4])  // resolutionDeadline
+                ]).toHex(),
+                 R9: SColl(SColl(SByte), [
+                                stringToBytes("utf8", "{}"),                     // detalles del juego
+                                prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
             }
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
@@ -606,18 +650,37 @@ describe("Game Resolution Invalidation by Judges", () => {
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [
+                            BigInt(numericalParams[0]), // deadline
+                            numericalParams[1],         // creatorStake
+                            numericalParams[2],         // participationFee
+                            numericalParams[3],         // perJudgeCommissionPercent
+                            10n,                 // creatorComissionPercentage
+                            extendedDeadline  // resolutionDeadline
+                        ];
         
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
                 new OutputBuilder(newFunds, gameResolutionErgoTree)
                     .addTokens(gameResolutionBox.assets)
-                    .setAdditionalRegisters({
-                        ...gameResolutionBox.additionalRegisters,
-                        R5: SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex(), // Nuevo candidato
-                        R7: SColl(SLong, newNumericalParams).toHex(), // Parámetros actualizados
-                    })
+                    .setAdditionalRegisters(
+                        {
+                            R4: SInt(1).toHex(), // Estado: Resolución
+                            R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                            R6: SPair(
+                                    SColl(SByte, secret),
+                                    SColl(SByte, nextWinnerCommitment)
+                                ).toHex(),
+                            R7: SColl(SColl(SByte), judges).toHex(),
+                            R8: SColl(SLong, newNumericalParams).toHex(),
+                            R9: SColl(SColl(SByte), [
+                                        stringToBytes("utf8", "{}"),                     // detalles del juego
+                                        prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                        prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                                    ]).toHex()
+                        }
+                    )
             ])
             .withDataFrom([judge1ReputationBox, nextWinnerBox, extraParticipantBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
@@ -636,12 +699,12 @@ describe("Game Resolution Invalidation by Judges", () => {
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
-        const newR5 = newGameBox.additionalRegisters.R5;
-        expect(newR5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
+        const newR6 = newGameBox.additionalRegisters.R6;
+        expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
         
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
-        const newR7 = newGameBox.additionalRegisters.R7;
-        expect(newR7).to.equal(SColl(SLong, newNumericalParams).toHex());
+        const newR8 = newGameBox.additionalRegisters.R8;
+        expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
 
         // 4. Las cajas gastadas ya no existen
         expect(gameResolutionContract.utxos.toArray().find(b => b.boxId === gameResolutionBox.boxId)).to.be.undefined;
@@ -1648,5 +1711,5 @@ describe("Game Resolution Invalidation by Judges", () => {
         const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
         expect(executionResult).to.be.false;
     });
-    */
+
 });
