@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
-import { compile } from "@fleet-sdk/compiler";
 import {
   Box,
   OutputBuilder,
@@ -10,14 +9,9 @@ import {
 import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
 import { DefaultGameConstants } from "$lib/common/constants";
 import { getGopGameActiveErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
-
-function uint8ArrayToHex(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("hex");
-}
 
 
 const GRACE_PERIOD_IN_BLOCKS = DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS;
@@ -55,13 +49,36 @@ describe("Participant Reclaim After Grace Period", () => {
       assets: [{ tokenId: gameNftId, amount: 1n }],
       creationHeight: mockChain.height,
       additionalRegisters: {
-        R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, creator.key.publicKey), SLong(10n)).toHex(),
-        R6: SColl(SByte, blake2b256(stringToBytes("utf8", "secret"))).toHex(),
-        R7: SColl(SColl(SByte), []).toHex(),
-        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee]).toHex(),
-        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
-      },
+          // R4: Game state (0: Active)
+          R4: SInt(0).toHex(),
+
+          // R5: (Seed, Ceremony deadline)
+          R5: SPair(
+            SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")),
+            SLong(BigInt(deadlineBlock + 50))
+          ).toHex(),
+
+          // R6: Hash of the secret 'S'
+          R6: SColl(SByte, blake2b256(stringToBytes("utf8", "secret"))).toHex(),
+
+          // R7: Invited judges (empty in this test)
+          R7: SColl(SColl(SByte), []).toHex(),
+
+          // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+          R8: SColl(SLong, [
+            BigInt(deadlineBlock),
+            creatorStake,
+            participationFee,
+            500n,  // 5.00% comisión por juez
+            1000n  // 10.00% comisión del creador,
+          ]).toHex(),
+
+          // R9: (Detalles del juego, Script del creador)
+          R9: SPair(
+            SColl(SByte, stringToBytes("utf8", "{}")), // JSON con detalles del juego
+            SColl(SByte, creator.key.publicKey) // Script de gasto del creador (placeholder)
+          ).toHex()
+        },
     });
 
     participationContract.addUTxOs({
