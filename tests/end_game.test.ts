@@ -20,7 +20,7 @@ import {
 import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
-import { bigintToLongByteArray } from "$lib/ergo/utils";
+import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { DefaultGameConstants } from "$lib/common/constants";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
 
@@ -164,13 +164,33 @@ describe("Game Finalization (end_game)", () => {
         ergoTree: gameResolutionErgoTree.toHex(),
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
-            R4: SInt(1).toHex(), // Estado: Resolución
-            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
-            R6: SColl(SColl(SByte), []).toHex(),
-            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
-        },
+          // Estado igual
+          R4: SInt(1).toHex(),
+
+          R5: SColl(SByte, hexToBytes("a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712") ?? "").toHex(),
+
+          // (revealedSecretS, winnerCandidateCommitment)
+          R6: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+
+          // participatingJudges (vacío)
+          R7: SColl(SColl(SByte), []).toHex(),
+
+          R8: SColl(SLong, [
+            BigInt(deadline),
+            creatorStake,
+            participationFee,
+            0n,        // perJudgeComissionPercentage
+            resolverCommissionPercent,        // creatorComissionPercentage
+            BigInt(resolutionDeadline)
+          ]).toHex(),
+
+          // gameProvenance: [Detalles del juego, Script del creador, Script del resolvedor]
+          R9: SColl(SColl(SByte), [
+            stringToBytes('utf8', gameDetailsJson),                   // detalles del juego
+            prependHexPrefix(creator.key.publicKey, "0008cd"),        // script creador original
+            prependHexPrefix(resolver.key.publicKey, "0008cd")        // script del resolvedor
+          ]).toHex()
+        }
     });
 
   });
