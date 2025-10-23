@@ -633,7 +633,7 @@ describe("Game Finalization (end_game)", () => {
     // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
     expect(mockChain.execute(transaction, { signers: [facilitator], throw: false })).to.be.false;
   });
-  /*
+
   it("Should successfully finalize the game and distribute funds correctly with a pk Script winner without any proveDlog pk input script", () => {
     // --- Arrange ---
     // 1. Create a simple "anyone-can-spend" contract to hold the fee box.
@@ -744,12 +744,32 @@ describe("Game Finalization (end_game)", () => {
         ergoTree: gameResolutionErgoTree.toHex(),
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
-            R4: SInt(1).toHex(), // Estado: Resolución
-            R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(), // Sin ganador
-            R6: SColl(SColl(SByte), []).toHex(),
-            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+            R4: SInt(1).toHex(),
+
+            R5: SColl(SByte, hexToBytes("f3a1b2c4d5e6f7890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f6789") ?? "").toHex(),
+
+
+            R6: SPair(
+                SColl(SByte, "00".repeat(32)),
+                SColl(SByte, [])
+            ).toHex(),
+
+            R7: SColl(SColl(SByte), []).toHex(),
+
+            R8: SColl(SLong, [
+                BigInt(deadline),
+                creatorStake,
+                participationFee,
+                0n,  // perJudgeComissionPercentage
+                resolverCommissionPercent,  // creatorComissionPercentage
+                BigInt(resolutionDeadline)
+            ]).toHex(),
+
+            R9: SColl(SColl(SByte), [
+                stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+                prependHexPrefix(creator.key.publicKey, "0008cd"), // Script del creador original
+                prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
+            ]).toHex()
         },
     });
 
@@ -828,7 +848,7 @@ describe("Game Finalization (end_game)", () => {
     // --- Assert ---
     expect(mockChain.execute(transaction, { signers: [loser], throw: false })).to.be.false;
   });
-  
+
   it("Should fail if the resolver tries to sign when a winner is declared", () => {
     // --- Arrange ---
     mockChain.jumpTo(resolutionDeadline);
@@ -863,15 +883,46 @@ describe("Game Finalization (end_game)", () => {
     // Reconfigurar para un escenario sin ganador
     gameResolutionContract.utxos.clear();
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+
     gameResolutionContract.addUTxOs({
-        creationHeight: mockChain.height, value: creatorStake, ergoTree: gameResolutionErgoTree.toHex(),
-        assets: [{ tokenId: gameNftId, amount: 1n }],
-        additionalRegisters: {
-            R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
-            R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
-        },
-    });
+      creationHeight: mockChain.height,
+      value: creatorStake,
+      ergoTree: gameResolutionErgoTree.toHex(),
+      assets: [{ tokenId: gameNftId, amount: 1n }],
+      additionalRegisters: {
+          // Estado del juego
+          R4: SInt(1).toHex(),
+
+          // Nuevo SEED (inventado, 32 bytes aleatorios)
+          R5: SColl(SByte, hexToBytes("a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712") ?? "").toHex(),
+
+          // (revealedSecretS, winnerCandidateCommitment)
+          R6: SPair(
+              SColl(SByte, "00".repeat(32)),
+              SColl(SByte, [])
+          ).toHex(),
+
+          R7: SColl(SColl(SByte), []).toHex(),
+
+          // numericalParameters
+          R8: SColl(SLong, [
+              BigInt(deadline),          // deadline
+              creatorStake,              // creator stake
+              participationFee,          // participation fee
+              0n,                        // perJudgeComissionPercentage
+              resolverCommissionPercent, // creatorComissionPercentage
+              BigInt(resolutionDeadline) // resolution deadline
+          ]).toHex(),
+
+          // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
+          R9: SColl(SColl(SByte), [
+              stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+              prependHexPrefix(creator.key.publicKey, "0008cd"),  // script creador original
+              prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+          ]).toHex()
+      },
+  });
+
     mockChain.jumpTo(resolutionDeadline);
 
     const gameBox = gameResolutionContract.utxos.toArray()[0];
@@ -903,14 +954,43 @@ describe("Game Finalization (end_game)", () => {
     gameResolutionContract.utxos.clear();
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     gameResolutionContract.addUTxOs({
-        creationHeight: mockChain.height, value: creatorStake, ergoTree: gameResolutionErgoTree.toHex(),
-        assets: [{ tokenId: gameNftId, amount: 1n }],
-        additionalRegisters: {
-            R4: SInt(1).toHex(), R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, [])).toHex(),
-            R6: SColl(SColl(SByte), []).toHex(), R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, BigInt(resolutionDeadline), 0n]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(), R9: SPair(SColl(SByte, creator.key.publicKey), SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
-        },
-    });
+    creationHeight: mockChain.height,
+    value: creatorStake,
+    ergoTree: gameResolutionErgoTree.toHex(),
+    assets: [{ tokenId: gameNftId, amount: 1n }],
+    additionalRegisters: {
+        R4: SInt(1).toHex(),
+
+        R5: SColl(SByte, hexToBytes("b1c2d3e4f5a60718293a4b5c6d7e8f90123456789abcdef0b1c2d3e4f5a60718") ?? "").toHex(),
+
+        // (revealedSecretS, winnerCandidateCommitment) - sin ganador
+        R6: SPair(
+            SColl(SByte, "00".repeat(32)),
+            SColl(SByte, [])
+        ).toHex(),
+
+        // participatingJudges (vacío)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // numericalParameters
+        R8: SColl(SLong, [
+            BigInt(deadline),        // deadline
+            creatorStake,            // creator stake
+            participationFee,        // participation fee
+            0n,                      // perJudgeComissionPercentage
+            resolverCommissionPercent,                      // creatorComissionPercentage
+            BigInt(resolutionDeadline) // resolution deadline
+        ]).toHex(),
+
+        // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
+        R9: SColl(SColl(SByte), [
+            stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+            prependHexPrefix(creator.key.publicKey, "0008cd"), // script creador original
+            prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
+        ]).toHex()
+    },
+});
+
     mockChain.jumpTo(resolutionDeadline);
 
     const gameBox = gameResolutionContract.utxos.toArray()[0];
@@ -1002,14 +1082,40 @@ describe("Game Finalization (end_game)", () => {
         ergoTree: gameResolutionErgoTree.toHex(),
         assets: [{ tokenId: gameNftId, amount: 1n }],
         additionalRegisters: {
+            // Estado del juego
             R4: SInt(1).toHex(),
-            R5: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
-            R6: SColl(SColl(SByte), judgesTokenIds).toHex(),
-            R7: SColl(SLong, [BigInt(deadline), creatorStake, participationFee, perJudgeCommissionPercent, BigInt(resolutionDeadline)]).toHex(),
-            R8: SPair(SColl(SByte, prependHexPrefix(resolver.key.publicKey, "0008cd")), SLong(resolverCommissionPercent)).toHex(),
-            R9: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")),  SColl(SByte, stringToBytes('utf8', gameDetailsJson))).toHex()
+
+            // SEED (32 bytes aleatorios)
+            R5: SColl(SByte, hexToBytes("c1d2e3f4a5b60718293a4b5c6d7e8f90123456789abcdef0c1d2e3f4a5b60718") ?? "").toHex(),
+
+            // (revealedSecretS, winnerCandidateCommitment)
+            R6: SPair(
+                SColl(SByte, secret),
+                SColl(SByte, winnerCommitment)
+            ).toHex(),
+
+            // participatingJudges (lista de tokens de reputación de los jueces)
+            R7: SColl(SColl(SByte), judgesTokenIds).toHex(),
+
+            // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+            R8: SColl(SLong, [
+                BigInt(deadline),              // deadline
+                creatorStake,                  // creator stake
+                participationFee,              // participation fee
+                perJudgeCommissionPercent,     // per-judge commission
+                resolverCommissionPercent,                            // creatorComissionPercentage
+                BigInt(resolutionDeadline)     // resolution deadline
+            ]).toHex(),
+
+            // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
+            R9: SColl(SColl(SByte), [
+                stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+                prependHexPrefix(creator.key.publicKey, "0008cd"), // script creador original
+                prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
+            ]).toHex()
         },
     });
+
 
     mockChain.jumpTo(resolutionDeadline);
     const gameBox = gameResolutionContract.utxos.toArray()[0];
@@ -1090,5 +1196,5 @@ describe("Game Finalization (end_game)", () => {
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
-*/
+
 });
