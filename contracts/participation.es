@@ -157,7 +157,7 @@
       val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
 
       if (isAfter90Days) {
-        val resolverPK = mainGameBox.R8[Coll[Coll[Byte]]].get(2)
+        val resolverPK = mainGameBox.R9[Coll[Coll[Byte]]].get(2)
 
         // --- Condición 2: Autenticación del creador ---
         val prefix = resolverPK.slice(0, 3)

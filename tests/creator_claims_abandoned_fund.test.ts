@@ -11,6 +11,7 @@ import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
+import { stringToBytes } from "@scure/base";
 
 
 describe("Creator Claims Abandoned Funds", () => {
@@ -46,12 +47,38 @@ describe("Creator Claims Abandoned Funds", () => {
       assets: [{ tokenId: gameNftId, amount: 1n }],
       creationHeight: mockChain.height,
       additionalRegisters: {
+        // Estado del juego
         R4: SInt(1).toHex(),
-        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
-      },
+
+        // Nuevo SEED (32 bytes aleatorios)
+        R5: SColl(SByte, hexToBytes("d4e5f6a7b8c90123456789abcdef0123456789abcdef0123d4e5f6a7b8c90123") ?? "").toHex(),
+
+        // (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(
+            SColl(SByte, "aa".repeat(32)), // revealedSecretS
+            SColl(SByte, "bb".repeat(32))  // winnerCandidateCommitment
+        ).toHex(),
+
+        // participatingJudges (en este caso vacío)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+        R8: SColl(SLong, [
+            0n, // deadline
+            creatorStake,         // creatorStake
+            participationFee,         // participationFee
+            0n,         // perJudgeCommissionPercent
+            10n,                        // creatorComissionPercentage
+            BigInt(resolutionDeadline)  // resolutionDeadline
+        ]).toHex(),
+
+        // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
+        R9: SColl(SColl(SByte), [
+            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+            prependHexPrefix(creator.key.publicKey, "0008cd"), // script del creador original
+            prependHexPrefix(creator.key.publicKey, "0008cd")  // script del resolvedor
+        ]).toHex()
+    },
     });
 
     participationContract.addUTxOs({
