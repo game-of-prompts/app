@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MockChain } from "@fleet-sdk/mock-chain";
-import { compile } from "@fleet-sdk/compiler";
 import {
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
@@ -8,11 +7,8 @@ import {
 } from "@fleet-sdk/core";
 import { SByte, SColl, SLong, SPair, SInt } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
-import * as fs from "fs";
-import * as path from "path";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
-import { PARTICIPATION } from "$lib/ergo/reputation/types";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameActiveErgoTree, getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
@@ -41,6 +37,7 @@ describe("Game Resolution (resolve_game)", () => {
   // --- Estado del Juego ---
   let secret: Uint8Array;
   let gameNftId: string;
+  const creator_commission_percentage = 10n;
   const perJudgeCommission = 1n;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
@@ -64,8 +61,6 @@ describe("Game Resolution (resolve_game)", () => {
     participant2 = mockChain.newParty("Player2");
     creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
-    const creator_commission_percentage = 10n;
-
     // --- Definir Partidos de Contratos --- 
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
     participationContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationContract");
@@ -85,14 +80,34 @@ describe("Game Resolution (resolve_game)", () => {
       assets: [{ tokenId: gameNftId, amount: 1n }],
       value: creatorStake,
       additionalRegisters: {
+        // R4: Integer - Game state (0: Active)
         R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, creatorPkBytes), SLong(creator_commission_percentage)).toHex(),
+
+        // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline)
+        R5: SPair(SColl(SByte, "aa".repeat(32)), SLong(BigInt(mockChain.height + 10))).toHex(),
+
+        // R6: Coll[Byte] - secretHash
         R6: SColl(SByte, hashedSecret).toHex(),
+
+        // R7: Coll[Coll[Byte]] - invitedJudgesReputationProofs
         R7: SColl(SColl(SByte), []).toHex(),
-        R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission]).toHex(),
-        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+
+        // R8: Coll[Long] - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+        R8: SColl(SLong, [
+          BigInt(deadlineBlock),
+          creatorStake,
+          participationFee,
+          perJudgeCommission,
+          creator_commission_percentage
+        ]).toHex(),
+
+        // R9: (Coll[Byte], Coll[Byte]) - gameProvenance: (Detalles JSON/Hex, Script de gasto del creador)
+        R9: SPair(
+          SColl(SByte, stringToBytes("utf8", "{}")), 
+          SColl(SByte, creatorPkBytes)
+        ).toHex(),
       }
-    })
+    });
 
     const resolvedorPkBytes = creatorPkBytes;
 
@@ -106,18 +121,34 @@ describe("Game Resolution (resolve_game)", () => {
 
     winnerCandidateCommitment = commitment1Hex;
 
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
 
     // OUTPUT(0)
     gameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
       .addTokens([{ tokenId: gameNftId, amount: 1n }])
       .setAdditionalRegisters({
+        
+        // R4: Integer - Game state (1: Resolved)
         R4: SInt(1).toHex(),
-        R5: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, newNumericalParams).toHex(),
-        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
-        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+        // R5: Coll[Byte] - Seed
+        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+
+        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+
+        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // R8: Coll[Long] - numericalParameters
+        R8: SColl(SLong, newNumericalParams).toHex(),
+
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"), // Detalles del juego
+          creatorPkBytes,             // Script de gasto del creador original
+          resolvedorPkBytes           // Script de gasto del resolvedor
+        ]).toHex()
       });
 
     participation1_registers = {
@@ -169,12 +200,12 @@ describe("Game Resolution (resolve_game)", () => {
     const r4 = newResolutionBox.additionalRegisters.R4;
     expect(r4).to.equal(SInt(1).toHex());
     
-    const r5 = newResolutionBox.additionalRegisters.R5;
-    expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); 
+    const r6 = newResolutionBox.additionalRegisters.R6;
+    expect(r6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex()); 
     
-    const r7 = newResolutionBox.additionalRegisters.R7;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
-    expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
+    const r8 = newResolutionBox.additionalRegisters.R8;
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    expect(r8).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
   it("should FAIL transition the game to the resolution phase if participation game nft id is wrong", () => {
@@ -286,20 +317,35 @@ describe("Game Resolution (resolve_game)", () => {
   it("should FAIL transition the game to the resolution phase if output state is wrong", () => {
     const currentHeight = mockChain.height;
   
-    const creator_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
     const wrongGameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address) 
       .addTokens([{ tokenId: gameNftId, amount: 1n }])
       .setAdditionalRegisters({
+        
+        // R4: Integer - Game state (1: Resolved)
         R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, newNumericalParams).toHex(),
-        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
-        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+        // R5: Coll[Byte] - Seed
+        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+
+        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
+
+        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // R8: Coll[Long] - numericalParameters
+        R8: SColl(SLong, newNumericalParams).toHex(),
+
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"), // Detalles del juego
+          creatorPkBytes,             // Script de gasto del creador original
+          resolvedorPkBytes           // Script de gasto del resolvedor
+        ]).toHex()
       });
 
     const tx = new TransactionBuilder(currentHeight)
@@ -322,18 +368,34 @@ describe("Game Resolution (resolve_game)", () => {
 
     const creator_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
     const gameBoxOutputWithAnyWinner = new OutputBuilder(creatorStake, gameResolutionContract.address) 
       .addTokens([{ tokenId: gameNftId, amount: 1n }])
       .setAdditionalRegisters({
+        
+        // R4: Integer - Game state (1: Resolved)
         R4: SInt(1).toHex(),
-        R5: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, newNumericalParams).toHex(),
-        R8: SPair(SColl(SByte, resolvedorPkBytes), SLong(creator_commission_percentage)).toHex(),
-        R9: SPair(SColl(SByte, creatorPkBytes), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+        // R5: Coll[Byte] - Seed
+        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+
+        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
+
+        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // R8: Coll[Long] - numericalParameters
+        R8: SColl(SLong, newNumericalParams).toHex(),
+
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"), // Detalles del juego
+          creatorPkBytes,             // Script de gasto del creador original
+          resolvedorPkBytes           // Script de gasto del resolvedor
+        ]).toHex()
       });
   
     const tx = new TransactionBuilder(currentHeight)
@@ -361,12 +423,12 @@ describe("Game Resolution (resolve_game)", () => {
     const r4 = newResolutionBox.additionalRegisters.R4;
     expect(r4).to.equal(SInt(1).toHex());
     
-    const r5 = newResolutionBox.additionalRegisters.R5;
-    expect(r5).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex()); 
+    const r6 = newResolutionBox.additionalRegisters.R6;
+    expect(r6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex()); 
     
-    const r7 = newResolutionBox.additionalRegisters.R7;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, resolutionDeadline];
-    expect(r7).to.equal(SColl(SLong, expectedNumericalParams).toHex());
+    const r8 = newResolutionBox.additionalRegisters.R8;
+    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    expect(r8).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
   it("should FAIL if the winning participation has more than 10 scores", () => {
