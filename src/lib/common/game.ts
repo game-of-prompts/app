@@ -63,6 +63,7 @@ export interface GameActive {
     commissionPercentage: number;
     secretHash: string;
     seed: string;
+    ceremonyDeadline: number;
     judges: string[];
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;

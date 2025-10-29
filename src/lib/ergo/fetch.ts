@@ -123,20 +123,18 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         }
         const gameId = box.assets[0].tokenId;
 
-        // R4 is now game state, which we can optionally validate.
+        // R4: Game state (0: Active)
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-        if (gameState !== 0) throw new Error("R4 indicates incorrect game state.");
+        if (gameState !== 0) throw new Error("R4 indicates incorrect game state (not 0).");
 
-        // R5 (previously R4): creatorInfo (creator PK, commission)
+        // R5: seed (Seed, Ceremony deadline)
         const r5Value = JSON.parse(box.additionalRegisters.R5?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
-        if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
-        const gameCreatorScript_Hex = parseCollByteToHex(r5Value[0]);
-        const commissionPercentage = parseInt(r5Value[1], 10);
-        if (!gameCreatorScript_Hex || isNaN(commissionPercentage)) throw new Error("Could not parse R5.");
+        if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 is not a valid tuple (Seed, Ceremony deadline).");
+        const seed = parseCollByteToHex(r5Value[0]);
+        const ceremonyDeadline = Number(r5Value[1]); // R5[1] is Long
+        if (!seed || isNaN(ceremonyDeadline)) throw new Error("Could not parse R5 (seed, ceremonyDeadline).");
 
-        const gameCreatorPK_Hex = gameCreatorScript_Hex.slice(0, 6) == "0008cd" ? gameCreatorScript_Hex.slice(6, gameCreatorScript_Hex.length) : null
-
-        // R6 secretHash
+        // R6: secretHash
         const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         if (!secretHash) throw new Error("R6 (secretHash) is invalid or does not exist.");
 
@@ -145,7 +143,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             .replace(/[\[\]\s]/g, "")
             .split(",").filter((e: string) => e.length === 64);
 
-        // R8 numericalParameters
+        // R8: numericalParameters
         const r8RenderedValue = box.additionalRegisters.R8?.renderedValue;
         let parsedR8Array: any[] | null = null;
         if (typeof r8RenderedValue === 'string') {
@@ -153,14 +151,29 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
-        if (!numericalParams || numericalParams.length < 3) throw new Error("R8 does not contain the 3 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage] = numericalParams;
+        // New structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+        if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
 
-        // R9 (previously R8): gameDetailsJsonHex
-        const gameDetailsHex = box.additionalRegisters.R9?.renderedValue;
+        // R9: gameProvenance (gameDetailsJsonHex, creatorScript)
+        const r9RenderedValue = box.additionalRegisters.R9?.renderedValue;
+        // R9 is (Coll[Byte], Coll[Byte]), rendered as [hex1, hex2]
+        // We must quote both hex strings to make it valid JSON
+        const r9Value = JSON.parse(r9RenderedValue.replace(/\[\s*([a-f0-9]+)\s*,\s*([a-f0-9]+)\s*\]/, '["$1","$2"]'));
+        if (!Array.isArray(r9Value) || r9Value.length < 2) throw new Error("R9 is not a valid (Coll[Byte], Coll[Byte]) tuple.");
+        
+        // R9[0]: gameDetailsJsonHex
+        const gameDetailsHex = parseCollByteToHex(r9Value[0]);
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
+        // R9[1]: creatorScript
+        const gameCreatorScript_Hex = parseCollByteToHex(r9Value[1]);
+        if (!gameCreatorScript_Hex) throw new Error("Could not parse R9[1] (creatorScript).");
+        
+        const gameCreatorPK_Hex = gameCreatorScript_Hex.slice(0, 6) == "0008cd" ? gameCreatorScript_Hex.slice(6, gameCreatorScript_Hex.length) : null
+
+        // --- Calculate Reputation ---
         const reputation = judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
 
         const gameActive: GameActive = {
@@ -169,20 +182,22 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             box: box,
             status: GameState.Active,
             gameId,
-            gameCreatorPK_Hex,
-            gameCreatorScript_Hex,
-            commissionPercentage,
-            secretHash,
-            judges,
-            deadlineBlock: Number(deadlineBlock),
-            creatorStakeNanoErg,
-            participationFeeNanoErg,
-            content,
+            gameCreatorPK_Hex, // From R9
+            gameCreatorScript_Hex, // From R9
+            commissionPercentage: creatorComissionPercentage, // From R8
+            secretHash, // From R6
+            judges, // From R7
+            deadlineBlock: Number(deadlineBlock), // From R8
+            creatorStakeNanoErg, // From R8
+            participationFeeNanoErg, // From R8
+            content, // From R9
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            perJudgeComissionPercentage: perJudgeComissionPercentage,
+            perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
             reputation: reputation,
-            constants: DefaultGameConstants
+            constants: DefaultGameConstants,
+            seed: seed,
+            ceremonyDeadline: ceremonyDeadline,
         };
         
         return gameActive;
