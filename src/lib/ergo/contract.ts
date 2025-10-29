@@ -94,6 +94,7 @@ function ensureGameActiveCompiled(): void {
         .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
         .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+        .replace(/`\+OPEN_CEREMONY_BLOCKS\+`/g, DefaultGameConstants.OPEN_CEREMONY_BLOCKS.toString());
             
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }
