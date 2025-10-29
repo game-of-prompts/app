@@ -295,44 +295,45 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
         if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
         
-        // R5: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
-        const r5Value = getArrayFromValue(box.additionalRegisters.R5?.renderedValue);
-        if (!r5Value || r5Value.length < 2) throw new Error("R5 is not a valid tuple.");
-        const revealedS_Hex = parseCollByteToHex(r5Value[0]);
-        const winnerCandidateCommitment = parseCollByteToHex(r5Value[1]);
-        if (!revealedS_Hex ) throw new Error("Could not parse R5.");
+        // R5: Coll[Byte] -> Seed
+        const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
+        if (!seed) throw new Error("Could not parse R5 (Seed).");
+
+        // R6: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
+        const r6Value = getArrayFromValue(box.additionalRegisters.R6?.renderedValue);
+        if (!r6Value || r6Value.length < 2) throw new Error("R6 is not a valid tuple.");
+        const revealedS_Hex = parseCollByteToHex(r6Value[0]);
+        const winnerCandidateCommitment = parseCollByteToHex(r6Value[1]);
+        if (!revealedS_Hex ) throw new Error("Could not parse R6.");
         
-        // R6: Coll[Coll[Byte]] -> judges
-        const judges = (getArrayFromValue(box.additionalRegisters.R6?.renderedValue) || [])
+        // R7: Coll[Coll[Byte]] -> judges
+        const judges = (getArrayFromValue(box.additionalRegisters.R7?.renderedValue) || [])
             .map(parseCollByteToHex)
             .filter((judge): judge is string => judge !== null && judge !== undefined);
 
-        // R7: Coll[Long] -> [deadline, creatorStake, participationFee, resolutionDeadline, resolvedCounter]
-        const r7Array = getArrayFromValue(box.additionalRegisters.R7?.renderedValue);
-        const numericalParams = parseLongColl(r7Array);
-        if (!numericalParams || numericalParams.length < 4) throw new Error("R7 does not contain the 4 expected numerical parameters.");
-        console.log(`R7 numericalParams for box ${box.boxId}:`, numericalParams);
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, resolutionDeadline] = numericalParams;
+        // R8: Coll[Long] -> [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+        const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
+        const numericalParams = parseLongColl(r8Array);
+        if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
+        console.log(`R8 numericalParams for box ${box.boxId}:`, numericalParams);
+        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
 
-        // R8: (Coll[Byte], Long) -> resolverPK_Hex, resolverCommission
-        const r8Value = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
-        if (!r8Value || r8Value.length < 2) throw new Error("R8 is not a valid tuple.");
-        const resolverScript_Hex = parseCollByteToHex(r8Value[0]);
-        const resolverCommission = parseInt(r8Value[1], 10);
-        if (!resolverScript_Hex || isNaN(resolverCommission)) throw new Error("Could not parse R8.");
-
-        const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
-
-        // R9: (Coll[Byte], Coll[Byte]) -> originalCreatorPK_Hex, gameDetailsHex
+        // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, originalCreatorScript_Hex, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
-        if (!r9Value || r9Value.length < 2) throw new Error("R9 is not a valid tuple.");
-        const originalCreatorScript_Hex = parseCollByteToHex(r9Value[0]);
-        const gameDetailsHex = r9Value[1];
-        if (!originalCreatorScript_Hex || !gameDetailsHex) throw new Error("Could not parse R9.");
+        if (!r9Value || r9Value.length < 3) throw new Error("R9 is not a valid tuple (expected 3 items).");
+        
+        const gameDetailsHex = r9Value[0];
+        const originalCreatorScript_Hex = parseCollByteToHex(r9Value[1]);
+        const resolverScript_Hex = parseCollByteToHex(r9Value[2]);
+
+        if (!originalCreatorScript_Hex || !gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
+        
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
 
         const originalCreatorPK_Hex = originalCreatorScript_Hex.slice(0, 6) == "0008cd" ? originalCreatorScript_Hex.slice(6, originalCreatorScript_Hex.length) : null
         
+        const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
+
         return {
             platform: new ErgoPlatform(), 
             boxId: box.boxId, 
@@ -348,14 +349,15 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             participationFeeNanoErg,
             resolverPK_Hex, 
             resolverScript_Hex,
-            resolverCommission, 
             originalCreatorPK_Hex, 
             originalCreatorScript_Hex,
             content, 
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
+            resolverCommission: creatorComissionPercentage, // Se añade desde R8
             constants: DefaultGameConstants,
+            seed: seed // Se añade desde R5
         };
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);

@@ -88,6 +88,7 @@ export interface GameResolution {
     gameId: string;
     resolutionDeadline: number;
     revealedS_Hex: string;
+    seed: string;
     winnerCandidateCommitment: string|null;
     judges: string[];
     deadlineBlock: number;
