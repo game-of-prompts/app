@@ -12,7 +12,17 @@ import { getGopGameActiveErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 import { DefaultGameConstants } from '$lib/common/constants';
 
-declare var ergo: any;
+function randomSeed(): string {
+  // 64 bits = 16 hex characters
+  let hex = '';
+  while (hex.length < 16) {
+    // genera hasta 8 hex chars por vez (~32 bits)
+    hex += Math.floor(Math.random() * 0xffffffff)
+      .toString(16)
+      .padStart(8, '0');
+  }
+  return hex.slice(0, 16);
+}
 
 /**
  * Creates a transaction to generate a game box in the "GameActive" state.
@@ -25,7 +35,6 @@ declare var ergo: any;
  * @param judges - An array of reputation token IDs for invited judges.
  * @param gameDetailsJson - A JSON string with game details.
  * @param perJudgeComissionPercentage - The commission percentage for each judge.
- * @param seedHex - Game seed, hexadecimal format
  * @returns The ID of the submitted transaction.
  */
 export async function create_game(
@@ -37,9 +46,10 @@ export async function create_game(
     commissionPercentage: number,
     judges: string[],
     gameDetailsJson: string,
-    perJudgeComissionPercentage: number,
-    seedHex: string
+    perJudgeComissionPercentage: number
 ): Promise<string | null> {
+
+    const seedHex = randomSeed();
 
     console.log("Attempting to create a game:", {
         hashedSecret: hashedSecret.substring(0, 10) + "...",
@@ -77,7 +87,7 @@ export async function create_game(
     const seedBytes = hexToBytes(seedHex);
     if (!seedBytes) throw new Error("Failed to convert the seedHex to bytes.");
 
-    const ceremonyDeadlineBlock = ergo.get_current_height() +  DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
+    const ceremonyDeadlineBlock = (await ergo.get_current_height()) +  DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
 
     const gameDetailsBytes = stringToBytes("utf8", gameDetailsJson);
 
