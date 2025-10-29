@@ -160,6 +160,7 @@ export async function resolve_game(
         game.creatorStakeNanoErg, 
         game.participationFeeNanoErg,
         game.perJudgeComissionPercentage,
+        BigInt(game.commissionPercentage),
         resolutionDeadline
     ];
     
@@ -196,13 +197,18 @@ export async function resolve_game(
     const PER_REGISTER_OVERHEAD = 1;       // bytes por índice/encabezado de registro
     const SIZE_MARGIN = 120;               // margen de seguridad en bytes
 
-    // --- construí aquí los hex de los registros igual que los vas a poner en setAdditionalRegisters ---
-    const r4Hex = SInt(1).toHex();
-    const r5Hex = SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex();
-    const r6Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex();
-    const r7Hex = SColl(SLong, newNumericalParams).toHex();
-    const r8Hex = SPair(SColl(SByte, prependHexPrefix(resolverPkBytes)), SLong(BigInt(game.commissionPercentage))).toHex();
-    const r9Hex = SPair(SColl(SByte, gameCreatorScript), SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))).toHex();
+    const seedBytes = hexToBytes(game.seed); 
+    if (!seedBytes) throw new Error("No se pudo obtener el 'seed' del objeto game (game.seedHex).");
+    
+    const gameDetailsBytes = stringToBytes('utf8', game.content.rawJsonString);
+
+    const r4Hex = SInt(1).toHex(); // R4: Estado (1: Resuelto)
+    const r5Hex = SColl(SByte, seedBytes).toHex(); // R5: Seed
+    const r6Hex = SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex(); // R6: (secretS, winnerCommitment)
+    const r7Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(); // R7: Jueces participantes
+    const r8Hex = SColl(SLong, newNumericalParams).toHex(); // R8: Parámetros numéricos
+    
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, gameCreatorScript, resolverPkBytes]).toHex(); 
 
     // Conteos y tamaños
     const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];
@@ -246,7 +252,6 @@ export async function resolve_game(
     // seleccionar el mayor entre originalValue, minRequiredValue y SAFE_MIN_BOX_VALUE
     const resolutionBoxValue = maxBigInt(originalValue, minRequiredValue, SAFE_MIN_BOX_VALUE);
 
-    // Ahora construís la salida con ese value (no se usa setValue después)
     const resolutionBoxOutput = new OutputBuilder(
     resolutionBoxValue,
     resolutionErgoTree

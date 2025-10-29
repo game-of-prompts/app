@@ -62,6 +62,7 @@ export interface GameActive {
     gameCreatorScript_Hex: string
     commissionPercentage: number;
     secretHash: string;
+    seed: string;
     judges: string[];
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
