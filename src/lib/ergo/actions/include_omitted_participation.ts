@@ -2,14 +2,11 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    type InputBox,
-    SConstant
-} from '@fleet-sdk/core';
+    type InputBox} from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex, pkHexToBase58Address } from '$lib/ergo/utils';
+import { hexToBytes, parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
-import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
-import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
+import { getGopGameResolutionErgoTreeHex } from '../contract';
 import { prependHexPrefix } from '$lib/utils';
 import { stringToBytes } from '@scure/base';
 
@@ -51,20 +48,33 @@ export async function include_omitted_participation(
     .addTokens(game.box.assets)
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Preservar estado (1: Resolved)
-        R5: SPair(SColl(SByte, hexToBytes(game.revealedS_Hex)!), SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex)!)),
-        R6: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
-        R7: SColl(SLong, [
-            BigInt(game.deadlineBlock), 
-            BigInt(game.creatorStakeNanoErg), 
+
+        R5: SColl(SByte, hexToBytes(game.seed)!),
+
+        // --- R6: (revealedSecretS, winnerCandidateCommitment) ---
+        R6: SPair(
+            SColl(SByte, hexToBytes(game.revealedS_Hex)!),
+            SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex)!)
+        ),
+
+        // --- R7: participatingJudges: Coll[Coll[Byte]] ---
+        R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
+
+        // --- R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] ---
+        R8: SColl(SLong, [
+            BigInt(game.deadlineBlock),
+            BigInt(game.creatorStakeNanoErg),
             BigInt(game.participationFeeNanoErg),
             BigInt(game.perJudgeComissionPercentage),
+            BigInt(game.resolverCommission),
             BigInt(game.resolutionDeadline)
         ]).toHex(),
-        R8: SPair(SColl(SByte, resolverErgoTree), SLong(BigInt(game.resolverCommission))),
-        R9: SPair(
-                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
-                SColl(SByte, hexToBytes(game.resolverScript_Hex)!),
-            ),
+
+        // --- R9: gameProvenance: Coll[Coll[Byte]] (Detalles del juego en JSON/Hex, Script de gasto del resolvedor) ---
+        R9: SColl(SColl(SByte), [
+            SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
+            SColl(SByte, hexToBytes(game.resolverScript_Hex)!)
+        ]),
     });
     
     const pBox = parseBox(omittedParticipation.box);
