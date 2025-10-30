@@ -138,7 +138,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),                    // detalles del juego
-                    prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                    
                     prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                 ]).toHex()
             }
@@ -257,7 +257,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),                        // detalles del juego
-                            prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                            
                             prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                         ]).toHex()
                     })
@@ -351,7 +351,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),                     // detalles del juego
-                    prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                    
                     prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                 ]).toHex()
             }
@@ -467,7 +467,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                             // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                             R9: SColl(SColl(SByte), [
                                 stringToBytes("utf8", "{}"),                     // detalles del juego
-                                prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                
                                 prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                             ]).toHex()
                         }
@@ -553,7 +553,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 ]).toHex(),
                  R9: SColl(SColl(SByte), [
                                 stringToBytes("utf8", "{}"),                     // detalles del juego
-                                prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                
                                 prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                             ]).toHex()
             }
@@ -676,7 +676,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                             R8: SColl(SLong, newNumericalParams).toHex(),
                             R9: SColl(SColl(SByte), [
                                         stringToBytes("utf8", "{}"),                     // detalles del juego
-                                        prependHexPrefix(resolver.key.publicKey, "0008cd"), // script creador original
+                                        
                                         prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                                     ]).toHex()
                         }
