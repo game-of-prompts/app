@@ -124,3 +124,5 @@ Teoricamente se permite un numero ilimitado de participaciones.
 ====
 
 [] Cambiar R9 de game_resolution.es a Pair(Coll[Byte]) ¿?   Son 70 bytes frente a 72 bytes del Coll[Coll[Byte]].     A no ser que tenga sentido que el resolutor agregue en un tercer campo algo... ¿un comentario, un link?
+
+¿Porque no agregar la prueba de reputación del creador?   -> En ese caso hay que hacer el R9 de game_active y game_cancelled Coll[Coll[Byte]]
