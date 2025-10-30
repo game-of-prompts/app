@@ -118,3 +118,9 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
 Teoricamente se permite un numero ilimitado de participaciones.
 
+
+
+
+====
+
+[] Cambiar R9 de game_resolution.es a Pair(Coll[Byte]) ¿?   Son 70 bytes frente a 72 bytes del Coll[Coll[Byte]].     A no ser que tenga sentido que el resolutor agregue en un tercer campo algo... ¿un comentario, un link?
