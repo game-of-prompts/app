@@ -909,7 +909,7 @@
                             </Button>
                         {/if}
 
-                        {#if game.status === 'Active' && participationIsEnded && isOwner}
+                        {#if game.status === 'Active' && participationIsEnded}
                             <Button on:click={() => setupActionModal('resolve_game')} class="w-full">
                                 <CheckSquare class="mr-2 h-4 w-4"/>Resolve Competition
                             </Button>
