@@ -72,7 +72,7 @@
 [x] Plantear la necesidad de registrar creator script ¿porque no solo resolver script? ¿porque simplemente quien quiera que lo cambie y ya ... ?  el creador podría agregar su prueba de reputación entre el resto de información del juego
 
 
-# Corrección de acciones - actual: 
+# Corrección de acciones - actual: end_game
 
 
 [] Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
