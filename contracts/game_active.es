@@ -40,7 +40,7 @@
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
-  // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador)
+  // R9: Coll[Byte]         - Detalles del juego en JSON/Hex
 
 
   // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).
@@ -70,10 +70,8 @@
   val perJudgeComissionPercentage = numericalParams(3)
   val creatorComissionPercentage = numericalParams(4)
 
-  // R9: (gameDetailsJsonHex, gameCreatorScript)
-  val gameProvenance = SELF.R9[(Coll[Byte], Coll[Byte])].get
-  val gameDetailsJsonHex = gameProvenance._1
-  val gameCreatorScript = gameProvenance._2
+  // R9: gameDetailsJsonHex
+  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -174,8 +172,7 @@
               resolutionBox.R8[Coll[Long]].get(4) >= creatorComissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
-              resolutionBox.R9[Coll[Coll[Byte]]].get(1) == gameCreatorScript &&
-              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 3 // The third element is the resolver script (who will receive the funds), could be the creator's one or a different one.
+              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 2
             }
 
           resolutionBoxIsValid && allVotesAreUnique
@@ -283,7 +280,7 @@
       val sameR6 = out.R6[Coll[Byte]].get == secretHash
       val sameR7 = out.R7[Coll[Coll[Byte]]].get == invitedJudges
       val sameR8 = out.R8[Coll[Long]].get == numericalParams
-      val sameR9 = out.R9[(Coll[Byte], Coll[Byte])].get == gameProvenance
+      val sameR9 = out.R9[Coll[Byte]].get == gameDetailsJsonHex
     
       sameNFT &&
       sameValue &&

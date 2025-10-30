@@ -36,7 +36,7 @@
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
   // R8: Coll[Long]                 - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline].
-  // R9: Coll[Coll[Byte]]           - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del creador original, Script de gasto del resolvedor)
+  // R9: Coll[Coll[Byte]]           - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del resolvedor)
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -59,7 +59,7 @@
   val resolutionDeadline = numericalParams(5)
 
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
-  val resolverPK = gameProvenance(2)
+  val resolverPK = gameProvenance(1)
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -175,15 +175,14 @@
                 recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
                 recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
                 (  
-                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == resolverPK ||   // Maintains original resolver if within no-penalty period
+                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == resolverPK ||   // Maintains original resolver if within no-penalty period
                   (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT  // Allows changing resolver after no-penalty period. 
                   /* Must be strictly after (not equal to) the no-penalty period, ensuring exactly CREATOR_OMISSION_NO_PENALTY_PERIOD blocks have passed 
                      since the latest invalidation transaction (or resolution transaction). This guarantees the creator has sufficient time to include any previously omitted participation.
                      After this period, anyone is allowed to add a participation — even one that is invalid or has a lower score than the last declared candidate. */
                 ) && 
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
-                recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
-                recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 3  // Can change resolver script
+                recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 2
               }
               
               gameBoxIsRecreatedCorrectly && newScoreIsValid
@@ -289,7 +288,7 @@
             recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
             recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
             recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == gameProvenance(2)
+            recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 2
           }
           
           fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
