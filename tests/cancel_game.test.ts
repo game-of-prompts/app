@@ -90,11 +90,8 @@ describe("Game Cancellation (cancel_game)", () => {
                     1000n                      // creatorComissionPercentage (ejemplo 10.00%)
                 ]).toHex(),
 
-                // R9: (Coll[Byte], Coll[Byte]) - gameProvenance: (Detalles JSON/Hex, Script del creador)
-                R9: SPair(
-                    SColl(SByte, stringToBytes("utf8", "{}")), // Detalles JSON
-                    SColl(SByte, creator.key.publicKey)                                     // Script del creador (placeholder)
-                ).toHex(),
+                // R9: Detalles JSON
+                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
             }
         });
 

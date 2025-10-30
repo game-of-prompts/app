@@ -114,11 +114,8 @@ describe("Game Creation (create_game)", () => {
         1000n  // 10.00% comisión del creador
       ]).toHex(),
 
-      // R9: (Detalles del juego, Script del creador)
-      R9: SPair(
-        SColl(SByte, stringToBytes("utf8", gameDetailsJson)), // JSON con detalles del juego
-        SColl(SByte, creatorPkBytes) // Script de gasto del creador (placeholder)
-      ).toHex()
+      // R9: Detalles del juego
+      R9: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
     });
 
     // Build the transaction.

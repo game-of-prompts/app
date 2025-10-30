@@ -101,11 +101,8 @@ describe("Game Resolution (resolve_game)", () => {
           creator_commission_percentage
         ]).toHex(),
 
-        // R9: (Coll[Byte], Coll[Byte]) - gameProvenance: (Detalles JSON/Hex, Script de gasto del creador)
-        R9: SPair(
-          SColl(SByte, stringToBytes("utf8", "{}")), 
-          SColl(SByte, creatorPkBytes)
-        ).toHex(),
+        // R9: JSON Details
+        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
       }
     });
 
@@ -143,10 +140,9 @@ describe("Game Resolution (resolve_game)", () => {
         // R8: Coll[Long] - numericalParameters
         R8: SColl(SLong, newNumericalParams).toHex(),
 
-        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
-          creatorPkBytes,             // Script de gasto del creador original
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -340,10 +336,9 @@ describe("Game Resolution (resolve_game)", () => {
         // R8: Coll[Long] - numericalParameters
         R8: SColl(SLong, newNumericalParams).toHex(),
 
-        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
-          creatorPkBytes,             // Script de gasto del creador original
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -390,10 +385,9 @@ describe("Game Resolution (resolve_game)", () => {
         // R8: Coll[Long] - numericalParameters
         R8: SColl(SLong, newNumericalParams).toHex(),
 
-        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Creador, Script Resolvedor)
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
-          creatorPkBytes,             // Script de gasto del creador original
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -459,6 +453,97 @@ describe("Game Resolution (resolve_game)", () => {
       ])
       .to([gameBoxOutput])
       .withDataFrom([participationContract.utxos.toArray()[1]]) // Use the new invalid box
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL transition the game to the resolution phase if R9 is modified", () => {
+    const currentHeight = mockChain.height;
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()
+      ])
+      .to([new OutputBuilder(creatorStake, gameResolutionContract.address) 
+      .addTokens([{ tokenId: gameNftId, amount: 1n }])
+      .setAdditionalRegisters({
+        
+        // R4: Integer - Game state (1: Resolved)
+        R4: SInt(1).toHex(),
+
+        // R5: Coll[Byte] - Seed
+        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+
+        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+
+        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // R8: Coll[Long] - numericalParameters
+        R8: SColl(SLong, newNumericalParams).toHex(),
+
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", '{"name": "anon"}'), // Detalles del juego
+          creatorPkBytes           // Script de gasto del resolvedor
+        ]).toHex()
+      })])
+      .withDataFrom([participationContract.utxos.toArray()[0]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+      
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+    expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL transition the game to the resolution phase if R9 size is modified", () => {
+    const currentHeight = mockChain.height;
+    const creatorPkBytes = creator.address.getPublicKeys()[0];
+    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+  
+    const tx = new TransactionBuilder(currentHeight)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()
+      ])
+      .to([new OutputBuilder(creatorStake, gameResolutionContract.address) 
+      .addTokens([{ tokenId: gameNftId, amount: 1n }])
+      .setAdditionalRegisters({
+        
+        // R4: Integer - Game state (1: Resolved)
+        R4: SInt(1).toHex(),
+
+        // R5: Coll[Byte] - Seed
+        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+
+        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+
+        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // R8: Coll[Long] - numericalParameters
+        R8: SColl(SLong, newNumericalParams).toHex(),
+
+        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", '{}'), // Detalles del juego
+          creatorPkBytes,           // Script de gasto del resolvedor
+          creatorPkBytes
+        ]).toHex()
+      })])
+      .withDataFrom([participationContract.utxos.toArray()[0]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
