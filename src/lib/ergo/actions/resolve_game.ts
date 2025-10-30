@@ -173,10 +173,6 @@ export async function resolve_game(
         winnerCommitmentBytes = new Uint8Array();
     }
 
-    const gameCreatorScript = hexToBytes(game.gameCreatorScript_Hex!)!;
-
-    if (!gameCreatorScript) throw new Error("Fallo al convertir gameCreatorScript a bytes.");
-
     // Helpers
     const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
     const isHex = (s: string) => typeof s === 'string' && /^0x?[0-9a-fA-F]+$/.test(s);
@@ -208,7 +204,7 @@ export async function resolve_game(
     const r7Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(); // R7: Jueces participantes
     const r8Hex = SColl(SLong, newNumericalParams).toHex(); // R8: Parámetros numéricos
     
-    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, gameCreatorScript, resolverPkBytes]).toHex(); 
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, resolverPkBytes]).toHex(); 
 
     // Conteos y tamaños
     const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];

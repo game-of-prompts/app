@@ -154,24 +154,11 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         // New structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
         if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
-
-        // R9: gameProvenance (gameDetailsJsonHex, creatorScript)
-        const r9RenderedValue = box.additionalRegisters.R9?.renderedValue;
-        // R9 is (Coll[Byte], Coll[Byte]), rendered as [hex1, hex2]
-        // We must quote both hex strings to make it valid JSON
-        const r9Value = JSON.parse(r9RenderedValue.replace(/\[\s*([a-f0-9]+)\s*,\s*([a-f0-9]+)\s*\]/, '["$1","$2"]'));
-        if (!Array.isArray(r9Value) || r9Value.length < 2) throw new Error("R9 is not a valid (Coll[Byte], Coll[Byte]) tuple.");
         
-        // R9[0]: gameDetailsJsonHex
-        const gameDetailsHex = parseCollByteToHex(r9Value[0]);
+        // R9: gameDetailsJsonHex
+        const gameDetailsHex = parseCollByteToHex(box.additionalRegisters.R9?.renderedValue);
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
-
-        // R9[1]: creatorScript
-        const gameCreatorScript_Hex = parseCollByteToHex(r9Value[1]);
-        if (!gameCreatorScript_Hex) throw new Error("Could not parse R9[1] (creatorScript).");
-        
-        const gameCreatorPK_Hex = gameCreatorScript_Hex.slice(0, 6) == "0008cd" ? gameCreatorScript_Hex.slice(6, gameCreatorScript_Hex.length) : null
 
         // --- Calculate Reputation ---
         const reputation = judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
@@ -182,8 +169,6 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             box: box,
             status: GameState.Active,
             gameId,
-            gameCreatorPK_Hex, // From R9
-            gameCreatorScript_Hex, // From R9
             commissionPercentage: creatorComissionPercentage, // From R8
             secretHash, // From R6
             judges, // From R7
@@ -320,21 +305,18 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, originalCreatorScript_Hex, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
-        if (!r9Value || r9Value.length < 3) throw new Error("R9 is not a valid tuple (expected 3 items).");
+        if (!r9Value || r9Value.length !== 2) throw new Error("R9 is not a valid tuple (expected 2 items).");
         
         const gameDetailsHex = r9Value[0];
-        const originalCreatorScript_Hex = parseCollByteToHex(r9Value[1]);
-        const resolverScript_Hex = parseCollByteToHex(r9Value[2]);
+        const resolverScript_Hex = parseCollByteToHex(r9Value[1]);
 
-        if (!originalCreatorScript_Hex || !gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
+        if (!gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
         
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
-
-        const originalCreatorPK_Hex = originalCreatorScript_Hex.slice(0, 6) == "0008cd" ? originalCreatorScript_Hex.slice(6, originalCreatorScript_Hex.length) : null
         
         const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
 
-        return {
+        const gameResolution: GameResolution = {
             platform: new ErgoPlatform(), 
             boxId: box.boxId, 
             box, 
@@ -349,8 +331,6 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             participationFeeNanoErg,
             resolverPK_Hex, 
             resolverScript_Hex,
-            originalCreatorPK_Hex, 
-            originalCreatorScript_Hex,
             content, 
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
@@ -359,6 +339,9 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             constants: DefaultGameConstants,
             seed: seed // Se añade desde R5
         };
+
+        return gameResolution;
+        
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);
         return null;

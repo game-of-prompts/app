@@ -62,8 +62,8 @@ export async function include_omitted_participation(
         ]).toHex(),
         R8: SPair(SColl(SByte, resolverErgoTree), SLong(BigInt(game.resolverCommission))),
         R9: SPair(
-                SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
-                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
+                SColl(SByte, hexToBytes(game.resolverScript_Hex)!),
             ),
     });
     

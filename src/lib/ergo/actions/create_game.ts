@@ -131,11 +131,8 @@ export async function create_game(
             BigInt(commissionPercentage)
         ]).toHex(),
 
-        // R9: (Game details JSON/Hex, Creator spend script/PK)
-        R9: SPair(
-            SColl(SByte, gameDetailsBytes),
-            SColl(SByte, creatorPkBytes)
-        ).toHex()
+        // R9: JSON
+        R9: SColl(SByte, gameDetailsBytes).toHex()
     });
 
     // --- 3. Transaction Construction and Submission ---

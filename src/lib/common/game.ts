@@ -58,8 +58,6 @@ export interface GameActive {
     platform: ErgoPlatform;
     status: 'Active';
     gameId: string;
-    gameCreatorPK_Hex: string|null;
-    gameCreatorScript_Hex: string
     commissionPercentage: number;
     secretHash: string;
     seed: string;
@@ -98,8 +96,6 @@ export interface GameResolution {
     resolverPK_Hex: string|null;
     resolverScript_Hex: string
     resolverCommission: number;
-    originalCreatorPK_Hex: string|null;
-    originalCreatorScript_Hex: string
     content: GameContent;
     value: bigint;
     reputationOpinions: ReputationOpinion[];

@@ -164,8 +164,8 @@ export async function judges_invalidate(
                 SLong(BigInt(game.resolverCommission))
             ),
             R9: SPair(
-                SColl(SByte, hexToBytes(game.originalCreatorScript_Hex)!),
-                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+                SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
+                SColl(SByte, hexToBytes(game.resolverScript_Hex)!),
             ),
         });
         
