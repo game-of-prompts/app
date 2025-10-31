@@ -766,8 +766,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
                     
-                    const wrong_commitment = (game.status === "Resolution" || game.status === "Cancelled_Draining") && 
-                        resolve_participation_commitment(p_base as AnyParticipation, game.revealedS_Hex) === null;
+                    const wrong_commitment = (game.status === "Resolution" || game.status === "Cancelled_Draining") && resolve_participation_commitment(p_base as AnyParticipation, game.revealedS_Hex) === null;
 
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
                     if (malformed && !spent) {
