@@ -940,7 +940,7 @@
                 <div class="flex flex-col gap-6">
                     {#each participations as p (p.boxId)}
                         {@const isCurrentParticipationWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === p.commitmentC_Hex}
-                        {@const actualScoreForThisParticipation = game.status === 'Resolution' ? resolve_participation_commitment(p, game.revealedS_Hex) : undefined}
+                        {@const actualScoreForThisParticipation = (game.status === 'Resolution' || game.status === 'Cancelled_Draining') ? resolve_participation_commitment(p, game.revealedS_Hex) : null}
 
                         {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
                         {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && p.status === 'Submitted'}
