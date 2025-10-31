@@ -249,18 +249,18 @@ export async function resolve_game(
     const resolutionBoxValue = maxBigInt(originalValue, minRequiredValue, SAFE_MIN_BOX_VALUE);
 
     const resolutionBoxOutput = new OutputBuilder(
-    resolutionBoxValue,
-    resolutionErgoTree
-    )
-    .addTokens(game.box.assets)
-    .setAdditionalRegisters({
-    R4: r4Hex,
-    R5: r5Hex,
-    R6: r6Hex,
-    R7: r7Hex,
-    R8: r8Hex,
-    R9: r9Hex
-    });
+        resolutionBoxValue,
+        resolutionErgoTree
+        )
+        .addTokens(game.box.assets)
+        .setAdditionalRegisters({
+            R4: r4Hex,
+            R5: r5Hex,
+            R6: r6Hex,
+            R7: r7Hex,
+            R8: r8Hex,
+            R9: r9Hex
+        });
 
     // --- 4. Construir y Enviar la Transacción ---    
 
