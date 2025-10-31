@@ -13,7 +13,8 @@ import {
     type AnyGame,
     type GameContent,
     type ParticipationConsumedReason,
-    type MalformedParticipationReason
+    type MalformedParticipationReason,
+    resolve_participation_commitment
 } from "../common/game";
 import { explorer_uri } from "./envs";
 import { 
@@ -762,7 +763,10 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const spent = !!box.spentTransactionId;
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
-                    const wrong_commitment = false; // TODO Make this if the secret is revealed.
+                    
+                    const wrong_commitment = (game.status === "Resolution" || game.status === "Cancelled_Draining") && 
+                        resolve_participation_commitment(p_base as AnyParticipation, game.revealedS_Hex) === null;
+
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
                     if (malformed && !spent) {
                         const reason = await (async (): Promise<MalformedParticipationReason> => {

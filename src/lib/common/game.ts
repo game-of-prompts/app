@@ -4,6 +4,8 @@ import { ErgoPlatform } from "$lib/ergo/platform";
 import { type ReputationOpinion } from "$lib/ergo/reputation/objects";
 import type { Amount, Box, TokenEIP4 } from "@fleet-sdk/core";
 import { type GameConstants } from "./constants";
+import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
+import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
 
 /**
  * Defines the possible states a game can be in, according to the new contract logic.
@@ -271,4 +273,59 @@ export function parseGameContent(
     }
     
     return content;
+}
+
+export function resolve_participation_commitment(p: AnyParticipation, secretHex?: string): bigint | null {
+  // Early validation
+  if (!p.box?.additionalRegisters || !secretHex) return null;
+  const R = p.box.additionalRegisters;
+
+  // Parse registers safely
+  const ergoTree = hexToBytes(R.R4?.renderedValue || "");
+  const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+  const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+  const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+  const scoreListRaw = R.R9?.renderedValue;
+
+  // Check for required fields
+  if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) return null;
+
+  // Try parsing the score list (R9)
+  let scoreList: bigint[] | null = null;
+  if (typeof scoreListRaw === "string") {
+    try {
+      scoreList = parseLongColl(JSON.parse(scoreListRaw));
+    } catch {
+      return null;
+    }
+  } else if (Array.isArray(scoreListRaw)) {
+    scoreList = parseLongColl(scoreListRaw);
+  }
+  if (!scoreList?.length) return null;
+
+  // Convert hex values to bytes
+  const solverIdBytes = hexToBytes(solverIdHex);
+  const hashLogsBytes = hexToBytes(hashLogsHex);
+  const secretBytes = hexToBytes(secretHex);
+
+  if (!solverIdBytes || !hashLogsBytes || !secretBytes) return null;
+
+  // Look for the matching commitment
+  for (const score of scoreList) {
+    const scoreBytes = bigintToLongByteArray(score);
+    const dataToHash = new Uint8Array([
+      ...solverIdBytes,
+      ...scoreBytes,
+      ...hashLogsBytes,
+      ...ergoTree,
+      ...secretBytes,
+    ]);
+    const computedCommitment = uint8ArrayToHex(fleetBlake2b256(dataToHash));
+
+    if (computedCommitment === commitmentHex) {
+      return score;
+    }
+  }
+
+  return null;
 }

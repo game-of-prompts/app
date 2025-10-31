@@ -10,8 +10,8 @@
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
         isGameEnded, 
-        isGameParticipationEnded
-
+        isGameParticipationEnded,
+        resolve_participation_commitment
     } from "$lib/common/game";
     import { address, connected, game_detail, judge_detail, judges, reputation_proof } from "$lib/common/store";
     import { ErgoPlatform } from '$lib/ergo/platform';
@@ -30,8 +30,7 @@
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
     import { ErgoAddress } from "@fleet-sdk/core";
-    import { uint8ArrayToHex, pkHexToBase58Address, parseCollByteToHex, parseLongColl, hexToBytes, bigintToLongByteArray } from "$lib/ergo/utils";
-    import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
+    import { uint8ArrayToHex, pkHexToBase58Address, hexToBytes } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
     import { fetchJudges, fetchReputationProofByTokenId } from "$lib/ergo/reputation/fetch";
@@ -541,33 +540,6 @@
         return (Number(nanoErg) / 1e9).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
 
-    function getActualScore(p: AnyParticipation, secretHex: Uint8Array | undefined): bigint | null {
-        if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
-        const pBoxErgotree = hexToBytes(p.box.additionalRegisters.R4?.renderedValue || "") ?? "";
-        const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
-        const pBox_R7_solverIdHex_raw = parseCollByteToHex(p.box.additionalRegisters.R7?.renderedValue);
-        const pBox_R8_hashLogsHex_raw = parseCollByteToHex(p.box.additionalRegisters.R8?.renderedValue);
-        let r9ParsedArray: any[] | null = null;
-        const r9ScoreListRaw = p.box.additionalRegisters.R9?.renderedValue;
-        if (typeof r9ScoreListRaw === 'string') {
-            try { r9ParsedArray = JSON.parse(r9ScoreListRaw);
-            } catch (e) { /* silent fail */ }
-        } else if (Array.isArray(r9ScoreListRaw)) { r9ParsedArray = r9ScoreListRaw; }
-        const pBox_scoreList = parseLongColl(r9ParsedArray);
-        if (!pBox_R5_commitmentHex || !pBox_R7_solverIdHex_raw || !pBox_R8_hashLogsHex_raw || !pBox_scoreList || pBox_scoreList.length === 0) return null;
-
-        const pBoxSolverId_directBytes = hexToBytes(pBox_R7_solverIdHex_raw);
-        const pBoxHashLogs_directBytes = hexToBytes(pBox_R8_hashLogsHex_raw);
-        if (!pBoxSolverId_directBytes || !pBoxHashLogs_directBytes) return null;
-        for (const scoreAttempt of pBox_scoreList) {
-            const scoreAttempt_bytes = bigintToLongByteArray(scoreAttempt);
-            const dataToHash = new Uint8Array([...pBoxSolverId_directBytes, ...scoreAttempt_bytes, ...pBoxHashLogs_directBytes, ...pBoxErgotree, ...secretHex]);
-            const testCommitmentBytes = fleetBlake2b256(dataToHash);
-            if (uint8ArrayToHex(testCommitmentBytes) === pBox_R5_commitmentHex) return scoreAttempt;
-        }
-        return null;
-    }
-
     onMount(async () => {
         await fetchJudges();
         if (game) loadGameDetailsAndTimers();
@@ -968,7 +940,7 @@
                 <div class="flex flex-col gap-6">
                     {#each participations as p (p.boxId)}
                         {@const isCurrentParticipationWinner = game.status === 'Resolution' && game.winnerCandidateCommitment === p.commitmentC_Hex}
-                        {@const actualScoreForThisParticipation = game.status === 'Resolution' ? getActualScore(p, hexToBytes(game.revealedS_Hex) ?? undefined) : undefined}
+                        {@const actualScoreForThisParticipation = game.status === 'Resolution' ? resolve_participation_commitment(p, game.revealedS_Hex) : undefined}
 
                         {@const isCurrentUserParticipant = $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
                         {@const canClaimCancellationRefund = (game.status === 'Cancelled_Draining') && isCurrentUserParticipant && p.status === 'Submitted'}
