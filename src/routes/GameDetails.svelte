@@ -543,7 +543,7 @@
 
     function getActualScore(p: AnyParticipation, secretHex: Uint8Array | undefined): bigint | null {
         if (!p.box || !p.box.additionalRegisters || !secretHex) return null;
-        const pBoxErgotree = hexToBytes(p.box.additionalRegisters.R4?.renderedValue || "");
+        const pBoxErgotree = hexToBytes(p.box.additionalRegisters.R4?.renderedValue || "") ?? "";
         const pBox_R5_commitmentHex = parseCollByteToHex(p.box.additionalRegisters.R5?.renderedValue);
         const pBox_R7_solverIdHex_raw = parseCollByteToHex(p.box.additionalRegisters.R7?.renderedValue);
         const pBox_R8_hashLogsHex_raw = parseCollByteToHex(p.box.additionalRegisters.R8?.renderedValue);
@@ -1065,15 +1065,13 @@
                                                     {score.toString()}
                                                 </span>{#if i < p.scoreList.length - 1}<span class="{$mode === 'dark' ? 'text-slate-500' : 'text-gray-400'}">, </span>{/if}
                                             {/each}
-                                            {#if actualScoreForThisParticipation !== null}
-                                                <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
-                                                    {#if game.status == "Active"}
-                                                        (one of these is the real one)
-                                                    {:else}
-                                                       (Real Score: {actualScoreForThisParticipation})
-                                                    {/if}
-                                                </span>
-                                            {/if}
+                                            <span class="text-xs italic {$mode === 'dark' ? 'text-gray-400' : 'text-gray-500'} ml-2">
+                                                {#if actualScoreForThisParticipation === null}
+                                                    (one of these is the real one)
+                                                {:else}
+                                                    (Real Score: {actualScoreForThisParticipation})
+                                                {/if}
+                                            </span>
                                         {/if}
                                     </div>
                                 </div>
