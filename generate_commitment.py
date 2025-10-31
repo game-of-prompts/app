@@ -85,6 +85,9 @@ def main():
             print("Usando el ErgoTree constante por defecto.")
             ergotree_hex_to_use = CONSTANT_ERGOTREE_HEX
 
+    if not args.address:
+        print("⚠️ Ten en cuenta que no has especificado la dirección. Esto no sirve para pruebas en real.")
+
     print("\nEntradas para generar el commitment:")
     print(f"  Score: {args.score}")
     print(f"  Solver ID: {solver_id_hex}")
