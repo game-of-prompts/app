@@ -613,6 +613,11 @@
                             <span class="stat-label">Reputation</span>
                         </div>
                         <div class="stat-block">
+                            <Users class="stat-icon"/>
+                            <span>{game.content.indetermismIndex}</span>
+                            <span class="stat-label">Indeterminisim Index</span>
+                        </div>
+                        <div class="stat-block">
                             <Edit class="stat-icon"/>
                             <span>{formatErg(getParticipationFee(game))} ERG</span>
                             <span class="stat-label">Fee per Player</span>

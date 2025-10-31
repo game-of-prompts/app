@@ -338,7 +338,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             perJudgeComissionPercentage: perJudgeComissionPercentage,
             resolverCommission: creatorComissionPercentage, // Se añade desde R8
             constants: DefaultGameConstants,
-            seed: seed // Se añade desde R5
+            seed: seed, // Se añade desde R5
+            reputation: 0
         };
 
         return gameResolution;
@@ -465,6 +466,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             judges: [],
             deadlineBlock: originalDeadline,
             constants: DefaultGameConstants,
+            reputation: 0
         };
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
