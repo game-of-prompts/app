@@ -8,44 +8,43 @@ import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
-import { DefaultGameConstants } from '$lib/common/constants';
 
 export async function end_game(
     game: GameResolution,
     participations: ValidParticipation[]
 ): Promise<string> {
 
-    console.log(`[end_game] Participaciones: ${participations.length}`)
+    console.log(`[end_game] Participations: ${participations.length}`)
 
-    console.log(`[end_game] Iniciando finalización del juego: ${game.boxId}`);
+    console.log(`[end_game] Starting game finalization: ${game.boxId}`);
     const currentHeight = await ergo.get_current_height();
     const userAddress = await ergo.get_change_address();
 
-    // --- 1. Verificaciones preliminares ---
+    // --- 1. Preliminary checks ---
     if (currentHeight < game.resolutionDeadline) {
-        throw new Error("El período de resolución aún no ha terminado.");
+        throw new Error("The resolution period has not yet ended.");
     }
     const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment) ?? null;
 
-    // --- 2. Verificación del Firmante ---
+    // --- 2. Signer verification ---
     let requiredSignerAddress: string;
 
     if (winnerParticipation === null) {
         requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex);
-        console.log(`Caso: Sin ganador. Se requiere la firma del resolutor: ${requiredSignerAddress}`);
+        console.log(`Case: No winner. Resolver signature required: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
-            throw new Error(`Firma inválida. Solo el resolutor (${requiredSignerAddress}) puede ejecutar esta transacción.`);
+            throw new Error(`Invalid signature. Only the resolver (${requiredSignerAddress}) can execute this transaction.`);
         }
     } else {
         requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
-        console.log(`Caso: Con ganador. Se requiere la firma del ganador: ${requiredSignerAddress}`);
+        console.log(`Case: With winner. Winner signature required: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
-            throw new Error(`Firma inválida. Solo el ganador declarado (${requiredSignerAddress}) puede ejecutar esta transacción.`);
+            throw new Error(`Invalid signature. Only the declared winner (${requiredSignerAddress}) can execute this transaction.`);
         }
     }
-    console.log(`Verificación de firmante exitosa. Usuario conectado: ${userAddress}`);
+    console.log(`Signer verification successful. Connected user: ${userAddress}`);
 
-    // --- 3. Lógica de Cálculo de Pagos ---
+    // --- 3. Payment Calculation Logic ---
     const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeNanoErg;
 
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
@@ -70,7 +69,7 @@ export async function end_game(
     let finalPerJudge = 0n;
 
     if (winnerParticipation === null) {
-        // --- CASO: NO HAY GANADOR ---
+        // --- CASE: NO WINNER ---
         const totalValue = prizePool + game.creatorStakeNanoErg;
 
         finalDevPayout = finalDevPayoutTent;
@@ -79,15 +78,15 @@ export async function end_game(
 
         finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
-        console.log("--- Resumen de Pagos (Sin Ganador) ---");
-        console.log(`Premio total: ${prizePool}`);
-        console.log(`Pago Final Resolver: ${finalResolverPayout} (incluye NFT si aplica)`);
-        console.log(`Pago Final Dev: ${finalDevPayout}`);
-        console.log(`Pago Total Jueces (a repartir): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
+        console.log("--- Payment Summary (No Winner) ---");
+        console.log(`Total prize: ${prizePool}`);
+        console.log(`Final Resolver Payment: ${finalResolverPayout} (includes NFT if applicable)`);
+        console.log(`Final Dev Payment: ${finalDevPayout}`);
+        console.log(`Total Judges Payment (to distribute): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
         console.log("---------------------------------------");
 
     } else {
-        // --- CASO: SÍ HAY GANADOR ---
+        // --- CASE: THERE IS A WINNER ---
         const creatorStake = game.creatorStakeNanoErg;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
 
@@ -121,16 +120,16 @@ export async function end_game(
         finalJudgesPayout = adjustedJudgesPayout;
         finalPerJudge = adjustedPerJudge;
 
-        console.log("--- Resumen de Pagos (Con Ganador) ---");
-        console.log(`Premio total: ${prizePool}`);
-        console.log(`Premio Final Ganador: ${finalWinnerPrize}`);
-        console.log(`Pago Final Resolver: ${finalResolverPayout}`);
-        console.log(`Pago Final Dev: ${finalDevPayout}`);
-        console.log(`Pago Total Jueces (a repartir): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
+        console.log("--- Payment Summary (With Winner) ---");
+        console.log(`Total prize: ${prizePool}`);
+        console.log(`Final Winner Prize: ${finalWinnerPrize}`);
+        console.log(`Final Resolver Payment: ${finalResolverPayout}`);
+        console.log(`Final Dev Payment: ${finalDevPayout}`);
+        console.log(`Total Judges Payment (to distribute): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
         console.log("------------------------------------");
     }
 
-    // --- 4. Construcción de Salidas ---
+    // --- 4. Output Construction ---
     const outputs: OutputBuilder[] = [];
     const gameNft = game.box.assets[0];
 
@@ -160,35 +159,35 @@ export async function end_game(
         for (const tokenId of game.judges) {
             const js = get(judges).data.get(tokenId)
             if (!js) {
-                console.warn(`[end_game] No se encontró información de juez para token ${tokenId}, se omite.`);
-                throw new Error(`No se encontró información de juez para token ${tokenId}`);
+                console.warn(`[end_game] No judge information found for token ${tokenId}, skipping.`);
+                throw new Error(`No judge information found for token ${tokenId}`);
             }
             const judgeErgoTree = js.owner_ergotree;
             const judgeDatabox = js.current_boxes && js.current_boxes[0];
 
             if (!judgeErgoTree) {
-                console.warn(`[end_game] judgeErgoTree vacío para token ${tokenId}, se omite.`);
-                throw new Error(`judgeErgoTree vacío para token ${tokenId}`);
+                console.warn(`[end_game] Empty judgeErgoTree for token ${tokenId}, skipping.`);
+                throw new Error(`Empty judgeErgoTree for token ${tokenId}`);
             }
 
-            // Añadir output por juez con la comisión por juez
+            // Add output per judge with per-judge commission
             outputs.push(
                 new OutputBuilder(finalPerJudge, judgeErgoTree)
             );
 
-            // Si hay datainput, lo parseamos y lo añadimos a datainputs
+            // If there is a datainput, parse it and add to datainputs
             if (judgeDatabox) {
                 dataInputs.push(parseBox(judgeDatabox.box));
             }
             else {
-                throw new Error('[end_game] JudgeDatabox vacío')
+                throw new Error('[end_game] Empty JudgeDatabox')
             }
         }
     } else {
-        console.log("[end_game] No se crean salidas para jueces (comisión por juez es 0 o polvo o no hay jueces).");
+        console.log("[end_game] No outputs created for judges (per-judge commission is 0 or no judges exist).");
     }
 
-    // --- 5. Construcción y Envío de la Transacción ---
+    // --- 5. Transaction Construction and Submission ---
     const utxos = await ergo.get_utxos();
     const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box))];
 
@@ -196,22 +195,22 @@ export async function end_game(
         .from([...inputs, ...utxos])
         .to(outputs)
         .withDataFrom(dataInputs)
-        .sendChangeTo(userAddress) // El cambio va al firmante autorizado
+        .sendChangeTo(userAddress) // Change goes to the authorized signer
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()
         .toEIP12Object();
 
-    console.log("Transacción EIP-12 sin firmar generada.");
+    console.log("Unsigned EIP-12 transaction generated.");
 
     try {
         const signedTransaction = await ergo.sign_tx(unsignedTransaction);
         const txId = await ergo.submit_tx(signedTransaction);
 
-        console.log(`¡Éxito! Transacción de finalización enviada. ID: ${txId}`);
+        console.log(`Success! Finalization transaction sent. ID: ${txId}`);
         return txId;
     } 
     catch (error) {
-        console.error("Error al firmar o enviar la transacción:", error);
+        console.error("Error signing or sending transaction:", error);
         throw error;
     }
 }
