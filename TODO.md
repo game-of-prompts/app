@@ -74,9 +74,11 @@
 [] "Script reduced to false" en judges invalidate con un juez y sin nueva candidata.
 
 
-[] Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
-    - Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
-    - Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
+**Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.**
+[x]Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
+[x] Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
+[] Implementar acción mediante código.
+
 
 [] Soporte multi-token
 
