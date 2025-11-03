@@ -282,9 +282,9 @@ export function parseGameContent(
     return content;
 }
 
-export function resolve_participation_commitment(p: AnyParticipation, secretHex?: string): bigint | null {
+export function resolve_participation_commitment(p: AnyParticipation, secretHex: string, seed: string): bigint | null {
   // Early validation
-  if (!p.box?.additionalRegisters || !secretHex) return null;
+  if (!p.box?.additionalRegisters || !secretHex || !seed) return null;
   const R = p.box.additionalRegisters;
 
   // Parse registers safely
@@ -293,6 +293,7 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex?
   const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
   const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
   const scoreListRaw = R.R9?.renderedValue;
+  const seedBytes = hexToBytes(seed)!;
 
   // Check for required fields
   if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) return null;
@@ -322,6 +323,7 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex?
     const scoreBytes = bigintToLongByteArray(score);
     const dataToHash = new Uint8Array([
       ...solverIdBytes,
+      ...seedBytes,
       ...scoreBytes,
       ...hashLogsBytes,
       ...ergoTree,

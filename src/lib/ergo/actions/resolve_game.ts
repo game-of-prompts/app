@@ -10,7 +10,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { type GameActive, type ValidParticipation } from '$lib/common/game';
+import { resolve_participation_commitment, type GameActive, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
@@ -116,26 +116,9 @@ export async function resolve_game(
         }
 
         // Simulación de la validación de la puntuación
-        let scoreIsValid = false;
-        let actualScore = -1n;
+        let actualScore = resolve_participation_commitment(p, secretS_hex, game.seed);
 
-        for (const score of p.scoreList) {
-            const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!,
-                ...bigintToLongByteArray(BigInt(score)),
-                ...hexToBytes(p.hashLogs_Hex)!,
-                ...hexToBytes(p.playerScript_Hex)!,
-                ...secretS_bytes
-            ]);
-            const testCommitment = fleetBlake2b256(dataToHash);
-            if (uint8ArrayToHex(testCommitment) === p.commitmentC_Hex) {
-                scoreIsValid = true;
-                actualScore = score;
-                break;
-            }
-        }
-
-        if (!scoreIsValid) {
+        if (actualScore === null) {
             console.warn(`No se pudo encontrar una puntuación válida para la participación ${p.commitmentC_Hex}. Será omitida.`);
             continue;
         }
