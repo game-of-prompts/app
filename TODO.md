@@ -71,6 +71,8 @@
 
 [x] Plantear la necesidad de registrar creator script ¿porque no solo resolver script? ¿porque simplemente quien quiera que lo cambie y ya ... ?  el creador podría agregar su prueba de reputación entre el resto de información del juego
 
+[] "Script reduced to false" en judges invalidate con un juez y sin nueva candidata.
+
 
 [] Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
     - Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
@@ -81,26 +83,23 @@
 
 ### Fetch
 
-[] La reputación de un juez en un juego debe de reducirse en caso de que el juego, aun pudiendo invalidar la participación, no lo terminara haciendo.
-> Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
-
 [] Muy importante, fetch debe asegurarse de que las participaciones son válidas, y marcar las maliciosas.
+
+
+
+
 
 ##### game-service-factory
 [] Game obfuscated
 [] Señuelos
 [] Limited resources
 
+
+
 #### Servicio para supervisar jueces
 
-
-
-
-
-
-
-
-
+[] La reputación de un juez en un juego debe de reducirse en caso de que el juego, aun pudiendo invalidar la participación, no lo terminara haciendo.
+> Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
 
 ----
 
