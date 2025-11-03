@@ -12,9 +12,7 @@ import { type GameCancellation } from '$lib/common/game';
 import { getGopGameCancellationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 
-// Constantes del contrato game_cancellation.es
-const STAKE_DENOMINATOR = 5n;
-const COOLDOWN_IN_BLOCKS = 40; // Cooldown definido en el contrato
+const COOLDOWN_IN_BLOCKS_MARGIN = 10;
 
 /**
  * Executes the drain action on a game box in the "Cancellation" state.
@@ -39,7 +37,7 @@ export async function drain_cancelled_game_stake(
     }
 
     const stakeToDrain = BigInt(game.currentStakeNanoErg);
-    const stakePortionToClaim = stakeToDrain / STAKE_DENOMINATOR;
+    const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
     const remainingStake = stakeToDrain - stakePortionToClaim;
 
     // The contract prevents this action from running if not enough stake is left.
@@ -51,7 +49,7 @@ export async function drain_cancelled_game_stake(
 
     // --- 2. Build Outputs ---
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
+    const newUnlockHeight = BigInt(currentHeight + game.constants.COOLDOWN_IN_BLOCKS + COOLDOWN_IN_BLOCKS_MARGIN);
     const revealedSecretBytes = hexToBytes(game.revealedS_Hex);
     if (!revealedSecretBytes) throw new Error("Could not convert revealed secret hex to bytes.");
 

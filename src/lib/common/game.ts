@@ -2,7 +2,7 @@
 
 import { ErgoPlatform } from "$lib/ergo/platform";
 import { type ReputationOpinion } from "$lib/ergo/reputation/objects";
-import type { Amount, Box, TokenEIP4 } from "@fleet-sdk/core";
+import { SAFE_MIN_BOX_VALUE, type Amount, type Box, type TokenEIP4 } from "@fleet-sdk/core";
 import { type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
@@ -236,7 +236,13 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
     }
     const platform = new ErgoPlatform();
     const currentHeight = await platform.get_current_height();
-    return currentHeight >= game.unlockHeight;
+    const unlocked = currentHeight >= game.unlockHeight;
+
+    const stakeToDrain = BigInt(game.currentStakeNanoErg);
+    const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
+    const remainingStake = (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
+
+    return unlocked && remainingStake;
 }
 
 /**
