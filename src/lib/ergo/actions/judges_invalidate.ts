@@ -12,10 +12,8 @@ import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
-import { prependHexPrefix } from '$lib/utils';
 
-// Constant from the game_resolution.es contract for extending the deadline
-const JUDGE_PERIOD_EXTENSION = 30 + 10;
+const JUDGE_PERIOD_MARGIN = 10;
 
 /**
  * Allows a judge (or group of judges) to invalidate the current winner.
@@ -95,7 +93,7 @@ export async function judges_invalidate(
 
         for (const score of p.scoreList) {
             const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!,   // TODO CHECK Buffer.from(p.solverId_RawBytesHex, 'utf-8'),
+                ...hexToBytes(p.solverId_RawBytesHex)!,
                 ...bigintToLongByteArray(BigInt(score)),
                 ...hexToBytes(p.hashLogs_Hex)!,
                 ...hexToBytes(p.playerScript_Hex)!,
@@ -135,7 +133,7 @@ export async function judges_invalidate(
 
     // The invalidated candidate's value is added back to the game box's value
     const newGameBoxValue = game.value + invalidatedParticipation.value;
-    const newDeadline = BigInt(currentHeight + JUDGE_PERIOD_EXTENSION);
+    const newDeadline = BigInt(currentHeight + game.constants.JUDGE_PERIOD + JUDGE_PERIOD_MARGIN);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
 
     // --- seed_bytes para R5 (seed puede venir como game.seed) ---

@@ -19,8 +19,9 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, generate_pk_proposition, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
+import { DefaultGameConstants } from "$lib/common/constants";
 
-const JUDGE_PERIOD = 40n; // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
+const JUDGE_PERIOD = BigInt(DefaultGameConstants.JUDGE_PERIOD + 10); // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
 // Helper para crear un hash de compromiso
 const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
