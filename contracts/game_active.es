@@ -28,14 +28,6 @@
   // =================================================================
 
   // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Long) - creatorInfo: (Script de gasto del creador, Porcentaje de comisión).
-  // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
-  // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage].
-  // R9: Coll[Byte]         - gameDetailsJsonHex: Detalles del juego en formato JSON/Hex.
-
-  // -- NEW --
-  // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
@@ -122,7 +114,7 @@
 
               val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
                 if (scoreAcc) { scoreAcc } else {
-                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
+                  val testCommitment = blake2b256(pBoxSolverId ++ gameSeed ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
                   if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
                 }
               })

@@ -23,15 +23,6 @@
   // =================================================================
 
   // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
-  // R6: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R7: Coll[Long]                 - numericalParams: [originalDeadline, creatorStake, participationFee, perJudgeComissionPercentage, resolutionDeadline].
-  // R8: (Coll[Byte], Long)         - resolverInfo: (Script de gasto del "Resolvedor", % de comisión).
-  // R9: (Coll[Byte], Coll[Byte])   - gameProvenance: (Script de gasto del CREADOR ORIGINAL, Detalles del juego en JSON/Hex).
-
-
-  // -- NEW --
-  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
@@ -71,7 +62,7 @@
   // === ACCIONES DE GASTO
   // =================================================================
 
-  // ### Acción 1: Incluir Participación Omitida (Versión Corregida y Mejorada)
+  // ### Acción 1: Incluir Participación Omitida
   val action1_includeOmittedParticipation = {
     // Verificaciones iniciales de la estructura de la transacción
     if (isBeforeResolutionDeadline && INPUTS.size > 1 && OUTPUTS.size > 1) {
@@ -102,7 +93,7 @@
           // Se calcula el puntaje de la nueva participación revelando el secreto
           val newScore = omittedWinnerBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
             if (acc._2) { acc } else {
-              val testCommitment = blake2b256(omittedWinnerBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ omittedWinnerBox.R8[Coll[Byte]].get ++ omittedWinnerBox.R4[Coll[Byte]].get ++ revealedS)
+              val testCommitment = blake2b256(omittedWinnerBox.R7[Coll[Byte]].get ++ seed ++ longToByteArray(score) ++ omittedWinnerBox.R8[Coll[Byte]].get ++ omittedWinnerBox.R4[Coll[Byte]].get ++ revealedS)
               if (testCommitment == omittedWinnerBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
             }
           })._1
@@ -255,7 +246,7 @@
 
               val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
                 if (scoreAcc) { scoreAcc } else {
-                  val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
+                  val testCommitment = blake2b256(pBoxSolverId ++ seed ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
                   if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
                 }
               })
@@ -417,7 +408,7 @@
 
             val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>
               if (scoreAcc) { scoreAcc } else {
-                val testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
+                val testCommitment = blake2b256(pBoxSolverId ++ seed ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)
                 if (testCommitment == pBoxCommitment) { true } else { scoreAcc }
               }
             })
