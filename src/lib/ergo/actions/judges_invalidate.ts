@@ -159,8 +159,11 @@ export async function judges_invalidate(
                 SColl(SByte, nextWinnerCandidateCommitment ? hexToBytes(nextWinnerCandidateCommitment)! : [])
             ),
 
-            // R7: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
-            R7: SColl(SLong, [
+            // --- R7: participatingJudges: Coll[Coll[Byte]] ---
+            R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
+
+            // R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+            R8: SColl(SLong, [
                 BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
@@ -168,12 +171,6 @@ export async function judges_invalidate(
                 BigInt(game.resolverCommission ?? 0),
                 BigInt(newDeadline)
             ]),
-
-            // R8: resolverInfo: (Script de gasto del resolvedor, % de comisión)
-            R8: SPair(
-                SColl(SByte, hexToBytes(game.resolverScript_Hex)!),
-                SLong(BigInt(game.resolverCommission))
-            ),
 
             // R9: gameProvenance: Coll[Coll[Byte]] -> [ rawJsonBytes, resolverScriptBytes ]
             R9: SColl(SColl(SByte), [
