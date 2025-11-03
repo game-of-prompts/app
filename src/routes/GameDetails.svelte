@@ -921,13 +921,11 @@
                         {/if}
 
                         {#if iGameDrainingStaking(game)}
-                            <div class="p-3 rounded-lg border {$mode === 'dark' ? 'border-yellow-500/30 bg-yellow-600/20' : 'border-yellow-200 bg-yellow-100'}">
-                                {#await isGameDrainingAllowed(game) then isAllowed}
-                                    <Button on:click={() => setupActionModal('drain_stake')} disabled={!isAllowed} class="w-full">
-                                        <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
-                                    </Button>
-                                {/await}
-                            </div>
+                            {#await isGameDrainingAllowed(game) then isAllowed}
+                                <Button on:click={() => setupActionModal('drain_stake')} disabled={!isAllowed} class="w-full">
+                                    <Trophy class="mr-2 h-4 w-4"/>Drain Creator Stake
+                                </Button>
+                            {/await}
                         {/if}
                     {:else}
                         <p class="info-box">Connect your wallet to interact with the game competition.</p>
