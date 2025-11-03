@@ -123,7 +123,7 @@
                 // Se calcula el puntaje del candidato actual de forma segura
                 val currentCandidateScoreTuple = currentCandidateBox.R9[Coll[Long]].get.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>
                   if (acc._2) { acc } else {
-                    val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ currentCandidateBox.R4[Coll[Byte]].get ++ revealedS)
+                    val testCommitment = blake2b256(currentCandidateBox.R7[Coll[Byte]].get ++ seed ++ longToByteArray(score) ++ currentCandidateBox.R8[Coll[Byte]].get ++ currentCandidateBox.R4[Coll[Byte]].get ++ revealedS)
                     if (testCommitment == currentCandidateBox.R5[Coll[Byte]].get) { (score, true) } else { acc }
                   }
                 })
