@@ -3,7 +3,7 @@
 genera_commitment.py
 
 Uso:
-  python genera_commitment.py <score> [--address ADDRESS]
+  python genera_commitment.py <score> [--address ADDRESS] [--seed SEED]
 
 Si se pasa --address, el script consulta el Explorer oficial de Ergo en
 /api/v1/boxes/byAddress/{address} para obtener el campo "ergoTree".
@@ -41,8 +41,10 @@ def fetch_ergo_tree_for_address(address: str, timeout: int = 10) -> str:
 
     return ergo_tree
 
+
 def generate_gop_commitment(
     solver_id: str,
+    seed_str: str,
     score: int,
     hash_logs_hex: str,
     secret_s_hex: str,
@@ -50,15 +52,24 @@ def generate_gop_commitment(
 ) -> str:
     """Genera el commitment C (Blake2b-256) para Game of Prompts."""
     solver_id_bytes = binascii.unhexlify(solver_id)
+
+    # Si el seed es hex, lo decodificamos; si no, lo codificamos como UTF-8
+    try:
+        seed_bytes = binascii.unhexlify(seed_str)
+    except (binascii.Error, ValueError):
+        seed_bytes = seed_str.encode("utf-8")
+
     score_bytes = score.to_bytes(8, byteorder="big", signed=True)
     hash_logs_bytes = binascii.unhexlify(hash_logs_hex)
     secret_s_bytes = binascii.unhexlify(secret_s_hex)
     ergotree_bytes = binascii.unhexlify(ergotree_hex)
 
-    concatenated = solver_id_bytes + score_bytes + hash_logs_bytes + ergotree_bytes + secret_s_bytes
+    # Orden actualizado: solver_id + seed + score + hash_logs + ergoTree + secret_s
+    concatenated = solver_id_bytes + seed_bytes + score_bytes + hash_logs_bytes + ergotree_bytes + secret_s_bytes
     h = hashlib.blake2b(digest_size=32)
     h.update(concatenated)
     return h.hexdigest()
+
 
 def main():
     CONSTANT_SECRET_S_HEX = "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21"
@@ -67,6 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description="Genera un commitment para Game of Prompts.")
     parser.add_argument("score", type=int, help="Puntuación (score) obtenida por el solver.")
     parser.add_argument("--address", type=str, default=None, help="Dirección Ergo del jugador.")
+    parser.add_argument("--seed", type=str, default=None, help="Seed personalizada del jugador (texto o hex).")
     parser.add_argument("--secret", type=str, default=CONSTANT_SECRET_S_HEX, help="Secret S (hex).")
     parser.add_argument("--no-fetch", action="store_true", help="No consultar el Explorer aunque se pase --address.")
     args = parser.parse_args()
@@ -88,15 +100,21 @@ def main():
     if not args.address:
         print("⚠️ Ten en cuenta que no has especificado la dirección. Esto no sirve para pruebas en real.")
 
+    if not args.seed:
+        print("⚠️ No has especificado la seed. Se recomienda definir una para commits válidos en producción.")
+        args.seed = "default-seed"
+
     print("\nEntradas para generar el commitment:")
     print(f"  Score: {args.score}")
     print(f"  Solver ID: {solver_id_hex}")
+    print(f"  Seed: {args.seed}")
     print(f"  Hash Logs: {hash_logs_hex}")
     print(f"  ErgoTree: {ergotree_hex_to_use[:80]}... (len={len(ergotree_hex_to_use)})")
     print(f"  Secret S: {args.secret}\n{'-'*60}")
 
     commitment = generate_gop_commitment(
         solver_id_hex,
+        args.seed,
         args.score,
         hash_logs_hex,
         args.secret,
@@ -105,6 +123,7 @@ def main():
 
     print(f"✅ Commitment generado:\n{commitment}")
     print(f"Longitud: {len(commitment)} caracteres ({len(binascii.unhexlify(commitment))} bytes)")
+
 
 if __name__ == "__main__":
     main()
