@@ -71,14 +71,13 @@
 
 [x] Plantear la necesidad de registrar creator script ¿porque no solo resolver script? ¿porque simplemente quien quiera que lo cambie y ya ... ?  el creador podría agregar su prueba de reputación entre el resto de información del juego
 
-[] "Script reduced to false" en judges invalidate con un juez y sin nueva candidata.
-
 
 **Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.**
 [x]Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
 [x] Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
 [] Implementar acción mediante código.
 
+[] "Script reduced to false" en judges invalidate con un juez y sin nueva candidata.
 
 [] Soporte multi-token
 
