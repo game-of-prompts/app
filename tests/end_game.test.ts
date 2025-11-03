@@ -47,6 +47,7 @@ describe("Game Finalization (end_game)", () => {
   const creatorStake = 2_000_000n;
   const participationFee = 100_000_000n;
   const resolverCommissionPercent = 10;
+  const seed = "a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712";
 
   
   // --- Variables para el Estado de la Prueba ---
@@ -60,7 +61,7 @@ describe("Game Finalization (end_game)", () => {
 
 
   const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, ergotree: Uint8Array, secret: Uint8Array): Uint8Array => {
-      return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...logs, ...ergotree, ...secret]));
+      return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...hexToBytes(seed), ...bigintToLongByteArray(score), ...logs, ...ergotree, ...secret]));
   };
 
   const createParticipation = (
@@ -167,7 +168,7 @@ describe("Game Finalization (end_game)", () => {
           // Estado igual
           R4: SInt(1).toHex(),
 
-          R5: SColl(SByte, hexToBytes("a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712") ?? "").toHex(),
+          R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
           // (revealedSecretS, winnerCandidateCommitment)
           R6: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
@@ -329,7 +330,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(),
 
-            R5: SColl(SByte, hexToBytes("b7c5a91f2d8a94e3b1c6f7d2e4a8c9b0f135d7a8e2c4f9b1a0e8d5f3c2b19e7f") ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
             R6: SPair(
                 SColl(SByte, secret),
@@ -455,7 +456,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(),
 
-            R5: SColl(SByte, hexToBytes("7b9a34c6d5e1f0a89c3d4b56e7a2f918cde4a5b09f6c1d2e3b7a8f9c0123e4d5") ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
             R6: SPair(
                 SColl(SByte, secret),
@@ -572,7 +573,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(),
 
-            R5: SColl(SByte, hexToBytes("d4e3a7b9c1f08a6b2e5d4c3f9b8a7e1d2c3f4b5a6e7c8d9f0b1a2c3d4e5f6789") ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
             R6: SPair(
                 SColl(SByte, secret),
@@ -742,7 +743,7 @@ describe("Game Finalization (end_game)", () => {
         additionalRegisters: {
             R4: SInt(1).toHex(),
 
-            R5: SColl(SByte, hexToBytes("f3a1b2c4d5e6f7890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f6789") ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
 
             R6: SPair(
@@ -888,8 +889,7 @@ describe("Game Finalization (end_game)", () => {
           // Estado del juego
           R4: SInt(1).toHex(),
 
-          // Nuevo SEED (inventado, 32 bytes aleatorios)
-          R5: SColl(SByte, hexToBytes("a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712") ?? "").toHex(),
+          R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
           // (revealedSecretS, winnerCandidateCommitment)
           R6: SPair(
@@ -955,7 +955,7 @@ describe("Game Finalization (end_game)", () => {
     additionalRegisters: {
         R4: SInt(1).toHex(),
 
-        R5: SColl(SByte, hexToBytes("b1c2d3e4f5a60718293a4b5c6d7e8f90123456789abcdef0b1c2d3e4f5a60718") ?? "").toHex(),
+        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
         // (revealedSecretS, winnerCandidateCommitment) - sin ganador
         R6: SPair(
@@ -1078,8 +1078,7 @@ describe("Game Finalization (end_game)", () => {
             // Estado del juego
             R4: SInt(1).toHex(),
 
-            // SEED (32 bytes aleatorios)
-            R5: SColl(SByte, hexToBytes("c1d2e3f4a5b60718293a4b5c6d7e8f90123456789abcdef0c1d2e3f4a5b60718") ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
             // (revealedSecretS, winnerCandidateCommitment)
             R6: SPair(
