@@ -44,6 +44,21 @@ export async function judges_invalidate(
     if (invalidatedParticipation.commitmentC_Hex !== game.winnerCandidateCommitment) {
         throw new Error("The provided participation does not correspond to the current winning candidate of the game.");
     }
+
+    // Check all judge votes
+    for (const p of judgeVoteDataInputs) {
+        const reg = p.additionalRegisters;
+
+        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+                      reg.R6.renderedValue === "true" &&
+                      reg.R8.renderedValue === "false";
+
+        if (!valid) {
+            throw new Error("Invalid judge vote.")
+        }
+
+    }
     
     const requiredVotes = Math.floor(game.judges.length / 2) + 1;
     if (judgeVoteDataInputs.length < requiredVotes) {
