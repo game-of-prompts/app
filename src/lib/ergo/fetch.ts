@@ -40,6 +40,13 @@ import { get } from "svelte/store";
 import { judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
 
+
+function calculate_reputation(game: AnyGame): number {
+    let reputation = 0
+    reputation += game.judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
+    return reputation;
+}
+
 // =================================================================
 // === REPUTATION PROOF UTILITIES
 // =================================================================
@@ -111,7 +118,7 @@ async function getTransactionInfo(transactionId: string): Promise<any> {
  * @param box The raw box obtained from the explorer.
  * @returns A `GameActive` object or `null` if the box does not match the expected format.
  */
-async function parseGameActiveBox(box: Box<Amount>, reputationOptions: ReputationOpinion[] = []): Promise<GameActive | null> {
+async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> {
     try {
         if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
             console.warn('parseGameActiveBox: invalid constants');
@@ -152,7 +159,7 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
-        // New structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+        // structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
         if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
         
@@ -160,9 +167,6 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
         const gameDetailsHex = parseCollByteToHex(box.additionalRegisters.R9?.renderedValue);
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
-
-        // --- Calculate Reputation ---
-        const reputation = judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
 
         const gameActive: GameActive = {
             platform: new ErgoPlatform(),
@@ -180,11 +184,13 @@ async function parseGameActiveBox(box: Box<Amount>, reputationOptions: Reputatio
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
-            reputation: reputation,
+            reputation: 0,
             constants: DefaultGameConstants,
             seed: seed,
             ceremonyDeadline: ceremonyDeadline,
         };
+
+        gameActive.reputation = calculate_reputation(gameActive);
         
         return gameActive;
 
@@ -342,6 +348,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             reputation: 0
         };
 
+        gameResolution.reputation = calculate_reputation(gameResolution);
+
         return gameResolution;
         
     } catch (e) {
@@ -450,7 +458,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
 
         const participationFeeNanoErg = BigInt(0); // Asumiendo 0 en cancelación
 
-        return {
+        const gameCancelled: GameCancellation = {
             platform: new ErgoPlatform(),
             boxId: box.boxId,
             box,
@@ -468,6 +476,11 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             constants: DefaultGameConstants,
             reputation: 0
         };
+
+        gameCancelled.reputation = calculate_reputation(gameCancelled);
+
+        return gameCancelled;
+
     } catch (e) {
         console.error(`Error parsing cancellation box ${box.boxId}:`, e);
         return null;
@@ -659,9 +672,10 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             judgeFinalizationBlock: judgeFinalizationBlock,
             winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
             constants: DefaultGameConstants,
+            reputation: 0
         };
 
-        console.log("Finalized game found. Body: ", finalized);
+        finalized.reputation = calculate_reputation(finalized);
 
         games.set(gameId, finalized);
     }
