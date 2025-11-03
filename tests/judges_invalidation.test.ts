@@ -23,9 +23,11 @@ import { DefaultGameConstants } from "$lib/common/constants";
 
 const JUDGE_PERIOD = BigInt(DefaultGameConstants.JUDGE_PERIOD + 10); // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
+const seed = "a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712";
+
 // Helper para crear un hash de compromiso
 const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
-    return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
+    return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...hexToBytes(seed), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
 };
 
 describe("Game Resolution Invalidation by Judges", () => {
@@ -114,8 +116,8 @@ describe("Game Resolution Invalidation by Judges", () => {
                 // Estado del juego
                 R4: SInt(1).toHex(),
 
-                // SEED (32 bytes aleatorios)
-                R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                
+                R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                 // (revealedSecretS, winnerCandidateCommitment)
                 R6: SPair(
@@ -240,8 +242,8 @@ describe("Game Resolution Invalidation by Judges", () => {
                         // Estado del juego
                         R4: SInt(1).toHex(),
 
-                        // SEED (32 bytes aleatorios)
-                        R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                        
+                        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                         // (revealedSecretS, winnerCandidateCommitment)
                         R6: SPair(
@@ -328,7 +330,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 R4: SInt(1).toHex(),
 
                 // Nuevo SEED (32 bytes aleatorios)
-                R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                 // (revealedSecretS, winnerCandidateCommitment)
                 R6: SPair(
@@ -451,7 +453,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                             R4: SInt(1).toHex(),
 
                             // Nuevo SEED (32 bytes aleatorios)
-                            R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                             // (revealedSecretS, winnerCandidateCommitment)
                             R6: SPair(
@@ -538,7 +540,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
-                R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                 R6: SPair(
                         SColl(SByte, secret),
                         SColl(SByte, invalidatedCommitment)
@@ -668,7 +670,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                     .setAdditionalRegisters(
                         {
                             R4: SInt(1).toHex(), // Estado: Resolución
-                            R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                             R6: SPair(
                                     SColl(SByte, secret),
                                     SColl(SByte, nextWinnerCommitment)
@@ -746,7 +748,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: mockChain.height - 30,  
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
-                R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                 R6: SPair(
                         SColl(SByte, secret),
                         SColl(SByte, invalidatedCommitment)
@@ -844,7 +846,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                     .setAdditionalRegisters(
                         {
                             R4: SInt(1).toHex(), // Estado: Resolución
-                            R5: SColl(SByte, hexToBytes("e1f2a3b4c5d60718293a4b5c6d7e8f90123456789abcdef0e1f2a3b4c5d60718") ?? "").toHex(),
+                            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                             R6: SPair(
                                     SColl(SByte, secret),
                                     SColl(SByte, [])
