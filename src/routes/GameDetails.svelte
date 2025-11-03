@@ -895,30 +895,29 @@
                         {#if game.status === 'Resolution'}
                             {@const isBeforeDeadline = new Date().getTime() < targetDate}
                             
-                            {#if isResolver}
-                                <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline} class="w-full">
-                                    <Trophy class="mr-2 h-4 w-4"/> End Competition & Distribute Prizes
+                            {#if isBeforeDeadline}
+                                <Button 
+                                    on:click={() => setupActionModal('include_omitted')}
+                                    variant="outline" 
+                                    class="w-full"
+                                    title="Anyone can execute this action to claim the resolver's commission.">
+                                    <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
                                 </Button>
-                            {/if}
 
-                            <Button 
-                                on:click={() => setupActionModal('include_omitted')} 
-                                disabled={!isBeforeDeadline} 
-                                variant="outline" 
-                                class="w-full"
-                                title="Anyone can execute this action to claim the resolver's commission.">
-                                <Users class="mr-2 h-4 w-4"/> Include Omitted Participations
-                            </Button>
-
-                            {#if isJudge}
                                 <Button 
                                     on:click={() => setupActionModal('invalidate_winner')} 
-                                    disabled={!isBeforeDeadline} 
+                                    disabled={!isJudge} 
                                     variant="destructive" 
                                     class="w-full">
                                     <XCircle class="mr-2 h-4 w-4"/> Judges: Invalidate Winner
                                 </Button>
+                            
+                            {:else}
+                                <Button on:click={() => setupActionModal('end_game')} disabled={isBeforeDeadline && isResolver} class="w-full">
+                                    <Trophy class="mr-2 h-4 w-4"/> End Competition & Distribute Prizes
+                                </Button>
                             {/if}
+
                         {/if}
 
                         {#if iGameDrainingStaking(game)}
