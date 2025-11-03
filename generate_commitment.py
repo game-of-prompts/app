@@ -2,11 +2,11 @@
 """
 genera_commitment.py
 
-Uso:
+Usage:
   python genera_commitment.py <score> [--address ADDRESS] [--seed SEED]
 
-Si se pasa --address, el script consulta el Explorer oficial de Ergo en
-/api/v1/boxes/byAddress/{address} para obtener el campo "ergoTree".
+If --address is provided, the script queries the official Ergo Explorer at
+/api/v1/boxes/byAddress/{address} to obtain the "ergoTree" field.
 """
 
 import hashlib
@@ -18,26 +18,24 @@ import sys
 
 EXPLORER_API_BASE = "https://api.ergoplatform.com/api/v1/boxes/byAddress"
 
+
 def fetch_ergo_tree_for_address(address: str, timeout: int = 10) -> str:
-    """
-    Consulta el Explorer público y devuelve el 'ergoTree' (hex) del primer box
-    asociado a la dirección.
-    """
+    """Fetch the 'ergoTree' (hex) of the first box associated with the given address."""
     url = f"{EXPLORER_API_BASE}/{address}"
     try:
         resp = requests.get(url, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
     except requests.RequestException as e:
-        raise RuntimeError(f"Error HTTP al consultar el Explorer: {e}")
+        raise RuntimeError(f"HTTP error when querying the Explorer: {e}")
 
     items = data.get("items", [])
     if not items:
-        raise RuntimeError(f"No se encontraron boxes para la dirección {address}")
+        raise RuntimeError(f"No boxes found for address {address}")
 
     ergo_tree = items[0].get("ergoTree")
     if not ergo_tree:
-        raise RuntimeError(f"No se encontró 'ergoTree' en el primer box devuelto para {address}")
+        raise RuntimeError(f"No 'ergoTree' found in the first box returned for {address}")
 
     return ergo_tree
 
@@ -50,10 +48,10 @@ def generate_gop_commitment(
     secret_s_hex: str,
     ergotree_hex: str
 ) -> str:
-    """Genera el commitment C (Blake2b-256) para Game of Prompts."""
+    """Generate the Game of Prompts commitment C (Blake2b-256)."""
     solver_id_bytes = binascii.unhexlify(solver_id)
 
-    # Si el seed es hex, lo decodificamos; si no, lo codificamos como UTF-8
+    # If seed looks like hex, decode it; otherwise, encode as UTF-8
     try:
         seed_bytes = binascii.unhexlify(seed_str)
     except (binascii.Error, ValueError):
@@ -64,7 +62,7 @@ def generate_gop_commitment(
     secret_s_bytes = binascii.unhexlify(secret_s_hex)
     ergotree_bytes = binascii.unhexlify(ergotree_hex)
 
-    # Orden actualizado: solver_id + seed + score + hash_logs + ergoTree + secret_s
+    # Order: solver_id + seed + score + hash_logs + ergoTree + secret_s
     concatenated = solver_id_bytes + seed_bytes + score_bytes + hash_logs_bytes + ergotree_bytes + secret_s_bytes
     h = hashlib.blake2b(digest_size=32)
     h.update(concatenated)
@@ -75,12 +73,12 @@ def main():
     CONSTANT_SECRET_S_HEX = "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21"
     CONSTANT_ERGOTREE_HEX = "a3f1bde417cf029a9d51dceaf45a08e23c4cc6f1ed2a75b3b394ac97b4e23145"
 
-    parser = argparse.ArgumentParser(description="Genera un commitment para Game of Prompts.")
-    parser.add_argument("score", type=int, help="Puntuación (score) obtenida por el solver.")
-    parser.add_argument("--address", type=str, default=None, help="Dirección Ergo del jugador.")
-    parser.add_argument("--seed", type=str, default=None, help="Seed personalizada del jugador (texto o hex).")
+    parser = argparse.ArgumentParser(description="Generate a Game of Prompts commitment.")
+    parser.add_argument("score", type=int, help="Solver's score.")
+    parser.add_argument("--address", type=str, default=None, help="Ergo address of the player.")
+    parser.add_argument("--seed", type=str, default=None, help="Custom seed for the player (text or hex).")
     parser.add_argument("--secret", type=str, default=CONSTANT_SECRET_S_HEX, help="Secret S (hex).")
-    parser.add_argument("--no-fetch", action="store_true", help="No consultar el Explorer aunque se pase --address.")
+    parser.add_argument("--no-fetch", action="store_true", help="Do not query the Explorer even if --address is provided.")
     args = parser.parse_args()
 
     solver_id_hex = os.urandom(32).hex()
@@ -89,28 +87,20 @@ def main():
 
     if args.address and not args.no_fetch:
         try:
-            print(f"Consultando Explorer para la dirección: {args.address} ...")
+            print(f"Querying Ergo Explorer for address: {args.address} ...")
             ergotree_hex_to_use = fetch_ergo_tree_for_address(args.address)
-            print(f"ErgoTree obtenido (len={len(ergotree_hex_to_use)} chars).")
+            print(f"ErgoTree retrieved (len={len(ergotree_hex_to_use)} chars).")
         except Exception as e:
-            print(f"⚠️  No se pudo obtener el ErgoTree: {e}")
-            print("Usando el ErgoTree constante por defecto.")
+            print(f"⚠️  Could not fetch ErgoTree: {e}")
+            print("Using the default constant ErgoTree instead.")
             ergotree_hex_to_use = CONSTANT_ERGOTREE_HEX
 
     if not args.address:
-        print("⚠️ Ten en cuenta que no has especificado la dirección. Esto no sirve para pruebas en real.")
+        print("⚠️  You did not specify an address. This will not work for real submissions.")
 
     if not args.seed:
-        print("⚠️ No has especificado la seed. Se recomienda definir una para commits válidos en producción.")
+        print("⚠️  No seed provided. It's recommended to define one for valid production commitments.")
         args.seed = "default-seed"
-
-    print("\nEntradas para generar el commitment:")
-    print(f"  Score: {args.score}")
-    print(f"  Solver ID: {solver_id_hex}")
-    print(f"  Seed: {args.seed}")
-    print(f"  Hash Logs: {hash_logs_hex}")
-    print(f"  ErgoTree: {ergotree_hex_to_use[:80]}... (len={len(ergotree_hex_to_use)})")
-    print(f"  Secret S: {args.secret}\n{'-'*60}")
 
     commitment = generate_gop_commitment(
         solver_id_hex,
@@ -121,8 +111,27 @@ def main():
         ergotree_hex_to_use
     )
 
-    print(f"✅ Commitment generado:\n{commitment}")
-    print(f"Longitud: {len(commitment)} caracteres ({len(binascii.unhexlify(commitment))} bytes)")
+    # Pretty formatted output
+    print("\n" + "═" * 60)
+    print("🔐 COMMITMENT DATA".center(60))
+    print("═" * 60)
+
+    print("\n")
+    print(f"🔒 Secret:           {args.secret}")
+    print("\n")
+
+    print(f"🧩 Solver ID:        {solver_id_hex}")
+    print(f"📄 Hash Logs:        {hash_logs_hex}")
+    print(f"✅ Commitment:       {commitment}")
+    print(f"🧮 Score:            {args.score}")
+    print("\n")
+
+    print("─" * 60)
+    print(f"🌱 Seed:             {args.seed}")
+    print(f"🌳 ErgoTree:         {ergotree_hex_to_use[:80]}... (len={len(ergotree_hex_to_use)})")
+    print("═" * 60 + "\n")
+    print(f"Commitment length: {len(commitment)} characters "
+          f"({len(binascii.unhexlify(commitment))} bytes)")
 
 
 if __name__ == "__main__":
