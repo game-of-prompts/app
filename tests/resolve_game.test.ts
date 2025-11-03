@@ -48,6 +48,7 @@ describe("Game Resolution (resolve_game)", () => {
   let score1: bigint;
   let participation1_registers: Record<string, string>;
   let winnerCandidateCommitment: string;
+  const seed = "a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712";
 
   afterEach(() => {
     mockChain.reset({clearParties: true});
@@ -84,7 +85,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(0).toHex(),
 
         // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline)
-        R5: SPair(SColl(SByte, "aa".repeat(32)), SLong(BigInt(mockChain.height + 10))).toHex(),
+        R5: SPair(SColl(SByte, hexToBytes(seed)!), SLong(BigInt(mockChain.height + 10))).toHex(),
 
         // R6: Coll[Byte] - secretHash
         R6: SColl(SByte, hashedSecret).toHex(),
@@ -113,7 +114,7 @@ describe("Game Resolution (resolve_game)", () => {
     // --- Creación de las cajas `participation.es` ---
     score1 = 1000n;
     commitment1Hex = uint8ArrayToHex(blake2b256(
-        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...participantErgotree, ...secret])
+        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...hexToBytes(seed)!, ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...participantErgotree, ...secret])
     ));
 
     winnerCandidateCommitment = commitment1Hex;
@@ -129,7 +130,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(1).toHex(),
 
         // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(), 
 
         // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
@@ -244,7 +245,7 @@ describe("Game Resolution (resolve_game)", () => {
 
     const wrongSecret = stringToBytes("utf8", "wrong-secret-phrase-for-testing");
     const wrongCommitment1Hex = uint8ArrayToHex(blake2b256(
-        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...wrongSecret])
+        new Uint8Array([...stringToBytes("utf8", "player1-solver"), ...hexToBytes(seed)!, ...bigintToLongByteArray(score1), ...stringToBytes("utf8", "logs1"), ...wrongSecret])
     ));
 
     participationContract.addUTxOs({
@@ -325,7 +326,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(0).toHex(),
 
         // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(), 
 
         // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
@@ -374,7 +375,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(1).toHex(),
 
         // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(), 
 
         // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
@@ -480,7 +481,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(1).toHex(),
 
         // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(), 
 
         // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
@@ -525,7 +526,7 @@ describe("Game Resolution (resolve_game)", () => {
         R4: SInt(1).toHex(),
 
         // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, "aa".repeat(32)).toHex(), 
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(), 
 
         // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
