@@ -613,11 +613,6 @@
                             <span class="stat-label">Reputation</span>
                         </div>
                         <div class="stat-block">
-                            <Users class="stat-icon"/>
-                            <span>{game.content.indetermismIndex}</span>
-                            <span class="stat-label">Indeterminisim Index</span>
-                        </div>
-                        <div class="stat-block">
                             <Edit class="stat-icon"/>
                             <span>{formatErg(getParticipationFee(game))} ERG</span>
                             <span class="stat-label">Fee per Player</span>
@@ -711,8 +706,7 @@
         <section class="game-info-section mb-12 p-6 rounded-xl shadow {$mode === 'dark' ? 'bg-dark' : 'bg-white'}">
             <h2 class="text-2xl font-semibold mb-6">Details</h2>
             {#if game}
-                {@const creator_pk = game.status === 'Active' ? game.gameCreatorPK_Hex : game.originalCreatorPK_Hex}
-                {@const creatorAddr = pkHexToBase58Address(creator_pk)}
+                {@const creator = game.content.creatorReputationProof}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                     <div class="info-block">
                         <span class="info-label">Competition ID (NFT)</span>
@@ -729,11 +723,17 @@
                         <span class="info-value font-mono text-xs break-all">{game.content.indetermismIndex}</span>
                     </div> 
                     <div class="info-block">
-                        <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
-                        <a href="{web_explorer_uri_addr + creatorAddr}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creatorAddr}>
-                            {creatorAddr.slice(0, 12)}...{creatorAddr.slice(-6)}
-                        </a>
-                    </div>
+                        <span class="info-label">Seed</span>
+                        <span class="info-value font-mono text-xs break-all">{game.seed ?? "N/A"}</span>
+                    </div> 
+                    {#if creator}
+                        <div class="info-block">
+                            <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
+                            <a href="{web_explorer_uri_tkn + creator}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creator}>
+                                {creator.slice(0, 12)}...{creator.slice(-6)}
+                            </a>
+                        </div>
+                    {/if}
                     {#if game.status === 'Resolution' && game.revealedS_Hex}
                         <div class="info-block col-span-1 md:col-span-2 lg:col-span-3">
                             <span class="info-label">Revealed Secret (S)</span>
