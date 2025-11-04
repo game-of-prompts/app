@@ -14,7 +14,6 @@ const ergo_tree_hash = getReputationProofTemplateHash();
 export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {
     try {
         if (!force && (Date.now() - get(types).last_fetch < CACHE_DURATION_MS)) {
-            console.log("Using cached Type NFTs (data is fresh).");
             return get(types).data;
         }
 
@@ -59,7 +58,6 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
         
         const typesMap = new Map(fetchedTypesArray.map(type => [type.tokenId, type]));
         types.set({data: typesMap, last_fetch: Date.now()});
-        console.log(`Successfully fetched and stored ${typesMap.size} Type NFTs.`);
 
         return get(types).data
 
@@ -182,7 +180,6 @@ export async function fetchReputationProofs(
             }
             offset += limit;
         }
-        console.log(`Found ${tokenIdsToFetch.size} unique reputation proof token IDs matching criteria.`);
     } catch (error) {
         console.error('An error occurred during the token ID search phase:', error);
         return new Map(); // Return empty on error
@@ -191,7 +188,6 @@ export async function fetchReputationProofs(
     // --- Step 2: Fetch full proof data for each unique token ID ---
     if (tokenIdsToFetch.size > 0) {
 
-        console.log(`Fetching full details for ${tokenIdsToFetch.size} proofs...`);
         for (const tokenId of tokenIdsToFetch) {
             try {
                 // Delegate the fetching and construction of the proof to the specialized function
@@ -206,7 +202,6 @@ export async function fetchReputationProofs(
         }
     }
 
-    console.log(`Successfully constructed ${proofs.size} complete reputation proofs.`);
     return proofs;
 }
 
@@ -329,12 +324,10 @@ export async function fetchReputationProofByTokenId(
 export async function fetchJudges(force: boolean = false): Promise<Map<string, Judge>> {
     try {
         if (!force && (Date.now() - get(judges).last_fetch < CACHE_DURATION_MS)) {
-            console.log("Using cached Judges (data is fresh).");
             return get(judges).data;
         }
         const map = await fetchReputationProofs(ergo, true, "judge", null);
         judges.set({data: map, last_fetch: Date.now()});
-        console.log(`Successfully fetched and stored ${map.size} Judges.`);
         return get(judges).data;
     } catch (e: any) {
         console.error("Failed to fetch and store judges:", e);

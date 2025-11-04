@@ -307,7 +307,6 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         const numericalParams = parseLongColl(r8Array);
         if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
-        console.log(`R8 numericalParams for box ${box.boxId}:`, numericalParams);
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, originalCreatorScript_Hex, resolverScript_Hex
@@ -371,7 +370,6 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
     const limit = 100;
     let moreAvailable = true;
 
-    console.log("Searching for resolution games with template hash:", scriptHash);
 
     while (moreAvailable) {
         const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
@@ -403,7 +401,6 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
         }
     }
 
-    console.log(`Found ${games.size} games in resolution.`);
     return games;
 }
 
@@ -501,8 +498,6 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
     const limit = 100;
     let moreAvailable = true;
 
-    console.log("Searching for cancellation games with template hash:", scriptHash);
-
     while (moreAvailable) {
         const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
         try {
@@ -533,7 +528,6 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
         }
     }
 
-    console.log(`Found ${games.size} games in cancellation.`);
     return games;
 }
 
@@ -680,7 +674,6 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         games.set(gameId, finalized);
     }
 
-    console.log(`Found ${games.size} finalized games.`);
     return games;
 }
 
@@ -769,7 +762,6 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
             const items: Box[] = data.items || [];
 
             for (const box of items) {
-                console.log(box)
                 if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
                     console.warn('parseParticipationBox: invalid constants');
                     continue;
@@ -843,6 +835,5 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
         }
     }
 
-    console.log(`Found ${participations.length} historical participations for game ${gameNftId}.`);
     return participations;
 }

@@ -117,9 +117,6 @@
 
                 if (selectedProof) {
                     reputation_proof.set(selectedProof);
-                    console.log("Added judge proof with highest burned: ", maxBurned);
-                } else {
-                    console.log("No valid proof found.");
                 }
             }
         } catch (error) {
