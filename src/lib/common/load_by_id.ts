@@ -1,6 +1,7 @@
 import { type Platform } from "./platform";
 import { type Game } from "./game";
 import { game_detail } from "./store"; // Asumiendo que es una Svelte store o similar
+import { fetchGoPGames } from "$lib/ergo/fetch";
 
 /**
  * Carga un juego por su ID, buscándolo primero entre los juegos activos y luego
@@ -11,11 +12,8 @@ import { game_detail } from "./store"; // Asumiendo que es una Svelte store o si
  */
 export async function loadGameById(gameId: string, platform: Platform): Promise<void> {
     try {
-        console.log(`Intentando cargar el juego con ID: ${gameId}`);
-
         // 1. Intentar encontrar el juego
-        console.log("Buscando el juego ...");
-        let gamesMap: Map<string, Game> = await platform.fetchGoPGames();
+        let gamesMap: Map<string, Game> = await fetchGoPGames();
         let game: Game | undefined = gamesMap.get(gameId);
         
         if (game) {

@@ -310,7 +310,7 @@
                             </div>
                             <div class="legend-item">
                                 <div class="legend-color developers"></div>
-                                <span>Dev Fund ({developersPct.toFixed(2)}%)</span>
+                                <span>Protocol fee ({developersPct.toFixed(2)}%)</span>
                             </div>
                         </div>
                         {#if overAllocated > 0}

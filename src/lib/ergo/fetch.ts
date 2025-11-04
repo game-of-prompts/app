@@ -16,7 +16,7 @@ import {
     type MalformedParticipationReason,
     resolve_participation_commitment
 } from "../common/game";
-import { explorer_uri } from "./envs";
+import { CACHE_DURATION_MS, explorer_uri } from "./envs";
 import { 
     getGopGameActiveScriptHash,
     getGopGameResolutionTemplateHash,
@@ -37,7 +37,7 @@ import {
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
 import { get } from "svelte/store";
-import { judges as judgesStore } from "../common/store";
+import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
 
 
@@ -837,3 +837,52 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
 
     return participations;
 }
+
+
+// =================================================================
+// === ALL GAMES
+// =================================================================
+let inFlightFetch: Promise<Map<string, AnyGame>> | null = null;
+
+export async function fetchGoPGames(force: boolean = false): Promise<Map<string, AnyGame>> {
+    const current = get(games);
+
+    if (!force && (Date.now() - current.last_fetch < CACHE_DURATION_MS)) {
+        return current.data;
+    }
+
+    if (inFlightFetch) {
+        return inFlightFetch;
+    }
+
+    inFlightFetch = (async () => {
+        try {
+            const [activeGames, resolutionGames, cancellationGames, finalizedGames] = await Promise.all([
+                fetchActiveGames(),
+                fetchResolutionGames(),
+                fetchCancellationGames(),
+                fetchFinalizedGames()
+            ]);
+
+            const allGames = new Map<string, AnyGame>([
+                ...activeGames,
+                ...resolutionGames,
+                ...cancellationGames,
+                ...finalizedGames
+            ]);
+
+            games.set({
+                data: allGames,
+                last_fetch: Date.now()
+            });
+
+            console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
+            return allGames;
+        } finally {
+            inFlightFetch = null;
+        }
+    })();
+
+    return inFlightFetch;
+}
+

@@ -138,13 +138,6 @@ export interface Platform {
         participation: ValidParticipation
     ): Promise<string | null>;
 
-
-    /**
-     * Obtiene todos los juegos "Game of Prompts" de la blockchain en todos sus estados.
-     * @returns Un Map con todos los juegos, usando el ID del juego como clave.
-     */
-    fetchGoPGames(): Promise<Map<string, AnyGame>>;
-
     /**
      * 
      */

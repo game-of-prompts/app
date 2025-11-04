@@ -8,6 +8,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { get } from 'svelte/store';
     import { Input } from "$lib/components/ui/input";
+    import { fetchGoPGames } from '$lib/ergo/fetch';
 
     let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, Game> = new Map();
@@ -49,7 +50,7 @@
         isLoadingApi = true;
         errorMessage = null;
         try {
-            await platform.fetchGoPGames();
+            await fetchGoPGames();
             
         } catch (error: any) {
             console.error("Error fetching GoP games:", error);

@@ -268,43 +268,6 @@ export class ErgoPlatform implements Platform {
     }
 
     /**
-     * Busca todos los juegos en la blockchain, combinando los resultados de cada estado posible.
-     * @returns Un `Promise` que resuelve a un `Map` que contiene todos los juegos, usando el ID del juego como clave.
-     */
-    async fetchGoPGames(force: boolean = false): Promise<Map<string, AnyGame>> {
-        
-        if (!force && (Date.now() - get(games).last_fetch < CACHE_DURATION_MS)) {
-            return get(games).data;
-        }
-
-        // Ejecutar todas las búsquedas en paralelo para mayor eficiencia.
-        const [activeGames, resolutionGames, cancellationGames, finalizedGames] = await Promise.all([
-            fetchActiveGames(),
-            fetchResolutionGames(),
-            fetchCancellationGames(),
-            fetchFinalizedGames()
-        ]);
-
-        // Combinar los resultados en un solo mapa.
-        // El operador '...' permite fusionar los mapas. Si un ID existiera en múltiples
-        // mapas (lo cual es imposible por diseño de los contratos), el último prevalecería.
-        const allGames = new Map<string, AnyGame>([
-            ...activeGames,
-            ...resolutionGames,
-            ...cancellationGames,
-            ...finalizedGames
-        ]);
-
-        games.set({
-            data: allGames,
-            last_fetch: Date.now()
-        });
-
-        console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
-        return allGames;
-    }
-
-    /**
      * Allows a nominated judge to accept their role in an active game.
      * @param game The Game object in 'Active' state.
      * @returns A promise that resolves to the transaction ID.
