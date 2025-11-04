@@ -195,10 +195,10 @@ export async function resolve_game(
     // tamaño del ergoTree (puede ser hex o fuente legible); detectamos si es hex:
     let ergoTreeBytes = 0;
     if (typeof resolutionErgoTree === 'string' && isHex(resolutionErgoTree)) {
-    ergoTreeBytes = hexBytesLen(resolutionErgoTree);
+        ergoTreeBytes = hexBytesLen(resolutionErgoTree);
     } else {
-    // si no es hex, calculamos bytes de la cadena UTF-8
-    ergoTreeBytes = new TextEncoder().encode(String(resolutionErgoTree || '')).length;
+        // si no es hex, calculamos bytes de la cadena UTF-8
+        ergoTreeBytes = new TextEncoder().encode(String(resolutionErgoTree || '')).length;
     }
 
     // tamaño tokens
@@ -209,8 +209,8 @@ export async function resolve_game(
     // tamaño registros (sumando overhead por registro)
     let registersBytes = 0;
     for (const h of registersHex) {
-    const len = hexBytesLen(h);
-    registersBytes += len + PER_REGISTER_OVERHEAD;
+        const len = hexBytesLen(h);
+        registersBytes += len + PER_REGISTER_OVERHEAD;
     }
 
     // tamaño total estimado
