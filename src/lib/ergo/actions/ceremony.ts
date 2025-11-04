@@ -1,12 +1,7 @@
-# ceremony.ts
-
 import {
     OutputBuilder,
     TransactionBuilder,
-    ErgoAddress,
-    type Box,
     RECOMMENDED_MIN_FEE_VALUE,
-    type Amount,
     SAFE_MIN_BOX_VALUE
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
@@ -44,7 +39,7 @@ export async function contribute_to_ceremony(
         throw new Error(`La caja del juego tiene un valor (${gameBoxToSpend.value}) inferior al mínimo seguro (${SAFE_MIN_BOX_VALUE}).`);
     }
 
-    // 2. --- Calcular el nuevo estado (especialmente R5) ---
+    // 2. --- Calcular el nuevo estado ---
     
     const oldSeedBytes = hexToBytes(game.seed);
     if (!oldSeedBytes) throw new Error("Seed (R5._1) del juego inválido.");
@@ -95,8 +90,7 @@ export async function contribute_to_ceremony(
     const r8Hex = SColl(SLong, numericalParams).toHex();
 
     // R9: gameDetailsJsonHex (se mantiene)
-    // Asumimos que game.gameDetailsJsonHex es el Coll[Byte] en formato hex
-    const gameDetailsBytes = hexToBytes(game.gameDetailsJsonHex);
+    const gameDetailsBytes = hexToBytes(game.content.rawJsonString);
     if (!gameDetailsBytes) throw new Error("gameDetailsJsonHex (R9) inválido");
     const r9Hex = SColl(SByte, gameDetailsBytes).toHex();
 

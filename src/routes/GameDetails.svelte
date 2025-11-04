@@ -9,7 +9,6 @@
         GameState, 
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
-        isGameEnded, 
         isGameParticipationEnded,
         resolve_participation_commitment
     } from "$lib/common/game";
@@ -24,7 +23,7 @@
     import { Label } from "$lib/components/ui/label/index.js";
     import { Textarea } from "$lib/components/ui/textarea";
     // ICONS
-    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel, Check, CheckCircle } from 'lucide-svelte';
+    import { ShieldCheck, Calendar, Trophy, Users, Share2, Edit, CheckSquare, XCircle, ExternalLink, Gavel, Check, CheckCircle, Sparkles } from 'lucide-svelte';
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
@@ -57,14 +56,13 @@
     let showCopyMessage = false;
 
     // Game Status State
-    let gameEnded = true;
     let participationIsEnded = true;
     let deadlineDateDisplay = "N/A";
-    let statusCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isOwner = false;
     let isResolver = false;
     let isJudge = false;
     let isNominatedJudge = false;
+    let openCeremony = false;
     let acceptedJudgeNominations: string[] = [];
     
     // Refund State
@@ -84,7 +82,7 @@
     
     // Modal State
     let showActionModal = false;
-    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | "end_game" | "invalidate_winner" | "include_omitted" | "accept_judge_nomination" | null = null;
+    let currentActionType: "submit_score" | "resolve_game" | "cancel_game" | "drain_stake" | "end_game" | "invalidate_winner" | "include_omitted" | "accept_judge_nomination" | "open_ceremony" | null = null;
     let modalTitle = "";
     
     // Form Inputs
@@ -126,11 +124,12 @@
         try {
             currentHeight = await platform.get_current_height();
             participationIsEnded = await isGameParticipationEnded(game);
-            gameEnded = isGameEnded(game);
-            if (game.status === GameState.Active) {
+            openCeremony = game.status === "Active" && currentHeight < game.ceremonyDeadline;
+
+            if (game.status === "Active") {
                 participations = await fetchParticipations(game);
 
-            } else if (game.status === GameState.Resolution) {
+            } else if (game.status === "Resolution") {
                 participations = await fetchParticipations(game);
                 participations.forEach(async (item) => {
 
@@ -146,19 +145,21 @@
                     participationVotes.set(participation, votes);
                 });
 
-                const candidate_participation_votes = Array.from(participationVotes.get(game.winnerCandidateCommitment)?.entries() ?? []);
-                if (candidate_participation_votes) {
-                    candidateParticipationValidVotes = candidate_participation_votes.filter(([key, value]) => { 
-                        return value.current_boxes.some((box) => {
-                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === true;
-                            });
-                     }).map(([key, value]) => key);
-                    
-                     candidateParticipationInvalidVotes = candidate_participation_votes.filter(([key, value]) => { 
-                        return value.current_boxes.some((box) => {
-                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === false;
-                            });
-                     }).map(([key, value]) => key);
+                if (game.winnerCandidateCommitment) {
+                    const candidate_participation_votes = Array.from(participationVotes.get(game.winnerCandidateCommitment)?.entries() ?? []);
+                    if (candidate_participation_votes) {
+                        candidateParticipationValidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                            return value.current_boxes.some((box) => {
+                                    return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === true;
+                                });
+                        }).map(([key, value]) => key);
+                        
+                        candidateParticipationInvalidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                            return value.current_boxes.some((box) => {
+                                    return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === false;
+                                });
+                        }).map(([key, value]) => key);
+                    }
                 }
                 
             } else if (game.status === GameState.Cancelled_Draining) {
@@ -266,6 +267,15 @@
     }
 
     // --- Action Handlers ---
+
+    async function handleOpenCeremony() {
+        if (game?.status !== 'Active') return;
+        errorMessage = null; isSubmitting = true;
+        try {
+            transactionId = await platform.contribute_to_ceremony(game);
+        } catch (e: any) { errorMessage = e.message;
+        } finally { isSubmitting = false; }
+    }
 
     async function handleSubmitScore() {
         if (game?.status !== 'Active') return;
@@ -495,7 +505,8 @@
             end_game: `Finalize Game`,
             invalidate_winner: `Judge Invalidation`,
             include_omitted: `Include Omitted Participation`,
-            accept_judge_nomination: 'Accept Judge Nomination'
+            accept_judge_nomination: 'Accept Judge Nomination',
+            open_ceremony: 'Add Randomness'
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -869,6 +880,13 @@
                 <h2 class="text-2xl font-semibold mb-4">Available Actions</h2>
                 <div class="space-y-4">
                     {#if $connected}
+
+                        {#if game.status === 'Active' && openCeremony}
+                               <Button on:click={() => setupActionModal('open_ceremony')} class="w-full">
+                                    <!-- svelte-ignore missing-declaration -->
+                                    <Sparkles class="mr-2 h-4 w-4"/> Add Randomness
+                                </Button>
+                        {/if}
 
                         {#if game.status === 'Active' && !participationIsEnded}
                             {#if isNominatedJudge && !isJudge} <!-- Could be added !isOwner -->
@@ -1291,6 +1309,25 @@
                         </p>
                         <Button on:click={handleJudgeNomination} disabled={isSubmitting} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold">
                             {isSubmitting ? 'Processing...' : 'Confirm Judge Nomination'}
+                        </Button>
+                    </div>
+                {:else if currentActionType === 'open_ceremony'}
+                    <div class="space-y-4">
+                        <p class="text-sm p-3 rounded-md {$mode === 'dark' ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200'}">
+                            <strong>Action: Open Ceremony</strong><br>
+                            This action re-spends the active game box before the <strong>ceremony deadline</strong> to update its <code>gameSeed</code>, adding new entropy. 
+                            It helps ensure fairness and unpredictability of the final game state.
+                        </p>
+                        <p class="text-sm {$mode === 'dark' ? 'text-gray-400' : 'text-gray-600'}">
+                            The new seed will be computed as: <code>blake2b256(old_seed ++ INPUTS(0).id)</code>.<br>
+                            No extra input is required — this transaction simply refreshes the game seed.
+                        </p>
+                        <Button 
+                            on:click={handleOpenCeremony} 
+                            disabled={isSubmitting} 
+                            class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'} font-semibold"
+                        >
+                            {isSubmitting ? 'Processing...' : 'Confirm & Open Ceremony'}
                         </Button>
                     </div>
                 {/if}

@@ -150,4 +150,9 @@ export interface Platform {
      */
     acceptJudgeNomination(game: GameActive): Promise<string | null>;
 
+    /*
+    *
+    */
+   contribute_to_ceremony(game: GameActive): Promise<string | null>;
+
 }

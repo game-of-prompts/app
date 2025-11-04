@@ -259,7 +259,7 @@
         }))
 
       // Calculamos la nueva semilla (gameSeed es R5._1)
-      val updated_seed = blake2b256(gameSeed ++ INPUTS(0).id)
+      val updated_seed = blake2b256(gameSeed ++ SELF.id)
 
       // Validar que R5._1 del output sea igual al updated_seed
       val outR5 = out.R5[(Coll[Byte], Long)].get

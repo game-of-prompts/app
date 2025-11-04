@@ -23,6 +23,7 @@ import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
 import { update_reputation_proof } from './reputation/submit';
 import { get } from 'svelte/store';
+import { contribute_to_ceremony } from './actions/ceremony';
 
 // Un tipo de unión para representar un juego en cualquier estado posible.
 type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
@@ -320,6 +321,32 @@ export class ErgoPlatform implements Platform {
             if (error instanceof Error) throw new Error(`Failed to accept judge nomination: ${error.message}`);
             throw new Error("An unknown error occurred while accepting the judge nomination.");
         }
+    }
+
+    /**
+     * Executes the "Open Ceremony" action (action3_openCeremony) for an active game.
+     * * This action allows anyone to "re-spend" the game's box before the
+     * 'ceremonyDeadline' to update the game seed (gameSeed),
+     * thereby adding entropy.
+     * * The new seed is calculated as:
+     * updated_seed = blake2b256(old_seed ++ INPUTS(0).id)
+     * * All other registers and box values are preserved.
+     * * @param game The GameActive object (box to be consumed).
+     * @returns The transaction ID if successful.
+     */
+    async contribute_to_ceremony(game: GameActive): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        if (game.status !== 'Active') {
+            throw new Error("The game is not in an active state.");
+        }        
+        try {
+            return await contribute_to_ceremony(game);
+        } catch (error) {
+            console.error("Error in platform method contribute_to_ceremony:", error);
+            if (error instanceof Error) throw new Error(`Failed to contribute to ceremony: ${error.message}`);
+            throw new Error("An unknown error occurred while contributing to the ceremony.");
+        }
+    
     }
 
 }
