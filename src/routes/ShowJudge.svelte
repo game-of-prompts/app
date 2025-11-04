@@ -9,7 +9,6 @@
     import { onDestroy } from 'svelte';
     import Return from './Return.svelte';
     import { update_reputation_proof } from '$lib/ergo/reputation/submit';
-    import { json } from '@sveltejs/kit';
 
 	let proof: Judge | undefined = undefined;
 
