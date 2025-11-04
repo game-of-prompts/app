@@ -28,8 +28,8 @@
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
-    import { Amount, Box, ErgoAddress } from "@fleet-sdk/core";
-    import { uint8ArrayToHex, pkHexToBase58Address, hexToBytes } from "$lib/ergo/utils";
+    import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
+    import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
     import { fetchJudges, fetchReputationProofByTokenId } from "$lib/ergo/reputation/fetch";
