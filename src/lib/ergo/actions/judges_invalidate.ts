@@ -151,29 +151,24 @@ export async function judges_invalidate(
     const newDeadline = BigInt(currentHeight + game.constants.JUDGE_PERIOD + JUDGE_PERIOD_MARGIN);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
 
-    // --- seed_bytes para R5 (seed puede venir como game.seed) ---
-    const seed_bytes = game.seed ? hexToBytes(game.seed)! : new Uint8Array([]);
-
-    const secretS_bytes = hexToBytes(game.revealedS_Hex)!;
-
     // --- 4. Build the new resolution box ---
     const recreatedGameBox = new OutputBuilder(newGameBoxValue, resolutionErgoTree)
         .addTokens(game.box.assets) // Keep the game's NFT
         .setAdditionalRegisters({
             // R4
-            R4: SInt(1),
+            R4: SInt(1).toHex(),
 
             // R5: Seed (Coll[Byte])
-            R5: SColl(SByte, seed_bytes),
+            R5: SColl(SByte, hexToBytes(game.seed)!).toHex(),
 
             // R6: (revealedSecretS, winnerCandidateCommitment)
             R6: SPair(
-                SColl(SByte, secretS_bytes),
+                SColl(SByte, hexToBytes(game.revealedS_Hex)!),
                 SColl(SByte, nextWinnerCandidateCommitment ? hexToBytes(nextWinnerCandidateCommitment)! : [])
-            ),
+            ).toHex(),
 
             // --- R7: participatingJudges: Coll[Coll[Byte]] ---
-            R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
+            R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
             // R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
             R8: SColl(SLong, [
@@ -181,15 +176,15 @@ export async function judges_invalidate(
                 BigInt(game.creatorStakeNanoErg),
                 BigInt(game.participationFeeNanoErg),
                 BigInt(game.perJudgeComissionPercentage),
-                BigInt(game.resolverCommission ?? 0),
+                BigInt(game.resolverCommission),
                 BigInt(newDeadline)
-            ]),
+            ]).toHex(),
 
             // R9: gameProvenance: Coll[Coll[Byte]] -> [ rawJsonBytes, resolverScriptBytes ]
             R9: SColl(SColl(SByte), [
                 SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
                 SColl(SByte, hexToBytes(game.resolverScript_Hex)!)
-            ]),
+            ]).toHex(),
         });
         
     // --- 5. Build and Submit the Transaction ---
