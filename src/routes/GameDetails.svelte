@@ -202,8 +202,6 @@
             
             const connectedAddress = get(address);
             if(get(connected) && connectedAddress && game) {
-                let creatorPK: string | undefined;
-                isOwner = false;
                 isResolver = false;
                 isJudge = false;
                 isNominatedJudge = false;
@@ -212,9 +210,7 @@
                 const userPKHex = userPKBytes ? uint8ArrayToHex(userPKBytes) : null;
 
                 if (game.status === 'Active') {
-                    creatorPK = game.gameCreatorPK_Hex;
                     if(userPKHex) {
-                        isResolver = userPKHex === game.gameCreatorPK_Hex;
                         const own_proof = get(reputation_proof);
                         if (own_proof) {
                             isNominatedJudge = game.judges.includes(own_proof.token_id);
@@ -230,7 +226,6 @@
                     }
                 }
                 else if (game.status === 'Resolution') {
-                    creatorPK = game.originalCreatorPK_Hex;
                     if(userPKHex) {
                         isResolver = userPKHex === game.resolverPK_Hex;
                         const own_proof = get(reputation_proof);
@@ -246,10 +241,6 @@
                             isJudge = isNominatedJudge && exists;
                         }
                     }
-                }
-                
-                if (creatorPK && userPKHex) {
-                    isOwner = userPKHex === creatorPK;
                 }
             }
 
