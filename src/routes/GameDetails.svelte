@@ -506,7 +506,7 @@
             invalidate_winner: `Judge Invalidation`,
             include_omitted: `Include Omitted Participation`,
             accept_judge_nomination: 'Accept Judge Nomination',
-            open_ceremony: 'Add Randomness'
+            open_ceremony: 'Add Seed Randomness'
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -881,11 +881,11 @@
                 <div class="space-y-4">
                     {#if $connected}
 
-                        {#if game.status === 'Active' && openCeremony}
-                               <Button on:click={() => setupActionModal('open_ceremony')} class="w-full">
-                                    <!-- svelte-ignore missing-declaration -->
-                                    <Sparkles class="mr-2 h-4 w-4"/> Add Randomness
-                                </Button>
+                        {#if game.status === 'Active'}
+                            <Button on:click={() => setupActionModal('open_ceremony')} disabled={!openCeremony} class="w-full">
+                                <!-- svelte-ignore missing-declaration -->
+                                <Sparkles class="mr-2 h-4 w-4"/> Add Seed Randomness
+                            </Button>
                         {/if}
 
                         {#if game.status === 'Active' && !participationIsEnded}
