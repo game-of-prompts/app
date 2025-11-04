@@ -90,21 +90,19 @@ export async function contribute_to_ceremony(
     ];
     const r8Hex = SColl(SLong, numericalParams).toHex();
 
-    // R9: gameDetailsJsonHex (se mantiene)
+    // R9: gameDetailsJsonHex 
     const gameDetailsBytes = stringToBytes("utf8", game.content.rawJsonString);
     const r9Hex = SColl(SByte, gameDetailsBytes ?? "").toHex();
 
     
     // 4. --- Construir la Caja de Salida ---
-    
-    // La caja de salida debe tener el mismo script que la de entrada
     const gameActiveErgoTree = getGopGameActiveErgoTreeHex();
 
     const ceremonyOutputBox = new OutputBuilder(
-        BigInt(gameBoxToSpend.value), // Mismo valor
-        gameActiveErgoTree             // Mismo script
+        BigInt(gameBoxToSpend.value),
+        gameActiveErgoTree 
     )
-    .addTokens(gameBoxToSpend.assets) // Mismos tokens
+    .addTokens(gameBoxToSpend.assets)
     .setAdditionalRegisters({
         R4: r4Hex,
         R5: r5Hex,
@@ -124,7 +122,6 @@ export async function contribute_to_ceremony(
             .to([ceremonyOutputBox])
             .sendChangeTo(changeAddress)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
-            // No se necesitan dataInputs para esta acción
             .build();
 
         const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
