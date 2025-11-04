@@ -78,11 +78,6 @@
 [x] Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
 [x] Implementar acción mediante código.
 
-
-
-
-[] "Script reduced to false" en judges invalidate con un juez y sin nueva candidata.
-
 [] Soporte multi-token
 
 
