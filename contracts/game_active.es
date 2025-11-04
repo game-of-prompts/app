@@ -225,7 +225,7 @@
   }
 
   // =================================================================
-  // === ACCIÓN 3: OPEN CEREMONY (Reproducción temprana con nueva semilla)
+  // === ACCIÓN 3: ADD RANDOMNESS TO GAME SEED (Reproducción temprana con nueva semilla)
   // =================================================================
   //
   // Esta acción permite reproducir el contrato dentro del período inicial (hasta ceremonyDeadline)
@@ -238,11 +238,11 @@
   //   - El script de salida debe ser idéntico (SELF mismo script)
   //   - El NFT y valores deben preservarse
   //
-  val action3_openCeremony = {
+  val action3_add_randomness = {
     // Usa ceremonyDeadline del nuevo R5
-    val openCeremonyActive = HEIGHT < ceremonyDeadline
+    val ceremonyActive = HEIGHT < ceremonyDeadline
 
-    if (openCeremonyActive && OUTPUTS.size > 0) {
+    if (ceremonyActive && OUTPUTS.size > 0) {
       // La caja de salida debe ser una copia del contrato actual, excepto R5._1
       val out = OUTPUTS.filter({ (box: Box) => 
         blake2b256(box.propositionBytes) == blake2b256(SELF.propositionBytes)
@@ -285,7 +285,6 @@
   }
 
   val game_active = gameState == 0
-  // Se descomenta action3_openCeremony para que sea una acción válida
-  val actions = action1_transitionToResolution || action2_transitionToCancellation || action3_openCeremony
+  val actions = action1_transitionToResolution || action2_transitionToCancellation || action3_add_randomness
   sigmaProp(game_active && actions)
 }
