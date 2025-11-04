@@ -895,7 +895,7 @@
                                 </Button>
                             {/if}
                             
-                            <Button on:click={() => setupActionModal('submit_score')} class="w-full">
+                            <Button on:click={() => setupActionModal('submit_score')} disabled={openCeremony} class="w-full">
                                 <Edit class="mr-2 h-4 w-4"/>Submit My Score
                             </Button>
                             

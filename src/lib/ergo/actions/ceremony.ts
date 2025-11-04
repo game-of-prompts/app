@@ -9,6 +9,7 @@ import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import type { GameActive } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameActiveErgoTreeHex } from '../contract'; // Asume que esta función existe
+import { stringToBytes } from '@scure/base';
 
 /**
  * Ejecuta la acción "Open Ceremony" (action3_openCeremony) para un juego activo.
@@ -90,9 +91,8 @@ export async function contribute_to_ceremony(
     const r8Hex = SColl(SLong, numericalParams).toHex();
 
     // R9: gameDetailsJsonHex (se mantiene)
-    const gameDetailsBytes = hexToBytes(game.content.rawJsonString);
-    if (!gameDetailsBytes) throw new Error("gameDetailsJsonHex (R9) inválido");
-    const r9Hex = SColl(SByte, gameDetailsBytes).toHex();
+    const gameDetailsBytes = stringToBytes("utf8", game.content.rawJsonString);
+    const r9Hex = SColl(SByte, gameDetailsBytes ?? "").toHex();
 
     
     // 4. --- Construir la Caja de Salida ---
