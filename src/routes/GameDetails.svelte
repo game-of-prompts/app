@@ -28,7 +28,7 @@
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
     import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
-    import { ErgoAddress } from "@fleet-sdk/core";
+    import { Amount, Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address, hexToBytes } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
     import { getDisplayStake, getParticipationFee } from "$lib/utils";
@@ -145,21 +145,19 @@
                     participationVotes.set(participation, votes);
                 });
 
-                if (game.winnerCandidateCommitment) {
-                    const candidate_participation_votes = Array.from(participationVotes.get(game.winnerCandidateCommitment)?.entries() ?? []);
-                    if (candidate_participation_votes) {
-                        candidateParticipationValidVotes = candidate_participation_votes.filter(([key, value]) => { 
-                            return value.current_boxes.some((box) => {
-                                    return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === true;
-                                });
-                        }).map(([key, value]) => key);
-                        
-                        candidateParticipationInvalidVotes = candidate_participation_votes.filter(([key, value]) => { 
-                            return value.current_boxes.some((box) => {
-                                    return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === false;
-                                });
-                        }).map(([key, value]) => key);
-                    }
+                const candidate_participation_votes = Array.from(participationVotes.get(game.winnerCandidateCommitment)?.entries() ?? []);
+                if (candidate_participation_votes) {
+                    candidateParticipationValidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                        return value.current_boxes.some((box) => {
+                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === true;
+                            });
+                    }).map(([key, value]) => key);
+                    
+                    candidateParticipationInvalidVotes = candidate_participation_votes.filter(([key, value]) => { 
+                        return value.current_boxes.some((box) => {
+                                return box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION && box.polarization === false;
+                            });
+                    }).map(([key, value]) => key);
                 }
                 
             } else if (game.status === GameState.Cancelled_Draining) {
@@ -365,18 +363,19 @@
 
             const winner_participation = participations.filter((p) => game.winnerCandidateCommitment === p.commitmentC_Hex)[0]
 
+            let judgeInvalidVotesDataInputsBoxes: Box<Amount>[] = [];
             const winnerVotes = participationVotes.get(game.winnerCandidateCommitment);
-            if (!winnerVotes) throw new Error("No votes found.");
+            if (winnerVotes) {
+                const judgeInvalidVotesDataInputs = Array.from(winnerVotes.entries()).filter(([key, value]) => {
+                    return candidateParticipationInvalidVotes.includes(key);
+                })
 
-            const judgeInvalidVotesDataInputs = Array.from(winnerVotes.entries()).filter(([key, value]) => {
-                return candidateParticipationInvalidVotes.includes(key);
-            })
-
-            const judgeInvalidVotesDataInputsBoxes = judgeInvalidVotesDataInputs.map(([Key, value]) => {
-                return value.current_boxes.filter((box) => {
-                    return box.polarization === false && box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION;
-                })[0].box;
-            });
+                judgeInvalidVotesDataInputsBoxes = judgeInvalidVotesDataInputs.map(([Key, value]) => {
+                    return value.current_boxes.filter((box) => {
+                        return box.polarization === false && box.object_pointer === game.winnerCandidateCommitment && box.type.tokenId === PARTICIPATION;
+                    })[0].box;
+                });
+            }
             
             const otherParticipations: ValidParticipation[] = participations.filter((p) => p.commitmentC_Hex !== winner_participation.commitmentC_Hex && p.status === 'Submitted') as ValidParticipation[];
 
