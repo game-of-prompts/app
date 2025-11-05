@@ -80,6 +80,21 @@
 
 [] Soporte multi-token
 
+[] Lotes de participaciones 
+(Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
+De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
+Teoricamente se permite un numero ilimitado de participaciones.
+
+[] Incentivo a participación temprana.
+Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
+- No hay vote, asi que no llama la atención.
+- Esperar al último momento permite probar durante mas tiempo.
+Una posible idea para incentivar a participar de manera prematura (si es que lo considera adecuado el creador) es que el puntaje no solo dependa de la puntuacion del juego, si no del bloque en el que se agregó la participación. Algo como `score = game_score + N*(DEADLINE - HEIGHT)` donde:
+- score: es la puntuación final
+- game_score: es la puntuación del solver en el juego.
+- N: factor constante.
+- DEADLINE: deadline de la competición.
+- HEIGHT: altura donde se agregó la participación.
 
 
 
@@ -97,26 +112,10 @@
 
 ----
 
-[] Lotes de participaciones (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
-##### Puntuacion en funcion de antiguedad del bloque -> incentivo de participar antes aunq no haya demasiado vote.
-Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
-- No hay vote, asi que no llama la atención.
-- Esperar al último momento permite probar mas veces.
-
-Una posible idea para incentivar a participar de manera prematura (si es que lo considera adecuado el creador) es que el puntaje no solo dependa de la puntuacion del juego, si no del bloque en el que se agregó la participación. Algo como `score = game_score + N*(DEADLINE - HEIGHT)` donde:
-- score: es la puntuación final
-- game_score: es la puntuación del solver en el juego.
-- N: factor constante.
-- DEADLINE: deadline de la competición.
-- HEIGHT: altura donde se agregó la participación.
-
-### Gastar participaciones en lotes
-De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
-Teoricamente se permite un numero ilimitado de participaciones.
 
 
 
-
+====
 ====
 
 [] Cambiar R9 de game_resolution.es a Pair(Coll[Byte]) ¿?   Son 70 bytes frente a 72 bytes del Coll[Coll[Byte]].     A no ser que tenga sentido que el resolutor agregue en un tercer campo algo... ¿un comentario, un link?
