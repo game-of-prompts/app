@@ -49,16 +49,16 @@ export async function include_omitted_participation(
     .setAdditionalRegisters({
         R4: SInt(1).toHex(), // Preservar estado (1: Resolved)
 
-        R5: SColl(SByte, hexToBytes(game.seed)!),
+        R5: SColl(SByte, hexToBytes(game.seed)!).toHex(),
 
         // --- R6: (revealedSecretS, winnerCandidateCommitment) ---
         R6: SPair(
             SColl(SByte, hexToBytes(game.revealedS_Hex)!),
             SColl(SByte, hexToBytes(omittedParticipation.commitmentC_Hex)!)
-        ),
+        ).toHex(),
 
         // --- R7: participatingJudges: Coll[Coll[Byte]] ---
-        R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)),
+        R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
         // --- R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] ---
         R8: SColl(SLong, [
@@ -71,10 +71,7 @@ export async function include_omitted_participation(
         ]).toHex(),
 
         // --- R9: gameProvenance: Coll[Coll[Byte]] (Detalles del juego en JSON/Hex, Script de gasto del resolvedor) ---
-        R9: SColl(SColl(SByte), [
-            SColl(SByte, stringToBytes('utf8', game.content.rawJsonString)),
-            SColl(SByte, hexToBytes(game.resolverScript_Hex)!)
-        ]),
+        R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.resolverScript_Hex)!]).toHex(),
     });
     
     const pBox = parseBox(omittedParticipation.box);
