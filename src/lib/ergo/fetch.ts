@@ -844,11 +844,20 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
 // =================================================================
 let inFlightFetch: Promise<Map<string, AnyGame>> | null = null;
 
-export async function fetchGoPGames(force: boolean = false): Promise<Map<string, AnyGame>> {
+export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boolean = false): Promise<Map<string, AnyGame>> {
+    if (force && avoidFullLoad) {
+        alert("Incorrect use of fetchCoPGames funciton.   Check code.");
+        return new Map();
+    }
+
     const current = get(games);
 
     if (!force && (Date.now() - current.last_fetch < CACHE_DURATION_MS)) {
         return current.data;
+    }
+
+    if (avoidFullLoad) {
+        return new Map();
     }
 
     if (inFlightFetch) {
@@ -886,3 +895,208 @@ export async function fetchGoPGames(force: boolean = false): Promise<Map<string,
     return inFlightFetch;
 }
 
+
+/**
+ * Fetch a single game by its NFT id (token id). Will return the game regardless of its state:
+ * - Active / Resolution / Cancelled  => parsed from the current unspent box
+ * - Finalized (no longer using contract trees) => reconstructed from historical contract boxes
+ * Returns null if the game cannot be found or parsed.
+ */
+export async function fetchGame(id: string): Promise<AnyGame | null> {
+    // 1) try store first
+    try {
+        const current = get(games);
+        if (current && current.data && current.data.has(id)) {
+            return current.data.get(id)!;
+        }
+    } catch (e) {
+        console.warn("fetchGame: could not read store:", e);
+    }
+
+    // helper constants
+    const activeTemplate = getGopGameActiveTemplateHash();
+    const resolutionTemplate = getGopGameResolutionTemplateHash();
+    const cancellationTemplate = getGopGameCancellationTemplateHash();
+
+    // 2) try to fetch current unspent box for the token (if any)
+    let currentBox: Box<Amount> | null = null;
+    try {
+        const url = `${explorer_uri}/api/v1/boxes/unspent/byTokenId/${id}`;
+        const resp = await fetch(`${url}?limit=1`);
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.items && data.items.length > 0) {
+                currentBox = data.items[0];
+            }
+        } else {
+            console.warn(`fetchGame: unspent/byTokenId response not ok: ${resp.status}`);
+        }
+    } catch (e) {
+        console.error(`fetchGame: error fetching unspent box for ${id}:`, e);
+    }
+
+    // 3) If there is a current box and it matches a contract ErgoTree -> parse and return
+    try {
+        if (currentBox) {
+            if (currentBox.ergoTree === getGopGameActiveErgoTreeHex()) {
+                const parsed = await parseGameActiveBox(currentBox);
+                if (parsed) return parsed;
+            } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex()) {
+                const parsed = await parseGameResolutionBox(currentBox);
+                if (parsed) return parsed;
+            } else if (currentBox.ergoTree === getGopGameCancellationErgoTreeHex()) {
+                const parsed = await parseGameCancellationBox(currentBox);
+                if (parsed) return parsed;
+            }
+            // else: currentBox exists but not a contract tree -> likely a finalized token holder box
+        }
+    } catch (e) {
+        console.error(`fetchGame: error parsing current box for ${id}:`, e);
+    }
+
+    // 4) If we reached here we need to collect historical contract boxes for this token id
+    const templateHashes = [activeTemplate, resolutionTemplate, cancellationTemplate];
+    const histBoxes: AnyGame[] = [];
+
+    const limit = 100;
+    for (const templateHash of templateHashes) {
+        let offset = 0;
+        let more = true;
+        while (more) {
+            try {
+                const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ergoTreeTemplateHash: templateHash }),
+                });
+                if (!resp.ok) {
+                    console.warn(`fetchGame: /boxes/search returned ${resp.status} for template ${templateHash}`);
+                    break;
+                }
+                const data = await resp.json();
+                const items: Box[] = data.items || [];
+
+                for (const box of items) {
+                    try {
+                        if (!box.assets || box.assets.length === 0) continue;
+                        if (box.assets[0].tokenId !== id) continue;
+
+                        let parsed: AnyGame | null = null;
+                        if (templateHash === activeTemplate) {
+                            parsed = await parseGameActiveBox(box);
+                        } else if (templateHash === resolutionTemplate) {
+                            parsed = await parseGameResolutionBox(box);
+                        } else if (templateHash === cancellationTemplate) {
+                            parsed = await parseGameCancellationBox(box);
+                        }
+                        if (parsed) histBoxes.push(parsed);
+                    } catch (inner) {
+                        console.error(`fetchGame: error parsing historical box ${box.boxId} for ${id}:`, inner);
+                    }
+                }
+
+                offset += items.length;
+                more = items.length === limit;
+            } catch (e) {
+                console.error(`fetchGame: exception while searching template ${templateHash} for ${id}:`, e);
+                break;
+            }
+        }
+    }
+
+    // 5) If we found historical contract boxes, try to reconstruct Finalized (or use the best historical box)
+    if (histBoxes.length > 0) {
+        // pick last box by creationHeight (descending)
+        histBoxes.sort((a, b) => b.box.creationHeight - a.box.creationHeight);
+        const lastBox = histBoxes[0];
+
+        // gather judges from lastBox if present
+        const judges = lastBox.judges || [];
+
+        // find last resolution box (to get resolutionDeadline / judgeFinalizationBlock)
+        const resolutionBoxes = histBoxes.filter(b => b.status === GameState.Resolution)
+            .sort((a, b) => b.box.creationHeight - a.box.creationHeight);
+        const lastResolutionBox = resolutionBoxes.length > 0 ? (resolutionBoxes[0] as GameResolution) : null;
+        const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
+        const winnerFinalizationGracePeriod = 64800; // 90 days (as in fetchFinalizedGames) - TODO: take from contract constants if available
+
+        // build finalized object
+        try {
+            const finalized: GameFinalized = {
+                boxId: currentBox ? currentBox.boxId : lastBox.box.boxId,
+                box: currentBox ? currentBox : lastBox.box,
+                platform: new ErgoPlatform(),
+                status: GameState.Finalized,
+                deadlineBlock: lastBox.deadlineBlock,
+                gameId: id,
+                content: lastBox.content,
+                value: BigInt(lastBox.box.value),
+                participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0),
+                reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
+                judges,
+                judgeFinalizationBlock: judgeFinalizationBlock,
+                winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
+                constants: DefaultGameConstants,
+                reputation: 0
+            };
+
+            finalized.reputation = calculate_reputation(finalized);
+
+            return finalized;
+        } catch (e) {
+            console.error(`fetchGame: error constructing finalized object for ${id}:`, e);
+            return null;
+        }
+    }
+
+    // 6) If no historical boxes and no current contract box, but currentBox exists (non-contract),
+    // we may still want to return a minimal "Finalized" style object using available data.
+    if (currentBox) {
+        try {
+            // Try to extract some minimal content from currentBox (if it contains the NFT metadata)
+            let content: GameContent = {
+                rawJsonString: "{}",
+                title: "Unknown",
+                description: "Unknown",
+                serviceId: ""
+            };
+            try {
+                if (currentBox.additionalRegisters && currentBox.additionalRegisters.R9) {
+                    const hex = parseCollByteToHex(currentBox.additionalRegisters.R9?.renderedValue);
+                    const json = hexToUtf8(hex || "");
+                    content = parseGameContent(json, currentBox.boxId, currentBox.assets?.[0]);
+                }
+            } catch (e) {
+                // ignore content parse failures
+            }
+
+            const minimal: GameFinalized = {
+                boxId: currentBox.boxId,
+                box: currentBox,
+                platform: new ErgoPlatform(),
+                status: GameState.Finalized,
+                deadlineBlock: 0,
+                gameId: id,
+                content,
+                value: BigInt(currentBox.value),
+                participationFeeNanoErg: BigInt(0),
+                reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
+                judges: [],
+                judgeFinalizationBlock: 0,
+                winnerFinalizationDeadline: 0,
+                constants: DefaultGameConstants,
+                reputation: 0
+            };
+            minimal.reputation = calculate_reputation(minimal);
+            return minimal;
+        } catch (e) {
+            console.error(`fetchGame: error constructing minimal object from current box for ${id}:`, e);
+            return null;
+        }
+    }
+
+    // 7) Not found anywhere
+    console.warn(`fetchGame: game ${id} not found (store, unspent current box, nor historical contract boxes).`);
+    return null;
+}
