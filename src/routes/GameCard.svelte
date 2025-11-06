@@ -2,9 +2,8 @@
     import { block_to_time_remaining, block_height_to_timestamp } from "$lib/common/countdown";
     import { game_detail } from "$lib/common/store";
     import { Button } from "$lib/components/ui/button";
+    import { Badge } from "$lib/components/ui/badge";
     import { onMount, onDestroy } from "svelte";
-    import { Badge } from "$lib/components/ui/badge/index.js";
-    
     import { 
         isGameParticipationEnded, 
         GameState, 
@@ -13,27 +12,18 @@
 
     export let game: Game;
     export let index: number;
-
-    // For opinions.
     export let opinionContent: string | undefined = undefined;
-	export let isInvited: boolean | undefined = undefined;
+    export let isInvited: boolean | undefined = undefined;
 
     $: isEven = index % 2 === 0;
 
-    const STATUS_COLORS = {
-        OPEN: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200",
-        AWAITING_RESULTS: "bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200",
-        RESOLUTION: "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-200",
-        FINALIZED: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200",
-        CANCELLED: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200",
-        DEFAULT: "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300",
-    };
-
     let participationEnded = true;
-    let deadlineDateString = "N/A";
-    let remainingTimeCountdown = "Loading...";
-    let statusMessage = "Loading status...";
-    let statusColor = STATUS_COLORS.DEFAULT;
+    let deadlineTimestamp = 0;
+    let remainingTime = "Loading...";
+    let statusLabel = "Loading...";
+    let statusClasses = "";
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let initializedBoxId: string | null = null;
 
     function handleViewDetails() {
         if (game) {
@@ -41,251 +31,195 @@
         }
     }
 
-    let timerInterval: ReturnType<typeof setInterval> | null = null;
-    let _initializedGameId: string | null = null;
-    let _isCurrentlyInitializing = false;
+    function formatErg(nano: bigint | number): string {
+        const erg = Number(nano) / 1e9;
+        return erg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+    }
 
-    // [MODIFICADO] La lógica de visualización ahora se basa en game.status.
-    function updateDisplayMessages() {
+    function updateStatus() {
         if (!game) return;
 
         switch (game.status) {
             case GameState.Active:
-                const participationFeeErg = Number(game.participationFeeNanoErg) / 1e9;
                 if (participationEnded) {
-                    statusMessage = "Awaiting Results";
-                    statusColor = STATUS_COLORS.AWAITING_RESULTS;
-                    remainingTimeCountdown = "Participation closed";
+                    statusLabel = "Awaiting Results";
+                    statusClasses = "bg-amber-500/15 text-amber-400 border border-amber-500/30";
                 } else {
-                    statusMessage = `Fee: ${participationFeeErg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 9})} ERG`;
-                    statusColor = STATUS_COLORS.OPEN;
+                    statusLabel = `Play for ${formatErg(game.participationFeeNanoErg)} ERG`;
+                    statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
                 }
                 break;
-            
+
             case GameState.Resolution:
-                statusMessage = "Judging in Progress";
-                statusColor = STATUS_COLORS.RESOLUTION;
-                remainingTimeCountdown = "Awaiting verdict";
+                statusLabel = "Judging in Progress";
+                statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
                 break;
 
             case GameState.Cancelled_Draining:
-                statusMessage = "Game Cancelled";
-                statusColor = STATUS_COLORS.CANCELLED;
-                remainingTimeCountdown = "Ended";
+                statusLabel = "Cancelled";
+                statusClasses = "bg-red-500/15 text-red-400 border border-red-500/30";
                 break;
 
             case GameState.Finalized:
-                statusMessage = "Finalized";
-                statusColor = STATUS_COLORS.FINALIZED;
-                remainingTimeCountdown = "Game has ended";
+                statusLabel = "Finalized";
+                statusClasses = "bg-blue-500/15 text-blue-400 border border-blue-500/30";
                 break;
 
             default:
-                statusMessage = "Unknown Status";
-                statusColor = STATUS_COLORS.DEFAULT;
-                remainingTimeCountdown = "N/A";
-                break;
+                statusLabel = "Unknown";
+                statusClasses = "bg-gray-500/15 text-gray-400 border border-gray-500/30";
         }
     }
 
-    async function runTimerTick() {
+    async function tick() {
         if (!game || game.status !== GameState.Active || participationEnded) {
-            cleanupTimer();
+            cleanup();
             return;
         }
-        try {
-            remainingTimeCountdown = await block_to_time_remaining(game.deadlineBlock, game.platform);
-            const currentParticipationStatus = await isGameParticipationEnded(game);
 
-            if (currentParticipationStatus) {
+        try {
+            remainingTime = await block_to_time_remaining(game.deadlineBlock, game.platform);
+            const ended = await isGameParticipationEnded(game);
+            if (ended) {
                 participationEnded = true;
-                cleanupTimer();
-                updateDisplayMessages(); // Actualiza el mensaje a "Awaiting Results"
+                cleanup();
+                updateStatus();
             }
-        } catch (error) {
-            console.error(`GameCard (${game?.boxId}): Error in runTimerTick:`, error);
-            remainingTimeCountdown = "Error";
-            statusMessage = "Error updating time";
-            cleanupTimer();
+        } catch {
+            remainingTime = "Error";
+            cleanup();
         }
     }
 
-    function cleanupTimer() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
+    function cleanup() {
+        if (timer) clearInterval(timer);
+        timer = null;
+    }
+
+    async function initialize() {
+        if (!game || !game.platform || initializedBoxId === game.boxId) return;
+        initializedBoxId = game.boxId;
+        cleanup();
+
+        participationEnded = await isGameParticipationEnded(game);
+
+        if (game.status === GameState.Active || game.status === GameState.Resolution) {
+            deadlineTimestamp = await block_height_to_timestamp(
+                game.status === GameState.Active ? game.deadlineBlock : game.deadlineBlock,
+                game.platform
+            );
+        }
+
+        updateStatus();
+
+        if (game.status === GameState.Active && !participationEnded) {
+            await tick();
+            if (!participationEnded) timer = setInterval(tick, 30000);
         }
     }
 
-    async function initializeCardStateInternal(currentGame: Game) {
-        if (!currentGame || !currentGame.platform || _isCurrentlyInitializing) return;
-        _isCurrentlyInitializing = true;
-        cleanupTimer();
+    $: if (game?.boxId && game.boxId !== initializedBoxId) initialize();
 
-        try {
-            participationEnded = await isGameParticipationEnded(currentGame);
-
-            if (currentGame.status === 'Active' || currentGame.status === 'Resolution') {
-                const deadline = currentGame.status === 'Active' ? currentGame.deadlineBlock : currentGame.deadlineBlock;
-                const deadlineTimestamp = await block_height_to_timestamp(deadline, currentGame.platform);
-                const deadlineDateObj = new Date(deadlineTimestamp);
-                deadlineDateString = deadlineDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-            } else {
-                deadlineDateString = 'N/A';
-            }
-            
-            updateDisplayMessages();
-
-            if (currentGame.status === GameState.Active && !participationEnded) {
-                await runTimerTick();
-                if (!participationEnded) {
-                    timerInterval = setInterval(runTimerTick, 30000);
-                }
-            }
-        } catch (error) {
-            console.error(`GameCard (${currentGame?.boxId}): Error initializing:`, error);
-            statusMessage = "Error loading status.";
-            remainingTimeCountdown = "Error";
-            participationEnded = true;
-        } finally {
-            _isCurrentlyInitializing = false;
-        }
-    }
-
-    $: if (game && game.boxId && game.boxId !== _initializedGameId) {
-        _initializedGameId = game.boxId;
-        initializeCardStateInternal(game);
-    }
-
-    onMount(() => {
-        if (game) initializeCardStateInternal(game);
-        else {
-            console.warn("GameCard: No game data provided.");
-        }
-    });
-
-    onDestroy(() => {
-        cleanupTimer();
-    });
+    onMount(() => game && initialize());
+    onDestroy(cleanup);
 </script>
 
-<div
-    class="game-row flex flex-col md:flex-row items-start gap-8 md:gap-24 lg:gap-32 lg:px-16 xl:gap-40 xl:px-24"
-    class:md:flex-row-reverse={!isEven}
->
-    <div class="image-wrapper w-full md:w-5/12 flex-shrink-0">
-        {#if game?.content?.imageURL}
-            <img
-                src={game.content.imageURL}
-                alt="{game.content.title} banner"
-                class="w-full h-auto object-cover rounded-lg aspect-video"
-                loading="lazy"
-            />
-        {/if}
-    </div>
-
-    <div class="content-wrapper w-full md:w-7/12 text-center md:text-left">
-
-        {#if isInvited}
-            <span class="badge invited-badge">Invited Judge</span>
-        {/if}
-
-        <Badge variant="secondary" class="mb-3">
-            {game.participations?.length || 0} Participants
-        </Badge>
-
-        <h3 class="text-3xl font-bold font-['Russo_One'] mb-2 text-slate-700 dark:text-slate-300">
-            {game?.content?.title || 'Loading title...'}
-        </h3>
-
-        <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 space-y-1">
-            <p>
-                Game ID:
-                <span class="font-mono bg-gray-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                    {game.gameId.slice(0, 10)}...{game.gameId.slice(-10)}
-                </span>
-            </p>
-            {#if game?.content?.serviceId}
-                <p>
-                    Service ID:
-                    <span class="font-mono bg-gray-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                        {game.content.serviceId.length > 20 ? `${game.content.serviceId.slice(0, 8)}...${game.content.serviceId.slice(-8)}` : game.content.serviceId}
-                    </span>
-                </p>
+<div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+    
+    <div class="flex flex-col lg:flex-row {isEven ? 'lg:flex-row-reverse' : ''} gap-0">
+        <div class="relative w-full lg:w-2/5 aspect-video lg:aspect-auto overflow-hidden bg-muted/50">
+            {#if game.content?.imageURL}
+                <img 
+                    src={game.content.imageURL} 
+                    alt={game.content.title}
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            {:else}
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-6xl font-bold text-muted/20">{game.gameId.slice(0, 4)}</div>
+                </div>
             {/if}
         </div>
 
-        <p class="description-text mb-6 text-slate-600 dark:text-slate-400">
-            {game?.content?.description?.slice(0, 200) || 'No description.'}
-            {#if game?.content?.description && game.content.description.length > 200}...{/if}
-        </p>
-
-        {#if opinionContent}
-            <div class="opinion-content-block">
-                <span class="opinion-label">Judge's Opinion:</span>
-                <blockquote class="opinion-quote">
-                    {opinionContent}
-                </blockquote>
-            </div>
-        {/if}
-
-        <div class="status-info flex flex-col sm:flex-row gap-4 items-center mb-6 justify-center md:justify-start">
-            <div class="text-center md:text-left">
-                <div class="text-xs uppercase text-slate-500 dark:text-slate-400 tracking-wider">Status</div>
-                <div class="{statusColor} px-3 py-1 rounded-full text-sm font-semibold mt-1">
-                    {statusMessage}
+        <div class="flex-1 p-6 lg:p-8 flex flex-col justify-between">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        {#if isInvited}
+                            <Badge variant="outline" class="text-xs font-medium border-primary/30 text-primary">
+                                Invited Judge
+                            </Badge>
+                        {/if}
+                        <Badge variant="secondary" class="text-xs">
+                            {game.participations?.length ?? 0} Players
+                        </Badge>
+                    </div>
+                    <div class="px-3 py-1 rounded-full text-xs font-semibold {statusClasses}">
+                        {statusLabel}
+                    </div>
                 </div>
-            </div>
-            <div class="text-center md:text-left" style="margin-left: 30px;">
-                <div class="text-xs uppercase text-slate-500 dark:text-slate-400 tracking-wider">Time Remaining</div>
-                <div class="text-lg font-semibold text-slate-700 dark:text-slate-200 mt-1">
-                    {remainingTimeCountdown}
-                </div>
-                {#if (game.status === 'Resolution' || participationEnded) && deadlineDateString !== 'N/A'}
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Original Deadline: {deadlineDateString}
+
+                <div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-foreground tracking-tight line-clamp-2">
+                        {game.content?.title || 'Untitled Game'}
+                    </h3>
+                    <p class="mt-2 text-sm text-muted-foreground line-clamp-3">
+                        {game.content?.description || 'No description available.'}
                     </p>
+                </div>
+
+                {#if opinionContent}
+                    <blockquote class="border-l-4 border-primary/30 pl-4 italic text-sm text-muted-foreground">
+                        "{opinionContent}"
+                    </blockquote>
                 {/if}
             </div>
-        </div>
 
-        <Button
-            size="lg"
-            class="w-full sm:w-auto transition-all duration-200 hover:scale-[1.03] bg-slate-600 hover:bg-slate-700 text-white dark:bg-slate-300 dark:hover:bg-slate-200 dark:text-slate-900 font-semibold"
-            on:click={handleViewDetails}
-            disabled={!game}
-        >
-            View Details
-        </Button>
+            <div class="mt-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-muted-foreground uppercase tracking-wider text-xs">Game ID</div>
+                        <code class="font-mono text-xs text-primary/80 font-medium mt-1 block truncate">
+                            {game.gameId.slice(0, 8)}...{game.gameId.slice(-6)}
+                        </code>
+                    </div>
+                    <div>
+                        <div class="text-muted-foreground uppercase tracking-wider text-xs">Prize Pool</div>
+                        <div class="font-bold text-foreground mt-1">
+                            {formatErg(game.value)} ERG
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 pt-2 border-t border-border/50">
+                    <div class="space-y-1">
+                        <div class="text-xs uppercase text-muted-foreground tracking-wider">
+                            {game.status === GameState.Active && !participationEnded ? 'Closes in' : 'Status Update'}
+                        </div>
+                        <div class="text-base font-semibold text-foreground">
+                            {game.status === GameState.Active && !participationEnded ? remainingTime : statusLabel}
+                        </div>
+                        {#if deadlineTimestamp && (game.status === GameState.Resolution || participationEnded)}
+                            <div class="text-xs text-muted-foreground">
+                                Deadline: {new Date(deadlineTimestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        {/if}
+                    </div>
+
+                    <Button
+                        size="lg"
+                        class="w-full sm:w-auto transition-all duration-200 hover:scale-[1.03] bg-slate-600 hover:bg-slate-700 text-white dark:bg-slate-300 dark:hover:bg-slate-200 dark:text-slate-900 font-semibold"
+                        on:click={handleViewDetails}
+                        disabled={!game}
+                    >
+                        View Details
+                    </Button>
+
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
-<style>
-    .game-row {
-        padding: 1.5rem;
-        background-color: var(--card);
-        border-radius: 1rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        border: 1px solid var(--border);
-        transition: box-shadow 0.3s ease, transform 0.3s ease;
-    }
-    .game-row:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        transform: translateY(-4px);
-    }
-
-    .opinion-content-block {
-        @apply mt-4 pt-4 border-t border-gray-700;
-    }
-    .opinion-label {
-        @apply text-sm font-bold text-gray-400 uppercase tracking-wider;
-    }
-    .opinion-quote {
-        @apply mt-1 text-base text-white italic bg-black/20 p-3 rounded-md;
-        border-left: 3px solid hsl(var(--primary));
-    }
-
-    .invited-badge {
-        @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300;
-    }
-</style>
