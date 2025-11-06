@@ -163,10 +163,11 @@
     }
 
     .judge-list-container {
-        display: flex;
-        flex-direction: column;
-        gap: 3rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
         width: 100%;
+        justify-items: start;
     }
 
     @keyframes pulse { 50% { opacity: .6; } }
