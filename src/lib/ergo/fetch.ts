@@ -341,9 +341,9 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
-            resolverCommission: creatorComissionPercentage, // Se añade desde R8
+            resolverCommission: creatorComissionPercentage, // Added from R8
             constants: DefaultGameConstants,
-            seed: seed, // Se añade desde R5
+            seed: seed, // Added from R5
             reputation: 0
         };
 
@@ -426,34 +426,34 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         }
         const gameId = box.assets[0].tokenId;
 
-        // R4: Game state (Integer). Debe ser 2 para 'Cancelled'.
+        // R4: Game state (Integer). Must be 2 for 'Cancelled'.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
         if (isNaN(gameState) || gameState !== 2) {
             console.warn(`parseGameCancellationBox: Box ${box.boxId} has incorrect game state in R4. Expected '2', got '${box.additionalRegisters.R4?.renderedValue}'.`);
             return null;
         }
 
-        // R5: unlockHeight (Long). Se convierte directamente a número.
+        // R5: unlockHeight (Long). Converted directly to number.
         const unlockHeight = parseInt(box.additionalRegisters.R5?.renderedValue, 10);
         
-        // R6: revealedSecret (Coll[Byte]). El secreto 'S' revelado.
+        // R6: revealedSecret (Coll[Byte]). The revealed secret 'S'.
         const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
         
-        // R7: creatorStake (Long). El stake actual del creador.
+        // R7: creatorStake (Long). The creator's current stake.
         const currentStakeNanoErg = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
         
         // R8: Original deadline (Long).
         const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
 
-        // R9: ReadOnlyInfo (Coll[Byte]). JSON con datos inmutables.
+        // R9: ReadOnlyInfo (Coll[Byte]). JSON with immutable data.
         const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9?.renderedValue) || ""), box.boxId, box.assets[0]);
 
-        // Valida que los registros esenciales se hayan parseado correctamente
+        // Validate that essential registers were parsed correctly
         if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
             throw new Error("Invalid or missing registers R5, R6, or R7.");
         }
 
-        const participationFeeNanoErg = BigInt(0); // Asumiendo 0 en cancelación
+        const participationFeeNanoErg = BigInt(0); // Assuming 0 in cancellation
 
         const gameCancelled: GameCancellation = {
             platform: new ErgoPlatform(),
@@ -595,15 +595,18 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         }
     }
 
+    // Fetch current unspent boxes to filter out active/resolution/cancellation games
     const activeGames = await fetchActiveGames();
     const resolutionGames = await fetchResolutionGames();
     const cancellationGames = await fetchCancellationGames();
 
     for (const gameId of allGameIds) {
+        // If the game is in a current unspent state, it's not finalized.
         if (activeGames.has(gameId) || resolutionGames.has(gameId) || cancellationGames.has(gameId)) {
             continue;
         }
 
+        // Find the current box holding the game NFT
         let currentBox: Box<Amount> | null = null;
         try {
             const url = `${explorer_uri}/api/v1/boxes/unspent/byTokenId/${gameId}`;
@@ -618,15 +621,18 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             continue;
         }
 
-        if (!currentBox) continue;
+        if (!currentBox) continue; // Should not happen if historical boxes exist, but good to check
 
+        // Check if the current unspent box is *still* a contract box (e.g., missed by first fetch)
         const contractTrees = [
             getGopGameActiveErgoTreeHex(),
             getGopGameResolutionErgoTreeHex(),
             getGopGameCancellationErgoTreeHex()
         ];
-        if (contractTrees.includes(currentBox.ergoTree)) continue;
+        if (contractTrees.includes(currentBox.ergoTree)) continue; // It's still in a contract state, skip.
 
+        // At this point, the game NFT is in a non-contract box (e.g., winner's wallet)
+        // We use historical data to build the Finalized object.
         const histBoxes = historicalContractBoxes.get(gameId) || [];
         let content: GameContent = {
             rawJsonString: "{}",
@@ -638,31 +644,34 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
 
         let lastBox: AnyGame | null = null;
         if (histBoxes.length > 0) {
+            // Sort by creation height descending to get the *last* contract box
             histBoxes.sort((a, b) => b.box.creationHeight - a.box.creationHeight);
             lastBox = histBoxes[0];
             content = lastBox.content;
             judges = lastBox.judges || [];
         } else {
+            // This case should be rare (NFT found but no history?)
             continue;  // Skip if no historical data to extract content
         }
 
+        // Find the last resolution box to get finalization deadlines
         const resolutionBoxes = histBoxes.filter((b) => b.status === "Resolution").sort((a, b) => b.box.creationHeight - a.box.creationHeight);
-        const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] : null;
+        const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] as GameResolution : null;
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-        const winnerFinalizationGracePeriod = 64800; // 90 Días    TODO take from script constants
+        const winnerFinalizationGracePeriod = 64800; // 90 Days TODO take from script constants
 
         const finalized: GameFinalized = {
-            boxId: currentBox.boxId,
-            box: currentBox,
+            boxId: currentBox.boxId, // The *current* box ID
+            box: currentBox, // The *current* box
             platform: new ErgoPlatform(),
             status: GameState.Finalized,
-            deadlineBlock: lastBox.deadlineBlock,
+            deadlineBlock: lastBox.deadlineBlock, // From last contract box
             gameId,
-            content,
-            value: BigInt(lastBox.box.value),
-            participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0),
+            content: lastBox.content, // From last contract box
+            value: BigInt(lastBox.box.value), // Value from last contract box
+            participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0), // From last contract box
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            judges,
+            judges: lastBox.judges || [], // From last contract box
             judgeFinalizationBlock: judgeFinalizationBlock,
             winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
             constants: DefaultGameConstants,
@@ -772,7 +781,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
                     
-                    const wrong_commitment = (game.status === "Resolution") && resolve_participation_commitment(p_base as AnyParticipation, game.revealedS_Hex, game.seed) === null;
+                    const wrong_commitment = (game.status === "Resolution") && resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
 
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
                     if (malformed && !spent) {
@@ -799,11 +808,11 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                 if (game.status === GameState.Cancelled_Draining) return "cancelled";
                                 
                                 if (game.status === GameState.Finalized) {
-                                    const spentTx = await getTransactionInfo(box.spentTransactionId);
+                                    const spentTx = await getTransactionInfo(box.spentTransactionId!);
                                     if (!spentTx) return "unknown";
                                     
-                                    if (spentTx.inclusionHeight < game.judgeFinalizationBlock) return "invalidated";
-                                    if (spentTx.inclusionHeight < game.winnerFinalizationDeadline) return "bywinner";
+                                    if (spentTx.inclusionHeight < (game as GameFinalized).judgeFinalizationBlock) return "invalidated";
+                                    if (spentTx.inclusionHeight < (game as GameFinalized).winnerFinalizationDeadline) return "bywinner";
                                     return "abandoned";  // In case the winner doesn't take it.
                                 }
                                 
@@ -846,12 +855,13 @@ let inFlightFetch: Promise<Map<string, AnyGame>> | null = null;
 
 export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boolean = false): Promise<Map<string, AnyGame>> {
     if (force && avoidFullLoad) {
-        alert("Incorrect use of fetchCoPGames funciton.   Check code.");
+        alert("Incorrect use of fetchGoPGames function. Check code.");
         return new Map();
     }
 
     const current = get(games);
 
+    // Return cached data if valid
     if (!force && (Date.now() - current.last_fetch < CACHE_DURATION_MS)) {
         return current.data;
     }
@@ -860,34 +870,66 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
         return new Map();
     }
 
+    // If a fetch is already in progress, return its promise
     if (inFlightFetch) {
         return inFlightFetch;
     }
 
+    // Start the fetch operation
     inFlightFetch = (async () => {
         try {
-            const [activeGames, resolutionGames, cancellationGames, finalizedGames] = await Promise.all([
-                fetchActiveGames(),
-                fetchResolutionGames(),
-                fetchCancellationGames(),
+            // 1. If forced, clear the store. Otherwise, just update the timestamp.
+            if (force) {
+                games.set({ data: new Map(), last_fetch: Date.now() });
+            } else {
+                games.update(current => ({ ...current, last_fetch: Date.now() }));
+            }
+
+            // 2. Helper function to merge results into the store
+            const mergeIntoStore = (newGames: Map<string, AnyGame>) => {
+                if (newGames.size > 0) {
+                    games.update(current => {
+                        const updatedData = new Map(current.data);
+                        newGames.forEach((value, key) => updatedData.set(key, value));
+                        // Return the new complete state
+                        return { last_fetch: current.last_fetch, data: updatedData };
+                    });
+                    console.log(`[fetchGoPGames] Store updated with ${newGames.size} games.`);
+                }
+            };
+
+            // 3. Define the promises. Each will update the store upon completion.
+            //    Add .catch() to each individually so one failure doesn't stop others.
+            const fetchPromises = [
+                fetchActiveGames()
+                    .then(mergeIntoStore)
+                    .catch(e => console.error("Error fetching active games:", e)),
+                
+                fetchResolutionGames()
+                    .then(mergeIntoStore)
+                    .catch(e => console.error("Error fetching resolution games:", e)),
+                
+                fetchCancellationGames()
+                    .then(mergeIntoStore)
+                    .catch(e => console.error("Error fetching cancellation games:", e)),
+                
                 fetchFinalizedGames()
-            ]);
+                    .then(mergeIntoStore)
+                    .catch(e => console.error("Error fetching finalized games:", e))
+            ];
 
-            const allGames = new Map<string, AnyGame>([
-                ...activeGames,
-                ...resolutionGames,
-                ...cancellationGames,
-                ...finalizedGames
-            ]);
+            // 4. Wait for all promises (and their .then() updates) to complete.
+            await Promise.all(fetchPromises);
 
-            games.set({
-                data: allGames,
-                last_fetch: Date.now()
-            });
+            // 5. The fetch is complete.
+            const finalState = get(games);
+            console.log(`Fetch complete. Total games found: ${finalState.data.size}`);
+            
+            // Return the final Map from the store, as the original function did.
+            return finalState.data;
 
-            console.log(`Búsqueda completada. Total de juegos encontrados: ${allGames.size}`);
-            return allGames;
         } finally {
+            // 6. Release the lock for the next fetch
             inFlightFetch = null;
         }
     })();
