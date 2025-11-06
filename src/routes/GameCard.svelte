@@ -17,7 +17,6 @@
 
     $: isEven = index % 2 === 0;
 
-    // --- Estados para countdown/status ---
     let participationEnded = true;
     let deadlineTimestamp = 0;
     let remainingTime = "Loading...";
@@ -26,15 +25,14 @@
     let timer: ReturnType<typeof setInterval> | null = null;
     let initializedBoxId: string | null = null;
 
-    // ======================
-    // 📏 EFECTO SCALING CENTER
-    // ======================
     let cardEl: HTMLElement | null = null;
-    let scale = 1; // valor reactivo para aplicar el transform
-    const maxScale = 1.06;       // escala máxima (1.06 = +6%)
-    const activeRadiusFactor = 0.45; // parte del alto del viewport considerada "activa"
+    let scale = 1;
+    const maxScale = 1.06;
+    const activeRadiusFactor = 0.45;
     let rafId: number | null = null;
     let scheduled = false;
+
+    let isActive = false;
 
     function scheduleUpdate() {
         if (scheduled) return;
@@ -52,28 +50,50 @@
         const viewportCenterY = window.innerHeight / 2;
         const distance = Math.abs(elemCenterY - viewportCenterY);
         const activeRadius = window.innerHeight * activeRadiusFactor;
-
-        // Calcular interpolación (más cerca = más grande)
-        const raw = Math.max(0, 1 - (distance / activeRadius));
-        const eased = Math.pow(raw, 2); // suavizado cuadrático
+        const raw = Math.max(0, 1 - distance / activeRadius);
+        const eased = Math.pow(raw, 2);
         scale = 1 + (maxScale - 1) * eased;
+        checkIfCentered();
     }
 
     function onScrollOrResize() {
         scheduleUpdate();
     }
 
+    function handleViewDetails() {
+        if (game) {
+            game_detail.set(game);
+        }
+    }
+
+    function checkIfCentered() {
+        if (!cardEl) return;
+        const rect = cardEl.getBoundingClientRect();
+        const cardCenterY = rect.top + rect.height / 2;
+        const viewportCenterY = window.innerHeight / 2;
+        const distance = Math.abs(cardCenterY - viewportCenterY);
+        const threshold = window.innerHeight * 0.1;
+        isActive = distance < threshold;
+    }
+
+    function handleKeyPress(e: KeyboardEvent) {
+        if (e.key === "Enter" && isActive) {
+            e.preventDefault();
+            handleViewDetails();
+        }
+    }
+
     onMount(() => {
         updateScale();
-        window.addEventListener('scroll', onScrollOrResize, { passive: true });
-        window.addEventListener('resize', onScrollOrResize);
-
+        window.addEventListener("scroll", onScrollOrResize, { passive: true });
+        window.addEventListener("resize", onScrollOrResize);
+        window.addEventListener("keydown", handleKeyPress);
         const ro = new ResizeObserver(() => scheduleUpdate());
         if (cardEl) ro.observe(cardEl);
-
         return () => {
-            window.removeEventListener('scroll', onScrollOrResize);
-            window.removeEventListener('resize', onScrollOrResize);
+            window.removeEventListener("scroll", onScrollOrResize);
+            window.removeEventListener("resize", onScrollOrResize);
+            window.removeEventListener("keydown", handleKeyPress);
             ro.disconnect();
             if (rafId) cancelAnimationFrame(rafId);
         };
@@ -83,16 +103,6 @@
         if (rafId) cancelAnimationFrame(rafId);
     });
 
-    // ======================
-    // ⏱️ Lógica del juego
-    // ======================
-
-    function handleViewDetails() {
-        if (game) {
-            game_detail.set(game);
-        }
-    }
-
     function formatErg(nano: bigint | number): string {
         const erg = Number(nano) / 1e9;
         return erg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
@@ -100,7 +110,6 @@
 
     function updateStatus() {
         if (!game) return;
-
         switch (game.status) {
             case GameState.Active:
                 if (participationEnded) {
@@ -111,22 +120,18 @@
                     statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
                 }
                 break;
-
             case GameState.Resolution:
                 statusLabel = "Judging in Progress";
                 statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
                 break;
-
             case GameState.Cancelled_Draining:
                 statusLabel = "Cancelled";
                 statusClasses = "bg-red-500/15 text-red-400 border border-red-500/30";
                 break;
-
             case GameState.Finalized:
                 statusLabel = "Finalized";
                 statusClasses = "bg-blue-500/15 text-blue-400 border border-blue-500/30";
                 break;
-
             default:
                 statusLabel = "Unknown";
                 statusClasses = "bg-gray-500/15 text-gray-400 border border-gray-500/30";
@@ -138,7 +143,6 @@
             cleanup();
             return;
         }
-
         try {
             remainingTime = await block_to_time_remaining(game.deadlineBlock, game.platform);
             const ended = await isGameParticipationEnded(game);
@@ -162,18 +166,14 @@
         if (!game || !game.platform || initializedBoxId === game.boxId) return;
         initializedBoxId = game.boxId;
         cleanup();
-
         participationEnded = await isGameParticipationEnded(game);
-
         if (game.status === GameState.Active || game.status === GameState.Resolution) {
             deadlineTimestamp = await block_height_to_timestamp(
                 game.status === GameState.Active ? game.deadlineBlock : game.deadlineBlock,
                 game.platform
             );
         }
-
         updateStatus();
-
         if (game.status === GameState.Active && !participationEnded) {
             await tick();
             if (!participationEnded) timer = setInterval(tick, 30000);
@@ -181,18 +181,13 @@
     }
 
     $: if (game?.boxId && game.boxId !== initializedBoxId) initialize();
-
     onMount(() => game && initialize());
     onDestroy(cleanup);
 </script>
 
-
-<!-- ======================
-🎨 ESTRUCTURA VISUAL
-====================== -->
 <div
     bind:this={cardEl}
-    class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 will-change-transform"
+    class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 will-change-transform {isActive ? 'game-card-active' : ''}"
     style="transform-origin:center center; transform: translateZ(0) scale({scale});"
 >
     <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -293,15 +288,17 @@
     </div>
 </div>
 
-
 <style>
-    /* Suaviza el escalado con transiciones naturales */
     .will-change-transform {
         transition: transform 260ms cubic-bezier(.22,.9,.27,1), box-shadow 260ms;
     }
 
-    /* Extra sombra cuando está ampliado */
     [style*="scale(1.0"]:not([style*="scale(1)"]) {
         box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .game-card-active {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 4px;
     }
 </style>
