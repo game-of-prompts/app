@@ -17,6 +17,7 @@
 
     $: isEven = index % 2 === 0;
 
+    // --- Estados para countdown/status ---
     let participationEnded = true;
     let deadlineTimestamp = 0;
     let remainingTime = "Loading...";
@@ -24,6 +25,67 @@
     let statusClasses = "";
     let timer: ReturnType<typeof setInterval> | null = null;
     let initializedBoxId: string | null = null;
+
+    // ======================
+    // 📏 EFECTO SCALING CENTER
+    // ======================
+    let cardEl: HTMLElement | null = null;
+    let scale = 1; // valor reactivo para aplicar el transform
+    const maxScale = 1.06;       // escala máxima (1.06 = +6%)
+    const activeRadiusFactor = 0.45; // parte del alto del viewport considerada "activa"
+    let rafId: number | null = null;
+    let scheduled = false;
+
+    function scheduleUpdate() {
+        if (scheduled) return;
+        scheduled = true;
+        rafId = requestAnimationFrame(() => {
+            scheduled = false;
+            updateScale();
+        });
+    }
+
+    function updateScale() {
+        if (!cardEl) return;
+        const rect = cardEl.getBoundingClientRect();
+        const elemCenterY = rect.top + rect.height / 2;
+        const viewportCenterY = window.innerHeight / 2;
+        const distance = Math.abs(elemCenterY - viewportCenterY);
+        const activeRadius = window.innerHeight * activeRadiusFactor;
+
+        // Calcular interpolación (más cerca = más grande)
+        const raw = Math.max(0, 1 - (distance / activeRadius));
+        const eased = Math.pow(raw, 2); // suavizado cuadrático
+        scale = 1 + (maxScale - 1) * eased;
+    }
+
+    function onScrollOrResize() {
+        scheduleUpdate();
+    }
+
+    onMount(() => {
+        updateScale();
+        window.addEventListener('scroll', onScrollOrResize, { passive: true });
+        window.addEventListener('resize', onScrollOrResize);
+
+        const ro = new ResizeObserver(() => scheduleUpdate());
+        if (cardEl) ro.observe(cardEl);
+
+        return () => {
+            window.removeEventListener('scroll', onScrollOrResize);
+            window.removeEventListener('resize', onScrollOrResize);
+            ro.disconnect();
+            if (rafId) cancelAnimationFrame(rafId);
+        };
+    });
+
+    onDestroy(() => {
+        if (rafId) cancelAnimationFrame(rafId);
+    });
+
+    // ======================
+    // ⏱️ Lógica del juego
+    // ======================
 
     function handleViewDetails() {
         if (game) {
@@ -124,7 +186,15 @@
     onDestroy(cleanup);
 </script>
 
-<div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+
+<!-- ======================
+🎨 ESTRUCTURA VISUAL
+====================== -->
+<div
+    bind:this={cardEl}
+    class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 will-change-transform"
+    style="transform-origin:center center; transform: translateZ(0) scale({scale});"
+>
     <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     
     <div class="flex flex-col lg:flex-row {isEven ? 'lg:flex-row-reverse' : ''} gap-0">
@@ -217,9 +287,21 @@
                     >
                         View Details
                     </Button>
-
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
+<style>
+    /* Suaviza el escalado con transiciones naturales */
+    .will-change-transform {
+        transition: transform 260ms cubic-bezier(.22,.9,.27,1), box-shadow 260ms;
+    }
+
+    /* Extra sombra cuando está ampliado */
+    [style*="scale(1.0"]:not([style*="scale(1)"]) {
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+</style>
