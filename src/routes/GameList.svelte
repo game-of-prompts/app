@@ -5,7 +5,7 @@
     import { games } from '$lib/common/store';
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from 'lucide-svelte';
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount, onDestroy, afterUpdate, tick } from 'svelte';
     import { get } from 'svelte/store';
     import { Input } from "$lib/components/ui/input";
     import { fetchGoPGames } from '$lib/ergo/fetch';
@@ -51,7 +51,6 @@
         errorMessage = null;
         try {
             await fetchGoPGames();
-            
         } catch (error: any) {
             console.error("Error fetching GoP games:", error);
             errorMessage = error.message || "An error occurred while fetching games.";
@@ -88,6 +87,41 @@
     onDestroy(() => {
         unsubscribeGames();
         if (debouncedSearch) clearTimeout(debouncedSearch);
+        window.removeEventListener('keydown', handleKeyNavigation);
+    });
+
+    let cardElements: HTMLElement[] = [];
+    let currentIndex = 0;
+
+    async function scrollToCard(index: number) {
+        await tick();
+        if (!cardElements[index]) return;
+        cardElements[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cardElements.forEach((el, i) => {
+            if (i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    function handleKeyNavigation(event: KeyboardEvent) {
+        if (!listedItems || cardElements.length === 0) return;
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            currentIndex = Math.min(currentIndex + 1, cardElements.length - 1);
+            scrollToCard(currentIndex);
+        } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            currentIndex = Math.max(currentIndex - 1, 0);
+            scrollToCard(currentIndex);
+        }
+    }
+
+    afterUpdate(() => {
+        cardElements = Array.from(document.querySelectorAll(".game-card"));
+    });
+
+    onMount(() => {
+        window.addEventListener('keydown', handleKeyNavigation);
     });
 </script>
 
@@ -135,7 +169,9 @@
     {:else if listedItems && Array.from(listedItems).length > 0}
         <div class="game-list-container">
             {#each Array.from(listedItems) as [itemId, itemData], i (itemId)}
-                <GameCard game={itemData} index={i} />
+                <div class="game-card" tabindex="0">
+                    <GameCard game={itemData} index={i} />
+                </div>
             {/each}
         </div>
     {:else}
@@ -156,13 +192,11 @@
         margin-left: auto;
         margin-right: auto;
     }
-
     .hero-section {
         text-align: center;
         padding: 2rem 1rem;
         margin-bottom: 2rem;
     }
-
     .items-title {
         text-align: center;
         font-size: 2.8rem;
@@ -170,22 +204,24 @@
         color: slate;
         font-family: 'Russo One', sans-serif;
     }
-
     .subtitle {
         font-size: 1.1rem;
         color: var(--muted-foreground);
         max-width: 500px;
         margin: 0 auto;
     }
-
-
     .game-list-container {
         display: flex;
         flex-direction: column;
         gap: 4rem;
         width: 100%;
     }
-
+    .game-card.active {
+        outline: 3px solid var(--primary);
+        outline-offset: 6px;
+        border-radius: 1rem;
+        transition: outline 0.3s ease;
+    }
     @keyframes pulse { 50% { opacity: .6; } }
     .skeleton-row {
         display: flex;
@@ -194,7 +230,7 @@
         animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
     .skeleton-image-large {
-        height: 16rem; /* 256px */
+        height: 16rem;
         width: 100%;
         background-color: var(--muted);
         border-radius: 0.75rem;
@@ -210,7 +246,6 @@
     .skeleton-line.text { width: 100%; }
     .skeleton-line.text.short { width: 70%; }
     .skeleton-button { height: 3rem; width: 180px; background-color: var(--muted); border-radius: 0.5rem; margin-top: 2rem; }
-
     @media (min-width: 768px) {
         .skeleton-row {
             flex-direction: row;
