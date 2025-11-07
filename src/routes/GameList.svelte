@@ -10,7 +10,6 @@
     import { Input } from "$lib/components/ui/input";
     import { fetchGoPGames } from '$lib/ergo/fetch';
 
-    let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, Game> = new Map();
     let listedItems: Map<string, Game> | null = null;
     let errorMessage: string | null = null;
@@ -18,11 +17,15 @@
     let isFiltering: boolean = false;
     let searchQuery: string = "";
     let offset: number = 0;
+    let orderedIds: string[] = []; // Mantiene el orden de los IDs
+    let isInitialSort: boolean = true; // Flag para saber si es la primera ordenación
 
     export let filterGame: ((item: Game) => Promise<boolean>) | null = null;
 
     async function applyFiltersAndSearch(sourceItems: Map<string, Game>) {
         const filteredItemsMap = new Map<string, Game>();
+        
+        // Filtrar elementos
         for (const [id, item] of sourceItems.entries()) {
             let shouldAdd = true;
             if (filterGame) {
@@ -40,10 +43,42 @@
                 }
             }
         }
-        const sortedItemsArray = Array.from(filteredItemsMap.entries()).sort(
-            ([, itemA], [, itemB]) => (itemB.box?.creationHeight ?? 0) - (itemA.box?.creationHeight ?? 0)
-        );
-        listedItems = new Map(sortedItemsArray);
+
+        // Si hay búsqueda o es la carga inicial, ordenar completamente
+        if (searchQuery || isInitialSort) {
+            const sortedItemsArray = Array.from(filteredItemsMap.entries()).sort(
+                ([, itemA], [, itemB]) => (itemB.box?.creationHeight ?? 0) - (itemA.box?.creationHeight ?? 0)
+            );
+            orderedIds = sortedItemsArray.map(([id]) => id);
+            listedItems = new Map(sortedItemsArray);
+            if (isInitialSort && !searchQuery) {
+                isInitialSort = false;
+            }
+        } else {
+            // Mantener orden existente y agregar nuevos al final
+            const existingIds = new Set(orderedIds);
+            const newIds = Array.from(filteredItemsMap.keys()).filter(id => !existingIds.has(id));
+            
+            // Ordenar solo los nuevos elementos
+            const newSortedIds = newIds.sort((idA, idB) => {
+                const itemA = filteredItemsMap.get(idA);
+                const itemB = filteredItemsMap.get(idB);
+                return (itemB?.box?.creationHeight ?? 0) - (itemA?.box?.creationHeight ?? 0);
+            });
+            
+            // Agregar nuevos IDs al final
+            orderedIds = [...orderedIds.filter(id => filteredItemsMap.has(id)), ...newSortedIds];
+            
+            // Reconstruir el mapa manteniendo el orden
+            const orderedMap = new Map<string, Game>();
+            for (const id of orderedIds) {
+                const item = filteredItemsMap.get(id);
+                if (item) {
+                    orderedMap.set(id, item);
+                }
+            }
+            listedItems = orderedMap;
+        }
     }
 
     async function loadInitialItems() {
