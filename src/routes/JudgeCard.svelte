@@ -69,7 +69,7 @@
       on:click={handleViewDetails}
       disabled={!judge}
     >
-      Ver Detalles
+      View Details
     </Button>
   </div>
 </div>
