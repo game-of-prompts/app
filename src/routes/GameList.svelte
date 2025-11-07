@@ -1,7 +1,6 @@
 <script lang="ts">
     import GameCard from './GameCard.svelte';
-    import { type Game } from '$lib/common/game';
-    import { ErgoPlatform } from '$lib/ergo/platform';
+    import { type AnyGame as Game } from '$lib/common/game';
     import { games } from '$lib/common/store';
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from 'lucide-svelte';
@@ -16,21 +15,53 @@
     let isLoadingApi: boolean = true;
     let isFiltering: boolean = false;
     let searchQuery: string = "";
-    let offset: number = 0;
-    let orderedIds: string[] = []; // Mantiene el orden de los IDs
-    let isInitialSort: boolean = true; // Flag para saber si es la primera ordenación
+    let orderedIds: string[] = [];
+    let isInitialSort: boolean = true;
+
+    const statusOptions = [
+        { value: 'all', label: 'All Statuses' },
+        { value: 'Active', label: 'Active' },
+        { value: 'Resolution', label: 'Resolution' },
+        { value: 'Cancelled_Draining', label: 'Cancelled' },
+        { value: 'Finalized', label: 'Finalized' }
+    ];
+
+    let selectedStatus: string = statusOptions[0].value;
+
+    let totalGamesCount: number = 0;
 
     export let filterGame: ((item: Game) => Promise<boolean>) | null = null;
 
+    function getStatus(item: Game) {
+        return (item.status as string)
+            || (item.state as string)
+            || (item.box?.state as string)
+            || (item.box?.status as string)
+            || 'unknown';
+    }
+
     async function applyFiltersAndSearch(sourceItems: Map<string, Game>) {
         const filteredItemsMap = new Map<string, Game>();
-        
-        // Filtrar elementos
+        const targetValue = selectedStatus === 'Cancelled' ? 'Cancelled_Draining' : selectedStatus;
+        const targetOption = statusOptions.find(o => o.value.toLowerCase() === selectedStatus.toLowerCase())?.value;
+
+
         for (const [id, item] of sourceItems.entries()) {
             let shouldAdd = true;
             if (filterGame) {
                 shouldAdd = await filterGame(item);
             }
+
+            if (shouldAdd && selectedStatus && selectedStatus !== 'all') {
+                const s = getStatus(item)?.toString() ?? 'unknown';
+                
+                const statusMatch = s.toLowerCase() === targetOption?.toLowerCase();
+                
+                if (!statusMatch) {
+                    shouldAdd = false;
+                }
+            }
+
             if (shouldAdd) {
                 if (searchQuery && item.content) {
                     const searchLower = searchQuery.toLowerCase();
@@ -44,7 +75,6 @@
             }
         }
 
-        // Si hay búsqueda o es la carga inicial, ordenar completamente
         if (searchQuery || isInitialSort) {
             const sortedItemsArray = Array.from(filteredItemsMap.entries()).sort(
                 ([, itemA], [, itemB]) => (itemB.box?.creationHeight ?? 0) - (itemA.box?.creationHeight ?? 0)
@@ -55,21 +85,17 @@
                 isInitialSort = false;
             }
         } else {
-            // Mantener orden existente y agregar nuevos al final
             const existingIds = new Set(orderedIds);
             const newIds = Array.from(filteredItemsMap.keys()).filter(id => !existingIds.has(id));
-            
-            // Ordenar solo los nuevos elementos
+
             const newSortedIds = newIds.sort((idA, idB) => {
                 const itemA = filteredItemsMap.get(idA);
                 const itemB = filteredItemsMap.get(idB);
                 return (itemB?.box?.creationHeight ?? 0) - (itemA?.box?.creationHeight ?? 0);
             });
-            
-            // Agregar nuevos IDs al final
+
             orderedIds = [...orderedIds.filter(id => filteredItemsMap.has(id)), ...newSortedIds];
-            
-            // Reconstruir el mapa manteniendo el orden
+
             const orderedMap = new Map<string, Game>();
             for (const id of orderedIds) {
                 const item = filteredItemsMap.get(id);
@@ -94,6 +120,9 @@
 
     const unsubscribeGames = games.subscribe(async value => {
         allFetchedItems = value.data || new Map();
+
+        totalGamesCount = allFetchedItems.size;
+
         await applyFiltersAndSearch(allFetchedItems);
         if (isLoadingApi) isLoadingApi = false;
     });
@@ -113,6 +142,9 @@
             loadInitialItems();
         } else {
             allFetchedItems = get(games).data;
+
+            totalGamesCount = allFetchedItems.size;
+
             applyFiltersAndSearch(allFetchedItems).then(() => {
                  if (isLoadingApi) isLoadingApi = false;
             });
@@ -164,20 +196,37 @@
     <div class="hero-section">
         <h2 class="items-title">Explore Competitions</h2>
         <p class="subtitle">Compete, demonstrate your skill, and win prizes.</p>
+        <div class="counts-row">
+            <div class="badge">Total games: {totalGamesCount}</div>
+            {#if listedItems}
+                <div class="badge muted">Showing: {Array.from(listedItems).length}</div>
+            {/if}
+        </div>
     </div>
 
     <div class="search-container mb-12">
-        <div class="relative w-full max-w-md mx-auto">
-            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500/70 h-4 w-4" />
-            <Input
-                type="text"
-                placeholder="Search games..."
-                bind:value={searchQuery}
-                class="pl-10 w-full bg-background/80 backdrop-blur-lg border-slate-500/20 focus:border-slate-500/40 focus:ring-slate-500/20 focus:ring-1 rounded-lg transition-all duration-200"
-            />
-             {#if isFiltering}
-                <Loader2 class="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-slate-500" />
-            {/if}
+        <div class="relative w-full max-w-2xl mx-auto flex flex-col md:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500/70 h-4 w-4" />
+                <Input
+                    type="text"
+                    placeholder="Search games..."
+                    bind:value={searchQuery}
+                    class="pl-10 w-full bg-background/80 backdrop-blur-lg border-slate-500/20 focus:border-slate-500/40 focus:ring-slate-500/20 focus:ring-1 rounded-lg transition-all duration-200"
+                />
+                    {#if isFiltering}
+                        <Loader2 class="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-slate-500" />
+                    {/if}
+            </div>
+
+            <div class="status-filter">
+                <label for="status-select" class="sr-only">Filter by status</label>
+                <select id="status-select" bind:value={selectedStatus} on:change={() => applyFiltersAndSearch(allFetchedItems)}>
+                    {#each statusOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                    {/each}
+                </select>
+            </div>
         </div>
     </div>
 
@@ -204,6 +253,7 @@
     {:else if listedItems && Array.from(listedItems).length > 0}
         <div class="game-list-container">
             {#each Array.from(listedItems) as [itemId, itemData], i (itemId)}
+                <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                 <div class="game-card" tabindex="0">
                     <GameCard game={itemData} index={i} />
                 </div>
@@ -245,6 +295,25 @@
         max-width: 500px;
         margin: 0 auto;
     }
+    .counts-row { display:flex; gap:0.75rem; justify-content:center; margin-top:0.75rem; }
+    .badge { padding:0.35rem 0.6rem; border-radius:999px; background:var(--muted); color:var(--foreground); font-weight:600; }
+    .badge.muted { opacity:0.8; }
+
+    .search-container { margin-bottom: 3rem; }
+    .status-filter select { 
+        padding: 0.5rem 0.75rem; 
+        border-radius: 0.5rem; 
+        border: 1px solid var(--border); 
+        background: var(--input); 
+        color: var(--foreground); 
+        cursor: pointer;
+        height: 40px;
+    }
+
+    .status-filter select option {
+        color: #0F172A;
+    }
+
     .game-list-container {
         display: flex;
         flex-direction: column;
