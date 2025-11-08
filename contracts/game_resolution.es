@@ -26,8 +26,8 @@
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R8: Coll[Long]                 - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline].
-  // R9: Coll[Coll[Byte]]           - gameProvenance: (Detalles del juego en JSON/Hex, Script de gasto del resolvedor)
+  // R8: Coll[Long]                 - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+  // R9: Coll[Coll[Byte]]           - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, resolverErgoTree]
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -50,7 +50,9 @@
   val resolutionDeadline = numericalParams(5)
 
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
-  val resolverPK = gameProvenance(1)
+  // gameProvenance(0) = gameDetailsJsonHex
+  val participationTokenId = gameProvenance(1)
+  val resolverPK = gameProvenance(2)
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -165,15 +167,13 @@
                 recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
                 recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
                 recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
-                (  
-                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == resolverPK ||   // Maintains original resolver if within no-penalty period
-                  (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT  // Allows changing resolver after no-penalty period. 
-                  /* Must be strictly after (not equal to) the no-penalty period, ensuring exactly CREATOR_OMISSION_NO_PENALTY_PERIOD blocks have passed 
-                     since the latest invalidation transaction (or resolution transaction). This guarantees the creator has sufficient time to include any previously omitted participation.
-                     After this period, anyone is allowed to add a participation — even one that is invalid or has a lower score than the last declared candidate. */
-                ) && 
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
-                recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 2
+                recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
+                (
+                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == resolverPK ||
+                  (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT
+                ) && 
+                recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 3
               }
               
               gameBoxIsRecreatedCorrectly && newScoreIsValid
@@ -251,7 +251,14 @@
                 }
               })
 
-              val correctParticipationFee = winnerCandidateBox.value >= participationFee
+              val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
+                  winnerCandidateBox.value >= participationFee
+                } else {
+                  winnerCandidateBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
+                      pair._1 == participationTokenId &&
+                      pair._2 >= participationFee
+                  }
+                }
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
               validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
@@ -277,9 +284,7 @@
             recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
             recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
             recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 2
+            recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
           }
           
           fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
@@ -413,7 +418,14 @@
               }
             })
 
-            val correctParticipationFee = winnerBox.value >= participationFee
+            val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
+                winnerBox.value >= participationFee
+              } else {
+                winnerBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
+                    pair._1 == participationTokenId &&
+                    pair._2 >= participationFee
+                }
+              }
             val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline
 
             validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST

@@ -32,7 +32,7 @@
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
-  // R9: Coll[Byte]         - Detalles del juego en JSON/Hex
+  // R9: Coll[Coll[Byte]]   - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID]
 
 
   // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).
@@ -62,8 +62,10 @@
   val perJudgeComissionPercentage = numericalParams(3)
   val creatorComissionPercentage = numericalParams(4)
 
-  // R9: gameDetailsJsonHex
-  val gameDetailsJsonHex = SELF.R9[Coll[Byte]].get
+  // R9: [gameDetailsJsonHex, ParticipationTokenID]
+  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
+  val gameDetailsJsonHex = gameProvenance(0)
+  val participationTokenId = gameProvenance(1)
   
   val gameNft = SELF.tokens(0)
   val gameNftId = gameNft._1
@@ -119,7 +121,14 @@
                 }
               })
 
-              val correctParticipationFee = winnerCandidateBox.value >= participationFee
+              val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
+                  winnerCandidateBox.value >= participationFee
+                } else {
+                  winnerCandidateBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
+                      pair._1 == participationTokenId &&
+                      pair._2 >= participationFee
+                  }
+                }
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
               validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
@@ -163,8 +172,7 @@
               resolutionBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(4) >= creatorComissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
-              resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
-              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 2
+              resolutionBox.R9[Coll[Coll[Byte]]].get == gameProvenance
             }
 
           resolutionBoxIsValid && allVotesAreUnique
@@ -210,7 +218,7 @@
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
           cancellationBox.R7[Long].get == remainingStake &&
           cancellationBox.R8[Long].get == deadline &&
-          cancellationBox.R9[Coll[Byte]].get == gameDetailsJsonHex
+          cancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
@@ -272,7 +280,7 @@
       val sameR6 = out.R6[Coll[Byte]].get == secretHash
       val sameR7 = out.R7[Coll[Coll[Byte]]].get == invitedJudges
       val sameR8 = out.R8[Coll[Long]].get == numericalParams
-      val sameR9 = out.R9[Coll[Byte]].get == gameDetailsJsonHex
+      val sameR9 = out.R9[Coll[Coll[Byte]]].get == gameProvenance
     
       sameNFT &&
       sameValue &&
