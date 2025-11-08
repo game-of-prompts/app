@@ -603,9 +603,6 @@
                 {/if}
                 <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
                     <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white">{game.content.title}</h1>
-                    <div class="prose prose-sm text-slate-300 max-w-none mb-6">
-                        {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
-                    </div>
 
                     <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white">
                         <div class="stat-block">
@@ -638,12 +635,12 @@
                             <span>{game.status == "Active" ? game.commissionPercentage : ( game.status == "Resolution" ? game.resolverCommission : "N/A")}%</span>
                             <span class="stat-label">Creator Commission</span>
                         </div>
-                        <div class="stat-block">
-                            <Calendar class="stat-icon"/>
-                            <span>{deadlineDateDisplay.split(' at ')[0]}</span>
-                            <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : ( game.status == "Cancelled_Draining" ? game.unlockHeight : "N/A"))}</a>
-                            <span class="stat-label">Deadline</span>
-                        </div>
+                    </div> <div class="stat-block mt-4">
+                        <Calendar class="stat-icon"/>
+                        <span>{deadlineDateDisplay.split(' at ')[0]}</span>
+                        <!-- svelte-ignore a11y-missing-attribute -->
+                        <a>b.{game.status == "Active" ? game.deadlineBlock : ( game.status == "Resolution" ? game.resolutionDeadline : ( game.status == "Cancelled_Draining" ? game.unlockHeight : "N/A"))}</a>
+                        <span class="stat-label">Deadline</span>
                     </div>
 
                     {#if !participationIsEnded && targetDate}
@@ -709,6 +706,11 @@
             {#if game}
                 {@const creator = game.content.creatorReputationProof}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                    
+                    <div class="prose prose-sm text-slate-300 max-w-none mb-6 md:col-span-2 lg:col-span-3">
+                        {@html game.content.description?.replace(/\n/g, '<br/>') || 'No description available.'}
+                    </div>
+
                     <div class="info-block">
                         <span class="info-label">Competition ID (NFT)</span>
                         <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
@@ -779,7 +781,6 @@
                             {/if}
                         </div>
                     {/if}
-
 
                 </div>
             {/if}
