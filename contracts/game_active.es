@@ -172,7 +172,9 @@
               resolutionBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(4) >= creatorComissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
-              resolutionBox.R9[Coll[Coll[Byte]]].get == gameProvenance
+              resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
+              resolutionBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId &&
+              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 3
             }
 
           resolutionBoxIsValid && allVotesAreUnique

@@ -103,7 +103,7 @@ describe("Game Resolution (resolve_game)", () => {
         ]).toHex(),
 
         // R9: JSON Details
-        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), ""]).toHex()
       }
     });
 
@@ -144,6 +144,7 @@ describe("Game Resolution (resolve_game)", () => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
+          "",
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -340,6 +341,7 @@ describe("Game Resolution (resolve_game)", () => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
+          "",
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -389,6 +391,7 @@ describe("Game Resolution (resolve_game)", () => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
+          "",
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -495,6 +498,7 @@ describe("Game Resolution (resolve_game)", () => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", '{"name": "anon"}'), // Detalles del juego
+          "",
           creatorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       })])
@@ -539,9 +543,9 @@ describe("Game Resolution (resolve_game)", () => {
 
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
-          stringToBytes("utf8", '{}'), // Detalles del juego
+          stringToBytes("utf8", '{changed: 1}'), // Detalles del juego
+          "",
           creatorPkBytes,           // Script de gasto del resolvedor
-          creatorPkBytes
         ]).toHex()
       })])
       .withDataFrom([participationContract.utxos.toArray()[0]])
