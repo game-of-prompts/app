@@ -218,7 +218,7 @@
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
           cancellationBox.R7[Long].get == remainingStake &&
           cancellationBox.R8[Long].get == deadline &&
-          cancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance
+          cancellationBox.R9[Coll[Byte]].get == gameDetailsJsonHex
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---

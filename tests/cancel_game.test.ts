@@ -17,6 +17,7 @@ import {
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
+import { prependHexPrefix } from "$lib/utils";
 
 describe("Game Cancellation (cancel_game)", () => {
     let mockChain: MockChain;
@@ -91,7 +92,11 @@ describe("Game Cancellation (cancel_game)", () => {
                 ]).toHex(),
 
                 // R9: Detalles JSON
-                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R9: SColl(SColl(SByte), [
+                                    stringToBytes("utf8", "{}"),                    // detalles del juego
+                                    
+                                    ""
+                                ]).toHex()
             }
         });
 
@@ -221,7 +226,11 @@ describe("Game Cancellation (Low Stake)", () => {
                 R6: SColl(SByte, hashedSecret).toHex(),
                 R7: SColl(SColl(SByte), []).toHex(),
                 R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
-                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R9: SColl(SColl(SByte), [
+                                    stringToBytes("utf8", "{}"),                    // detalles del juego
+                                    
+                                    ""
+                                ]).toHex()
             }
         });
         gameBox = game.utxos.toArray()[0];
