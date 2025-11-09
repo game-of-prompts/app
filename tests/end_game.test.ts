@@ -188,6 +188,7 @@ describe("Game Finalization (end_game)", () => {
           // gameProvenance: [Detalles del juego, Script del resolvedor]
           R9: SColl(SColl(SByte), [
             stringToBytes('utf8', gameDetailsJson),                   // detalles del juego
+            "",
             prependHexPrefix(resolver.key.publicKey, "0008cd")        // script del resolvedor
           ]).toHex()
         }
@@ -351,6 +352,7 @@ describe("Game Finalization (end_game)", () => {
             // gameProvenance:
             R9: SColl(SColl(SByte), [
                   stringToBytes('utf8', gameDetailsJson),                  // Detalles del juego
+                  "",
                   prependHexPrefix(resolver.key.publicKey, "0008cd")      // Script del resolvedor
             ]).toHex()
         },
@@ -477,6 +479,7 @@ describe("Game Finalization (end_game)", () => {
             // gameProvenance:
             R9: SColl(SColl(SByte), [
                   stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+                  "",
                   prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
             ]).toHex()
         },
@@ -595,6 +598,7 @@ describe("Game Finalization (end_game)", () => {
 
             R9: SColl(SColl(SByte), [
                 stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+                "",
                 prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
             ]).toHex()
         },
@@ -764,6 +768,7 @@ describe("Game Finalization (end_game)", () => {
 
             R9: SColl(SColl(SByte), [
                 stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+                "",
                 prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
             ]).toHex()
         },
@@ -912,6 +917,7 @@ describe("Game Finalization (end_game)", () => {
           // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
           R9: SColl(SColl(SByte), [
               stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+              "",
               prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
           ]).toHex()
       },
@@ -979,6 +985,7 @@ describe("Game Finalization (end_game)", () => {
         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
         R9: SColl(SColl(SByte), [
             stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+            "",
             prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
         ]).toHex()
     },
@@ -1102,6 +1109,7 @@ describe("Game Finalization (end_game)", () => {
             // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
             R9: SColl(SColl(SByte), [
                 stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+                "",
                 prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
             ]).toHex()
         },
