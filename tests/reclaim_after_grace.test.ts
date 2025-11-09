@@ -74,10 +74,10 @@ describe("Participant Reclaim After Grace Period", () => {
           ]).toHex(),
 
           // R9: (Detalles del juego, Script del creador)
-          R9: SPair(
-            SColl(SByte, stringToBytes("utf8", "{}")), // JSON con detalles del juego
+          R9: SColl(SColl(SByte), [
+            SColl(SByte, stringToBytes("utf8", "{}")), "", // JSON con detalles del juego
             SColl(SByte, creator.key.publicKey) // Script de gasto del creador (placeholder)
-          ).toHex()
+          ]).toHex()
         },
     });
 
