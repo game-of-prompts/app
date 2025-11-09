@@ -125,7 +125,7 @@ describe("Omitted Participation Inclusion", () => {
 
                 // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                    stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                      // script del creador original
                     prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                 ]).toHex()
@@ -197,7 +197,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                            stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                              // script del creador original
                             prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
@@ -243,7 +243,7 @@ describe("Omitted Participation Inclusion", () => {
                             BigInt(updatedNumericalParams[4])  // resolutionDeadline
                         ]).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                            stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                              // script del creador original
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
@@ -286,7 +286,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                            stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                              // script del creador original
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
@@ -334,7 +334,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                            stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                              // script del creador original
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
@@ -378,7 +378,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                            stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                              // script del creador original
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
@@ -432,7 +432,7 @@ describe("Omitted Participation Inclusion", () => {
 
                 // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                    stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                      // script del creador original
                     prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                 ]).toHex()
@@ -485,7 +485,7 @@ describe("Omitted Participation Inclusion", () => {
 
                             // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                             R9: SColl(SColl(SByte), [
-                                stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+                                stringToBytes("utf8", "{}"),  "",                               // detalles del juego (JSON/Hex)
                                  // script del creador original
                                 prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                             ]).toHex()
@@ -531,7 +531,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),
+                            stringToBytes("utf8", "{}"), "",
                             
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
@@ -964,7 +964,7 @@ describe("Omitted Participation Inclusion", () => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),
+                            stringToBytes("utf8", "{}"), "", 
                             
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
