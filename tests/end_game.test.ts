@@ -1196,138 +1196,138 @@ describe("Game Finalization (end_game)", () => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
-it("Should successfully finalize the game and distribute funds correctly with a different token (stable-coin)", () => {
-  // --- Arrange ---
-  const stableTokenId = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"; // Invented hash for stable-coin token
+  it("Should successfully finalize the game and distribute funds correctly with a different token (stable-coin)", () => {
+    // --- Arrange ---
+    const stableTokenId = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"; // Invented hash for stable-coin token
 
-  // Clear and recreate participation boxes with stable token instead of ERG value
-  participationContract.utxos.clear();
+    // Clear and recreate participation boxes with stable token instead of ERG value
+    participationContract.utxos.clear();
 
-  const winnerSolverId = "player-alpha-7";
-  const winnerTrueScore = 9500n;
-  const winnerLogs = "Winner game logs";
-  const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
-  const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
-  const winer_ergotree = prependHexPrefix(winner.address.getPublicKeys()[0]);
-  const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, winer_ergotree, secret);
-  winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
+    const winnerSolverId = "player-alpha-7";
+    const winnerTrueScore = 9500n;
+    const winnerLogs = "Winner game logs";
+    const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
+    const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
+    const winer_ergotree = prependHexPrefix(winner.address.getPublicKeys()[0]);
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, winer_ergotree, secret);
+    winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
 
-  participationContract.addUTxOs({
-    creationHeight: mockChain.height,
-    value: SAFE_MIN_BOX_VALUE,
-    ergoTree: participationErgoTree.toHex(),
-    assets: [{ tokenId: stableTokenId, amount: participationFee }],
-    additionalRegisters: {
-      R4: SColl(SByte, winer_ergotree).toHex(),
-      R5: SColl(SByte, winnerCommitment).toHex(),
-      R6: SColl(SByte, gameNftId).toHex(),
-      R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
-      R8: SColl(SByte, winnerHashLogsBytes).toHex(),
-      R9: SColl(SLong, winnerScoreList).toHex(),
-    },
-  });
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: SAFE_MIN_BOX_VALUE,
+      ergoTree: participationErgoTree.toHex(),
+      assets: [{ tokenId: stableTokenId, amount: participationFee }],
+      additionalRegisters: {
+        R4: SColl(SByte, winer_ergotree).toHex(),
+        R5: SColl(SByte, winnerCommitment).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+        R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+        R9: SColl(SLong, winnerScoreList).toHex(),
+      },
+    });
 
-  const loserSolverId = "player-beta-3";
-  const loserTrueScore = 2100n;
-  const loserLogs = "Loser game logs";
-  const loserHashLogsBytes = blake2b256(stringToBytes("utf8", loserLogs));
-  const loserScoreList = [500n, 1100n, 2100n, 3000n];
-  const loser_ergotree = prependHexPrefix(loser.address.getPublicKeys()[0]);
-  const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserHashLogsBytes, loser_ergotree, secret);
-  loserCommitment = Buffer.from(loserCommitmentBytes).toString("hex");
+    const loserSolverId = "player-beta-3";
+    const loserTrueScore = 2100n;
+    const loserLogs = "Loser game logs";
+    const loserHashLogsBytes = blake2b256(stringToBytes("utf8", loserLogs));
+    const loserScoreList = [500n, 1100n, 2100n, 3000n];
+    const loser_ergotree = prependHexPrefix(loser.address.getPublicKeys()[0]);
+    const loserCommitmentBytes = createCommitment(loserSolverId, loserTrueScore, loserHashLogsBytes, loser_ergotree, secret);
+    loserCommitment = Buffer.from(loserCommitmentBytes).toString("hex");
 
-  participationContract.addUTxOs({
-    creationHeight: mockChain.height,
-    value: SAFE_MIN_BOX_VALUE,
-    ergoTree: participationErgoTree.toHex(),
-    assets: [{ tokenId: stableTokenId, amount: participationFee }],
-    additionalRegisters: {
-      R4: SColl(SByte, loser_ergotree).toHex(),
-      R5: SColl(SByte, loserCommitment).toHex(),
-      R6: SColl(SByte, gameNftId).toHex(),
-      R7: SColl(SByte, Buffer.from(loserSolverId, "utf8").toString("hex")).toHex(),
-      R8: SColl(SByte, loserHashLogsBytes).toHex(),
-      R9: SColl(SLong, loserScoreList).toHex(),
-    },
-  });
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: SAFE_MIN_BOX_VALUE,
+      ergoTree: participationErgoTree.toHex(),
+      assets: [{ tokenId: stableTokenId, amount: participationFee }],
+      additionalRegisters: {
+        R4: SColl(SByte, loser_ergotree).toHex(),
+        R5: SColl(SByte, loserCommitment).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, Buffer.from(loserSolverId, "utf8").toString("hex")).toHex(),
+        R8: SColl(SByte, loserHashLogsBytes).toHex(),
+        R9: SColl(SLong, loserScoreList).toHex(),
+      },
+    });
 
-  // Clear and recreate game resolution box with stable token and updated R9
-  gameResolutionContract.utxos.clear();
-  const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
-  gameResolutionContract.addUTxOs({
-    creationHeight: mockChain.height,
-    value: SAFE_MIN_BOX_VALUE,
-    ergoTree: gameResolutionErgoTree.toHex(),
-    assets: [
-      { tokenId: gameNftId, amount: 1n },
-      { tokenId: stableTokenId, amount: creatorStake },
-    ],
-    additionalRegisters: {
-      R4: SInt(1).toHex(),
-      R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
-      R6: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
-      R7: SColl(SColl(SByte), []).toHex(),
-      R8: SColl(SLong, [
-        BigInt(deadline),
-        creatorStake,
-        participationFee,
-        0n,        // perJudgeComissionPercentage
-        resolverCommissionPercent,        // creatorComissionPercentage
-        BigInt(resolutionDeadline)
-      ]).toHex(),
-      R9: SColl(SColl(SByte), [
-        stringToBytes('utf8', gameDetailsJson),                   // detalles del juego
-        hexToBytes(stableTokenId)!,                                // token id (stable-coin)
-        prependHexPrefix(resolver.key.publicKey, "0008cd")        // script del resolvedor
-      ]).toHex()
-    }
-  });
-
-  mockChain.jumpTo(resolutionDeadline);
-  const gameBox = gameResolutionContract.utxos.toArray()[0];
-  const participationBoxes = participationContract.utxos.toArray();
-
-  // --- Act ---
-  const prizePool = participationBoxes.reduce((acc, p) => acc + (p.assets.find(a => a.tokenId === stableTokenId)?.amount || 0n), 0n);
-  const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
-  const devCommission = (prizePool * 5n) / 100n;
-  const winnerBasePrize = prizePool - resolverCommission - devCommission;
-
-  const finalWinnerPrize = winnerBasePrize;
-  const finalResolverPayout = creatorStake + resolverCommission;
-  const finalDevPayout = devCommission;
-
-  const transaction = new TransactionBuilder(mockChain.height)
-    .from([gameBox, ...participationBoxes, ...winner.utxos.toArray()])
-    .to([
-      new OutputBuilder(SAFE_MIN_BOX_VALUE, winner.address).addTokens([
+    // Clear and recreate game resolution box with stable token and updated R9
+    gameResolutionContract.utxos.clear();
+    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+    gameResolutionContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: SAFE_MIN_BOX_VALUE,
+      ergoTree: gameResolutionErgoTree.toHex(),
+      assets: [
         { tokenId: gameNftId, amount: 1n },
-        { tokenId: stableTokenId, amount: finalWinnerPrize }
-      ]),
-      new OutputBuilder(SAFE_MIN_BOX_VALUE, resolver.address).addTokens([
-        { tokenId: stableTokenId, amount: finalResolverPayout }
-      ]),
-      new OutputBuilder(SAFE_MIN_BOX_VALUE, developer.address).addTokens([
-        { tokenId: stableTokenId, amount: finalDevPayout }
-      ]),
-    ])
-    .payFee(RECOMMENDED_MIN_FEE_VALUE)
-    .sendChangeTo(winner.address)
-    .build();
+        { tokenId: stableTokenId, amount: creatorStake },
+      ],
+      additionalRegisters: {
+        R4: SInt(1).toHex(),
+        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
+        R6: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment)).toHex(),
+        R7: SColl(SColl(SByte), []).toHex(),
+        R8: SColl(SLong, [
+          BigInt(deadline),
+          creatorStake,
+          participationFee,
+          0n,        // perJudgeComissionPercentage
+          resolverCommissionPercent,        // creatorComissionPercentage
+          BigInt(resolutionDeadline)
+        ]).toHex(),
+        R9: SColl(SColl(SByte), [
+          stringToBytes('utf8', gameDetailsJson),                   // detalles del juego
+          hexToBytes(stableTokenId)!,                                // token id (stable-coin)
+          prependHexPrefix(resolver.key.publicKey, "0008cd")        // script del resolvedor
+        ]).toHex()
+      }
+    });
 
-  // --- Assert ---
-  expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
+    mockChain.jumpTo(resolutionDeadline);
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos.toArray();
 
-  const getTokenAmount = (party, tokenId) => party.balance.tokens.find(t => t.tokenId === tokenId)?.amount || 0n;
+    // --- Act ---
+    const prizePool = participationBoxes.reduce((acc, p) => acc + (p.assets.find(a => a.tokenId === stableTokenId)?.amount || 0n), 0n);
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
-  expect(getTokenAmount(winner, stableTokenId)).to.equal(finalWinnerPrize);
-  expect(getTokenAmount(resolver, stableTokenId)).to.equal(finalResolverPayout);
-  expect(getTokenAmount(developer, stableTokenId)).to.equal(finalDevPayout);
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
 
-  expect(getTokenAmount(winner, gameNftId)).to.equal(1n);
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes, ...winner.utxos.toArray()])
+      .to([
+        new OutputBuilder(SAFE_MIN_BOX_VALUE, winner.address).addTokens([
+          { tokenId: gameNftId, amount: 1n },
+          { tokenId: stableTokenId, amount: finalWinnerPrize }
+        ]),
+        new OutputBuilder(SAFE_MIN_BOX_VALUE, resolver.address).addTokens([
+          { tokenId: stableTokenId, amount: finalResolverPayout }
+        ]),
+        new OutputBuilder(SAFE_MIN_BOX_VALUE, developer.address).addTokens([
+          { tokenId: stableTokenId, amount: finalDevPayout }
+        ]),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
 
-  expect(gameResolutionContract.utxos.length).to.equal(0);
-  expect(participationContract.utxos.length).to.equal(0);
-});
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
+
+    const getTokenAmount = (party, tokenId) => party.balance.tokens.find(t => t.tokenId === tokenId)?.amount || 0n;
+
+    expect(getTokenAmount(winner, stableTokenId)).to.equal(finalWinnerPrize);
+    expect(getTokenAmount(resolver, stableTokenId)).to.equal(finalResolverPayout);
+    expect(getTokenAmount(developer, stableTokenId)).to.equal(finalDevPayout);
+
+    expect(getTokenAmount(winner, gameNftId)).to.equal(1n);
+
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+  });
 
 });
