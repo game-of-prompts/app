@@ -338,6 +338,20 @@
         }
       }
 
+      val min_value = if (participationTokenId == Coll[Byte]()) {
+        MIN_ERG_BOX
+      } else {
+        0L
+      }
+
+      val box_value = { (box: Box) =>
+        if (participationTokenId == Coll[Byte]()) {
+          box.value
+        } else {
+          box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+        }
+      }
+
       // --- Valores y cálculos comunes para AMBOS CASOS (con y sin ganador) ---
       val participations = INPUTS.filter({ 
               (box: Box) => 
@@ -346,8 +360,8 @@
             })
 
       val prizePool = {
-        val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + pBox.value })
-        val contractPrize = SELF.value - creatorStake
+        val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + box_value(pBox) })
+        val contractPrize = box_value(SELF) - creatorStake
         participationsAmount + contractPrize
       }
       val judge_amount = participatingJudges.size
@@ -358,17 +372,17 @@
       val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
 
       // 1. Calcular payout final para el DEV (manejando polvo)
-      val devForfeits = if (devCommission < MIN_ERG_BOX && devCommission > 0L) { devCommission } else { 0L }
+      val devForfeits = if (devCommission < min_value && devCommission > 0L) { devCommission } else { 0L }
       val finalDevPayout = devCommission - devForfeits
       
       // 2. Calcular payout final para los JUECES (manejando polvo)
       val totalJudgeComission = perJudgeComission * judge_amount
-      val judgesForfeits = if (perJudgeComission < MIN_ERG_BOX && perJudgeComission > 0L) { totalJudgeComission } else { 0L } // Si el pago por juez es polvo, se pierde TODA la comisión.
+      val judgesForfeits = if (perJudgeComission < min_value && perJudgeComission > 0L) { totalJudgeComission } else { 0L } // Si el pago por juez es polvo, se pierde TODA la comisión.
       val finalJudgesPayout = totalJudgeComission - judgesForfeits
       
       // 3. Verificación de que el DEV recibe su pago
       val devGetsPaid = if (finalDevPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => b.value >= finalDevPayout && b.propositionBytes == DEV_SCRIPT})
+          OUTPUTS.exists({(b:Box) => box_value(b) >= finalDevPayout && b.propositionBytes == DEV_SCRIPT})
       } else { true }
       
       // 4. Verificación de que los JUECES reciben su pago
@@ -388,7 +402,7 @@
               (judgeAddress: Coll[Byte]) => 
                 OUTPUTS.exists({
                   (b:Box) => b.propositionBytes == judgeAddress &&
-                             b.value >= perJudgeComission
+                             box_value(b) >= perJudgeComission
                   })
             })
 
@@ -419,7 +433,7 @@
             })
 
             val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
-                winnerBox.value >= participationFee
+                box_value(winnerBox) >= participationFee
               } else {
                 winnerBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
                     pair._1 == participationTokenId &&
@@ -454,7 +468,7 @@
 
             // Ajustar las verificaciones de pago para usar los valores ajustados
             val adjustedDevGetsPaid = if (adjustedDevPayout > 0L) {
-                OUTPUTS.exists({(b:Box) => b.value >= adjustedDevPayout && b.propositionBytes == DEV_SCRIPT})
+                OUTPUTS.exists({(b:Box) => box_value(b) >= adjustedDevPayout && b.propositionBytes == DEV_SCRIPT})
             } else { true }
 
             val adjustedJudgesGetsPaid = if (adjustedJudgesPayout > 0L) {
@@ -470,22 +484,22 @@
                     (judgeAddress: Coll[Byte]) => 
                       OUTPUTS.exists({
                         (b:Box) => b.propositionBytes == judgeAddress &&
-                                   b.value >= adjustedPerJudge
+                                   box_value(b) >= adjustedPerJudge
                         })
                   })
             } else { true }
 
             // Verificación de la salida del ganador
             val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
-                b.value >= adjustedWinnerPrize &&
+                box_value(b) >= adjustedWinnerPrize &&
                 b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
                 b.tokens.size == 1 &&
                 b.tokens(0)._1 == gameNftId
             })
 
-            val finalResolverPayout = creatorStake + adjustedResolverCommission  // We know creator_stake > MIN_ERG_BOX.
+            val finalResolverPayout = creatorStake + adjustedResolverCommission  // In case of erg, we know creator_stake > MIN_ERG_BOX.
             val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
-                b.value >= finalResolverPayout && 
+                box_value(b) >= finalResolverPayout && 
                 b.propositionBytes == resolverPK
             })
             
@@ -508,7 +522,7 @@
         val finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout
 
         val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
-            b.value >= finalResolverPayout &&
+            box_value(b) >= finalResolverPayout &&
             b.propositionBytes == resolverPK &&
             b.tokens.size == 1 && // El resolutor recibe el NFT
             b.tokens(0)._1 == gameNftId
