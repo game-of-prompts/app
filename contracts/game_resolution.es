@@ -493,7 +493,7 @@
             val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
                 box_value(b) >= adjustedWinnerPrize &&
                 b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
-                b.tokens.size == 1 &&
+                b.tokens.size > 0 &&
                 b.tokens(0)._1 == gameNftId
             })
 
