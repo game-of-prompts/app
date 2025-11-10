@@ -949,47 +949,47 @@ describe("Game Finalization (end_game)", () => {
   });
 
   it("Should fail if the creator tries to sign when no winner is declared", () => {
-    // --- Arrange ---
-    // Reconfigurar para un escenario sin ganador
-    gameResolutionContract.utxos.clear();
-    const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
-    gameResolutionContract.addUTxOs({
-    creationHeight: mockChain.height,
-    value: creatorStake,
-    ergoTree: gameResolutionErgoTree.toHex(),
-    assets: [{ tokenId: gameNftId, amount: 1n }],
-    additionalRegisters: {
-        R4: SInt(1).toHex(),
+      // --- Arrange ---
+      // Reconfigurar para un escenario sin ganador
+      gameResolutionContract.utxos.clear();
+      const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
+      gameResolutionContract.addUTxOs({
+        creationHeight: mockChain.height,
+        value: creatorStake,
+        ergoTree: gameResolutionErgoTree.toHex(),
+        assets: [{ tokenId: gameNftId, amount: 1n }],
+        additionalRegisters: {
+            R4: SInt(1).toHex(),
 
-        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
+            R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
-        // (revealedSecretS, winnerCandidateCommitment) - sin ganador
-        R6: SPair(
-            SColl(SByte, "00".repeat(32)),
-            SColl(SByte, [])
-        ).toHex(),
+            // (revealedSecretS, winnerCandidateCommitment) - sin ganador
+            R6: SPair(
+                SColl(SByte, "00".repeat(32)),
+                SColl(SByte, [])
+            ).toHex(),
 
-        // participatingJudges (vacío)
-        R7: SColl(SColl(SByte), []).toHex(),
+            // participatingJudges (vacío)
+            R7: SColl(SColl(SByte), []).toHex(),
 
-        // numericalParameters
-        R8: SColl(SLong, [
-            BigInt(deadline),        // deadline
-            creatorStake,            // creator stake
-            participationFee,        // participation fee
-            0n,                      // perJudgeComissionPercentage
-            resolverCommissionPercent,                      // creatorComissionPercentage
-            BigInt(resolutionDeadline) // resolution deadline
-        ]).toHex(),
+            // numericalParameters
+            R8: SColl(SLong, [
+                BigInt(deadline),        // deadline
+                creatorStake,            // creator stake
+                participationFee,        // participation fee
+                0n,                      // perJudgeComissionPercentage
+                resolverCommissionPercent,                      // creatorComissionPercentage
+                BigInt(resolutionDeadline) // resolution deadline
+            ]).toHex(),
 
-        // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
-        R9: SColl(SColl(SByte), [
-            stringToBytes('utf8', gameDetailsJson),             // detalles del juego
-            "",
-            prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
-        ]).toHex()
-    },
-});
+            // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
+            R9: SColl(SColl(SByte), [
+                stringToBytes('utf8', gameDetailsJson),             // detalles del juego
+                "",
+                prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
+            ]).toHex()
+        },
+    });
 
     mockChain.jumpTo(resolutionDeadline);
 
