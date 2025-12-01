@@ -43,6 +43,7 @@
 		"@sveltejs/adapter-static": "^2.0.3",
 		"date-fns": "^4.1.0",
 		"mode-watcher": "^0.5.0",
-		"update": "^0.7.4"
+		"update": "^0.7.4",
+		"wallet-svelte-component": "github:ergo-basics/wallet-svelte-component"
 	}
 }

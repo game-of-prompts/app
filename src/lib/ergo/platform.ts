@@ -1,9 +1,9 @@
 // src/ergo/platform.ts
-import { 
-    type GameActive, 
-    type GameResolution, 
-    type GameCancellation, 
-    type ValidParticipation, 
+import {
+    type GameActive,
+    type GameResolution,
+    type GameCancellation,
+    type ValidParticipation,
     type GameFinalized
 } from '../common/game';
 import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames, fetchFinalizedGames } from './fetch';
@@ -45,26 +45,11 @@ export class ErgoPlatform implements Platform {
     id = "ergo";
     main_token = "ERG";
     icon = "";
-    time_per_block = 2*60*1000;  // every 2 minutes
+    time_per_block = 2 * 60 * 1000;  // every 2 minutes
     last_version = "v1_0";
 
     async connect(): Promise<void> {
-        if (typeof ergoConnector !== 'undefined') {
-            const nautilus = ergoConnector.nautilus;
-            if (nautilus) {
-                if (await nautilus.connect()) {
-                    console.log('¡Conectado!');
-                    address.set(await ergo.get_change_address());
-                    network.set((network_id == "mainnet") ? "ergo-mainnet" : "ergo-testnet");
-                    await this.get_balance();
-                    connected.set(true);
-                } else {
-                    alert('No conectado');
-                }
-            } else {
-                alert('La billetera Nautilus no está activa');
-            }
-        }
+        // Handled by wallet-svelte-component
     }
 
     async get_current_height(): Promise<number> {
@@ -84,29 +69,13 @@ export class ErgoPlatform implements Platform {
     }
 
     async get_balance(id?: string): Promise<Map<string, number>> {
-        const balanceMap = new Map<string, number>();
-        const addr = await ergo.get_change_address();
-        if (!addr) throw new Error("Se requiere una dirección para obtener el saldo.");
-
-        try {
-            const response = await fetch(explorer_uri + `/api/v1/addresses/${addr}/balance/confirmed`);
-            if (!response.ok) throw new Error(`La solicitud a la API falló: ${response.status}`);
-            const data = await response.json();
-            balanceMap.set("ERG", data.nanoErgs);
-            balance.set(data.nanoErgs);
-            data.tokens.forEach((token: { tokenId: string; amount: number }) => {
-                balanceMap.set(token.tokenId, token.amount);
-            });
-        } catch (error) {
-            console.error(`No se pudo obtener el saldo para la dirección ${addr}:`, error);
-            throw new Error("No se puede obtener el saldo.");
-        }
-        return balanceMap;
+        // Handled by wallet-svelte-component
+        return new Map();
     }
 
     public async createGoPGame(params: CreateGoPGamePlatformParams): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
-        
+
         try {
             return await create_game(
                 params.gameServiceId,
@@ -129,8 +98,8 @@ export class ErgoPlatform implements Platform {
     async submitScoreToGopGame(
         game: GameActive, // Tipo específico: solo se puede enviar puntuación a un juego activo.
         scoreList: bigint[],
-        commitmentC_hex: string, 
-        solverId_string: string, 
+        commitmentC_hex: string,
+        solverId_string: string,
         hashLogs_hex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -152,7 +121,7 @@ export class ErgoPlatform implements Platform {
         acceptedJudgeNominations: string[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
-        
+
         return await resolve_game(game, participations, secretS_hex, acceptedJudgeNominations);
     }
 
@@ -162,7 +131,7 @@ export class ErgoPlatform implements Platform {
         claimerAddressString: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
-        
+
         return await cancel_game(game, secretS_hex, claimerAddressString);
     }
 
@@ -199,8 +168,7 @@ export class ErgoPlatform implements Platform {
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
 
-        if (judgeVoteDataInputs.length > (game.judges.length/2))
-        {
+        if (judgeVoteDataInputs.length > (game.judges.length / 2)) {
             return await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
         }
         else {
@@ -215,7 +183,7 @@ export class ErgoPlatform implements Platform {
     async includeOmittedParticipations(
         game: GameResolution,
         omittedParticipation: ValidParticipation,
-        currentResolved: ValidParticipation|null,
+        currentResolved: ValidParticipation | null,
         newResolverPkHex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -301,7 +269,7 @@ export class ErgoPlatform implements Platform {
         if (!ergo) throw new Error("Wallet not connected.");
         if (game.status !== 'Active') {
             throw new Error("The game is not in an active state.");
-        }        
+        }
         try {
             return await contribute_to_ceremony(game);
         } catch (error) {
@@ -309,7 +277,7 @@ export class ErgoPlatform implements Platform {
             if (error instanceof Error) throw new Error(`Failed to contribute to ceremony: ${error.message}`);
             throw new Error("An unknown error occurred while contributing to the ceremony.");
         }
-    
+
     }
 
 }
