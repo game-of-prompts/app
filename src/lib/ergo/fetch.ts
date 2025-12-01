@@ -357,12 +357,13 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
 
-        // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, originalCreatorScript_Hex, resolverScript_Hex
+        // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
         if (!r9Value || r9Value.length !== 2) throw new Error("R9 is not a valid tuple (expected 2 items).");
 
         const gameDetailsHex = r9Value[0];
-        const resolverScript_Hex = parseCollByteToHex(r9Value[1]);
+        const participationTokenId = parseCollByteToHex(r9Value[1]);
+        const resolverScript_Hex = parseCollByteToHex(r9Value[2]);
 
         if (!gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
 
@@ -383,6 +384,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             deadlineBlock: Number(deadlineBlock),
             creatorStakeNanoErg,
             participationFeeNanoErg,
+            participationTokenId: participationTokenId ?? "",
             resolverPK_Hex,
             resolverScript_Hex,
             content,
@@ -493,8 +495,15 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         // R8: Original deadline (Long).
         const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
 
-        // R9: ReadOnlyInfo (Coll[Byte]). JSON with immutable data.
-        const content = parseGameContent(hexToUtf8(parseCollByteToHex(box.additionalRegisters.R9?.renderedValue) || ""), box.boxId, box.assets[0]);
+        // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
+        const r9Value = JSON.parse(box.additionalRegisters.R9?.renderedValue || "[]");
+        if (!Array.isArray(r9Value) || r9Value.length < 2) {
+            throw new Error("R9 is not a valid array with at least 2 elements (gameDetailsJSON, participationTokenId).");
+        }
+        const gameDetailsHex = parseCollByteToHex(r9Value[0]);
+        const participationTokenId = parseCollByteToHex(r9Value[1]);
+        const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
+        const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
         // Validate that essential registers were parsed correctly
         if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
@@ -514,6 +523,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             currentStakeNanoErg,
             content,
             participationFeeNanoErg,
+            participationTokenId: participationTokenId ?? "",
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
