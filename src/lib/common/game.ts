@@ -15,7 +15,7 @@ export const GameState = {
     Active: 'Active',                   // Corresponde a game_active.es
     Resolution: 'Resolution',           // Corresponde a game_resolution.es
     Cancelled_Draining: 'Cancelled_Draining', // Corresponde a game_cancellation.es
-    
+
     // Estados derivados (no representan un script, sino el final del ciclo de vida)
     Finalized: 'Finalized',             // Juego terminado y pagado (obtenido mediante token NFT)
 } as const;
@@ -69,6 +69,7 @@ export interface GameActive {
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
+    participationTokenId: string;
     perJudgeComissionPercentage: bigint;
     content: GameContent;
     value: bigint;
@@ -90,13 +91,14 @@ export interface GameResolution {
     resolutionDeadline: number;
     revealedS_Hex: string;
     seed: string;
-    winnerCandidateCommitment: string|null;
+    winnerCandidateCommitment: string | null;
     judges: string[];
     deadlineBlock: number;
     creatorStakeNanoErg: bigint;
     participationFeeNanoErg: bigint;
+    participationTokenId: string;
     perJudgeComissionPercentage: bigint;
-    resolverPK_Hex: string|null;
+    resolverPK_Hex: string | null;
     resolverScript_Hex: string
     resolverCommission: number;
     content: GameContent;
@@ -121,6 +123,7 @@ export interface GameCancellation {
     currentStakeNanoErg: bigint;
     content: GameContent;
     participationFeeNanoErg: bigint;
+    participationTokenId: string;
     value: bigint;
     deadlineBlock: number;
     reputationOpinions: ReputationOpinion[];
@@ -142,6 +145,7 @@ export interface GameFinalized {
     content: GameContent;
     value: bigint;
     participationFeeNanoErg: bigint;
+    participationTokenId: string;
     reputationOpinions: ReputationOpinion[];
     judges: string[];
     deadlineBlock: number;
@@ -162,7 +166,7 @@ export interface ParticipationBase {
     creationHeight: number;
     value: bigint;
     gameNftId: string;
-    playerPK_Hex: string|null;
+    playerPK_Hex: string | null;
     playerScript_Hex: string,
     commitmentC_Hex: string;
     solverId_RawBytesHex: string;
@@ -181,14 +185,14 @@ export interface ValidParticipation extends ParticipationBase {
     spent: false;
 }
 
-export type MalformedParticipationReason = "expired"|"wrongcommitment"|"maxscores"|"unknown";
+export type MalformedParticipationReason = "expired" | "wrongcommitment" | "maxscores" | "unknown";
 export interface MalformedParticipation extends ParticipationBase {
     status: 'Malformed';
     spent: false;
     reason: MalformedParticipationReason;
 }
 
-export type ParticipationConsumedReason = "cancelled"|"invalidated"|"bywinner"|"byparticipant"|"abandoned"|"unknown";
+export type ParticipationConsumedReason = "cancelled" | "invalidated" | "bywinner" | "byparticipant" | "abandoned" | "unknown";
 export interface ParticipationConsumed extends ParticipationBase {
     status: 'Consumed';
     spent: true;
@@ -250,7 +254,7 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
  */
 export function parseGameContent(
     rawJsonDetails: string | undefined | null,
-    gameBoxId: string, 
+    gameBoxId: string,
     nft?: TokenEIP4
 ): GameContent {
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
@@ -278,63 +282,63 @@ export function parseGameContent(
             console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);
         }
     }
-    
+
     return content;
 }
 
 export function resolve_participation_commitment(p: AnyParticipation, secretHex: string, seed: string): bigint | null {
-  // Early validation
-  if (!p.box?.additionalRegisters || !secretHex || !seed) return null;
-  const R = p.box.additionalRegisters;
+    // Early validation
+    if (!p.box?.additionalRegisters || !secretHex || !seed) return null;
+    const R = p.box.additionalRegisters;
 
-  // Parse registers safely
-  const ergoTree = hexToBytes(R.R4?.renderedValue || "");
-  const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
-  const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
-  const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
-  const scoreListRaw = R.R9?.renderedValue;
-  const seedBytes = hexToBytes(seed)!;
+    // Parse registers safely
+    const ergoTree = hexToBytes(R.R4?.renderedValue || "");
+    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+    const scoreListRaw = R.R9?.renderedValue;
+    const seedBytes = hexToBytes(seed)!;
 
-  // Check for required fields
-  if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) return null;
+    // Check for required fields
+    if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) return null;
 
-  // Try parsing the score list (R9)
-  let scoreList: bigint[] | null = null;
-  if (typeof scoreListRaw === "string") {
-    try {
-      scoreList = parseLongColl(JSON.parse(scoreListRaw));
-    } catch {
-      return null;
+    // Try parsing the score list (R9)
+    let scoreList: bigint[] | null = null;
+    if (typeof scoreListRaw === "string") {
+        try {
+            scoreList = parseLongColl(JSON.parse(scoreListRaw));
+        } catch {
+            return null;
+        }
+    } else if (Array.isArray(scoreListRaw)) {
+        scoreList = parseLongColl(scoreListRaw);
     }
-  } else if (Array.isArray(scoreListRaw)) {
-    scoreList = parseLongColl(scoreListRaw);
-  }
-  if (!scoreList?.length) return null;
+    if (!scoreList?.length) return null;
 
-  // Convert hex values to bytes
-  const solverIdBytes = hexToBytes(solverIdHex);
-  const hashLogsBytes = hexToBytes(hashLogsHex);
-  const secretBytes = hexToBytes(secretHex);
+    // Convert hex values to bytes
+    const solverIdBytes = hexToBytes(solverIdHex);
+    const hashLogsBytes = hexToBytes(hashLogsHex);
+    const secretBytes = hexToBytes(secretHex);
 
-  if (!solverIdBytes || !hashLogsBytes || !secretBytes) return null;
+    if (!solverIdBytes || !hashLogsBytes || !secretBytes) return null;
 
-  // Look for the matching commitment
-  for (const score of scoreList) {
-    const scoreBytes = bigintToLongByteArray(score);
-    const dataToHash = new Uint8Array([
-      ...solverIdBytes,
-      ...seedBytes,
-      ...scoreBytes,
-      ...hashLogsBytes,
-      ...ergoTree,
-      ...secretBytes,
-    ]);
-    const computedCommitment = uint8ArrayToHex(fleetBlake2b256(dataToHash));
+    // Look for the matching commitment
+    for (const score of scoreList) {
+        const scoreBytes = bigintToLongByteArray(score);
+        const dataToHash = new Uint8Array([
+            ...solverIdBytes,
+            ...seedBytes,
+            ...scoreBytes,
+            ...hashLogsBytes,
+            ...ergoTree,
+            ...secretBytes,
+        ]);
+        const computedCommitment = uint8ArrayToHex(fleetBlake2b256(dataToHash));
 
-    if (computedCommitment === commitmentHex) {
-      return score;
+        if (computedCommitment === commitmentHex) {
+            return score;
+        }
     }
-  }
 
-  return null;
+    return null;
 }

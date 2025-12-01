@@ -205,8 +205,13 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
         if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
 
-        // R9: gameDetailsJsonHex
-        const gameDetailsHex = parseCollByteToHex(box.additionalRegisters.R9?.renderedValue);
+        // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
+        const r9Value = JSON.parse(box.additionalRegisters.R9?.renderedValue || "[]");
+        if (!Array.isArray(r9Value) || r9Value.length < 2) {
+            throw new Error("R9 is not a valid array with at least 2 elements (gameDetailsJSON, participationTokenId).");
+        }
+        const gameDetailsHex = parseCollByteToHex(r9Value[0]);
+        const participationTokenId = parseCollByteToHex(r9Value[1]);
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
@@ -222,6 +227,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
             deadlineBlock: Number(deadlineBlock), // From R8
             creatorStakeNanoErg, // From R8
             participationFeeNanoErg, // From R8
+            participationTokenId: participationTokenId || "", // From R9
             content, // From R9
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
