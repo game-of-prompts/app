@@ -56,7 +56,8 @@ export interface RegisterSizes {
 
 export function estimateRegisterSizes(
     judgesCount: number,
-    gameDetails: GameDetails
+    gameDetails: GameDetails,
+    participationTokenId: string = ""
 ): RegisterSizes {
     const PER_REGISTER_OVERHEAD = 1; // Type byte/overhead for the register itself
 
@@ -83,12 +84,23 @@ export function estimateRegisterSizes(
     const dummyLongs = Array(5).fill(BigInt(0));
     const r8Hex = SColl(SLong, dummyLongs).toHex();
 
-    // R9: SColl(SByte, JSON)
-    // We calculate this based on the actual content
+    // R9: SColl(SColl(SByte), [JSON, TokenID])
     const jsonString = JSON.stringify(gameDetails);
-    // We need to wrap it in SColl(SByte, ...) to get the full hex including types
     const jsonBytes = new TextEncoder().encode(jsonString);
-    const r9Hex = SColl(SByte, jsonBytes).toHex();
+
+    let tokenIdBytes = new Uint8Array(0);
+    if (participationTokenId) {
+        // If it's a token ID, it should be 32 bytes (hex string)
+        // We assume valid hex input or empty
+        const stripped = participationTokenId.startsWith('0x') ? participationTokenId.slice(2) : participationTokenId;
+        if (stripped.length > 0) {
+            // We just need the length for size estimation, so we can mock it if needed, 
+            // but let's try to be accurate if we can, or just use dummy 32 bytes if present
+            tokenIdBytes = new Uint8Array(32).fill(0);
+        }
+    }
+
+    const r9Hex = SColl(SColl(SByte), [jsonBytes, tokenIdBytes]).toHex();
 
     return {
         r4Bytes: hexByteLength(r4Hex) + PER_REGISTER_OVERHEAD,
@@ -110,7 +122,8 @@ export const MAX_BOX_SIZE = 4096;
  */
 export function estimateTotalBoxSize(
     gameDetails: GameDetails,
-    judgesCount: number
+    judgesCount: number,
+    participationTokenId: string = ""
 ): number {
     const BASE_BOX_OVERHEAD = 60; // Variable, but ~60 is a safe lower bound for non-complex boxes
     const PER_TOKEN_BYTES = 0; // We are minting 1 token, but it's the box's own token (NFT/singleton), usually handled in base size or slight overhead.
@@ -133,7 +146,7 @@ export function estimateTotalBoxSize(
         ergoTreeSize = 400; // Estimate for GoP contract
     }
 
-    const registerSizes = estimateRegisterSizes(judgesCount, gameDetails);
+    const registerSizes = estimateRegisterSizes(judgesCount, gameDetails, participationTokenId);
 
     const totalRegistersBytes =
         registerSizes.r4Bytes +
@@ -168,10 +181,11 @@ export interface ValidationResult {
  */
 export function validateGameContent(
     gameDetails: GameDetails,
-    judgesCount: number
+    judgesCount: number,
+    participationTokenId: string = ""
 ): ValidationResult {
     const currentBytes = calculateGameDetailsBytes(gameDetails);
-    const estimatedBoxSize = estimateTotalBoxSize(gameDetails, judgesCount);
+    const estimatedBoxSize = estimateTotalBoxSize(gameDetails, judgesCount, participationTokenId);
     const remainingBytes = Math.max(0, MAX_BOX_SIZE - estimatedBoxSize);
 
     if (estimatedBoxSize > MAX_BOX_SIZE) {
@@ -196,7 +210,7 @@ export function validateGameContent(
 /**
  * Calculate the percentage of box size used
  */
-export function getUsagePercentage(gameDetails: GameDetails, judgesCount: number): number {
-    const estimatedBoxSize = estimateTotalBoxSize(gameDetails, judgesCount);
+export function getUsagePercentage(gameDetails: GameDetails, judgesCount: number, participationTokenId: string = ""): number {
+    const estimatedBoxSize = estimateTotalBoxSize(gameDetails, judgesCount, participationTokenId);
     return Math.round((estimatedBoxSize / MAX_BOX_SIZE) * 100);
 }

@@ -40,16 +40,58 @@ import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
 
+export interface TokenEIP4 {
+    name: string,
+    description: string,
+    decimals: number,
+    emissionAmount: number | null
+}
+
+export async function fetch_token_details(id: string): Promise<TokenEIP4> {
+    console.log("Fetching token details for ", id);
+    const url = get(explorer_uri) + '/api/v1/tokens/' + id;
+    const response = await fetch(url, {
+        method: 'GET',
+    });
+
+    try {
+        if (response.ok) {
+            let json_data = await response.json();
+            if (json_data['type'] == 'EIP-004') {
+                return {
+                    "name": json_data['name'],
+                    "description": json_data['description'],
+                    "decimals": json_data['decimals'],
+                    "emissionAmount": json_data['emissionAmount']
+                }
+            }
+            else if (json_data['type'] == null) {
+                return {
+                    "name": id.slice(0, 6),
+                    "description": "",
+                    "decimals": 0,
+                    "emissionAmount": json_data['emissionAmount']
+                }
+            }
+        }
+    } catch { }
+    return {
+        'name': 'token',
+        'description': "",
+        'decimals': 0,
+        'emissionAmount': null
+    };
+}
+
+// =================================================================
+// === REPUTATION PROOF UTILITIES
+// =================================================================
 
 function calculate_reputation(game: AnyGame): number {
     let reputation = 0
     reputation += game.judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
     return reputation;
 }
-
-// =================================================================
-// === REPUTATION PROOF UTILITIES
-// =================================================================
 
 /**
  * Fetches reputation opinions for a specific target (game or participation)

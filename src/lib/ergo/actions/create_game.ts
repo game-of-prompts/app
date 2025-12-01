@@ -7,21 +7,21 @@ import {
     type InputBox
 } from '@fleet-sdk/core';
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
-import { hexToBytes } from '$lib/ergo/utils'; 
-import { getGopGameActiveErgoTreeHex } from '../contract'; 
+import { hexToBytes } from '$lib/ergo/utils';
+import { getGopGameActiveErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 import { DefaultGameConstants } from '$lib/common/constants';
 
 function randomSeed(): string {
-  // 64 bits = 16 hex characters
-  let hex = '';
-  while (hex.length < 16) {
-    // genera hasta 8 hex chars por vez (~32 bits)
-    hex += Math.floor(Math.random() * 0xffffffff)
-      .toString(16)
-      .padStart(8, '0');
-  }
-  return hex.slice(0, 16);
+    // 64 bits = 16 hex characters
+    let hex = '';
+    while (hex.length < 16) {
+        // genera hasta 8 hex chars por vez (~32 bits)
+        hex += Math.floor(Math.random() * 0xffffffff)
+            .toString(16)
+            .padStart(8, '0');
+    }
+    return hex.slice(0, 16);
 }
 
 /**
@@ -38,7 +38,7 @@ function randomSeed(): string {
  * @returns The ID of the submitted transaction.
  */
 export async function create_game(
-    gameServiceId: string, 
+    gameServiceId: string,
     hashedSecret: string,
     deadlineBlock: number,
     creatorStakeNanoErg: bigint,
@@ -46,7 +46,8 @@ export async function create_game(
     commissionPercentage: number,
     judges: string[],
     gameDetailsJson: string,
-    perJudgeComissionPercentage: number
+    perJudgeComissionPercentage: number,
+    participationTokenId: string = ""
 ): Promise<string | null> {
 
     const seedHex = randomSeed();
@@ -87,7 +88,7 @@ export async function create_game(
     const seedBytes = hexToBytes(seedHex);
     if (!seedBytes) throw new Error("Failed to convert the seedHex to bytes.");
 
-    const ceremonyDeadlineBlock = (await ergo.get_current_height()) +  DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
+    const ceremonyDeadlineBlock = (await ergo.get_current_height()) + DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
 
     const gameDetailsBytes = stringToBytes("utf8", gameDetailsJson);
 
@@ -98,42 +99,45 @@ export async function create_game(
         })
         .filter((item): item is number[] => item !== null);
 
+    const participationTokenIdBytes = participationTokenId ? hexToBytes(participationTokenId) : new Uint8Array(0);
+    if (participationTokenId && !participationTokenIdBytes) throw new Error("Failed to convert participationTokenId to bytes.");
+
     const gameBoxOutput = new OutputBuilder(
         creatorStakeNanoErg,
         activeGameErgoTree
     )
-    .mintToken({ 
-        amount: 1n,
-        decimals: 0
-    })
-    .setAdditionalRegisters({
-        // R4: Game state (0: Active)
-        R4: SInt(0).toHex(),
-        
-        // R5: (Seed, Ceremony deadline)
-        R5: SPair(
-            SColl(SByte, seedBytes), 
-            SLong(BigInt(ceremonyDeadlineBlock))
-        ).toHex(),
+        .mintToken({
+            amount: 1n,
+            decimals: 0
+        })
+        .setAdditionalRegisters({
+            // R4: Game state (0: Active)
+            R4: SInt(0).toHex(),
 
-        // R6: Hash of the secret 'S'
-        R6: SColl(SByte, hashedSecretBytes).toHex(),
+            // R5: (Seed, Ceremony deadline)
+            R5: SPair(
+                SColl(SByte, seedBytes),
+                SLong(BigInt(ceremonyDeadlineBlock))
+            ).toHex(),
 
-        // R7: Invited judges
-        R7: SColl(SColl(SByte), judgesColl).toHex(),
+            // R6: Hash of the secret 'S'
+            R6: SColl(SByte, hashedSecretBytes).toHex(),
 
-        // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
-        R8: SColl(SLong, [
-            BigInt(deadlineBlock), 
-            creatorStakeNanoErg, 
-            participationFeeNanoErg, 
-            BigInt(perJudgeComissionPercentage), 
-            BigInt(commissionPercentage)
-        ]).toHex(),
+            // R7: Invited judges
+            R7: SColl(SColl(SByte), judgesColl).toHex(),
 
-        // R9: JSON
-        R9: SColl(SByte, gameDetailsBytes).toHex()
-    });
+            // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+            R8: SColl(SLong, [
+                BigInt(deadlineBlock),
+                creatorStakeNanoErg,
+                participationFeeNanoErg,
+                BigInt(perJudgeComissionPercentage),
+                BigInt(commissionPercentage)
+            ]).toHex(),
+
+            // R9: [JSON, ParticipationTokenID]
+            R9: SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex()
+        });
 
     // --- 3. Transaction Construction and Submission ---
     const creationHeight = await ergo.get_current_height();
@@ -143,7 +147,7 @@ export async function create_game(
         .sendChangeTo(creatorAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
-    
+
     const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     const transactionId = await ergo.submit_tx(signedTransaction);
 

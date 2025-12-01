@@ -24,6 +24,7 @@
         ChevronUp,
         X,
     } from "lucide-svelte";
+    import { fetch_token_details } from "$lib/ergo/fetch";
 
     let platform = new ErgoPlatform();
 
@@ -47,6 +48,31 @@
     let transactionId: string | null = null;
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
+
+    let participationTokenId: string = ""; // "" para ERG
+    let participationTokenDecimals: number = 9;
+    let participationTokenName: string = "ERG";
+
+    let selectedTokenOption: string = "ERG";
+    let customTokenId: string = ""; 
+    let isCustomToken: boolean = false;
+    
+    const DEFAULT_TOKENS = [
+        {
+            tokenId:
+                "03faf2cb329f2e90d6d23b58d91bbb6c046aa143261cc21f52fbe2824bfcbf04",
+            title: "SigUSD",
+            balance: 0,
+            decimals: 2,
+        },
+        {
+            tokenId:
+                "886b7721bef42f60c6317d37d8752da8aca01898cae7dae61808c4a14225edc8",
+            title: "GluonW GAU",
+            balance: 0,
+            decimals: 9,
+        },
+    ];
 
     // --- Box Size Validation ---
     $: gameDetailsObject = {
@@ -168,6 +194,56 @@
         return BigInt(Math.round(ergValue * 1000000000));
     }
 
+    function toTokenSmallestUnit(value: number | undefined): BigInt {
+        if (value === undefined || value === null || isNaN(value))
+            return BigInt(0);
+        const multiplier = 10 ** participationTokenDecimals;
+        return BigInt(Math.round(value * multiplier));
+    }
+
+    // --- Token Reactive Logic ---
+    let customTokenDebounceTimer: any;
+    $: {
+        if (customTokenDebounceTimer) clearTimeout(customTokenDebounceTimer);
+
+        isCustomToken = selectedTokenOption === "custom";
+
+        if (isCustomToken) {
+            if (customTokenId && customTokenId.length === 64) {
+                participationTokenId = customTokenId;
+                participationTokenName = "Loading...";
+                
+                customTokenDebounceTimer = setTimeout(async () => {
+                    try {
+                        const { name, decimals } = await fetch_token_details(customTokenId);
+                        participationTokenName = name;
+                        participationTokenDecimals = decimals;
+                    } catch (e) {
+                        participationTokenName = "Unknown Token";
+                        participationTokenDecimals = 0;
+                    }
+                }, 500);
+            } else {
+                participationTokenId = "";
+                participationTokenName = "Enter 64-char ID";
+                participationTokenDecimals = 0;
+            }
+        } else if (selectedTokenOption && selectedTokenOption !== "ERG") {
+            const token = DEFAULT_TOKENS.find(
+                (t) => t.tokenId === selectedTokenOption,
+            );
+            
+            participationTokenId = token?.tokenId || "";
+            participationTokenDecimals = token?.decimals || 0;
+            participationTokenName = token?.title || "Unknown";
+        } else {
+            selectedTokenOption = "ERG"; 
+            participationTokenId = "";
+            participationTokenDecimals = 9;
+            participationTokenName = "ERG";
+        }
+    }
+
     // --- Prize Distribution Reactive Variables ---
     function asNumber(v: any) {
         const n = Number(v);
@@ -176,6 +252,7 @@
     function clampPct(v: number) {
         return Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0));
     }
+
     $: judgesCount = judges.filter((e) => e.value && e.value.trim()).length;
     $: creatorPct = asNumber(commissionPercentage);
     $: perJudgePct = asNumber(perJudgeComissionPercentage);
@@ -251,7 +328,8 @@
                 hashedSecret: hashedSecret,
                 deadlineBlock: deadlineBlock,
                 creatorStakeNanoErg: toNanoErg(creatorStakeErg),
-                participationFeeNanoErg: toNanoErg(participationFeeErg),
+                participationFeeAmount: toTokenSmallestUnit(participationFeeErg),
+                participationTokenId: participationTokenId === "" ? undefined : participationTokenId,
                 commissionPercentage: Math.round(commissionPercentage),
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
@@ -422,19 +500,61 @@
                             required
                         />
                     </div>
-                    <div class="form-group">
-                        <Label for="participationFeeErg"
-                            >Participation Fee (ERG per entry)</Label
+<div class="form-group lg:col-span-2">
+                        <Label for="participationFee"
+                            >Participation Fee ({participationTokenName})</Label
                         >
-                        <Input
-                            id="participationFeeErg"
-                            bind:value={participationFeeErg}
-                            type="number"
-                            min="0"
-                            step="0.001"
-                            placeholder="ERG cost per player"
-                            required
-                        />
+                        <div class="flex space-x-2">
+                            <Input
+                                id="participationFee"
+                                bind:value={participationFeeErg}
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                placeholder="Cost per player"
+                                required
+                                class="flex-grow"
+                            />
+                            
+                            <select
+                                bind:value={selectedTokenOption}
+                                class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
+                            >
+                                <option value="ERG">ERG (Ergo)</option>
+                                
+                                {#each DEFAULT_TOKENS as token (token.tokenId)}
+                                    <option value={token.tokenId}>
+                                        {token.title}
+                                    </option>
+                                {/each}
+                                
+                                <option value="custom">Other Token ID...</option>
+                            </select>
+                        </div>
+
+                        {#if isCustomToken}
+                            <div class="mt-3 pl-1">
+                                <Label
+                                    for="customTokenId"
+                                    class="text-xs font-medium mb-1.5 block"
+                                >
+                                    Custom Token ID
+                                </Label>
+                                <Input
+                                    id="customTokenId"
+                                    bind:value={customTokenId}
+                                    placeholder="Enter the 64-character token ID"
+                                    class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
+                                    maxlength={64}
+                                    pattern="[a-fA-F0-9]{64}"
+                                />
+                                {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
+                                    <p class="text-xs text-muted-foreground mt-1">
+                                        Token: {participationTokenName} (Decimals: {participationTokenDecimals})
+                                    </p>
+                                {/if}
+                            </div>
+                        {/if}
                     </div>
                     <div class="form-group">
                         <Label for="commissionPercentage"

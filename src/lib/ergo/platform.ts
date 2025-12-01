@@ -32,12 +32,13 @@ interface CreateGoPGamePlatformParams {
     gameServiceId: string;
     hashedSecret: string; // Hex string of blake2b256(S)
     deadlineBlock: number;
-    creatorStakeNanoErg: BigInt;
-    participationFeeNanoErg: BigInt;
+    creatorStakeNanoErg: bigint;
+    participationFeeNanoErg: bigint;
     commissionPercentage: number;
     judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
     perJudgeComissionPercentage: number;
+    participationTokenId?: string;
 }
 
 export class ErgoPlatform implements Platform {
@@ -86,7 +87,8 @@ export class ErgoPlatform implements Platform {
                 params.commissionPercentage,
                 params.judges,
                 params.gameDetailsJson,
-                params.perJudgeComissionPercentage
+                params.perJudgeComissionPercentage,
+                params.participationTokenId || ""
             );
         } catch (error) {
             console.error("Error en el método de plataforma createGoPGame:", error);
