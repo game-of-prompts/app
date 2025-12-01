@@ -90,11 +90,9 @@ export async function contribute_to_ceremony(
     ];
     const r8Hex = SColl(SLong, numericalParams).toHex();
 
-    // R9: gameDetailsJsonHex 
-    const gameDetailsBytes = stringToBytes("utf8", game.content.rawJsonString);
-    const r9Hex = SColl(SByte, gameDetailsBytes ?? "").toHex();
+    // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
+    const r9Hex = SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId)!]).toHex()
 
-    
     // 4. --- Construir la Caja de Salida ---
     const gameActiveErgoTree = getGopGameActiveErgoTreeHex();
 

@@ -66,7 +66,7 @@ export async function drain_cancelled_game_stake(
         R6: SColl(SByte, revealedSecretBytes).toHex(),
         R7: SLong(remainingStake).toHex(),
         R8: SLong(BigInt(game.deadlineBlock)).toHex(),
-        R9: SColl(SByte, stringToBytes('utf8', game.content.rawJsonString))
+        R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId)!]).toHex()
     });
 
     // OUTPUT(1): The portion of the stake for the claimer

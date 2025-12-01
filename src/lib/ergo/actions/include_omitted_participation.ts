@@ -70,8 +70,8 @@ export async function include_omitted_participation(
             BigInt(game.resolutionDeadline)
         ]).toHex(),
 
-        // --- R9: gameProvenance: Coll[Coll[Byte]] (Detalles del juego en JSON/Hex, Script de gasto del resolvedor) ---
-        R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.resolverScript_Hex)!]).toHex(),
+        // --- R9: gameProvenance: Coll[Coll[Byte]] (Detalles del juego en JSON/Hex, Participation token id, Script de gasto del resolvedor) ---
+        R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId)!, hexToBytes(game.resolverScript_Hex)!]).toHex()
     });
     
     const pBox = parseBox(omittedParticipation.box);
