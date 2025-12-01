@@ -300,13 +300,6 @@
         </nav>
 
         <div class="user-section">
-            {#if $address}
-                <div class="user-info">
-                    <div class="badge-container">
-                        <Badge variant="secondary">{ergInErgs} ERG</Badge>
-                    </div>
-                </div>
-            {/if}
             <WalletButton />
             <div class="theme-toggle">
                 <Theme />
