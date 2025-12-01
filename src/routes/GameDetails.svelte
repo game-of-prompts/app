@@ -27,7 +27,7 @@
     // UTILITIES
     import { format, formatDistanceToNow } from 'date-fns';
     import { block_height_to_timestamp } from "$lib/common/countdown";
-    import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr } from '$lib/ergo/envs';
+    import { web_explorer_uri_tkn, web_explorer_uri_tx, web_explorer_uri_addr, explorer_uri } from '$lib/ergo/envs';
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
@@ -36,6 +36,7 @@
     import { type RPBox, type Judge } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import Return from "./Return.svelte";
+    import { Forum } from "forum-application";
 
 
     // --- COMPONENT STATE ---
@@ -1189,6 +1190,24 @@
                 </div>
             </section>
         {/if}
+
+        <section class="forum-section mt-12 mb-12">
+            <h2 class="text-3xl font-semibold mb-8 text-center">
+                Discussion
+            </h2>
+            <div class="flex justify-center w-full">
+                <Forum
+                    topic_id={game.gameId}
+                    {web_explorer_uri_tx}
+                    {web_explorer_uri_addr}
+                    {web_explorer_uri_tkn}
+                    explorer_uri={explorer_uri}
+                    maxWidth="100%"
+                    profile={get(reputation_proof)}
+                    connected={get(connected)}
+                />
+            </div>
+        </section>
     </div>
 
     {#if showActionModal && game}
