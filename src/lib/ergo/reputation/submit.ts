@@ -11,7 +11,7 @@ import {
     SBool,
     SLong
 } from '@fleet-sdk/core';
-import { getReputationProofAddress }  from "$lib/ergo/contract";
+import { getReputationProofAddress } from "$lib/ergo/contract";
 import { SString, hexToBytes, parseBox } from '../utils';
 import { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY } from '../envs';
 import { SPair } from '@fleet-sdk/serializer';
@@ -52,7 +52,7 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
     console.log("Generating reputation proof with parameters:", {
         token_amount,
         total_supply,
-        type_nft_id,    
+        type_nft_id,
         polarization,
         content,
         is_locked
@@ -65,10 +65,10 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
     const creatorP2PKAddress = ErgoAddress.fromBase58(creatorAddressString);
 
     // Fetch the Type NFT box to be used in dataInputs. This is required by the contract.
-    const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${type_nft_id}`);
+    const typeNftBoxResponse = await fetch(`${get(explorer_uri)}/api/v1/boxes/byTokenId/${type_nft_id}`);
     if (!typeNftBoxResponse.ok) {
-      alert("Could not fetch the Type NFT box. Aborting transaction.");
-      return null;
+        alert("Could not fetch the Type NFT box. Aborting transaction.");
+        return null;
     }
 
     // Inputs for the transaction
@@ -100,7 +100,7 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
         R6: booleanToSerializer(is_locked),
         R7: SColl(SByte, propositionBytes).toHex(),
         R8: booleanToSerializer(polarization),
-        R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
+        R9: SString(typeof (content) === "object" ? JSON.stringify(content) : content ?? "")
     });
 
     outputs.push(new_proof_output);
@@ -130,10 +130,10 @@ export async function generate_reputation_proof(burned_amount: BigInt): Promise<
 }
 
 export async function update_reputation_proof(
-    type: "game"|"participation"|"judge",
+    type: "game" | "participation" | "judge",
     object_pointer: string,
     polarization: boolean,
-    content: object|string|null,
+    content: object | string | null,
 ): Promise<string | null> {
 
     const type_nft_id = type === "game" ? GAME : (type === "participation" ? PARTICIPATION : (type === "judge" ? JUDGE : null));
@@ -153,7 +153,7 @@ export async function update_reputation_proof(
     console.log("Generating reputation proof with parameters:", {
         token_amount,
         total_supply,
-        type_nft_id,    
+        type_nft_id,
         object_pointer,
         polarization,
         content,
@@ -197,18 +197,18 @@ export async function update_reputation_proof(
     if (input_proof.token_amount - token_amount > 0) {
         outputs.push(
             new OutputBuilder(BigInt(input_proof.box.value), ergo_tree_address)
-            .addTokens({
-                tokenId: input_proof.token_id,
-                amount: (input_proof.token_amount - token_amount).toString()
-            })
-            .setAdditionalRegisters({
-                R4: SColl(SByte, hexToBytes(input_proof.type.tokenId) ?? "").toHex(),
-                R5: SColl(SByte, hexToBytes(input_proof.object_pointer) ?? "").toHex(),
-                R6: booleanToSerializer(input_proof.is_locked),
-                R7: SColl(SByte, propositionBytes).toHex(),
-                R8: booleanToSerializer(input_proof.polarization),
-                R9: SString(typeof(input_proof.content) === "object" ? JSON.stringify(input_proof.content): input_proof.content ?? "")
-            })
+                .addTokens({
+                    tokenId: input_proof.token_id,
+                    amount: (input_proof.token_amount - token_amount).toString()
+                })
+                .setAdditionalRegisters({
+                    R4: SColl(SByte, hexToBytes(input_proof.type.tokenId) ?? "").toHex(),
+                    R5: SColl(SByte, hexToBytes(input_proof.object_pointer) ?? "").toHex(),
+                    R6: booleanToSerializer(input_proof.is_locked),
+                    R7: SColl(SByte, propositionBytes).toHex(),
+                    R8: booleanToSerializer(input_proof.polarization),
+                    R9: SString(typeof (input_proof.content) === "object" ? JSON.stringify(input_proof.content) : input_proof.content ?? "")
+                })
         );
     }
 
@@ -218,7 +218,7 @@ export async function update_reputation_proof(
         R6: booleanToSerializer(is_locked),
         R7: SColl(SByte, propositionBytes).toHex(),
         R8: booleanToSerializer(polarization),
-        R9: SString(typeof(content) === "object" ? JSON.stringify(content): content ?? "")
+        R9: SString(typeof (content) === "object" ? JSON.stringify(content) : content ?? "")
     });
 
     outputs.push(new_proof_output);

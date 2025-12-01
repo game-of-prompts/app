@@ -57,7 +57,7 @@ export class ErgoPlatform implements Platform {
             return await ergo.get_current_height();
         } catch {
             try {
-                const response = await fetch(explorer_uri + '/api/v1/networkState');
+                const response = await fetch(get(explorer_uri) + '/api/v1/networkState');
                 if (!response.ok) throw new Error(`La solicitud a la API falló: ${response.status}`);
                 const data = await response.json();
                 return data.height;

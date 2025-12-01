@@ -17,7 +17,7 @@ import {
     resolve_participation_commitment
 } from "../common/game";
 import { CACHE_DURATION_MS, explorer_uri } from "./envs";
-import { 
+import {
     getGopGameActiveScriptHash,
     getGopGameResolutionTemplateHash,
     getGopParticipationTemplateHash,
@@ -59,7 +59,7 @@ function calculate_reputation(game: AnyGame): number {
  */
 async function fetchReputationOpinionsForTarget(
     type: "game" | "participation",
-    targetId: string, 
+    targetId: string,
     ergo: any = null
 ): Promise<ReputationOpinion[]> {
     try {
@@ -69,7 +69,7 @@ async function fetchReputationOpinionsForTarget(
 
         for (const [tokenId, proof] of reputationProofs) {
             // Find boxes that reference our target
-            const relevantBoxes = proof.current_boxes.filter((box: RPBox) => 
+            const relevantBoxes = proof.current_boxes.filter((box: RPBox) =>
                 box.object_pointer === targetId
             );
 
@@ -97,7 +97,7 @@ async function fetchReputationOpinionsForTarget(
 }
 
 async function getTransactionInfo(transactionId: string): Promise<any> {
-    const url = `${explorer_uri}/api/v1/transactions/${transactionId}`;
+    const url = `${get(explorer_uri)}/api/v1/transactions/${transactionId}`;
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`API response: ${response.status}`);
@@ -155,14 +155,14 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
         const r8RenderedValue = box.additionalRegisters.R8?.renderedValue;
         let parsedR8Array: any[] | null = null;
         if (typeof r8RenderedValue === 'string') {
-            try { parsedR8Array = JSON.parse(r8RenderedValue); } 
+            try { parsedR8Array = JSON.parse(r8RenderedValue); }
             catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
         // structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
         if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
         const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
-        
+
         // R9: gameDetailsJsonHex
         const gameDetailsHex = parseCollByteToHex(box.additionalRegisters.R9?.renderedValue);
         const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
@@ -191,7 +191,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
         };
 
         gameActive.reputation = calculate_reputation(gameActive);
-        
+
         return gameActive;
 
     } catch (e) {
@@ -208,13 +208,13 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
 export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
     const games = new Map<string, GameActive>();
     const scriptHash = getGopGameActiveScriptHash();
-    
+
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
     while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
                 method: 'POST',
@@ -222,7 +222,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
                 body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
             });
             if (!response.ok) throw new Error(`API response: ${response.status}`);
-            
+
             const data = await response.json();
             const items: Box[] = data.items || [];
             for (const box of items) {
@@ -286,7 +286,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         // R4 is game state.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
         if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
-        
+
         // R5: Coll[Byte] -> Seed
         const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
         if (!seed) throw new Error("Could not parse R5 (Seed).");
@@ -296,8 +296,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         if (!r6Value || r6Value.length < 2) throw new Error("R6 is not a valid tuple.");
         const revealedS_Hex = parseCollByteToHex(r6Value[0]);
         const winnerCandidateCommitment = parseCollByteToHex(r6Value[1]);
-        if (!revealedS_Hex ) throw new Error("Could not parse R6.");
-        
+        if (!revealedS_Hex) throw new Error("Could not parse R6.");
+
         // R7: Coll[Coll[Byte]] -> judges
         const judges = (getArrayFromValue(box.additionalRegisters.R7?.renderedValue) || [])
             .map(parseCollByteToHex)
@@ -312,32 +312,32 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, originalCreatorScript_Hex, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
         if (!r9Value || r9Value.length !== 2) throw new Error("R9 is not a valid tuple (expected 2 items).");
-        
+
         const gameDetailsHex = r9Value[0];
         const resolverScript_Hex = parseCollByteToHex(r9Value[1]);
 
         if (!gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
-        
+
         const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
-        
+
         const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
 
         const gameResolution: GameResolution = {
-            platform: new ErgoPlatform(), 
-            boxId: box.boxId, 
-            box, 
-            status: GameState.Resolution, 
+            platform: new ErgoPlatform(),
+            boxId: box.boxId,
+            box,
+            status: GameState.Resolution,
             gameId,
-            resolutionDeadline: Number(resolutionDeadline), 
-            revealedS_Hex, 
-            winnerCandidateCommitment: winnerCandidateCommitment || null, 
+            resolutionDeadline: Number(resolutionDeadline),
+            revealedS_Hex,
+            winnerCandidateCommitment: winnerCandidateCommitment || null,
             judges,
-            deadlineBlock: Number(deadlineBlock), 
-            creatorStakeNanoErg, 
+            deadlineBlock: Number(deadlineBlock),
+            creatorStakeNanoErg,
             participationFeeNanoErg,
-            resolverPK_Hex, 
+            resolverPK_Hex,
             resolverScript_Hex,
-            content, 
+            content,
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
@@ -350,7 +350,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         gameResolution.reputation = calculate_reputation(gameResolution);
 
         return gameResolution;
-        
+
     } catch (e) {
         console.error(`Error parsing resolution game box ${box.boxId}:`, e);
         return null;
@@ -364,15 +364,15 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
  */
 export async function fetchResolutionGames(): Promise<Map<string, GameResolution>> {
     const games = new Map<string, GameResolution>();
-    const scriptHash = getGopGameResolutionTemplateHash(); 
-    
+    const scriptHash = getGopGameResolutionTemplateHash();
+
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
 
     while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
                 method: 'POST',
@@ -383,7 +383,7 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
             if (!response.ok) {
                 throw new Error(`API response was not OK: ${response.status}`);
             }
-            
+
             const data = await response.json();
             const items: Box[] = data.items || [];
 
@@ -435,13 +435,13 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
 
         // R5: unlockHeight (Long). Converted directly to number.
         const unlockHeight = parseInt(box.additionalRegisters.R5?.renderedValue, 10);
-        
+
         // R6: revealedSecret (Coll[Byte]). The revealed secret 'S'.
         const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
-        
+
         // R7: creatorStake (Long). The creator's current stake.
         const currentStakeNanoErg = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
-        
+
         // R8: Original deadline (Long).
         const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
 
@@ -493,13 +493,13 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
 export async function fetchCancellationGames(): Promise<Map<string, GameCancellation>> {
     const games = new Map<string, GameCancellation>();
     const scriptHash = getGopGameCancellationTemplateHash();
-    
+
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
     while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/search`;
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
         try {
             const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
                 method: 'POST',
@@ -510,7 +510,7 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
             if (!response.ok) {
                 throw new Error(`API response was not OK: ${response.status}`);
             }
-            
+
             const data = await response.json();
             const items: Box[] = data.items || [];
 
@@ -556,7 +556,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         let more = true;
 
         while (more) {
-            const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+            const url = `${get(explorer_uri)}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
             try {
                 const response = await fetch(url, {
                     method: 'POST',
@@ -609,7 +609,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         // Find the current box holding the game NFT
         let currentBox: Box<Amount> | null = null;
         try {
-            const url = `${explorer_uri}/api/v1/boxes/unspent/byTokenId/${gameId}`;
+            const url = `${get(explorer_uri)}/api/v1/boxes/unspent/byTokenId/${gameId}`;
             const response = await fetch(`${url}?limit=1`);
             if (!response.ok) throw new Error(`API response: ${response.status}`);
             const data = await response.json();
@@ -719,14 +719,14 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
             playerScript_Hex,
             commitmentC_Hex,
             solverId_RawBytesHex,
-            solverId_String: solverId_RawBytesHex, 
+            solverId_String: solverId_RawBytesHex,
             hashLogs_Hex,
             scoreList,
             reputationOpinions: await fetchReputationOpinionsForTarget("participation", box.boxId)
         };
         return participationBase;
 
-    } catch(e) {
+    } catch (e) {
         console.error(`Error parsing participation box ${box.boxId}:`, e);
         return null;
     }
@@ -744,13 +744,13 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
 
     const participations: AnyParticipation[] = [];
     const scriptHash = getGopParticipationTemplateHash();
-    
+
     let offset = 0;
     const limit = 100;
     let moreAvailable = true;
 
     while (moreAvailable) {
-        const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+        const url = `${get(explorer_uri)}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -780,7 +780,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const spent = !!box.spentTransactionId;
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
-                    
+
                     const wrong_commitment = (game.status === "Resolution") && resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
 
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
@@ -804,18 +804,18 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                 if (game.status === GameState.Active) return "byparticipant";
 
                                 if (game.status === GameState.Resolution) return "invalidated";
-                                
+
                                 if (game.status === GameState.Cancelled_Draining) return "cancelled";
-                                
+
                                 if (game.status === GameState.Finalized) {
                                     const spentTx = await getTransactionInfo(box.spentTransactionId!);
                                     if (!spentTx) return "unknown";
-                                    
+
                                     if (spentTx.inclusionHeight < (game as GameFinalized).judgeFinalizationBlock) return "invalidated";
                                     if (spentTx.inclusionHeight < (game as GameFinalized).winnerFinalizationDeadline) return "bywinner";
                                     return "abandoned";  // In case the winner doesn't take it.
                                 }
-                                
+
                                 return "unknown";
                             })();
                             participations.push({
@@ -904,15 +904,15 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
                 fetchActiveGames()
                     .then(mergeIntoStore)
                     .catch(e => console.error("Error fetching active games:", e)),
-                
+
                 fetchResolutionGames()
                     .then(mergeIntoStore)
                     .catch(e => console.error("Error fetching resolution games:", e)),
-                
+
                 fetchCancellationGames()
                     .then(mergeIntoStore)
                     .catch(e => console.error("Error fetching cancellation games:", e)),
-                
+
                 fetchFinalizedGames()
                     .then(mergeIntoStore)
                     .catch(e => console.error("Error fetching finalized games:", e))
@@ -924,7 +924,7 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
             // 5. The fetch is complete.
             const finalState = get(games);
             console.log(`Fetch complete. Total games found: ${finalState.data.size}`);
-            
+
             // Return the final Map from the store, as the original function did.
             return finalState.data;
 
@@ -963,7 +963,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     // 2) try to fetch current unspent box for the token (if any)
     let currentBox: Box<Amount> | null = null;
     try {
-        const url = `${explorer_uri}/api/v1/boxes/unspent/byTokenId/${id}`;
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/byTokenId/${id}`;
         const resp = await fetch(`${url}?limit=1`);
         if (resp.ok) {
             const data = await resp.json();
@@ -1006,7 +1006,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
         let more = true;
         while (more) {
             try {
-                const url = `${explorer_uri}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+                const url = `${get(explorer_uri)}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
                 const resp = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

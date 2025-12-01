@@ -21,25 +21,25 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
 
         const nftTypes = [GAME, PARTICIPATION, JUDGE];
         for (const currentTypeNftId of nftTypes) {
-            
+
             try {
-                const typeNftBoxResponse = await fetch(`${explorer_uri}/api/v1/boxes/byTokenId/${currentTypeNftId}`);
-                
+                const typeNftBoxResponse = await fetch(`${get(explorer_uri)}/api/v1/boxes/byTokenId/${currentTypeNftId}`);
+
                 if (!typeNftBoxResponse.ok) {
                     alert(`Could not fetch the Type NFT box for ${currentTypeNftId}. Status: ${typeNftBoxResponse.status}. Aborting transaction.`);
                     return new Map();
                 }
-                
+
                 const responseData = await typeNftBoxResponse.json();
-                
+
                 // Check if items exist and has at least one item
                 if (!responseData.items || responseData.items.length === 0) {
                     alert(`No NFT box found for type ${currentTypeNftId}. Aborting transaction.`);
                     return new Map();
                 }
-                
+
                 const box = responseData.items[0];
-                    fetchedTypesArray.push({
+                fetchedTypesArray.push({
                     tokenId: box.assets[0].tokenId,
                     boxId: box.boxId,
                     typeName: hexToUtf8(box.additionalRegisters.R4?.renderedValue || '') ?? "",
@@ -48,22 +48,22 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
                     isRepProof: box.additionalRegisters.R7?.renderedValue ?? false,
                     box: box
                 });
-                    
+
             } catch (error) {
                 console.error(`Error fetching NFT box for type ${type}:`, error);
                 alert(`Network error while fetching Type NFT box for ${type}. Aborting transaction.`);
                 return new Map();
             }
         }
-        
+
         const typesMap = new Map(fetchedTypesArray.map(type => [type.tokenId, type]));
-        types.set({data: typesMap, last_fetch: Date.now()});
+        types.set({ data: typesMap, last_fetch: Date.now() });
 
         return get(types).data
 
     } catch (e: any) {
         console.error("Failed to fetch and store types:", e);
-        types.set({data: new Map(), last_fetch: 0});
+        types.set({ data: new Map(), last_fetch: 0 });
         return get(types).data;
     }
 }
@@ -83,8 +83,8 @@ function createRPBoxFromApiBox(box: Box<Amount>, tokenId: string, availableTypes
     if (!typeNftForBox) {
         typeNftForBox = { tokenId: type_nft_id_for_box, boxId: '', typeName: "Unknown Type", description: "Metadata not found", schemaURI: "", isRepProof: false, box: null };
     }
-    
-    let box_content: string|object|null = {};
+
+    let box_content: string | object | null = {};
     try {
         const rawValue = box.additionalRegisters.R9?.renderedValue;
         if (rawValue) {
@@ -98,7 +98,7 @@ function createRPBoxFromApiBox(box: Box<Amount>, tokenId: string, availableTypes
     } catch (error) {
         box_content = {};
     }
-    
+
     const object_pointer_for_box = box.additionalRegisters.R5?.renderedValue ?? "";
 
     return {
@@ -115,22 +115,22 @@ function createRPBoxFromApiBox(box: Box<Amount>, tokenId: string, availableTypes
 }
 
 export async function fetchReputationProofs(
-    ergo: any, 
-    all: boolean, 
+    ergo: any,
+    all: boolean,
     type: "game" | "participation" | "judge",
     value: string | null
 ): Promise<Map<string, Judge>> {
 
     const proofs = new Map<string, Judge>();
     const tokenIdsToFetch = new Set<string>();
-    
+
     // Build search criteria
     let registers: { [key: string]: any } = {};
     if (type || value) {
         const type_id = ProofType[type];
         registers["R4"] = type_id;
         if (value) {
-           registers["R5"] = value;
+            registers["R5"] = value;
         }
     }
 
@@ -144,7 +144,7 @@ export async function fetchReputationProofs(
                 registers["R7"] = uint8ArrayToHex(propositionBytes);
             }
         } else {
-             // If no user address, cannot fetch user-specific proofs. Return empty.
+            // If no user address, cannot fetch user-specific proofs. Return empty.
             console.warn("Cannot fetch user proofs: no connected wallet address found.");
             return new Map();
         }
@@ -153,9 +153,9 @@ export async function fetchReputationProofs(
     // --- Step 1: Find all unique token IDs that match the criteria ---
     try {
         let offset = 0, limit = 100, moreDataAvailable = true;
-        
+
         while (moreDataAvailable) {
-            const url = `${explorer_uri}/api/v1/boxes/unspent/search?offset=${offset}&limit=${limit}`;
+            const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search?offset=${offset}&limit=${limit}`;
             const final_body = { "ergoTreeTemplateHash": ergo_tree_hash, "registers": registers };
             const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(final_body) });
 
@@ -184,7 +184,7 @@ export async function fetchReputationProofs(
         console.error('An error occurred during the token ID search phase:', error);
         return new Map(); // Return empty on error
     }
-    
+
     // --- Step 2: Fetch full proof data for each unique token ID ---
     if (tokenIdsToFetch.size > 0) {
 
@@ -214,7 +214,7 @@ export async function fetchReputationProofByTokenId(
     const availableTypes = await fetchTypeNfts();
 
     try {
-        const resp = await fetch(`${explorer_uri}/api/v1/boxes/unspent/byTokenId/${tokenId}`);
+        const resp = await fetch(`${get(explorer_uri)}/api/v1/boxes/unspent/byTokenId/${tokenId}`);
         if (!resp.ok) {
             console.warn(`Explorer returned ${resp.status} for token ${tokenId}`);
             return null;
@@ -266,7 +266,7 @@ export async function fetchReputationProofByTokenId(
             }
         }
 
-        const tokenResponse = await fetch(`${explorer_uri}/api/v1/tokens/${tokenId}`);
+        const tokenResponse = await fetch(`${get(explorer_uri)}/api/v1/tokens/${tokenId}`);
         if (!tokenResponse.ok) {
             console.error(`Error al obtener la cantidad emitida del token ${tokenId}`);
         }
@@ -327,11 +327,11 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, J
             return get(judges).data;
         }
         const map = await fetchReputationProofs(ergo, true, "judge", null);
-        judges.set({data: map, last_fetch: Date.now()});
+        judges.set({ data: map, last_fetch: Date.now() });
         return get(judges).data;
     } catch (e: any) {
         console.error("Failed to fetch and store judges:", e);
-        judges.set({data: new Map(), last_fetch: 0});
+        judges.set({ data: new Map(), last_fetch: 0 });
         return get(judges).data;
     }
 }

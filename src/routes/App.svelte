@@ -38,6 +38,15 @@
         walletBalance,
         walletManager,
     } from "wallet-svelte-component";
+    import { Settings } from "lucide-svelte";
+    import SettingsModal from "./SettingsModal.svelte";
+    import {
+        explorer_uri,
+        web_explorer_uri_tx,
+        web_explorer_uri_addr,
+        web_explorer_uri_tkn,
+    } from "$lib/ergo/envs";
+    import { Button } from "$lib/components/ui/button";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -50,6 +59,7 @@
     let showCopyMessage = false;
     let showWalletInfo = false;
     let mobileMenuOpen = false;
+    let showSettings = false;
 
     let platform = new ErgoPlatform();
 
@@ -89,12 +99,54 @@
             handleAnimationIteration,
         );
 
+        // Load settings
+        const storedSettings = localStorage.getItem("gop_settings");
+        if (storedSettings) {
+            try {
+                const settings = JSON.parse(storedSettings);
+                if (settings.explorer_uri)
+                    explorer_uri.set(settings.explorer_uri);
+                if (settings.web_explorer_uri_tx)
+                    web_explorer_uri_tx.set(settings.web_explorer_uri_tx);
+                if (settings.web_explorer_uri_addr)
+                    web_explorer_uri_addr.set(settings.web_explorer_uri_addr);
+                if (settings.web_explorer_uri_tkn)
+                    web_explorer_uri_tkn.set(settings.web_explorer_uri_tkn);
+            } catch (e) {
+                console.error("Error loading settings:", e);
+            }
+        }
+
+        // Subscribe to changes to save settings
+        const unsubscribeSettings = [
+            explorer_uri,
+            web_explorer_uri_tx,
+            web_explorer_uri_addr,
+            web_explorer_uri_tkn,
+        ].map((store) =>
+            store.subscribe(() => {
+                if (browser) {
+                    const settings = {
+                        explorer_uri: get(explorer_uri),
+                        web_explorer_uri_tx: get(web_explorer_uri_tx),
+                        web_explorer_uri_addr: get(web_explorer_uri_addr),
+                        web_explorer_uri_tkn: get(web_explorer_uri_tkn),
+                    };
+                    localStorage.setItem(
+                        "gop_settings",
+                        JSON.stringify(settings),
+                    );
+                }
+            }),
+        );
+
         return () => {
             if (balanceUpdateInterval) clearInterval(balanceUpdateInterval);
             scrollingTextElement?.removeEventListener(
                 "animationiteration",
                 handleAnimationIteration,
             );
+            unsubscribeSettings.forEach((unsub) => unsub());
         };
     });
 
@@ -259,6 +311,13 @@
             <div class="theme-toggle">
                 <Theme />
             </div>
+            <Button
+                variant="ghost"
+                size="icon"
+                on:click={() => (showSettings = true)}
+            >
+                <Settings class="h-[1.2rem] w-[1.2rem]" />
+            </Button>
         </div>
 
         <button
@@ -302,6 +361,10 @@
         <ShowJudge />
     {/if}
 </main>
+
+{#if showSettings}
+    <SettingsModal on:close={() => (showSettings = false)} />
+{/if}
 
 <footer class="page-footer">
     <div class="footer-left">
