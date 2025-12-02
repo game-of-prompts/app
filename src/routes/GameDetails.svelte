@@ -1039,6 +1039,13 @@
                                         {p.commitmentC_Hex.slice(0, 10)}...{p.commitmentC_Hex.slice(-4)}
                                     </a>
                                 </div>
+                                <div class="info-block">
+                                    <span class="info-label">Hash logs</span>
+                                    <!-- svelte-ignore a11y-missing-attribute -->
+                                    <a class="info-value font-mono text-xs" title={p.hashLogs_Hex}>
+                                        {p.hashLogs_Hex.slice(0, 10)}...{p.hashLogs_Hex.slice(-4)}
+                                    </a>
+                                </div>
                                 <div class="info-block sm:col-span-2 lg:col-span-3">
                                     <span class="info-label">Score List</span>
                                     <div class="font-mono text-xs {$mode === 'dark' ? 'text-lime-400' : 'text-lime-600'}">
