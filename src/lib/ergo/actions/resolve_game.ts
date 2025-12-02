@@ -187,7 +187,7 @@ export async function resolve_game(
     const r7Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(); // R7: Jueces participantes
     const r8Hex = SColl(SLong, newNumericalParams).toHex(); // R8: Parámetros numéricos
     
-    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, hexToBytes(game.participationTokenId)!, prependHexPrefix(resolverPkBytes)]).toHex(); 
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, hexToBytes(game.participationTokenId) ?? "", prependHexPrefix(resolverPkBytes)]).toHex(); 
 
     // Conteos y tamaños
     const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];

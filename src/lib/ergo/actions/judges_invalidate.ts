@@ -181,7 +181,7 @@ export async function judges_invalidate(
             ]).toHex(),
 
             // R9: gameProvenance: Coll[Coll[Byte]] -> [ rawJsonBytes, participationTokenId, resolverScriptBytes ]
-            R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId)!, hexToBytes(game.resolverScript_Hex)!]).toHex(),
+            R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId) ?? "", hexToBytes(game.resolverScript_Hex)!]).toHex(),
         });
         
     // --- 5. Build and Submit the Transaction ---
