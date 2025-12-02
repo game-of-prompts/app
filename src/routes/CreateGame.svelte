@@ -25,6 +25,7 @@
         X,
     } from "lucide-svelte";
     import { fetch_token_details } from "$lib/ergo/fetch";
+    import { get } from "svelte/store";
 
     let platform = new ErgoPlatform();
 
@@ -833,7 +834,7 @@
                     class="font-mono text-xs p-2 rounded bg-slate-800/50 break-all"
                 >
                     <a
-                        href={web_explorer_uri_tx + transactionId}
+                        href={get(web_explorer_uri_tx) + transactionId}
                         target="_blank"
                         rel="noopener noreferrer"
                         class="hover:underline"

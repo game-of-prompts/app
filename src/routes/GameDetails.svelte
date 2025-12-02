@@ -714,7 +714,7 @@
 
                     <div class="info-block">
                         <span class="info-label">Competition ID (NFT)</span>
-                        <a href="{web_explorer_uri_tkn + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
+                        <a href="{get(web_explorer_uri_tkn) + game.gameId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={game.gameId}>
                             {game.gameId.slice(0, 20)}...{game.gameId.slice(-4)}
                         </a>
                     </div>
@@ -733,7 +733,7 @@
                     {#if creator}
                         <div class="info-block">
                             <span class="info-label">Creator Address {isOwner ? '(You)' : ''}</span>
-                            <a href="{web_explorer_uri_tkn + creator}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creator}>
+                            <a href="{get(web_explorer_uri_tkn) + creator}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={creator}>
                                 {creator.slice(0, 12)}...{creator.slice(-6)}
                             </a>
                         </div>
@@ -995,7 +995,7 @@
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <div class="text-xs uppercase text-slate-500 dark:text-slate-400">Player Address</div>
-                                        <a href="{web_explorer_uri_addr + pkHexToBase58Address(p.playerPK_Hex)}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm break-all {$mode === 'dark' ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-black'}" title={pkHexToBase58Address(p.playerPK_Hex)}>
+                                        <a href="{get(web_explorer_uri_addr) + pkHexToBase58Address(p.playerPK_Hex)}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm break-all {$mode === 'dark' ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-black'}" title={pkHexToBase58Address(p.playerPK_Hex)}>
                                             {pkHexToBase58Address(p.playerPK_Hex)}
                                         </a>
                                     </div>
@@ -1028,7 +1028,7 @@
                                 </div>
                                 <div class="info-block">
                                     <span class="info-label">Transaction ID</span>
-                                    <a href="{web_explorer_uri_tx + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
+                                    <a href="{get(web_explorer_uri_tx) + p.transactionId}" target="_blank" rel="noopener noreferrer" class="info-value font-mono text-xs break-all hover:underline" title={p.transactionId}>
                                         {p.transactionId.slice(0, 10)}...{p.transactionId.slice(-4)}
                                     </a>
                                 </div>
@@ -1086,7 +1086,7 @@
                                         {#if reclaimGraceSuccessTxId[p.boxId]}
                                             <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
                                                 <strong>Success! Transaction ID:</strong><br/>
-                                                <a href="{web_explorer_uri_tx + reclaimGraceSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
+                                                <a href="{get(web_explorer_uri_tx) + reclaimGraceSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
                                                     {reclaimGraceSuccessTxId[p.boxId]}
                                                 </a>
                                             </div>
@@ -1127,7 +1127,7 @@
                                         {#if claimRefundSuccessTxId[p.boxId]}
                                             <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
                                                 <strong>Success! Transaction ID:</strong><br/>
-                                                <a href="{web_explorer_uri_tx + claimRefundSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
+                                                <a href="{get(web_explorer_uri_tx) + claimRefundSuccessTxId[p.boxId]}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">
                                                     {claimRefundSuccessTxId[p.boxId]}
                                                 </a>
                                             </div>
@@ -1344,7 +1344,7 @@
 
                 {#if transactionId && !isSubmitting && showActionModal}
                     <div class="mt-6 p-3 rounded-md text-sm {$mode === 'dark' ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-700 border border-green-200'}">
-                        <strong>Success! Transaction ID:</strong><br/><a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
+                        <strong>Success! Transaction ID:</strong><br/><a href="{get(web_explorer_uri_tx) + transactionId}" target="_blank" rel="noopener noreferrer" class="underline break-all hover:text-slate-400">{transactionId}</a>
                         <p class="mt-2 text-xs">You can close this modal. Data will update after block confirmation.</p>
                     </div>
                 {/if}

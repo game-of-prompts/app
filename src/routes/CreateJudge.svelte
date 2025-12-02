@@ -2,6 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { generate_reputation_proof } from '$lib/ergo/reputation/submit';
     import { web_explorer_uri_tx } from '$lib/ergo/envs';
+    import { get } from 'svelte/store';
 
     let transactionId: string | null = null;
     let isSubmitting: boolean = false;
@@ -88,7 +89,7 @@
                 <p class="text-sm text-muted-foreground mb-4">It may take a few moments to confirm.</p>
                 <div class="flex items-center justify-center">
                     <p class="font-mono text-xs p-2 rounded bg-slate-800/50 break-all">
-                        <a href="{web_explorer_uri_tx + transactionId}" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                        <a href="{get(web_explorer_uri_tx) + transactionId}" target="_blank" rel="noopener noreferrer" class="hover:underline">
                             {transactionId}
                         </a>
                     </p>
