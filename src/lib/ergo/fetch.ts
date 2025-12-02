@@ -203,7 +203,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
         const numericalParams = parseLongColl(parsedR8Array);
         // structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
         if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
+        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
         const r9Value = JSON.parse(box.additionalRegisters.R9?.renderedValue || "[]");
@@ -225,8 +225,8 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
             secretHash, // From R6
             judges, // From R7
             deadlineBlock: Number(deadlineBlock), // From R8
-            creatorStakeNanoErg, // From R8
-            participationFeeNanoErg, // From R8
+            creatorStakeAmount, // From R8
+            participationFeeAmount, // From R8
             participationTokenId: participationTokenId || "", // From R9
             content, // From R9
             value: BigInt(box.value),
@@ -355,7 +355,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
         const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         const numericalParams = parseLongColl(r8Array);
         if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeNanoErg, participationFeeNanoErg, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
+        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
@@ -382,8 +382,8 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             winnerCandidateCommitment: winnerCandidateCommitment || null,
             judges,
             deadlineBlock: Number(deadlineBlock),
-            creatorStakeNanoErg,
-            participationFeeNanoErg,
+            creatorStakeAmount,
+            participationFeeAmount,
             participationTokenId: participationTokenId ?? "",
             resolverPK_Hex,
             resolverScript_Hex,
@@ -510,7 +510,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             throw new Error("Invalid or missing registers R5, R6, or R7.");
         }
 
-        const participationFeeNanoErg = BigInt(0); // Assuming 0 in cancellation
+        const participationFeeAmount = BigInt(0); // Assuming 0 in cancellation
 
         const gameCancelled: GameCancellation = {
             platform: new ErgoPlatform(),
@@ -522,7 +522,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             revealedS_Hex,
             currentStakeNanoErg,
             content,
-            participationFeeNanoErg,
+            participationFeeAmount,
             participationTokenId: participationTokenId ?? "",
             value: BigInt(box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
@@ -727,7 +727,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             gameId,
             content: lastBox.content, // From last contract box
             value: BigInt(lastBox.box.value), // Value from last contract box
-            participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0), // From last contract box
+            participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0), // From last contract box
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: lastBox.judges || [], // From last contract box
             judgeFinalizationBlock: judgeFinalizationBlock,
@@ -1132,7 +1132,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 gameId: id,
                 content: lastBox.content,
                 value: BigInt(lastBox.box.value),
-                participationFeeNanoErg: BigInt(lastBox.participationFeeNanoErg || 0),
+                participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0),
                 reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
                 judges,
                 judgeFinalizationBlock: judgeFinalizationBlock,
@@ -1180,7 +1180,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 gameId: id,
                 content,
                 value: BigInt(currentBox.value),
-                participationFeeNanoErg: BigInt(0),
+                participationFeeAmount: BigInt(0),
                 reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
                 judges: [],
                 judgeFinalizationBlock: 0,

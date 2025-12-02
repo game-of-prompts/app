@@ -1254,7 +1254,7 @@
                                 <p class="text-xs {$mode === 'dark' ? 'text-gray-500' : 'text-gray-600'} mt-1">Enter a comma-separated list of numerical scores.</p>
                             </div>
                         </div>
-                        <p class="text-sm {$mode === 'dark' ? 'text-gray-400' : 'text-gray-600'} pt-2">A participation fee of <strong>{formatErg(game.participationFeeNanoErg)} ERG</strong> will be paid.</p>
+                        <p class="text-sm {$mode === 'dark' ? 'text-gray-400' : 'text-gray-600'} pt-2">A participation fee of <strong>{formatErg(game.participationFeeAmount)} ERG</strong> will be paid.</p>
                         <Button on:click={handleSubmitScore} disabled={isSubmitting || !commitmentC_input.trim() || !solverId_input.trim() || !hashLogs_input.trim() || !scores_input.trim()} class="w-full mt-3 py-2.5 text-base {$mode === 'dark' ? 'bg-slate-500 hover:bg-slate-600 text-white' : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold">{isSubmitting ? 'Processing...' : 'Confirm & Submit Score'}</Button>
                     </div>
                 {:else if currentActionType === 'resolve_game'}

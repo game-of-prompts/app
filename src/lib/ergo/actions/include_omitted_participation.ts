@@ -63,8 +63,8 @@ export async function include_omitted_participation(
         // --- R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] ---
         R8: SColl(SLong, [
             BigInt(game.deadlineBlock),
-            BigInt(game.creatorStakeNanoErg),
-            BigInt(game.participationFeeNanoErg),
+            BigInt(game.creatorStakeAmount),
+            BigInt(game.participationFeeAmount),
             BigInt(game.perJudgeComissionPercentage),
             BigInt(game.resolverCommission),
             BigInt(game.resolutionDeadline)

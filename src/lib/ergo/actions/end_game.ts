@@ -45,7 +45,7 @@ export async function end_game(
     console.log(`Signer verification successful. Connected user: ${userAddress}`);
 
     // --- 3. Payment Calculation Logic ---
-    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeNanoErg;
+    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeAmount;
 
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
     const perJudgePct = BigInt(perJudgePctNumber);
@@ -70,7 +70,7 @@ export async function end_game(
 
     if (winnerParticipation === null) {
         // --- CASE: NO WINNER ---
-        const totalValue = prizePool + game.creatorStakeNanoErg;
+        const totalValue = prizePool + game.creatorStakeAmount;
 
         finalDevPayout = finalDevPayoutTent;
         finalJudgesPayout = finalJudgesPayoutTent;
@@ -87,12 +87,12 @@ export async function end_game(
 
     } else {
         // --- CASE: THERE IS A WINNER ---
-        const creatorStake = game.creatorStakeNanoErg;
+        const creatorStake = game.creatorStakeAmount;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
 
         const tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayoutTent - finalDevPayoutTent;
 
-        const participationFee = game.participationFeeNanoErg
+        const participationFee = game.participationFeeAmount
 
         let adjustedWinnerPrize: bigint;
         let adjustedResolverComm: bigint;

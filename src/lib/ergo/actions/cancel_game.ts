@@ -52,8 +52,8 @@ export async function cancel_game(
     }
 
     // --- 2. Calcular valores para la nueva caja de cancelación y la penalización ---
-    let stakePortionToClaim = game.creatorStakeNanoErg / STAKE_DENOMINATOR;
-    let newCreatorStake = game.creatorStakeNanoErg - stakePortionToClaim;
+    let stakePortionToClaim = game.creatorStakeAmount / STAKE_DENOMINATOR;
+    let newCreatorStake = game.creatorStakeAmount - stakePortionToClaim;
 
     if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
         console.warn(`Ajuste de stake: El valor restante calculado (${newCreatorStake}) es menor que SAFE_MIN_BOX_VALUE (${SAFE_MIN_BOX_VALUE}).`);
@@ -62,7 +62,7 @@ export async function cancel_game(
         newCreatorStake = SAFE_MIN_BOX_VALUE;
         
         // La porción a reclamar es el resto, para que el total se conserve.
-        stakePortionToClaim = game.creatorStakeNanoErg - newCreatorStake;
+        stakePortionToClaim = game.creatorStakeAmount - newCreatorStake;
 
         console.log(`Valores ajustados -> newCreatorStake: ${newCreatorStake}, stakePortionToClaim: ${stakePortionToClaim}`);
     }

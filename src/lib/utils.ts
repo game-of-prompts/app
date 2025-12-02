@@ -67,7 +67,7 @@ export function getDisplayStake(game: AnyGame): bigint {
     if (game.status === 'Cancelled_Draining') {
         return (game as GameCancellation).currentStakeNanoErg;
     }
-    return game.creatorStakeNanoErg;
+    return game.creatorStakeAmount;
 }
 
 // Devuelve la tarifa de participación o 0 si el juego está cancelado
@@ -75,7 +75,7 @@ export function getParticipationFee(game: AnyGame): bigint {
     if (game.status === 'Cancelled_Draining') {
         return 0n; // 0 BigInt
     }
-    return game.participationFeeNanoErg;
+    return game.participationFeeAmount;
 }
 
 export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string = "0008cd"): Uint8Array {

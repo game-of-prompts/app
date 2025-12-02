@@ -32,8 +32,8 @@ interface CreateGoPGamePlatformParams {
     gameServiceId: string;
     hashedSecret: string; // Hex string of blake2b256(S)
     deadlineBlock: number;
-    creatorStakeNanoErg: bigint;
-    participationFeeNanoErg: bigint;
+    creatorStakeAmount: bigint|BigInt;
+    participationFeeAmount: bigint|BigInt;
     commissionPercentage: number;
     judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
@@ -82,8 +82,8 @@ export class ErgoPlatform implements Platform {
                 params.gameServiceId,
                 params.hashedSecret,
                 params.deadlineBlock,
-                params.creatorStakeNanoErg,
-                params.participationFeeNanoErg,
+                params.creatorStakeAmount,
+                params.participationFeeAmount,
                 params.commissionPercentage,
                 params.judges,
                 params.gameDetailsJson,
@@ -109,7 +109,7 @@ export class ErgoPlatform implements Platform {
         return await submit_score(
             game.gameId,
             scoreList,
-            game.participationFeeNanoErg,
+            game.participationFeeAmount,
             commitmentC_hex,
             solverId_string,
             hashLogs_hex

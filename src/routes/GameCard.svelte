@@ -116,7 +116,7 @@
                     statusLabel = "Awaiting Results";
                     statusClasses = "bg-amber-500/15 text-amber-400 border border-amber-500/30";
                 } else {
-                    statusLabel = `Play for ${formatErg(game.participationFeeNanoErg)} ERG`;
+                    statusLabel = `Play for ${formatErg(game.participationFeeAmount)} ERG`;
                     statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
                 }
                 break;

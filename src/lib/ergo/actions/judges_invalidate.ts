@@ -94,7 +94,7 @@ export async function judges_invalidate(
         }
 
         // Verificación 3: Pago de la Tarifa de Participación
-        if (BigInt(pBox.value) < game.participationFeeNanoErg) {
+        if (BigInt(pBox.value) < game.participationFeeAmount) {
             console.warn(`La participación ${p.boxId} no cumple con la tarifa mínima. Será omitida.`);
             continue;
         }
@@ -173,8 +173,8 @@ export async function judges_invalidate(
             // R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
             R8: SColl(SLong, [
                 BigInt(game.deadlineBlock),
-                BigInt(game.creatorStakeNanoErg),
-                BigInt(game.participationFeeNanoErg),
+                BigInt(game.creatorStakeAmount),
+                BigInt(game.participationFeeAmount),
                 BigInt(game.perJudgeComissionPercentage),
                 BigInt(game.resolverCommission),
                 BigInt(newDeadline)

@@ -29,8 +29,8 @@ function randomSeed(): string {
  * @param gameServiceId - Service ID
  * @param hashedSecret - The Blake2b256 hash of the secret 'S'.
  * @param deadlineBlock - The block height at which the game ends.
- * @param creatorStakeNanoErg - The amount of ERG the creator stakes.
- * @param participationFeeNanoErg - The fee for players to participate.
+ * @param creatorStakeAmount - The amount of ERG the creator stakes.
+ * @param participationFeeAmount - The fee for players to participate.
  * @param commissionPercentage - The commission percentage for the creator
  * @param judges - An array of reputation token IDs for invited judges.
  * @param gameDetailsJson - A JSON string with game details.
@@ -41,8 +41,8 @@ export async function create_game(
     gameServiceId: string,
     hashedSecret: string,
     deadlineBlock: number,
-    creatorStakeNanoErg: bigint,
-    participationFeeNanoErg: bigint,
+    creatorStakeAmount: bigint,
+    participationFeeAmount: bigint,
     commissionPercentage: number,
     judges: string[],
     gameDetailsJson: string,
@@ -55,7 +55,7 @@ export async function create_game(
     console.log("Attempting to create a game:", {
         hashedSecret: hashedSecret.substring(0, 10) + "...",
         deadlineBlock,
-        creatorStakeNanoErg: creatorStakeNanoErg.toString(),
+        creatorStakeAmount: creatorStakeAmount.toString(),
         judges,
         gameDetailsJsonBrief: gameDetailsJson.substring(0, 100) + "...",
         seedHex: seedHex.substring(0, 10) + "...",
@@ -77,8 +77,8 @@ export async function create_game(
         throw new Error("No UTXOs found in the wallet to create the game.");
     }
 
-    if (creatorStakeNanoErg < SAFE_MIN_BOX_VALUE) {
-        throw new Error(`The creator's stake (${creatorStakeNanoErg}) is less than the safe minimum.`);
+    if (creatorStakeAmount < SAFE_MIN_BOX_VALUE) {
+        throw new Error(`The creator's stake (${creatorStakeAmount}) is less than the safe minimum.`);
     }
 
     const activeGameErgoTree = getGopGameActiveErgoTreeHex();
@@ -99,11 +99,11 @@ export async function create_game(
         })
         .filter((item): item is number[] => item !== null);
 
-    const participationTokenIdBytes = participationTokenId ? hexToBytes(participationTokenId) : new Uint8Array(0);
+    const participationTokenIdBytes = participationTokenId ? hexToBytes(participationTokenId)! : new Uint8Array(0);
     if (participationTokenId && !participationTokenIdBytes) throw new Error("Failed to convert participationTokenId to bytes.");
 
     const gameBoxOutput = new OutputBuilder(
-        creatorStakeNanoErg,
+        creatorStakeAmount,
         activeGameErgoTree
     )
         .mintToken({
@@ -129,8 +129,8 @@ export async function create_game(
             // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
             R8: SColl(SLong, [
                 BigInt(deadlineBlock),
-                creatorStakeNanoErg,
-                participationFeeNanoErg,
+                creatorStakeAmount,
+                participationFeeAmount,
                 BigInt(perJudgeComissionPercentage),
                 BigInt(commissionPercentage)
             ]).toHex(),

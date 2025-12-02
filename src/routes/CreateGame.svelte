@@ -327,7 +327,7 @@
                 gameServiceId: gameServiceId,
                 hashedSecret: hashedSecret,
                 deadlineBlock: deadlineBlock,
-                creatorStakeNanoErg: toNanoErg(creatorStakeErg),
+                creatorStakeAmount: toNanoErg(creatorStakeErg),
                 participationFeeAmount: toTokenSmallestUnit(participationFeeErg),
                 participationTokenId: participationTokenId === "" ? undefined : participationTokenId,
                 commissionPercentage: Math.round(commissionPercentage),

@@ -13,8 +13,8 @@ export interface CreateGoPGamePlatformParams {
     gameServiceId: string;
     hashedSecret: string; // Hex string de blake2b256(S)
     deadlineBlock: number;
-    creatorStakeNanoErg: BigInt;
-    participationFeeNanoErg: BigInt;
+    creatorStakeAmount: BigInt;
+    participationFeeAmount: BigInt;
     commissionPercentage: number;
     gameDetailsJson: string; // String JSON con título, descripción, etc.
 }
