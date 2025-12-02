@@ -217,6 +217,11 @@ export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> 
     return game.status !== GameState.Active || game.deadlineBlock <= await game.platform.get_current_height();
 }
 
+export async function isOpenCeremony(game: AnyGame): Promise<boolean> {
+    const currentHeight = await (new ErgoPlatform).get_current_height();
+    return game.status === "Active" && currentHeight < game.ceremonyDeadline
+}
+
 /**
  * Determina si un juego ha llegado a su estado final definitivo.
  */

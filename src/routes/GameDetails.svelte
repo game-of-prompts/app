@@ -10,6 +10,7 @@
         iGameDrainingStaking, 
         isGameDrainingAllowed, 
         isGameParticipationEnded,
+        isOpenCeremony,
         resolve_participation_commitment
     } from "$lib/common/game";
     import { address, connected, game_detail, judge_detail, judges, reputation_proof } from "$lib/common/store";
@@ -123,9 +124,8 @@
         transactionId = null; 
         errorMessage = null;
         try {
-            currentHeight = await platform.get_current_height();
             participationIsEnded = await isGameParticipationEnded(game);
-            openCeremony = game.status === "Active" && currentHeight < game.ceremonyDeadline;
+            openCeremony = await isOpenCeremony(game);
 
             if (game.status === "Active") {
                 participations = await fetchParticipations(game);

@@ -7,7 +7,9 @@
     import { 
         isGameParticipationEnded, 
         GameState, 
-        type AnyGame as Game 
+        type AnyGame as Game, 
+        isOpenCeremony
+
     } from "$lib/common/game";
 
     export let game: Game;
@@ -108,13 +110,16 @@
         return erg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
     }
 
-    function updateStatus() {
+    async function updateStatus() {
         if (!game) return;
         switch (game.status) {
             case GameState.Active:
                 if (participationEnded) {
                     statusLabel = "Awaiting Results";
                     statusClasses = "bg-amber-500/15 text-amber-400 border border-amber-500/30";
+                } else if (await isOpenCeremony(game)) {
+                    statusLabel = "Collaborate to randomness";
+                    statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
                 } else {
                     statusLabel = `Play for ${formatErg(game.participationFeeAmount)} ERG`;
                     statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
@@ -149,7 +154,7 @@
             if (ended) {
                 participationEnded = true;
                 cleanup();
-                updateStatus();
+                await updateStatus();
             }
         } catch {
             remainingTime = "Error";
@@ -173,7 +178,7 @@
                 game.platform
             );
         }
-        updateStatus();
+        await updateStatus();
         if (game.status === GameState.Active && !participationEnded) {
             await tick();
             if (!participationEnded) timer = setInterval(tick, 30000);
