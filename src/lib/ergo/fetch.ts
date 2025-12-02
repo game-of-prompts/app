@@ -342,7 +342,7 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
-        if (!r9Value || r9Value.length !== 2) throw new Error("R9 is not a valid tuple (expected 2 items).");
+        if (!r9Value || r9Value.length !== 3) throw new Error("R9 is not a valid tuple (expected 3 items).");
 
         const gameDetailsHex = r9Value[0];
         const participationTokenId = parseCollByteToHex(r9Value[1]);
