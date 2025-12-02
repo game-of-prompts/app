@@ -8,9 +8,13 @@
         isGameParticipationEnded, 
         GameState, 
         type AnyGame as Game, 
-        isOpenCeremony
+        isOpenCeremony,
+
+        getGameTokenSymbol
+
 
     } from "$lib/common/game";
+    import { fetch_token_details } from "$lib/ergo/fetch";
 
     export let game: Game;
     export let index: number;
@@ -121,7 +125,7 @@
                     statusLabel = "Collaborate to randomness";
                     statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
                 } else {
-                    statusLabel = `Play for ${formatErg(game.participationFeeAmount)} ERG`;
+                    statusLabel = `Play for ${formatErg(game.participationFeeAmount)} ${await getGameTokenSymbol(game)}`;
                     statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
                 }
                 break;

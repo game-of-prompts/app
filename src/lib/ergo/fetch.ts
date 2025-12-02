@@ -58,6 +58,7 @@ export async function fetch_token_details(id: string): Promise<TokenEIP4> {
     try {
         if (response.ok) {
             let json_data = await response.json();
+            console.log("Token data: ", json_data);
             if (json_data['type'] == 'EIP-004') {
                 return {
                     "name": json_data['name'],

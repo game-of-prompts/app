@@ -6,6 +6,7 @@ import { SAFE_MIN_BOX_VALUE, type Amount, type Box, type TokenEIP4 } from "@flee
 import { type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
+import { fetch_token_details } from "$lib/ergo/fetch";
 
 /**
  * Defines the possible states a game can be in, according to the new contract logic.
@@ -346,4 +347,14 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     }
 
     return null;
+}
+
+export async function getGameTokenSymbol(game: AnyGame): Promise<string> {
+    if (game.participationTokenId) {
+        const eip4 = await fetch_token_details(game.participationTokenId);
+        return eip4.name;
+    }
+    else {
+        return "ERG";
+    }
 }
