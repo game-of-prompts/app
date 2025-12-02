@@ -77,9 +77,17 @@ export async function create_game(
         throw new Error("No UTXOs found in the wallet to create the game.");
     }
 
-    if (creatorStakeAmount < SAFE_MIN_BOX_VALUE) {
+    if (participationTokenId == "" && creatorStakeAmount < SAFE_MIN_BOX_VALUE) {
         throw new Error(`The creator's stake (${creatorStakeAmount}) is less than the safe minimum.`);
     }
+
+    const gameValue = participationTokenId == "" ? creatorStakeAmount : SAFE_MIN_BOX_VALUE;
+    const gameTokens = participationTokenId == "" ? [] : [{
+        tokenId: participationTokenId,
+        amount: creatorStakeAmount
+    }]; 
+
+    // --- 2. Game Box Construction ---
 
     const activeGameErgoTree = getGopGameActiveErgoTreeHex();
     const hashedSecretBytes = hexToBytes(hashedSecret);
@@ -103,13 +111,14 @@ export async function create_game(
     if (participationTokenId && !participationTokenIdBytes) throw new Error("Failed to convert participationTokenId to bytes.");
 
     const gameBoxOutput = new OutputBuilder(
-        creatorStakeAmount,
-        activeGameErgoTree
-    )
+            gameValue,
+            activeGameErgoTree
+        )
         .mintToken({
             amount: 1n,
             decimals: 0
         })
+        .addTokens(gameTokens)
         .setAdditionalRegisters({
             // R4: Game state (0: Active)
             R4: SInt(0).toHex(),
