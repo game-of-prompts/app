@@ -131,7 +131,7 @@
                 break;
             case GameState.Resolution:
                 statusLabel = "Judging in Progress";
-                statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
+                statusClasses = "bg-lime-500/15 text-lime-400 border border-lime-500/30";
                 break;
             case GameState.Cancelled_Draining:
                 statusLabel = "Cancelled";
@@ -139,7 +139,7 @@
                 break;
             case GameState.Finalized:
                 statusLabel = "Finalized";
-                statusClasses = "bg-blue-500/15 text-blue-400 border border-blue-500/30";
+                statusClasses = "bg-gray-500/15 text-gray-400 border border-black-500/30";
                 break;
             default:
                 statusLabel = "Unknown";
