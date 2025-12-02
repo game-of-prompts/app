@@ -224,3 +224,20 @@ export function pkHexToBase58Address(pkHex?: string): string {
         return ErgoAddress.fromPublicKey(pkBytes).toString();
     } catch { return "Invalid PK"; }
 }
+
+export function getArrayFromValue(value: any): any[] | null {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes('"')) {
+            const inner = trimmed.substring(1, trimmed.length - 1);
+            return inner === '' ? [] : inner.split(',');
+        }
+        try {
+            return JSON.parse(trimmed);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+};

@@ -32,7 +32,8 @@ import {
     hexToUtf8,
     parseCollByteToHex,
     parseLongColl,
-    parseGameContent
+    parseGameContent,
+    getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type ReputationOpinion, type RPBox } from "./reputation/objects";
@@ -206,7 +207,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
         const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
-        const r9Value = JSON.parse(box.additionalRegisters.R9?.renderedValue || "[]");
+        const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
         if (!Array.isArray(r9Value) || r9Value.length < 2) {
             throw new Error("R9 is not a valid array with at least 2 elements (gameDetailsJSON, participationTokenId).");
         }
@@ -311,25 +312,6 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             return null;
         }
         const gameId = box.assets[0].tokenId;
-
-
-        const getArrayFromValue = (value: any): any[] | null => {
-            if (Array.isArray(value)) return value;
-            if (typeof value === 'string') {
-                const trimmed = value.trim();
-                if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes('"')) {
-                    const inner = trimmed.substring(1, trimmed.length - 1);
-                    return inner === '' ? [] : inner.split(',');
-                }
-                try {
-                    return JSON.parse(trimmed);
-                } catch (e) {
-                    console.warn(`Could not parse JSON string for box ${box.boxId}: ${value}`);
-                    return null;
-                }
-            }
-            return null;
-        };
 
         // R4 is game state.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
@@ -496,7 +478,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
         const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
-        const r9Value = JSON.parse(box.additionalRegisters.R9?.renderedValue || "[]");
+        const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
         if (!Array.isArray(r9Value) || r9Value.length < 2) {
             throw new Error("R9 is not a valid array with at least 2 elements (gameDetailsJSON, participationTokenId).");
         }
