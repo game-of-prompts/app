@@ -64,7 +64,11 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
                 R8: SLong(BigInt(originalDeadline)).toHex(),
-                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                R9: SColl(SColl(SByte), [
+                                    stringToBytes("utf8", "{}"),                    // detalles del juego
+                                    
+                                    ""
+                                ]).toHex(),
             }
         });
         
@@ -146,7 +150,11 @@ describe("Game Stake Draining (drain_cancelled_game)", () => {
                 R6: SColl(SByte, revealedSecret).toHex(),
                 R7: SLong(initialCancelledStake).toHex(),
                 R8: SLong(BigInt(originalDeadline)).toHex(),
-                R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex() 
+                R9: SColl(SColl(SByte), [
+                                    stringToBytes("utf8", "{}"),                    // detalles del juego
+                                    
+                                    ""
+                                ]).toHex()
             }
         });
         const futureLockedBox = gameCancellationContract.utxos.toArray()[0];

@@ -17,7 +17,6 @@ import {
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
-import { prependHexPrefix } from "$lib/utils";
 
 describe("Game Cancellation (cancel_game)", () => {
     let mockChain: MockChain;
@@ -129,7 +128,11 @@ describe("Game Cancellation (cancel_game)", () => {
                         R6: SColl(SByte, secret).toHex(), // Se revela el secreto
                         R7: SLong(newCreatorStake).toHex(),
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
-                        R9: SColl(SByte, stringToBytes("utf8", "{}")).toHex(),
+                        R9: SColl(SColl(SByte), [
+                                    stringToBytes("utf8", "{}"),                    // detalles del juego
+                                    
+                                    ""
+                                ]).toHex(),
                     }),
                 // Salida 1: La penalización pagada al reclamante
                 new OutputBuilder(stakePortionToClaim, claimer.address)

@@ -16,12 +16,12 @@
   // === DEFINICIONES DE REGISTROS (ESTADO DE CANCELACIÓN)
   // =================================================================
 
-  // R4: Integer     - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: Long        - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
-  // R6: Coll[Byte]  - revealedSecret: El secreto 'S' del juego, ya revelado.
-  // R7: Long        - creatorStake: La cantidad actual (y decreciente) del stake del creador.
-  // R8 Long         - originalDeadline
-  // R9: Coll[Byte]  - ReadOnlyInfo: Un JSON (en bytes UTF-8) con datos inmutables del juego
+  // R4: Integer           - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R5: Long              - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
+  // R6: Coll[Byte]        - revealedSecret: El secreto 'S' del juego, ya revelado.
+  // R7: Long              - creatorStake: La cantidad actual (y decreciente) del stake del creador.
+  // R8  Long              - originalDeadline
+  // R9: Coll[Coll[Byte]]  - gameDetailsJsonHex, ParticipationTokenID
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -32,7 +32,9 @@
   val revealedSecret = SELF.R6[Coll[Byte]].get
   val currentStake = SELF.R7[Long].get
   val originalDeadline = SELF.R8[Long].get
-  val readOnlyInfo = SELF.R9[Coll[Byte]].get
+  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
+  val gameDetailsJsonHex = gameProvenance(0)
+  val participationTokenId = gameProvenance(1)
 
 
   // El ID del NFT original del juego se extrae de los tokens de la propia caja.
@@ -48,28 +50,38 @@
   // y si queda suficiente stake para continuar el ciclo.
   val action1_drainStake = {
     val recreatedCancellationBox = OUTPUTS(0)
-    val claimerOutput = OUTPUTS(1)
     
     val stakePortionToClaim = currentStake / STAKE_DENOMINATOR
     val remainingStake = currentStake - stakePortionToClaim
 
     val cooldownIsOver = HEIGHT >= unlockHeight
 
-    val claimerGetsPortion = claimerOutput.value >= stakePortionToClaim
+    val recreatedValue = if(participationTokenId.size == 0) {
+      recreatedCancellationBox.value
+    } else {
+      val matchingTokens = recreatedCancellationBox.tokens.filter { (token: (Coll[Byte], Long)) => 
+        token._1 == participationTokenId
+      }
+      if (matchingTokens.size > 0) {
+        matchingTokens(0)._2
+      } else {
+        0L
+      }
+    }
 
     val boxIsRecreatedCorrectly = {
       recreatedCancellationBox.propositionBytes == SELF.propositionBytes &&
-      recreatedCancellationBox.value >= remainingStake &&
+      recreatedValue >= remainingStake &&
       recreatedCancellationBox.tokens(0)._1 == gameNftId &&
       recreatedCancellationBox.R4[Int].get == gameState &&
       recreatedCancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
       recreatedCancellationBox.R6[Coll[Byte]].get == revealedSecret &&
       recreatedCancellationBox.R7[Long].get == remainingStake &&
       recreatedCancellationBox.R8[Long].get == originalDeadline &&
-      recreatedCancellationBox.R9[Coll[Byte]].get == readOnlyInfo
+      recreatedCancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance
     }
     
-    cooldownIsOver && claimerGetsPortion && boxIsRecreatedCorrectly
+    cooldownIsOver && boxIsRecreatedCorrectly
   }
 
   sigmaProp(gameIsCancelled && action1_drainStake)

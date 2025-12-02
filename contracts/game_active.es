@@ -32,7 +32,7 @@
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
-  // R9: Coll[Coll[Byte]]   - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID]
+  // R9: Coll[Coll[Byte]]   - gameDetailsJsonHex, ParticipationTokenID
 
 
   // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).
@@ -220,7 +220,7 @@
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
           cancellationBox.R7[Long].get == remainingStake &&
           cancellationBox.R8[Long].get == deadline &&
-          cancellationBox.R9[Coll[Byte]].get == gameDetailsJsonHex
+          cancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
