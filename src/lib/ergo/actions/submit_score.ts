@@ -27,6 +27,7 @@ export async function submit_score(
     gameNftIdHex: string,
     scoreList: bigint[],
     participationFeeForBox: bigint,
+    participationTokenId: string,
     commitmentCHex: string,
     solverIdString: string,
     hashLogsHex: string
@@ -45,11 +46,17 @@ export async function submit_score(
         hashLogsHex
     });
 
-    if (participationFeeForBox < SAFE_MIN_BOX_VALUE) {
+    if (participationTokenId == "" && participationFeeForBox < SAFE_MIN_BOX_VALUE) {
         throw new Error(
             `La tarifa de participación (${participationFeeForBox / 1000000000n} ERG) es menor que el valor mínimo requerido para una caja.`
         );
     }
+
+    const gameValue = participationTokenId == "" ? participationFeeForBox : SAFE_MIN_BOX_VALUE;
+    const gameTokens = participationTokenId == "" ? [] : [{
+        tokenId: participationTokenId,
+        amount: participationFeeForBox
+    }];  
 
     // 1. Obtener la clave pública del jugador desde la billetera
     const playerAddressString = await ergo.get_change_address();
@@ -86,9 +93,10 @@ export async function submit_score(
 
     // 5. Construir la caja de salida (ParticipationBox)
     const participationBoxOutput = new OutputBuilder(
-        participationFeeForBox,
+        gameValue,
         participationContractErgoTree
     )
+    .addTokens(gameTokens)
     .setAdditionalRegisters({
         R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
         R5: SColl(SByte, commitmentC_bytes).toHex(),

@@ -110,6 +110,7 @@ export class ErgoPlatform implements Platform {
             game.gameId,
             scoreList,
             game.participationFeeAmount,
+            game.participationTokenId,
             commitmentC_hex,
             solverId_string,
             hashLogs_hex
