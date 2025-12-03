@@ -42,8 +42,8 @@
     let deadlineUnit: "days" | "minutes" = "days";
     let deadlineBlock: number | undefined;
     let deadlineBlockDateText: string = "";
-    let creatorStakeErg: number | undefined;
-    let participationFeeErg: number | undefined;
+    let creatorStakeAmount: number | undefined;
+    let participationFeeAmount: number | undefined;
     let commissionPercentage: number | undefined;
     let perJudgeComissionPercentage: number | undefined;
     let transactionId: string | null = null;
@@ -189,12 +189,6 @@
         }
     }
 
-    function toNanoErg(ergValue: number | undefined): BigInt {
-        if (ergValue === undefined || ergValue === null || isNaN(ergValue))
-            return BigInt(0);
-        return BigInt(Math.round(ergValue * 1000000000));
-    }
-
     function toTokenSmallestUnit(value: number | undefined): BigInt {
         if (value === undefined || value === null || isNaN(value))
             return BigInt(0);
@@ -275,8 +269,8 @@
             !gameSecret.trim() ||
             !gameTitle.trim() ||
             !deadlineBlock ||
-            creatorStakeErg === undefined ||
-            participationFeeErg === undefined ||
+            creatorStakeAmount === undefined ||
+            participationFeeAmount === undefined ||
             commissionPercentage === undefined ||
             perJudgeComissionPercentage === undefined
         ) {
@@ -328,8 +322,8 @@
                 gameServiceId: gameServiceId,
                 hashedSecret: hashedSecret,
                 deadlineBlock: deadlineBlock,
-                creatorStakeAmount: toNanoErg(creatorStakeErg),
-                participationFeeAmount: toTokenSmallestUnit(participationFeeErg),
+                creatorStakeAmount: toTokenSmallestUnit(creatorStakeAmount),
+                participationFeeAmount: toTokenSmallestUnit(participationFeeAmount),
                 participationTokenId: participationTokenId === "" ? undefined : participationTokenId,
                 commissionPercentage: Math.round(commissionPercentage),
                 judges: judgesArray,
@@ -490,25 +484,25 @@
                         {/if}
                     </div>
                     <div class="form-group">
-                        <Label for="creatorStakeErg">Creator Stake (ERG)</Label>
+                        <Label for="creatorStakeAmount">Creator Stake ({participationTokenName})</Label>
                         <Input
-                            id="creatorStakeErg"
-                            bind:value={creatorStakeErg}
+                            id="creatorStakeAmount"
+                            bind:value={creatorStakeAmount}
                             type="number"
                             min="0"
                             step="0.001"
-                            placeholder="ERG to stake"
+                            placeholder="{participationTokenName} to stake"
                             required
                         />
                     </div>
-<div class="form-group lg:col-span-2">
+                    <div class="form-group lg:col-span-2">
                         <Label for="participationFee"
                             >Participation Fee ({participationTokenName})</Label
                         >
                         <div class="flex space-x-2">
                             <Input
                                 id="participationFee"
-                                bind:value={participationFeeErg}
+                                bind:value={participationFeeAmount}
                                 type="number"
                                 min="0"
                                 step="0.001"
@@ -808,8 +802,8 @@
                         !gameSecret.trim() ||
                         !gameTitle.trim() ||
                         !deadlineBlock ||
-                        creatorStakeErg === undefined ||
-                        participationFeeErg === undefined ||
+                        creatorStakeAmount === undefined ||
+                        participationFeeAmount === undefined ||
                         commissionPercentage === undefined ||
                         overAllocated > 0 ||
                         contentTooLarge}
