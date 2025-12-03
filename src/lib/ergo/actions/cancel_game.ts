@@ -31,6 +31,8 @@ export async function cancel_game(
     claimerAddressString: string
 ): Promise<string | null> {
 
+    const maxBigInt = (a: bigint, b: bigint): bigint => (a > b ? a : b);
+
     console.warn(`Iniciando transición de cancelación para el juego: ${game.boxId}`);
     
     // --- 1. Obtener datos y realizar pre-chequeos ---
@@ -53,18 +55,26 @@ export async function cancel_game(
 
     // --- 2. Calcular valores para la nueva caja de cancelación y la penalización ---
     let stakePortionToClaim = game.creatorStakeAmount / STAKE_DENOMINATOR;
+    const newValue = game.value - stakePortionToClaim;
     let newCreatorStake = game.creatorStakeAmount - stakePortionToClaim;
 
-    if (newCreatorStake < SAFE_MIN_BOX_VALUE) {
-        console.warn(`Ajuste de stake: El valor restante calculado (${newCreatorStake}) es menor que SAFE_MIN_BOX_VALUE (${SAFE_MIN_BOX_VALUE}).`);
+    let gameValue = game.participationTokenId == "" ? newValue : BigInt(game.box.value);
+    const gameTokens = game.participationTokenId == "" ? [] : [{
+        tokenId: game.participationTokenId,
+        amount: newValue
+    }];
+
+    if (gameValue < SAFE_MIN_BOX_VALUE) {
+        console.warn(`Ajuste de stake: El valor restante calculado (${gameValue}) es menor que SAFE_MIN_BOX_VALUE (${SAFE_MIN_BOX_VALUE}).`);
         
         // El stake para la nueva caja se fija en el mínimo seguro.
-        newCreatorStake = SAFE_MIN_BOX_VALUE;
-        
-        // La porción a reclamar es el resto, para que el total se conserve.
-        stakePortionToClaim = game.creatorStakeAmount - newCreatorStake;
+        gameValue = SAFE_MIN_BOX_VALUE;  // Ajusta con (SAFE_MIN_BOX_VALUE - gameValue) mas tokens si es necesario
 
-        console.log(`Valores ajustados -> newCreatorStake: ${newCreatorStake}, stakePortionToClaim: ${stakePortionToClaim}`);
+        // La porción a reclamar es el resto, para que el total se conserve.
+        const amountAdded = SAFE_MIN_BOX_VALUE - newValue;
+        
+        stakePortionToClaim = maxBigInt(stakePortionToClaim - amountAdded, 0n);
+        newCreatorStake = newCreatorStake + amountAdded;  // TODO, no está claro, podría no hacerse e igualmente estaría bien, depende del protocolo. Revisar contrato.
     }
 
     // --- 3. Construir Salidas de la Transacción ---
@@ -75,10 +85,10 @@ export async function cancel_game(
 
     // SALIDA(0): La nueva caja de cancelación (`game_cancellation.es`)
     const cancellationBoxOutput = new OutputBuilder(
-        newCreatorStake,
+        gameValue,
         cancellationContractErgoTree
     )
-    .addTokens(gameBoxToSpend.assets) // Preservar el NFT del juego
+    .addTokens([gameBoxToSpend.assets[0], ...gameTokens]) // Preservar el NFT del juego
     .setAdditionalRegisters({
         // R4: Estado del juego (2: Cancelado)
         R4: SInt(2).toHex(),
@@ -94,6 +104,20 @@ export async function cancel_game(
         R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId) ?? ""]).toHex()
     });
 
+    // SALIDA(1): Caja que paga la penalización al claimer
+
+    const claimerValue = game.participationTokenId == "" ? stakePortionToClaim : maxBigInt(stakePortionToClaim, SAFE_MIN_BOX_VALUE) + SAFE_MIN_BOX_VALUE;
+    const claimerTokens = game.participationTokenId == "" ? [] : [{
+        tokenId: game.participationTokenId,
+        amount: claimerValue
+    }];
+
+    const claimerBoxOutput = new OutputBuilder(
+        claimerValue,
+        claimerAddressString
+    )
+    .addTokens(claimerTokens);
+
 
     // --- 4. Construir y Enviar la Transacción ---
     const utxos = await ergo.get_utxos();
@@ -101,16 +125,7 @@ export async function cancel_game(
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
-        .to(stakePortionToClaim >= SAFE_MIN_BOX_VALUE ? 
-            [
-                cancellationBoxOutput, 
-                new OutputBuilder(
-                    stakePortionToClaim,
-                    claimerAddressString
-                )
-            ] : 
-            [cancellationBoxOutput]
-        )
+        .to([cancellationBoxOutput, claimerBoxOutput])
         .sendChangeTo(claimerAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
