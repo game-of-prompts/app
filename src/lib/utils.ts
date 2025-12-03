@@ -64,35 +64,35 @@ export const flyAndScale = (
 
 // Devuelve el stake, sin importar el estado del juego
 export function getDisplayStake(game: AnyGame): bigint {
-    if (game.status === 'Cancelled_Draining') {
-        return (game as GameCancellation).currentStakeNanoErg;
-    }
-    return game.creatorStakeAmount;
+	if (game.status === 'Cancelled_Draining') {
+		return (game as GameCancellation).currentStakeAmount;
+	}
+	return game.creatorStakeAmount;
 }
 
 // Devuelve la tarifa de participación o 0 si el juego está cancelado
 export function getParticipationFee(game: AnyGame): bigint {
-    if (game.status === 'Cancelled_Draining') {
-        return 0n; // 0 BigInt
-    }
-    return game.participationFeeAmount;
+	if (game.status === 'Cancelled_Draining') {
+		return 0n; // 0 BigInt
+	}
+	return game.participationFeeAmount;
 }
 
 export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string = "0008cd"): Uint8Array {
-  const cleanHex = hexPrefix.replace(/\s+/g, '');
-  if (cleanHex.length % 2 !== 0) {
-    throw new Error("La cadena hexadecimal debe tener una longitud par.");
-  }
+	const cleanHex = hexPrefix.replace(/\s+/g, '');
+	if (cleanHex.length % 2 !== 0) {
+		throw new Error("La cadena hexadecimal debe tener una longitud par.");
+	}
 
-  const prefixBytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < cleanHex.length; i += 2) {
-    prefixBytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
-  }
+	const prefixBytes = new Uint8Array(cleanHex.length / 2);
+	for (let i = 0; i < cleanHex.length; i += 2) {
+		prefixBytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
+	}
 
-  const result = new Uint8Array(prefixBytes.length + originalBytes.length);
+	const result = new Uint8Array(prefixBytes.length + originalBytes.length);
 
-  result.set(prefixBytes, 0);
-  result.set(originalBytes, prefixBytes.length);
+	result.set(prefixBytes, 0);
+	result.set(originalBytes, prefixBytes.length);
 
-  return result;
+	return result;
 }

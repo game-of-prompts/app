@@ -473,7 +473,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
         const revealedS_Hex = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
 
         // R7: creatorStake (Long). The creator's current stake.
-        const currentStakeNanoErg = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
+        const currentStakeAmount = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
 
         // R8: Original deadline (Long).
         const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
@@ -489,7 +489,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
         const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
 
         // Validate that essential registers were parsed correctly
-        if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeNanoErg === undefined) {
+        if (isNaN(unlockHeight) || !revealedS_Hex || currentStakeAmount === undefined) {
             throw new Error("Invalid or missing registers R5, R6, or R7.");
         }
 
@@ -503,7 +503,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             gameId,
             unlockHeight,
             revealedS_Hex,
-            currentStakeNanoErg,
+            currentStakeAmount,
             content,
             participationFeeAmount,
             participationTokenId: participationTokenId ?? "",

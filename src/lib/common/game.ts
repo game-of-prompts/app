@@ -121,7 +121,7 @@ export interface GameCancellation {
     gameId: string;
     unlockHeight: number;
     revealedS_Hex: string;
-    currentStakeNanoErg: bigint;
+    currentStakeAmount: bigint;
     content: GameContent;
     participationFeeAmount: bigint;
     participationTokenId: string;
@@ -248,7 +248,7 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
     const currentHeight = await platform.get_current_height();
     const unlocked = currentHeight >= game.unlockHeight;
 
-    const stakeToDrain = BigInt(game.currentStakeNanoErg);
+    const stakeToDrain = BigInt(game.currentStakeAmount);
     const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
     const remainingStake = (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
 
