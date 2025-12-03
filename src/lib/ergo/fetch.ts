@@ -162,7 +162,7 @@ async function getTransactionInfo(transactionId: string): Promise<any> {
  * @param box The raw box obtained from the explorer.
  * @returns A `GameActive` object or `null` if the box does not match the expected format.
  */
-async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> {
+async function parseGameActiveBox(box: any): Promise<GameActive | null> {
     try {
         if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
             console.warn('parseGameActiveBox: invalid constants');
@@ -223,7 +223,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
             box: box,
             status: GameState.Active,
             gameId,
-            commissionPercentage: creatorComissionPercentage, // From R8
+            commissionPercentage: Number(creatorComissionPercentage), // From R8
             secretHash, // From R6
             judges, // From R7
             deadlineBlock: Number(deadlineBlock), // From R8
@@ -231,7 +231,7 @@ async function parseGameActiveBox(box: Box<Amount>): Promise<GameActive | null> 
             participationFeeAmount, // From R8
             participationTokenId: participationTokenId || "", // From R9
             content, // From R9
-            value: BigInt(box.value),
+            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
             reputation: 0,
@@ -301,7 +301,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
  * @param box The raw box obtained from the explorer.
  * @returns A `GameResolution` object or `null` if the box does not match the expected format.
  */
-export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameResolution | null> {
+export async function parseGameResolutionBox(box: any): Promise<GameResolution | null> {
     try {
         if (box.ergoTree !== getGopGameResolutionErgoTreeHex()) {
             console.warn('parseGameResolutionBox: invalid constants');
@@ -371,10 +371,10 @@ export async function parseGameResolutionBox(box: Box<Amount>): Promise<GameReso
             resolverPK_Hex,
             resolverScript_Hex,
             content,
-            value: BigInt(box.value),
+            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
-            resolverCommission: creatorComissionPercentage, // Added from R8
+            resolverCommission: Number(creatorComissionPercentage), // Added from R8
             constants: DefaultGameConstants,
             seed: seed, // Added from R5
             reputation: 0
@@ -446,7 +446,7 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
  * @param box The raw box from the explorer.
  * @returns A `GameCancellation` object or `null`.
  */
-export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCancellation | null> {
+export async function parseGameCancellationBox(box: any): Promise<GameCancellation | null> {
     try {
         if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
             console.warn('parseGameCancellationBox: invalid constants (ErgoTree mismatch)');
@@ -507,7 +507,7 @@ export async function parseGameCancellationBox(box: Box<Amount>): Promise<GameCa
             content,
             participationFeeAmount,
             participationTokenId: participationTokenId ?? "",
-            value: BigInt(box.value),
+            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
             deadlineBlock: originalDeadline,
@@ -709,7 +709,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             deadlineBlock: lastBox.deadlineBlock, // From last contract box
             gameId,
             content: lastBox.content, // From last contract box
-            value: BigInt(lastBox.box.value), // Value from last contract box
+            value: lastBox.value, // Value from last contract box
+            participationTokenId: lastBox.participationTokenId,
             participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0), // From last contract box
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: lastBox.judges || [], // From last contract box
@@ -1146,7 +1147,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
             };
             try {
                 if (currentBox.additionalRegisters && currentBox.additionalRegisters.R9) {
-                    const hex = parseCollByteToHex(currentBox.additionalRegisters.R9?.renderedValue);
+                    const hex = parseCollByteToHex((currentBox.additionalRegisters.R9 as any)?.renderedValue);
                     const json = hexToUtf8(hex || "");
                     content = parseGameContent(json, currentBox.boxId, currentBox.assets?.[0]);
                 }
@@ -1163,6 +1164,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 gameId: id,
                 content,
                 value: BigInt(currentBox.value),
+                participationTokenId: "",
                 participationFeeAmount: BigInt(0),
                 reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
                 judges: [],
