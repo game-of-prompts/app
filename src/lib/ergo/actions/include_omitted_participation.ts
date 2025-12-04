@@ -42,7 +42,7 @@ export async function include_omitted_participation(
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();;
 
     const recreatedGameBox = new OutputBuilder(
-        BigInt(game.value),
+        BigInt(game.box.value),
         resolutionErgoTree
     )
     .addTokens(game.box.assets)
