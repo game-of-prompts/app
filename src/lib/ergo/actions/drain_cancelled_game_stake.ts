@@ -3,8 +3,7 @@ import {
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
     SAFE_MIN_BOX_VALUE,
-    type InputBox,
-    SConstant
+    type InputBox
 } from '@fleet-sdk/core';
 import { SColl, SByte, SLong, SInt } from '@fleet-sdk/serializer';
 import { parseBox, hexToBytes } from '$lib/ergo/utils';
@@ -39,11 +38,10 @@ export async function drain_cancelled_game_stake(
     const stakeToDrain = BigInt(game.currentStakeAmount);
     const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
     const remainingStake = stakeToDrain - stakePortionToClaim;
+    const isTokenGame = game.participationTokenId !== "";
 
-    // The contract prevents this action from running if not enough stake is left.
-    if (remainingStake < SAFE_MIN_BOX_VALUE) {
-        // In this case, a different action should be used to finalize the drain.
-        // For now, we throw an error to indicate this action is no longer valid.
+    // The contract prevents this action from running if not enough stake is left (only applies to ERG stake).
+    if (!isTokenGame && remainingStake < SAFE_MIN_BOX_VALUE) {
         throw new Error(`The remaining stake (${remainingStake}) is too low to continue the drain. Cannot proceed.`);
     }
 
@@ -53,27 +51,36 @@ export async function drain_cancelled_game_stake(
     const revealedSecretBytes = hexToBytes(game.revealedS_Hex);
     if (!revealedSecretBytes) throw new Error("Could not convert revealed secret hex to bytes.");
 
+    // Calculate Values and Tokens based on whether it's an ERG game or Token game
+    const nextBoxValue = isTokenGame ? BigInt(game.box.value) : remainingStake;
+    const nextBoxTokens = [game.box.assets[0]]; // Always preserve NFT
+    if (isTokenGame) nextBoxTokens.push({ tokenId: game.participationTokenId, amount: remainingStake });
+
+    const claimerValue = isTokenGame ? SAFE_MIN_BOX_VALUE : stakePortionToClaim;
+    const claimerTokens = isTokenGame ? [{ tokenId: game.participationTokenId, amount: stakePortionToClaim }] : [];
+
     // OUTPUT(0): The recreated cancellation box with updated values
     const recreatedCancellationBox = new OutputBuilder(
-        remainingStake,
+        nextBoxValue,
         cancellationContractErgoTree
     )
-        .addTokens(game.box.assets) // Keep the game NFT
+        .addTokens(nextBoxTokens)
         .setAdditionalRegisters({
             // Correct register structure from the test
             R4: SInt(2).toHex(), // State: Cancelled
             R5: SLong(newUnlockHeight).toHex(),
             R6: SColl(SByte, revealedSecretBytes).toHex(),
-            R7: SLong(remainingStake).toHex(),
+            R7: SLong(remainingStake).toHex(), // R7 always tracks the relevant stake amount (ERG or Token)
             R8: SLong(BigInt(game.deadlineBlock)).toHex(),
             R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId) ?? ""]).toHex()
         });
 
     // OUTPUT(1): The portion of the stake for the claimer
     const claimerOutput = new OutputBuilder(
-        stakePortionToClaim,
+        claimerValue,
         claimerAddressString
-    );
+    )
+    .addTokens(claimerTokens);
 
     // --- 3. Build and Send the Transaction ---
     const utxos: InputBox[] = await ergo.get_utxos();
