@@ -93,8 +93,12 @@ export async function judges_invalidate(
             continue;
         }
 
-        // Verificación 3: Pago de la Tarifa de Participación
-        if (BigInt(pBox.value) < game.participationFeeAmount) {
+        // Verificación 3: Pago de la Tarifa de Participación (Check Tokens or ERG)
+        const feeCheck = game.participationTokenId === "" 
+            ? BigInt(pBox.value) 
+            : BigInt(pBox.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
+
+        if (feeCheck < game.participationFeeAmount) {
             console.warn(`La participación ${p.boxId} no cumple con la tarifa mínima. Será omitida.`);
             continue;
         }
@@ -146,14 +150,24 @@ export async function judges_invalidate(
     ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
     ];
 
-    // The invalidated candidate's value is added back to the game box's value
-    const newGameBoxValue = game.value + invalidatedParticipation.value;
+    // Calculate new Value (ERG) and Tokens
+    // We sum the raw box values (nanoErgs) to preserve safe mins.
+    const newGameBoxValue = BigInt(game.box.value) + BigInt(invalidatedParticipation.box.value);
+    
+    // Calculate new Token Balances if applicable
+    const gameTokens = [game.box.assets[0]]; // NFT
+    if (game.participationTokenId !== "") {
+        const currentAmount = BigInt(game.box.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
+        const invalidatedAmount = BigInt(invalidatedParticipation.box.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
+        gameTokens.push({ tokenId: game.participationTokenId, amount: currentAmount + invalidatedAmount });
+    }
+
     const newDeadline = BigInt(currentHeight + game.constants.JUDGE_PERIOD + JUDGE_PERIOD_MARGIN);
     const resolutionErgoTree = getGopGameResolutionErgoTreeHex();
 
     // --- 4. Build the new resolution box ---
     const recreatedGameBox = new OutputBuilder(newGameBoxValue, resolutionErgoTree)
-        .addTokens(game.box.assets) // Keep the game's NFT
+        .addTokens(gameTokens) // Updated tokens list
         .setAdditionalRegisters({
             // R4
             R4: SInt(1).toHex(),
