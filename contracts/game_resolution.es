@@ -60,6 +60,20 @@
   val isAfterResolutionDeadline = HEIGHT >= resolutionDeadline
   val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline
 
+  val min_value = if (participationTokenId == Coll[Byte]()) {
+    MIN_ERG_BOX
+  } else {
+    0L
+  }
+
+  val box_value = { (box: Box) =>
+    if (participationTokenId == Coll[Byte]()) {
+      box.value
+    } else {
+      box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+    }
+  }
+
   // =================================================================
   // === ACCIONES DE GASTO
   // =================================================================
@@ -88,7 +102,7 @@
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
                                 omittedWinnerBox.R6[Coll[Byte]].get == gameNftId &&
                                 omittedWinnerBox.creationInfo._1 < deadline &&
-                                omittedWinnerBox.value >= participationFee &&
+                                box_value(omittedWinnerBox) >= participationFee &&
                                 omittedWinnerBox.R9[Coll[Long]].get.size <= MAX_SCORE_LIST
 
         if (omittedBoxIsValid) {
@@ -154,7 +168,7 @@
 
               // Verificación de la recreación de la caja del juego
               val gameBoxIsRecreatedCorrectly = {
-                recreatedGameBox.value >= SELF.value &&
+                box_value(recreatedGameBox) >= box_value(SELF) &&
                 recreatedGameBox.tokens(0)._1 == gameNftId &&
                 recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
                 recreatedGameBox.R5[Coll[Byte]].get == seed &&
@@ -251,14 +265,7 @@
                 }
               })
 
-              val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
-                  winnerCandidateBox.value >= participationFee
-                } else {
-                  winnerCandidateBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
-                      pair._1 == participationTokenId &&
-                      pair._2 >= participationFee
-                  }
-                }
+              val correctParticipationFee = box_value(winnerCandidateBox) >= participationFee
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
               validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
@@ -271,7 +278,7 @@
         if (winnerCandidateValid && invalidatedCandidateBoxes.size == 1) {
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
-          val fundsReturnedToPool = recreatedGameBox.value >= SELF.value + invalidatedCandidateBox.value
+          val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
           val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD
 
           val gameBoxIsRecreatedCorrectly = {
@@ -335,20 +342,6 @@
           else {
             sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
           }
-        }
-      }
-
-      val min_value = if (participationTokenId == Coll[Byte]()) {
-        MIN_ERG_BOX
-      } else {
-        0L
-      }
-
-      val box_value = { (box: Box) =>
-        if (participationTokenId == Coll[Byte]()) {
-          box.value
-        } else {
-          box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
         }
       }
 
