@@ -160,8 +160,15 @@
             }
           }
 
+          val boxValue = if (participationTokenId == Coll[Byte]()) {
+              resolutionBox.value
+            } else {
+              val tokenEntry = resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == participationTokenId })
+              if (tokenEntry.size == 1) { tokenEntry(0)._2 } else { 0L }
+            }
+
           val resolutionBoxIsValid = {
-              resolutionBox.value >= creatorStake &&
+              boxValue >= creatorStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
               resolutionBox.R5[Coll[Byte]].get == gameSeed &&
@@ -198,22 +205,37 @@
       val initialRemainingStake = creatorStake - initialStakePortionToClaim
 
       // Asegurarse de que la caja de cancelación tenga al menos el valor mínimo requerido.
-      val stakePortionToClaim = if (initialRemainingStake < MIN_BOX_VALUE) {
-        creatorStake - MIN_BOX_VALUE
+      val stakePortionToClaim = if (participationTokenId == Coll[Byte]()) {
+        if (initialStakePortionToClaim < MIN_BOX_VALUE) {
+          MIN_BOX_VALUE
+        } else {
+          initialStakePortionToClaim
+        }
       } else {
         initialStakePortionToClaim
       }
 
-      val remainingStake = if (initialRemainingStake < MIN_BOX_VALUE) {
-        MIN_BOX_VALUE
+      val remainingStake = if (participationTokenId == Coll[Byte]()) {
+        if (initialRemainingStake < MIN_BOX_VALUE) {
+          MIN_BOX_VALUE
+        } else {
+          initialRemainingStake
+        }
       } else {
         initialRemainingStake
       }
 
+      val boxValue = if (participationTokenId == Coll[Byte]()) {
+          cancellationBox.value
+        } else {
+          val tokenEntry = cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == participationTokenId })
+          if (tokenEntry.size == 1) { tokenEntry(0)._2 } else { 0L }
+        }
+
       // --- 1. Validar la caja de cancelación (OUTPUTS(0)) ---
       val cancellationBoxIsValid = {
           blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH &&
-          cancellationBox.value >= remainingStake &&
+          boxValue >= remainingStake &&
           cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
           cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)
           cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
@@ -224,7 +246,15 @@
       }
       
       // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
-      val claimerOutputIsValid = claimerOutput.value >= stakePortionToClaim
+
+      val claimerOutputValue = if (participationTokenId == Coll[Byte]()) {
+          claimerOutput.value
+        } else {  
+          val tokenEntry = claimerOutput.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == participationTokenId })
+          if (tokenEntry.size == 1) { tokenEntry(0)._2 } else { 0L }
+        }
+
+      val claimerOutputIsValid = claimerOutputValue >= stakePortionToClaim
       
       // El resultado final es verdadero solo si ambas cajas son válidas.
       cancellationBoxIsValid && claimerOutputIsValid
