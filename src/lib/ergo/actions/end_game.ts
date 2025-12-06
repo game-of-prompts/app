@@ -19,6 +19,9 @@ export async function end_game(
     console.log(`[end_game] Starting game finalization: ${game.boxId}`);
     const currentHeight = await ergo.get_current_height();
     const userAddress = await ergo.get_change_address();
+    
+    // --- NUEVO: Detectar si es juego de tokens ---
+    const isTokenGame = !!game.participationTokenId; 
 
     // --- 1. Preliminary checks ---
     if (currentHeight < game.resolutionDeadline) {
@@ -45,7 +48,7 @@ export async function end_game(
     console.log(`Signer verification successful. Connected user: ${userAddress}`);
 
     // --- 3. Payment Calculation Logic ---
-    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + BigInt(game.box.value) - game.creatorStakeAmount;
+    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + game.value - game.creatorStakeAmount;
 
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
     const perJudgePct = BigInt(perJudgePctNumber);
@@ -55,11 +58,13 @@ export async function end_game(
     const perJudgeCommission = (prizePool * perJudgePct) / 100n;
     const totalJudgeCommission = perJudgeCommission * judge_count;
 
-    const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < SAFE_MIN_BOX_VALUE) ? totalJudgeCommission : 0n;
+    const dustLimit = isTokenGame ? 0n : SAFE_MIN_BOX_VALUE;
+
+    const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < dustLimit) ? totalJudgeCommission : 0n;
     const finalJudgesPayoutTent = totalJudgeCommission - judgesForfeits;
 
     const devCommission = (prizePool * BigInt(game.constants.DEV_COMMISSION_PERCENTAGE)) / 100n;
-    const devForfeits = (devCommission > 0n && devCommission < SAFE_MIN_BOX_VALUE) ? devCommission : 0n;
+    const devForfeits = (devCommission > 0n && devCommission < dustLimit) ? devCommission : 0n;
     const finalDevPayoutTent = devCommission - devForfeits;
 
     let finalWinnerPrize = 0n;
@@ -132,15 +137,24 @@ export async function end_game(
     // --- 4. Output Construction ---
     const outputs: OutputBuilder[] = [];
     const gameNft = game.box.assets[0];
+    
+    const buildOutput = (amount: bigint, script: string) => {
+        if (isTokenGame) {
+            return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
+                .addTokens({ tokenId: game.participationTokenId!, amount: amount });
+        } else {
+            return new OutputBuilder(amount, script);
+        }
+    };
 
     if (winnerParticipation !== null && finalWinnerPrize > 0n) {
         outputs.push(
-            new OutputBuilder(finalWinnerPrize, winnerParticipation.playerScript_Hex).addTokens([gameNft])
+            buildOutput(finalWinnerPrize, winnerParticipation.playerScript_Hex).addTokens([gameNft])
         );
     }
 
     if (finalResolverPayout > 0n) {
-        const resolverOutput = new OutputBuilder(finalResolverPayout, game.resolverScript_Hex);
+        const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex);
         
         if (winnerParticipation === null) {
             resolverOutput.addTokens([gameNft]);
@@ -150,12 +164,12 @@ export async function end_game(
 
     if (finalDevPayout > 0n) {
         outputs.push(
-            new OutputBuilder(finalDevPayout, game.constants.DEV_SCRIPT)
+            buildOutput(finalDevPayout, game.constants.DEV_SCRIPT)
         );
     }
 
     const dataInputs: any[] = [];
-    if (finalPerJudge >= SAFE_MIN_BOX_VALUE && (game.judges ?? []).length > 0) {
+    if (finalPerJudge > dustLimit && (game.judges ?? []).length > 0) {
         for (const tokenId of game.judges) {
             const js = get(judges).data.get(tokenId)
             if (!js) {
@@ -170,12 +184,10 @@ export async function end_game(
                 throw new Error(`Empty judgeErgoTree for token ${tokenId}`);
             }
 
-            // Add output per judge with per-judge commission
             outputs.push(
-                new OutputBuilder(finalPerJudge, judgeErgoTree)
+                buildOutput(finalPerJudge, judgeErgoTree)
             );
 
-            // If there is a datainput, parse it and add to datainputs
             if (judgeDatabox) {
                 dataInputs.push(parseBox(judgeDatabox.box));
             }
@@ -184,7 +196,7 @@ export async function end_game(
             }
         }
     } else {
-        console.log("[end_game] No outputs created for judges (per-judge commission is 0 or no judges exist).");
+        console.log("[end_game] No outputs created for judges.");
     }
 
     // --- 5. Transaction Construction and Submission ---
@@ -195,7 +207,7 @@ export async function end_game(
         .from([...inputs, ...utxos])
         .to(outputs)
         .withDataFrom(dataInputs)
-        .sendChangeTo(userAddress) // Change goes to the authorized signer
+        .sendChangeTo(userAddress) 
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()
         .toEIP12Object();
