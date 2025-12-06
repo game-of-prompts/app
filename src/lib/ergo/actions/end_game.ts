@@ -15,54 +15,69 @@ export async function end_game(
 ): Promise<string> {
 
     console.log(`[end_game] Participations: ${participations.length}`)
-
     console.log(`[end_game] Starting game finalization: ${game.boxId}`);
+    
     const currentHeight = await ergo.get_current_height();
     const userAddress = await ergo.get_change_address();
     
-    // --- NUEVO: Detectar si es juego de tokens ---
+    // --- 1. Detectar tipo de juego ---
     const isTokenGame = !!game.participationTokenId; 
 
-    // --- 1. Preliminary checks ---
+    // --- 2. Validaciones Previas ---
     if (currentHeight < game.resolutionDeadline) {
         throw new Error("The resolution period has not yet ended.");
     }
     const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment) ?? null;
 
-    // --- 2. Signer verification ---
+    // --- 3. Verificación de firma ---
     let requiredSignerAddress: string;
 
     if (winnerParticipation === null) {
         requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex);
-        console.log(`Case: No winner. Resolver signature required: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
-            throw new Error(`Invalid signature. Only the resolver (${requiredSignerAddress}) can execute this transaction.`);
+            throw new Error(`Invalid signature. Resolver (${requiredSignerAddress}) required.`);
         }
     } else {
         requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
-        console.log(`Case: With winner. Winner signature required: ${requiredSignerAddress}`);
         if (userAddress !== requiredSignerAddress) {
-            throw new Error(`Invalid signature. Only the declared winner (${requiredSignerAddress}) can execute this transaction.`);
+            throw new Error(`Invalid signature. Winner (${requiredSignerAddress}) required.`);
         }
     }
-    console.log(`Signer verification successful. Connected user: ${userAddress}`);
+    
+    // --- 4. Lógica de Cálculo de Pagos ---
 
-    // --- 3. Payment Calculation Logic ---
-    const prizePool = BigInt(participations.reduce((acc, p) => acc + BigInt(p.value), 0n)) + game.value - game.creatorStakeAmount;
+    // A. Balance del Contrato (Token o ERG)
+    let contractBalance = BigInt(game.box.value); // Valor base en ERG
+    if (isTokenGame) {
+        const asset = game.box.assets.find(a => a.tokenId == game.participationTokenId);
+        contractBalance = asset ? BigInt(asset.amount) : 0n;
+    }
 
+    // B. Cálculo del Prize Pool
+    const totalParticipations = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
+    // prizePool = Lo que pusieron los jugadores + Lo que había en el contrato - Lo que puso el creador (Stake)
+    const prizePool = totalParticipations + contractBalance - game.creatorStakeAmount;
+
+    console.log("--- DEBUG CALCULATION START ---");
+    console.log(`Total Participations: ${totalParticipations}`);
+    console.log(`Contract Balance: ${contractBalance}`);
+    console.log(`Creator Stake: ${game.creatorStakeAmount}`);
+    console.log(`Calculated Prize Pool: ${prizePool}`);
+
+    // C. Comisiones Base
     const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
     const perJudgePct = BigInt(perJudgePctNumber);
-
     const judge_count = BigInt((game.judges ?? []).length);
 
     const perJudgeCommission = (prizePool * perJudgePct) / 100n;
     const totalJudgeCommission = perJudgeCommission * judge_count;
-
     const dustLimit = isTokenGame ? 0n : SAFE_MIN_BOX_VALUE;
 
+    // Comisiones Jueces
     const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < dustLimit) ? totalJudgeCommission : 0n;
     const finalJudgesPayoutTent = totalJudgeCommission - judgesForfeits;
 
+    // Comisiones Dev
     const devCommission = (prizePool * BigInt(game.constants.DEV_COMMISSION_PERCENTAGE)) / 100n;
     const devForfeits = (devCommission > 0n && devCommission < dustLimit) ? devCommission : 0n;
     const finalDevPayoutTent = devCommission - devForfeits;
@@ -74,30 +89,28 @@ export async function end_game(
     let finalPerJudge = 0n;
 
     if (winnerParticipation === null) {
-        // --- CASE: NO WINNER ---
+        // --- CASO: NO HAY GANADOR ---
         const totalValue = prizePool + game.creatorStakeAmount;
 
         finalDevPayout = finalDevPayoutTent;
         finalJudgesPayout = finalJudgesPayoutTent;
         finalPerJudge = perJudgeCommission;
-
         finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
-        console.log("--- Payment Summary (No Winner) ---");
-        console.log(`Total prize: ${prizePool}`);
-        console.log(`Final Resolver Payment: ${finalResolverPayout} (includes NFT if applicable)`);
-        console.log(`Final Dev Payment: ${finalDevPayout}`);
-        console.log(`Total Judges Payment (to distribute): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
-        console.log("---------------------------------------");
-
     } else {
-        // --- CASE: THERE IS A WINNER ---
+        // --- CASO: HAY GANADOR ---
         const creatorStake = game.creatorStakeAmount;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
 
+        // Premio tentativo restando comisiones
         const tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayoutTent - finalDevPayoutTent;
+        const participationFee = game.participationFeeAmount;
 
-        const participationFee = game.participationFeeAmount
+        console.log("--- WINNER SCENARIO DEBUG ---");
+        console.log(`Participation Fee (Entry Cost): ${participationFee}`);
+        console.log(`Tentative Winner Prize (After Comms): ${tentativeWinnerPrize}`);
+        console.log(`Resolver Commission Tentative: ${resolverCommission}`);
+        console.log(`Dev Commission Tentative: ${finalDevPayoutTent}`);
 
         let adjustedWinnerPrize: bigint;
         let adjustedResolverComm: bigint;
@@ -105,13 +118,19 @@ export async function end_game(
         let adjustedJudgesPayout: bigint;
         let adjustedPerJudge: bigint;
 
+        // --- LÓGICA DE PROTECCIÓN AL GANADOR ---
         if (tentativeWinnerPrize < participationFee) {
+            console.warn("!!! WINNER PROTECTION TRIGGERED !!!");
+            console.warn(`Reason: Tentative Prize (${tentativeWinnerPrize}) < Fee (${participationFee})`);
+            console.warn("Action: Setting ALL commissions to 0. Winner gets full Prize Pool.");
+            
             adjustedWinnerPrize = prizePool;
             adjustedResolverComm = 0n;
             adjustedDevPayout = 0n;
             adjustedJudgesPayout = 0n;
             adjustedPerJudge = 0n;
         } else {
+            console.log("Normal payout: Prize covers fee.");
             adjustedWinnerPrize = tentativeWinnerPrize;
             adjustedResolverComm = resolverCommission;
             adjustedDevPayout = finalDevPayoutTent;
@@ -124,82 +143,68 @@ export async function end_game(
         finalDevPayout = adjustedDevPayout;
         finalJudgesPayout = adjustedJudgesPayout;
         finalPerJudge = adjustedPerJudge;
-
-        console.log("--- Payment Summary (With Winner) ---");
-        console.log(`Total prize: ${prizePool}`);
-        console.log(`Final Winner Prize: ${finalWinnerPrize}`);
-        console.log(`Final Resolver Payment: ${finalResolverPayout}`);
-        console.log(`Final Dev Payment: ${finalDevPayout}`);
-        console.log(`Total Judges Payment (to distribute): ${finalJudgesPayout} (forfeits: ${judgesForfeits})`);
-        console.log("------------------------------------");
     }
 
-    // --- 4. Output Construction ---
+    console.log("--- FINAL PAYOUTS ---");
+    console.log(`Final Winner: ${finalWinnerPrize}`);
+    console.log(`Final Resolver: ${finalResolverPayout} (Stake: ${game.creatorStakeAmount} + Comm: ${finalResolverPayout - game.creatorStakeAmount})`);
+    console.log(`Final Dev: ${finalDevPayout}`);
+    console.log("---------------------");
+
+    // --- 5. Construcción de Outputs ---
     const outputs: OutputBuilder[] = [];
-    const gameNft = game.box.assets[0];
-    
+
+    // Identificar el NFT (es el asset que NO es el token de participación)
+    const gameNft = isTokenGame 
+        ? game.box.assets.find(a => a.tokenId !== game.participationTokenId) 
+        : game.box.assets[0];
+
+    // Helper para construir cajas (Maneja Token vs ERG)
     const buildOutput = (amount: bigint, script: string) => {
         if (isTokenGame) {
+            // Token Game: Min ERG + Tokens
             return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
                 .addTokens({ tokenId: game.participationTokenId!, amount: amount });
         } else {
+            // ERG Game: Amount en ERG
             return new OutputBuilder(amount, script);
         }
     };
 
     if (winnerParticipation !== null && finalWinnerPrize > 0n) {
-        outputs.push(
-            buildOutput(finalWinnerPrize, winnerParticipation.playerScript_Hex).addTokens([gameNft])
-        );
+        const out = buildOutput(finalWinnerPrize, winnerParticipation.playerScript_Hex);
+        if (gameNft) out.addTokens([gameNft]); 
+        outputs.push(out);
     }
 
     if (finalResolverPayout > 0n) {
         const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex);
-        
-        if (winnerParticipation === null) {
+        // Si no hay ganador, el resolver recupera el NFT
+        if (winnerParticipation === null && gameNft) {
             resolverOutput.addTokens([gameNft]);
         }
         outputs.push(resolverOutput);
     }
 
     if (finalDevPayout > 0n) {
-        outputs.push(
-            buildOutput(finalDevPayout, game.constants.DEV_SCRIPT)
-        );
+        outputs.push(buildOutput(finalDevPayout, game.constants.DEV_SCRIPT));
     }
 
     const dataInputs: any[] = [];
     if (finalPerJudge > dustLimit && (game.judges ?? []).length > 0) {
         for (const tokenId of game.judges) {
-            const js = get(judges).data.get(tokenId)
-            if (!js) {
-                console.warn(`[end_game] No judge information found for token ${tokenId}, skipping.`);
-                throw new Error(`No judge information found for token ${tokenId}`);
-            }
-            const judgeErgoTree = js.owner_ergotree;
-            const judgeDatabox = js.current_boxes && js.current_boxes[0];
+            const js = get(judges).data.get(tokenId);
+            if (!js) throw new Error(`No judge info for ${tokenId}`);
+            
+            outputs.push(buildOutput(finalPerJudge, js.owner_ergotree));
 
-            if (!judgeErgoTree) {
-                console.warn(`[end_game] Empty judgeErgoTree for token ${tokenId}, skipping.`);
-                throw new Error(`Empty judgeErgoTree for token ${tokenId}`);
-            }
-
-            outputs.push(
-                buildOutput(finalPerJudge, judgeErgoTree)
-            );
-
-            if (judgeDatabox) {
-                dataInputs.push(parseBox(judgeDatabox.box));
-            }
-            else {
-                throw new Error('[end_game] Empty JudgeDatabox')
+            if (js.current_boxes?.[0]) {
+                dataInputs.push(parseBox(js.current_boxes[0].box));
             }
         }
-    } else {
-        console.log("[end_game] No outputs created for judges.");
     }
 
-    // --- 5. Transaction Construction and Submission ---
+    // --- 6. Transacción ---
     const utxos = await ergo.get_utxos();
     const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box))];
 
@@ -212,17 +217,14 @@ export async function end_game(
         .build()
         .toEIP12Object();
 
-    console.log("Unsigned EIP-12 transaction generated.");
-
     try {
         const signedTransaction = await ergo.sign_tx(unsignedTransaction);
         const txId = await ergo.submit_tx(signedTransaction);
-
-        console.log(`Success! Finalization transaction sent. ID: ${txId}`);
+        console.log(`Success! Tx ID: ${txId}`);
         return txId;
     } 
     catch (error) {
-        console.error("Error signing or sending transaction:", error);
+        console.error("Tx Error:", error);
         throw error;
     }
 }
