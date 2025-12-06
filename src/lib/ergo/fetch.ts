@@ -734,7 +734,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
 // =================================================================
 
 
-async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBase | null> {
+async function _parseParticipationBox(box: Box<Amount>, participationTokenId: string): Promise<ParticipationBase | null> {
     try {
         const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
         const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
@@ -749,13 +749,19 @@ async function _parseParticipationBox(box: Box<Amount>): Promise<ParticipationBa
 
         const playerPK_Hex = playerScript_Hex.slice(0, 6) == "0008cd" ? playerScript_Hex.slice(6, playerScript_Hex.length) : null
 
+        const participation_value =
+            participationTokenId === ""
+                ? BigInt(box.value)
+                : BigInt(
+                    box.assets.find(a => a.tokenId === participationTokenId)?.amount ?? 0
+                );
 
         const participationBase: ParticipationBase = {
             boxId: box.boxId,
             box,
             transactionId: box.transactionId,
             creationHeight: box.creationHeight,
-            value: BigInt(box.value),
+            value: participation_value,
             gameNftId,
             playerPK_Hex,
             playerScript_Hex,
@@ -817,7 +823,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     console.warn('parseParticipationBox: invalid constants');
                     continue;
                 }
-                const p_base = await _parseParticipationBox(box);
+                const p_base = await _parseParticipationBox(box, game.participationTokenId);
                 if (p_base) {
                     const spent = !!box.spentTransactionId;
                     const expired = box.creationHeight >= gameDeadline;
