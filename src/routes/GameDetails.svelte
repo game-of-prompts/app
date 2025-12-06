@@ -780,7 +780,7 @@
         if (amount === undefined || amount === null) return "N/A";
         return (Number(amount) / Math.pow(10, tokenDecimals)).toLocaleString(
             undefined,
-            { minimumFractionDigits: 2, maximumFractionDigits: 4 },
+            { minimumFractionDigits: 2, maximumFractionDigits: 8 },
         );
     }
 
