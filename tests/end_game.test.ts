@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { KeyedMockChainParty, MockChain, NonKeyedMockChainParty } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
-  ErgoAddress as Address,
   ErgoTree,
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
@@ -145,7 +144,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const winnerSolverId = "player-alpha-7";
     const winnerTrueScore = 9500n;
-    const winnerLogs = "Log del juego para el ganador: nivel 1 superado, nivel 2 superado.";
+    const winnerLogs = "Log del juego del ganador.";
 
     const winnerHashLogsBytes = blake2b256(stringToBytes("utf8", winnerLogs));
 
@@ -217,7 +216,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           BigInt(deadline),
           creatorStake,
           participationFee,
-          0n,        // perJudgeComissionPercentage
+          0n,                                       // perJudgeComissionPercentage
           BigInt(resolverCommissionPercent),        // creatorComissionPercentage
           BigInt(resolutionDeadline)
         ]).toHex(),
@@ -247,12 +246,6 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
       }
     }, 0n);
-
-    console.error("DEBUG: participationBoxes.length", participationBoxes.length);
-    console.error("DEBUG: prizePool", prizePool);
-    console.error("DEBUG: resolverCommissionPercent", resolverCommissionPercent);
-    console.error("DEBUG: creatorStake", creatorStake);
-
 
     const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
     const devCommission = (prizePool * 5n) / 100n;
@@ -513,13 +506,23 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     expect(participationContract.utxos.length).to.equal(0);
   });
 
-
   it("Should successfully finalize the game and distribute funds correctly with only a complex Script winner (unique participation)", () => {
     // --- Arrange ---
-    // 1. Usamos 'winner' (P2PK) en lugar de script complejo para aislar el problema de "unique participation"
-    const winnerContract = winner;
+    // 1. Crear un contrato dummy para el ganador y un 'facilitador' que firmará la tx
+    const dummyWinnerScript = compile("sigmaProp(true)"); // Un script que cualquiera puede gastar
+    const winnerContract = mockChain.addParty(dummyWinnerScript.toHex(), "WinnerContract");
     const facilitator = mockChain.newParty("Facilitator");
     facilitator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n });
+
+    // 2. Crear una caja "prueba" que pertenece al contrato ganador. Gastar esta caja es la autorización.
+    winnerContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: SAFE_MIN_BOX_VALUE,
+      ergoTree: dummyWinnerScript.toHex(),
+      assets: [],
+      additionalRegisters: {},
+    });
+    const winnerProofBox = winnerContract.utxos.toArray()[0];
 
     participationContract.utxos.clear();
 
@@ -531,19 +534,26 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const winnerScoreList = [1200n, 5000n, 9500n, 12000n];
 
-    // R4 para P2PK es el ErgoTree del winner
-    const winnerErgoTree = hexToBytes(winner.ergoTree) || new Uint8Array(0);
-
-    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, winnerErgoTree, secret);
+    const winnerCommitmentBytes = createCommitment(winnerSolverId, winnerTrueScore, winnerHashLogsBytes, dummyWinnerScript.bytes, secret);
     winnerCommitment = Buffer.from(winnerCommitmentBytes).toString("hex");
 
-    createParticipation(
-      winnerErgoTree,
-      winnerCommitment,
-      winnerSolverId,
-      winnerHashLogsBytes,
-      winnerScoreList
-    );
+    const participationValue = mode.token === ERG_BASE_TOKEN ? participationFee : RECOMMENDED_MIN_FEE_VALUE;
+    const participationAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: participationFee }];
+
+    participationContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: participationValue,
+      ergoTree: participationErgoTree.toHex(),
+      assets: participationAssets,
+      additionalRegisters: {
+        R4: SColl(SByte, dummyWinnerScript.bytes).toHex(),
+        R5: SColl(SByte, winnerCommitment).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+        R7: SColl(SByte, Buffer.from(winnerSolverId, "utf8").toString("hex")).toHex(),
+        R8: SColl(SByte, winnerHashLogsBytes).toHex(),
+        R9: SColl(SLong, winnerScoreList).toHex(),
+      },
+    });
 
     mockChain.jumpTo(resolutionDeadline + 1);
 
@@ -585,9 +595,9 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
         // gameProvenance:
         R9: SColl(SColl(SByte), [
-          stringToBytes('utf8', gameDetailsJson),             // Detalles del juego
+          stringToBytes('utf8', gameDetailsJson),                  // Detalles del juego
           mode.token !== ERG_BASE_TOKEN ? (hexToBytes(mode.token) || new Uint8Array(0)) : new Uint8Array(0),
-          prependHexPrefix(resolver.key.publicKey, "0008cd") // Script del resolvedor
+          prependHexPrefix(resolver.key.publicKey, "0008cd")      // Script del resolvedor
         ]).toHex()
       },
     });
@@ -604,10 +614,16 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    // Calculate commissions
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
-    const devCommission = (prizePool * 5n) / 100n;
-    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+    let resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    let devCommission = (prizePool * 5n) / 100n;
+    let winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+    if (winnerBasePrize < participationFee) { 
+      resolverCommission = 0n;
+      devCommission = 0n;
+      winnerBasePrize = prizePool;
+    }
 
     const finalWinnerPrize = winnerBasePrize;
     const finalResolverPayout = creatorStake + resolverCommission;
@@ -628,21 +644,16 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
-      .from([gameBox, ...finalParticipationBoxes, ...facilitator.utxos.toArray()])
+      .from([gameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
       .to([
         // El premio se envía a la dirección del contrato ganador
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : 2000000n, winnerContract.address)
-          .addTokens(winnerAssets),
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address)
-          .addTokens(resolverAssets),
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : 2000000n, developer.address)
-          .addTokens(devAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : 2000000n, winnerContract.address).addTokens(winnerAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
+        ...(finalDevPayout > 0n ? [new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : 2000000n, developer.address).addTokens(devAssets)] : []),
       ])
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address) // El cambio va al firmante (facilitator)
       .build();
-
-
 
     // --- Assert ---
     // El 'facilitator' firma la transacción, pero la validez la da el gasto de 'winnerProofBox'
@@ -651,17 +662,17 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     // El contrato ganador recibe el premio. Su balance inicial de SAFE_MIN_BOX_VALUE fue gastado.
     if (mode.token === ERG_BASE_TOKEN) {
       expect(winnerContract.balance.nanoergs).to.equal(finalWinnerPrize);
-      expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
       expect(developer.balance.nanoergs).to.equal(finalDevPayout);
+      expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
     } else {
       const winnerTokenBalance = winnerContract.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
       expect(winnerTokenBalance).to.equal(finalWinnerPrize);
 
-      const resolverTokenBalance = resolver.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
-      expect(resolverTokenBalance).to.equal(finalResolverPayout);
-
       const devTokenBalance = developer.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
       expect(devTokenBalance).to.equal(finalDevPayout);
+
+      const resolverTokenBalance = resolver.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(resolverTokenBalance).to.equal(finalResolverPayout);
     }
 
     expect(winnerContract.balance.tokens.find(t => t.tokenId === gameNftId)).toBeDefined();
@@ -1031,8 +1042,5 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
   });
-
-
-
 
 });
