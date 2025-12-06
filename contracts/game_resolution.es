@@ -445,7 +445,7 @@
             // El premio se calcula restando los payouts finales (que ya consideran el polvo)
             val tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayout - finalDevPayout
 
-            // Nueva lógica para asegurar que el ganador no reciba menos que la tarifa de participación (evitar pérdida neta)
+            // Lógica para asegurar que el ganador no reciba menos que la tarifa de participación (evitar pérdida neta)
             // Si el premio tentativo es menor, eliminamos todas las comisiones (dev, jueces, resolver) y el ganador recibe el prizePool completo
             val adjustedWinnerPrize = if (tentativeWinnerPrize < participationFee) prizePool else tentativeWinnerPrize
             val adjustedResolverCommission = if (tentativeWinnerPrize < participationFee) 0L else resolverCommission
