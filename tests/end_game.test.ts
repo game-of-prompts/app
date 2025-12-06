@@ -828,7 +828,6 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     expect(mockChain.execute(transaction, { signers: [facilitator], throw: false })).to.be.false;
   });
 
-
   it("Should correctly distribute commissions to participating judges when finalizing the game", () => {
     // --- Arrange (Preparación del Escenario con Jueces) ---
 
