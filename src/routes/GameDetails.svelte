@@ -68,6 +68,54 @@
     import Return from "./Return.svelte";
     import { Forum } from "forum-application";
 
+    function formatTokenBigInt(
+        raw: unknown,
+        decimals: number,
+        minFrac: number = 2,
+        maxFrac: number = 8,
+    ): string {
+        if (raw === undefined || raw === null) return "N/A";
+
+        let valueBig: bigint;
+        try {
+            if (typeof raw === "bigint") {
+                valueBig = raw;
+            } else if (typeof raw === "number") {
+                valueBig = BigInt(Math.trunc(raw));
+            } else {
+                const s = (raw as any)?.toString?.();
+                valueBig = BigInt(s);
+            }
+        } catch {
+            const n = Number(raw);
+            if (isNaN(n)) return "N/A";
+            return (n / Math.pow(10, decimals)).toLocaleString(undefined, {
+                minimumFractionDigits: minFrac,
+                maximumFractionDigits: maxFrac,
+            });
+        }
+
+        const base = 10n ** BigInt(decimals);
+        const intPart = valueBig / base;
+        const frac = valueBig % base;
+
+        let fracStr = frac.toString().padStart(decimals, "0").slice(0, maxFrac);
+
+        while (fracStr.length > minFrac && fracStr.endsWith("0")) {
+            fracStr = fracStr.slice(0, -1);
+        }
+
+        let intFormatted: string;
+        try {
+            intFormatted = Number(intPart).toLocaleString();
+        } catch {
+            const s = intPart.toString();
+            intFormatted = s.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        return fracStr ? `${intFormatted}.${fracStr}` : `${intFormatted}.00`;
+    }
+
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
@@ -776,14 +824,6 @@
         clockCountdownInterval = null;
     }
 
-    function formatToken(amount?: bigint | number): string {
-        if (amount === undefined || amount === null) return "N/A";
-        return (Number(amount) / Math.pow(10, tokenDecimals)).toLocaleString(
-            undefined,
-            { minimumFractionDigits: 2, maximumFractionDigits: 8 },
-        );
-    }
-
     onMount(async () => {
         await fetchJudges();
         if (game) loadGameDetailsAndTimers();
@@ -889,7 +929,10 @@
                             <div class="stat-block">
                                 <Edit class="stat-icon" />
                                 <span
-                                    >{formatToken(getParticipationFee(game))}
+                                    >{formatTokenBigInt(
+                                        getParticipationFee(game),
+                                        tokenDecimals,
+                                    )}
                                     {tokenSymbol}</span
                                 >
                                 <span class="stat-label">Fee per Player</span>
@@ -902,9 +945,10 @@
                             <div class="stat-block">
                                 <Trophy class="stat-icon" />
                                 <span>
-                                    {formatToken(
+                                    {formatTokenBigInt(
                                         getParticipationFee(game) *
                                             BigInt(participations.length),
+                                        tokenDecimals,
                                     )}
                                     {tokenSymbol}</span
                                 >
@@ -913,7 +957,10 @@
                             <div class="stat-block">
                                 <ShieldCheck class="stat-icon" />
                                 <span
-                                    >{formatToken(getDisplayStake(game))}
+                                    >{formatTokenBigInt(
+                                        getDisplayStake(game),
+                                        tokenDecimals,
+                                    )}
                                     {tokenSymbol}</span
                                 >
                                 <span class="stat-label">Creator Stake</span>
@@ -1652,7 +1699,10 @@
                                     <div class="info-block">
                                         <span class="info-label">Fee Paid</span>
                                         <span class="info-value"
-                                            >{formatToken(p.value)}
+                                            >{formatTokenBigInt(
+                                                p.value,
+                                                tokenDecimals,
+                                            )}
                                             {tokenSymbol}</span
                                         >
                                     </div>
@@ -2296,8 +2346,9 @@
                                         : 'text-gray-600'} pt-2"
                                 >
                                     A participation fee of <strong
-                                        >{formatToken(
+                                        >{formatTokenBigInt(
                                             game.participationFeeAmount,
+                                            tokenDecimals,
                                         )}
                                         {tokenSymbol}</strong
                                     > will be paid.
