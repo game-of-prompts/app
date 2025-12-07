@@ -205,17 +205,6 @@
       val initialStakePortionToClaim = creatorStake / STAKE_DENOMINATOR
       val initialRemainingStake = creatorStake - initialStakePortionToClaim
 
-      // Asegurarse de que la caja de cancelación tenga al menos el valor mínimo requerido.
-      val stakePortionToClaim = if (participationTokenId == Coll[Byte]()) {
-        if (initialStakePortionToClaim < MIN_BOX_VALUE) {
-          MIN_BOX_VALUE
-        } else {
-          initialStakePortionToClaim
-        }
-      } else {
-        initialStakePortionToClaim
-      }
-
       val remainingStake = if (participationTokenId == Coll[Byte]()) {
         if (initialRemainingStake < MIN_BOX_VALUE) {
           MIN_BOX_VALUE
@@ -226,11 +215,11 @@
         initialRemainingStake
       }
 
-      // --- 1. Validar la caja de cancelación (OUTPUTS(0)) ---
+      // --- Validar la caja de cancelación (OUTPUTS(0)) ---
       val cancellationBoxIsValid = {
           blake2b256(cancellationBox.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH &&
           box_value(cancellationBox) >= remainingStake &&
-          cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
+          cancellationBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId && token._2 == 1}).size == 1 &&
           cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)
           cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
@@ -238,12 +227,8 @@
           cancellationBox.R8[Long].get == deadline &&
           cancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance
       }
-      
-      // --- 2. Validar la salida para quien reclama (OUTPUTS(1)) ---
-      val claimerOutputIsValid = box_value(claimerOutput) >= stakePortionToClaim
-      
-      // El resultado final es verdadero solo si ambas cajas son válidas.
-      cancellationBoxIsValid && claimerOutputIsValid
+
+      cancellationBoxIsValid
 
     } else { 
       false 

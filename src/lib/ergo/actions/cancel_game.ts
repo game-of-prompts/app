@@ -74,7 +74,7 @@ export async function cancel_game(
         const amountAdded = SAFE_MIN_BOX_VALUE - newValue;
         
         stakePortionToClaim = maxBigInt(stakePortionToClaim - amountAdded, 0n);
-        newCreatorStake = newCreatorStake + amountAdded;  // TODO, no está claro, podría no hacerse e igualmente estaría bien, depende del protocolo. Revisar contrato.
+        newCreatorStake = newCreatorStake + amountAdded;
     }
 
     // --- 3. Construir Salidas de la Transacción ---
