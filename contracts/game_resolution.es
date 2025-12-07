@@ -425,14 +425,7 @@
               }
             })
 
-            val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {  // TODO Esto se puede refactorizar.
-                box_value(winnerBox) >= participationFee
-              } else {
-                winnerBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
-                    pair._1 == participationTokenId &&
-                    pair._2 >= participationFee
-                }
-              }
+            val correctParticipationFee = box_value(winnerBox) >= participationFee
             val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline
 
             validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
