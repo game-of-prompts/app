@@ -154,35 +154,30 @@ export async function end_game(
     // --- 5. Construcción de Outputs ---
     const outputs: OutputBuilder[] = [];
 
-    // Identificar el NFT (es el asset que NO es el token de participación)
-    const gameNft = isTokenGame 
-        ? game.box.assets.find(a => a.tokenId !== game.participationTokenId) 
-        : game.box.assets[0];
+    // El NFT del juego siempre se encuentra en el indice 0 de los assets
+    const gameNft = game.box.assets[0];
 
     // Helper para construir cajas (Maneja Token vs ERG)
-    const buildOutput = (amount: bigint, script: string) => {
+    const buildOutput = (amount: bigint, script: string, other_tokens: any[] = []) => {
         if (isTokenGame) {
             // Token Game: Min ERG + Tokens
             return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
-                .addTokens({ tokenId: game.participationTokenId!, amount: amount });
+                .addTokens([...other_tokens, { tokenId: game.participationTokenId!, amount: amount }]);
         } else {
             // ERG Game: Amount en ERG
-            return new OutputBuilder(amount, script);
+            return new OutputBuilder(amount, script)
+                .addTokens(other_tokens);
         }
     };
 
     if (winnerParticipation !== null && finalWinnerPrize > 0n) {
-        const out = buildOutput(finalWinnerPrize, winnerParticipation.playerScript_Hex);
-        if (gameNft) out.addTokens([gameNft]); 
+        const out = buildOutput(finalWinnerPrize, winnerParticipation.playerScript_Hex, [gameNft]);
         outputs.push(out);
     }
 
     if (finalResolverPayout > 0n) {
-        const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex);
         // Si no hay ganador, el resolver recupera el NFT
-        if (winnerParticipation === null && gameNft) {
-            resolverOutput.addTokens([gameNft]);
-        }
+        const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex , winnerParticipation === null ? [gameNft] : []);
         outputs.push(resolverOutput);
     }
 

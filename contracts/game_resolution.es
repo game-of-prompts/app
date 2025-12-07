@@ -425,7 +425,7 @@
               }
             })
 
-            val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {
+            val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {  // TODO Esto se puede refactorizar.
                 box_value(winnerBox) >= participationFee
               } else {
                 winnerBox.tokens.exists { (pair: (Coll[Byte], Long)) => 
