@@ -96,3 +96,51 @@ export function prependHexPrefix(originalBytes: Uint8Array, hexPrefix: string = 
 
 	return result;
 }
+
+export function formatTokenBigInt(
+        raw: unknown,
+        decimals: number,
+        minFrac: number = 2,
+        maxFrac: number = 8,
+    ): string {
+        if (raw === undefined || raw === null) return "N/A";
+
+        let valueBig: bigint;
+        try {
+            if (typeof raw === "bigint") {
+                valueBig = raw;
+            } else if (typeof raw === "number") {
+                valueBig = BigInt(Math.trunc(raw));
+            } else {
+                const s = (raw as any)?.toString?.();
+                valueBig = BigInt(s);
+            }
+        } catch {
+            const n = Number(raw);
+            if (isNaN(n)) return "N/A";
+            return (n / Math.pow(10, decimals)).toLocaleString(undefined, {
+                minimumFractionDigits: minFrac,
+                maximumFractionDigits: maxFrac,
+            });
+        }
+
+        const base = 10n ** BigInt(decimals);
+        const intPart = valueBig / base;
+        const frac = valueBig % base;
+
+        let fracStr = frac.toString().padStart(decimals, "0").slice(0, maxFrac);
+
+        while (fracStr.length > minFrac && fracStr.endsWith("0")) {
+            fracStr = fracStr.slice(0, -1);
+        }
+
+        let intFormatted: string;
+        try {
+            intFormatted = Number(intPart).toLocaleString();
+        } catch {
+            const s = intPart.toString();
+            intFormatted = s.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        return fracStr ? `${intFormatted}.${fracStr}` : `${intFormatted}.00`;
+    }
