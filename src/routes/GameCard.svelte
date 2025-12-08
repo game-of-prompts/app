@@ -8,13 +8,10 @@
         isGameParticipationEnded, 
         GameState, 
         type AnyGame as Game, 
-        isOpenCeremony,
-
-        getGameTokenSymbol
-
-
+        isOpenCeremony
     } from "$lib/common/game";
-    import { fetch_token_details } from "$lib/ergo/fetch";
+    import { fetch_token_details, fetchParticipations } from "$lib/ergo/fetch";
+    import { formatTokenBigInt } from "$lib/utils";
 
     export let game: Game;
     export let index: number;
@@ -30,6 +27,7 @@
     let statusClasses = "";
     let timer: ReturnType<typeof setInterval> | null = null;
     let initializedBoxId: string | null = null;
+    let participations;
 
     let cardEl: HTMLElement | null = null;
     let scale = 1;
@@ -39,6 +37,9 @@
     let scheduled = false;
 
     let isActive = false;
+
+    let tokenSymbol = "ERG";
+    let tokenDecimals = 9;
 
     function scheduleUpdate() {
         if (scheduled) return;
@@ -125,7 +126,7 @@
                     statusLabel = "Collaborate to randomness";
                     statusClasses = "bg-purple-500/15 text-purple-400 border border-purple-500/30";
                 } else {
-                    statusLabel = `Play for ${formatErg(game.participationFeeAmount)} ${await getGameTokenSymbol(game)}`;
+                    statusLabel = `Play for ${formatTokenBigInt(game.participationFeeAmount, tokenDecimals)} ${tokenSymbol}`;
                     statusClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
                 }
                 break;
@@ -175,6 +176,21 @@
         if (!game || !game.platform || initializedBoxId === game.boxId) return;
         initializedBoxId = game.boxId;
         cleanup();
+
+        if (game.participationTokenId) {
+            try {
+                const tokenDetails = await fetch_token_details(game.participationTokenId);
+                if (tokenDetails?.name) tokenSymbol = tokenDetails.name;
+                if (typeof tokenDetails?.decimals === "number") tokenDecimals = tokenDetails.decimals;
+            } catch {
+                tokenSymbol = "ERG";
+                tokenDecimals = 9;
+            }
+        } else {
+            tokenSymbol = "ERG";
+            tokenDecimals = 9;
+        }
+
         participationEnded = await isGameParticipationEnded(game);
         if (game.status === GameState.Active || game.status === GameState.Resolution) {
             deadlineTimestamp = await block_height_to_timestamp(
@@ -187,6 +203,8 @@
             await tick();
             if (!participationEnded) timer = setInterval(tick, 30000);
         }
+
+        participations = await fetchParticipations(game);
     }
 
     $: if (game?.boxId && game.boxId !== initializedBoxId) initialize();
@@ -228,7 +246,7 @@
                             </Badge>
                         {/if}
                         <Badge variant="secondary" class="text-xs">
-                            {game.participations?.length ?? 0} Players
+                            {participations?.length ?? "n/a"} Players
                         </Badge>
                     </div>
                     <div class="px-3 py-1 rounded-full text-xs font-semibold {statusClasses}">
