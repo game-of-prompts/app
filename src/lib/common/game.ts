@@ -250,7 +250,7 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
 
     const stakeToDrain = BigInt(game.currentStakeAmount);
     const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
-    const remainingStake = (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
+    const remainingStake = game.participationTokenId !== "" || (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
 
     return unlocked && remainingStake;
 }
