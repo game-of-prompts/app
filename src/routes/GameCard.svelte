@@ -27,7 +27,7 @@
     let statusClasses = "";
     let timer: ReturnType<typeof setInterval> | null = null;
     let initializedBoxId: string | null = null;
-    let participations;
+    let participations: any[] | undefined;
 
     let cardEl: HTMLElement | null = null;
     let scale = 1;
@@ -40,6 +40,8 @@
 
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
+
+    $: currentPrizePool = BigInt(participations?.length ?? 0) * BigInt(game.participationFeeAmount);
 
     function scheduleUpdate() {
         if (scheduled) return;
@@ -198,7 +200,9 @@
                 game.platform
             );
         }
+        
         await updateStatus();
+        
         if (game.status === GameState.Active && !participationEnded) {
             await tick();
             if (!participationEnded) timer = setInterval(tick, 30000);
@@ -281,7 +285,11 @@
                     <div>
                         <div class="text-muted-foreground uppercase tracking-wider text-xs">Prize Pool</div>
                         <div class="font-bold text-foreground mt-1">
-                            {formatErg(game.value)} ERG
+                            {#if participations}
+                                {formatTokenBigInt(currentPrizePool, tokenDecimals)} {tokenSymbol}
+                            {:else}
+                                <span class="animate-pulse">Loading...</span>
+                            {/if}
                         </div>
                     </div>
                 </div>
