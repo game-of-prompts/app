@@ -12,7 +12,17 @@ import { prependHexPrefix } from "$lib/utils";
 import { getGopGameCancellationErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 
 
-describe("Participation Contract: Refund after Game Cancellation", () => {
+const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN_NAME = "ERG";
+const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN_NAME = "USD";
+
+const baseModes = [
+  { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
+  { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
+];
+
+describe.each(baseModes)("Participation Contract: Refund after Game Cancellation - (%s)", (mode) => {
   let mockChain: MockChain;
 
   const participationErgoTree = getGopParticipationErgoTree();
@@ -41,7 +51,15 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
     // Inicializar actores con saldo para las tasas de transacción
     player = mockChain.newParty("PlayerToRefund");
     creator = mockChain.newParty("GameCreator");
-    player.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+
+    if (mode.token !== ERG_BASE_TOKEN) {
+      player.addBalance({
+        tokens: [{ tokenId: mode.token, amount: participationFee * 2n }],
+        nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
+      });
+    } else {
+      player.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+    }
 
     // --- Definir Partidos de Contratos ---
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
@@ -50,14 +68,20 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
     // --- Crear el estado inicial: una caja de juego cancelada y una participación ---
     gameNftId = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
     const secret = stringToBytes("utf8", "the-secret-was-revealed");
-    
+
     // 1. Crear la caja `game_cancelled.es` (Data Input)
     // Esta caja simula un juego que ha sido cancelado.
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorInitialStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorInitialStake }] : [])
+    ];
+
     gameCancelledContract.addUTxOs({
       creationHeight: mockChain.height - 100, // Creada en el pasado
       ergoTree: gameCancellationErgoTree.toHex(),
-      assets: [{ tokenId: gameNftId, amount: 1n }],
-      value: creatorInitialStake, // El stake que queda
+      assets: gameAssets,
+      value: gameBoxValue, // El stake que queda
       additionalRegisters: {
         R4: SInt(2).toHex(), // Estado 2: "Cancelled"
         R5: SLong(BigInt(mockChain.height - 50)).toHex(), // unlockHeight en el pasado
@@ -72,13 +96,18 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
     const playerPkBytes = player.address.getPublicKeys()[0];
     const dummyCommitment = blake2b256(stringToBytes("utf8", "dummy-commitment"));
 
+    const participationValue = mode.token === ERG_BASE_TOKEN ? participationFee : RECOMMENDED_MIN_FEE_VALUE;
+    const participationAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     participationContract.addUTxOs({
       creationHeight: mockChain.height - 90,
       ergoTree: participationErgoTree.toHex(),
-      assets: [],
-      value: participationFee,
+      assets: participationAssets,
+      value: participationValue,
       additionalRegisters: {
-        R4: SColl(SByte,  prependHexPrefix(playerPkBytes)).toHex(),
+        R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
         R5: SColl(SByte, dummyCommitment).toHex(),
         R6: SColl(SByte, gameNftId).toHex(),
         R7: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex(),
@@ -92,8 +121,13 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
     const currentHeight = mockChain.height;
 
     // Caja de salida que devuelve los fondos al jugador
-    const refundOutput = new OutputBuilder(participationFee, player.address);
-    
+    const refundValue = mode.token === ERG_BASE_TOKEN ? participationFee : RECOMMENDED_MIN_FEE_VALUE;
+    const refundAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
+    const refundOutput = new OutputBuilder(refundValue, player.address).addTokens(refundAssets);
+
     const participationBoxToSpend = participationContract.utxos.toArray()[0];
     const gameCancelledBoxAsData = gameCancelledContract.utxos.toArray()[0];
 
@@ -115,10 +149,15 @@ describe("Participation Contract: Refund after Game Cancellation", () => {
 
     // 3. La caja del juego cancelado (data input) no debe haber sido gastada
     expect(gameCancelledContract.utxos.length).to.equal(1);
-    
+
     // 4. El jugador debe tener una nueva caja con el valor del reembolso
-    const playerRefundBox = player.utxos.toArray().find(box => box.value === participationFee);
-    expect(playerRefundBox).to.not.be.undefined;
-    expect(playerRefundBox?.value).to.equal(participationFee);
+    if (mode.token === ERG_BASE_TOKEN) {
+      const playerRefundBox = player.utxos.toArray().find(box => box.value === participationFee);
+      expect(playerRefundBox).to.not.be.undefined;
+      expect(playerRefundBox?.value).to.equal(participationFee);
+    } else {
+      const playerTokenBalance = player.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(playerTokenBalance).to.equal(participationFee * 2n); // Initial balance
+    }
   });
 });

@@ -18,7 +18,17 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 
-describe("Game Cancellation (cancel_game)", () => {
+const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN_NAME = "ERG";
+const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN_NAME = "USD";
+
+const baseModes = [
+    { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
+    { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
+];
+
+describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
     let mockChain: MockChain;
 
     // --- Actores ---
@@ -59,10 +69,16 @@ describe("Game Cancellation (cancel_game)", () => {
 
         // --- Creación de la Caja del Juego ---
         // Se crea la caja `game_active` inicial que será cancelada en la prueba.
+        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const gameAssets = [
+            { tokenId: gameNftId, amount: 1n },
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+        ];
+
         game.addUTxOs({
-            value: creatorStake,
+            value: gameBoxValue,
             ergoTree: gameActiveErgoTree.toHex(),
-            assets: [{ tokenId: gameNftId, amount: 1n }],
+            assets: gameAssets,
             creationHeight: mockChain.height,
             additionalRegisters: {
                 // R4: Integer - Estado del juego (0: Active, 1: Resolved, 2: Cancelled)
@@ -92,10 +108,10 @@ describe("Game Cancellation (cancel_game)", () => {
 
                 // R9: Detalles JSON
                 R9: SColl(SColl(SByte), [
-                                    stringToBytes("utf8", "{}"),                    // detalles del juego
-                                    
-                                    ""
-                                ]).toHex()
+                    stringToBytes("utf8", "{}"),                    // detalles del juego
+
+                    ""
+                ]).toHex()
             }
         });
 
@@ -103,7 +119,7 @@ describe("Game Cancellation (cancel_game)", () => {
     });
 
     afterEach(() => {
-        mockChain.reset({clearParties: true});
+        mockChain.reset({ clearParties: true });
     });
 
     it("should successfully cancel the game and pay penalty before the deadline", () => {
@@ -116,12 +132,24 @@ describe("Game Cancellation (cancel_game)", () => {
         const newCreatorStake = creatorStake - stakePortionToClaim;
         const newUnlockHeight = BigInt(mockChain.height + 40); // Cooldown definido en el contrato
 
+        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN ? newCreatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const penaltyValue = mode.token === ERG_BASE_TOKEN ? stakePortionToClaim : RECOMMENDED_MIN_FEE_VALUE;
+
+        const cancellationAssets = [
+            { tokenId: gameNftId, amount: 1n },
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: newCreatorStake }] : [])
+        ];
+
+        const penaltyAssets = mode.token !== ERG_BASE_TOKEN
+            ? [{ tokenId: mode.token, amount: stakePortionToClaim }]
+            : [];
+
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
             .to([
                 // Salida 0: La nueva caja `GameCancellation`
-                new OutputBuilder(newCreatorStake, gameCancellationErgoTree)
-                    .addTokens(gameBox.assets)
+                new OutputBuilder(cancellationBoxValue, gameCancellationErgoTree)
+                    .addTokens(cancellationAssets)
                     .setAdditionalRegisters({
                         R4: SInt(2).toHex(), // Estado: Cancelado
                         R5: SLong(newUnlockHeight).toHex(),
@@ -129,13 +157,13 @@ describe("Game Cancellation (cancel_game)", () => {
                         R7: SLong(newCreatorStake).toHex(),
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
                         R9: SColl(SColl(SByte), [
-                                    stringToBytes("utf8", "{}"),                    // detalles del juego
-                                    
-                                    ""
-                                ]).toHex(),
+                            stringToBytes("utf8", "{}"),                    // detalles del juego
+
+                            ""
+                        ]).toHex(),
                     }),
                 // Salida 1: La penalización pagada al reclamante
-                new OutputBuilder(stakePortionToClaim, claimer.address)
+                new OutputBuilder(penaltyValue, claimer.address).addTokens(penaltyAssets)
             ])
             .sendChangeTo(claimer.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
@@ -173,7 +201,7 @@ describe("Game Cancellation (cancel_game)", () => {
         // Intentar construir y ejecutar la misma transacción de cancelación.
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
-            .to([ new OutputBuilder(1_000_000_000n, claimer.address) ]) // Salida de ejemplo
+            .to([new OutputBuilder(1_000_000_000n, claimer.address)]) // Salida de ejemplo
             .sendChangeTo(claimer.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -189,7 +217,7 @@ describe("Game Cancellation (cancel_game)", () => {
 });
 
 
-describe("Game Cancellation (Low Stake)", () => {
+describe.each(baseModes)("Game Cancellation (Low Stake) - (%s)", (mode) => {
     let mockChain: MockChain;
     let game: ReturnType<MockChain["newParty"]>;
     let creator: ReturnType<MockChain["newParty"]>;
@@ -199,7 +227,7 @@ describe("Game Cancellation (Low Stake)", () => {
 
     // --- Parámetros del Juego para la Prueba ---
     // El stake es < 1.25 ERG, por lo que el 80% restante es < 1 ERG (MIN_BOX_VALUE)
-    const creatorStake = 1_200_000n; 
+    const creatorStake = 1_200_000n;
     const deadlineBlock = 800_200;
     const secret = stringToBytes("utf8", "this-is-the-revealed-secret");
     const hashedSecret = blake2b256(secret);
@@ -218,10 +246,16 @@ describe("Game Cancellation (Low Stake)", () => {
         gameActiveErgoTree = getGopGameActiveErgoTree();
 
         // --- Creación de la Caja del Juego con Stake Bajo ---
+        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const gameAssets = [
+            { tokenId: gameNftId, amount: 1n },
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+        ];
+
         game.addUTxOs({
-            value: creatorStake,
+            value: gameBoxValue,
             ergoTree: gameActiveErgoTree.toHex(),
-            assets: [{ tokenId: gameNftId, amount: 1n }],
+            assets: gameAssets,
             creationHeight: mockChain.height,
             additionalRegisters: {
                 R4: SInt(0).toHex(),
@@ -230,17 +264,17 @@ describe("Game Cancellation (Low Stake)", () => {
                 R7: SColl(SColl(SByte), []).toHex(),
                 R8: SColl(SLong, [BigInt(deadlineBlock), creatorStake, 1_000_000n]).toHex(),
                 R9: SColl(SColl(SByte), [
-                                    stringToBytes("utf8", "{}"),                    // detalles del juego
-                                    
-                                    ""
-                                ]).toHex()
+                    stringToBytes("utf8", "{}"),                    // detalles del juego
+
+                    ""
+                ]).toHex()
             }
         });
         gameBox = game.utxos.toArray()[0];
     });
 
     afterEach(() => {
-        mockChain.reset({clearParties: true});
+        mockChain.reset({ clearParties: true });
     });
 
     it("should fail to cancel if remaining stake is less than MIN_BOX_VALUE", () => {
@@ -256,12 +290,24 @@ describe("Game Cancellation (Low Stake)", () => {
         // --- Act ---
         // Intentar construir la transacción. La creación de la salida 0 fallará
         // a nivel de nodo/protocolo porque su valor es demasiado bajo.
+        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN ? newCreatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const penaltyValue = mode.token === ERG_BASE_TOKEN ? stakePortionToClaim : RECOMMENDED_MIN_FEE_VALUE;
+
+        const cancellationAssets = [
+            { tokenId: gameNftId, amount: 1n },
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: newCreatorStake }] : [])
+        ];
+
+        const penaltyAssets = mode.token !== ERG_BASE_TOKEN
+            ? [{ tokenId: mode.token, amount: stakePortionToClaim }]
+            : [];
+
         const transaction = new TransactionBuilder(mockChain.height)
             .from([gameBox, ...claimer.utxos.toArray()])
             .to([
                 // Salida 0: Esta caja tiene un valor < MIN_BOX_VALUE, lo que debería invalidar la tx.
-                new OutputBuilder(newCreatorStake, gameCancellationErgoTree)
-                    .addTokens(gameBox.assets)
+                new OutputBuilder(cancellationBoxValue, gameCancellationErgoTree)
+                    .addTokens(cancellationAssets)
                     .setAdditionalRegisters({
                         R4: SInt(2).toHex(),
                         R5: SLong(newUnlockHeight).toHex(),
@@ -271,7 +317,7 @@ describe("Game Cancellation (Low Stake)", () => {
                         R9: gameBox.additionalRegisters.R9,
                     }),
                 // Salida 1: La penalización para el reclamante.
-                new OutputBuilder(stakePortionToClaim, claimer.address)
+                new OutputBuilder(penaltyValue, claimer.address).addTokens(penaltyAssets)
             ])
             .sendChangeTo(claimer.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)

@@ -13,13 +13,24 @@ import {
     SLong,
     SPair,
     SInt,
-    SBool} from "@fleet-sdk/serializer";
+    SBool
+} from "@fleet-sdk/serializer";
 import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, generate_pk_proposition, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
 import { DefaultGameConstants } from "$lib/common/constants";
+
+const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN_NAME = "ERG";
+const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN_NAME = "USD";
+
+const baseModes = [
+    { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
+    { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
+];
 
 const JUDGE_PERIOD = BigInt(DefaultGameConstants.JUDGE_PERIOD + 10); // Debe coincidir con el valor en game_resolution.es mas cierto margen que se debe de dejar (ya que parece que el constructor de la transacción adelanta algunos bloques a proposito).
 
@@ -30,7 +41,7 @@ const createCommitment = (solverId: string, score: bigint, logs: string, ergoTre
     return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...hexToBytes(seed), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
 };
 
-describe("Game Resolution Invalidation by Judges", () => {
+describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode) => {
     const mockChain = new MockChain({ height: 800_000 });
 
     // --- Actores ---
@@ -46,7 +57,7 @@ describe("Game Resolution Invalidation by Judges", () => {
     let gameResolutionContract: ReturnType<MockChain["newParty"]>;
     let participationContract: ReturnType<MockChain["newParty"]>;
     let reputationProofContract: ReturnType<MockChain["newParty"]>;
-    
+
     // --- ErgoTrees de Contratos ---
     let gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
     let participationErgoTree: ErgoTree = getGopParticipationErgoTree();
@@ -73,7 +84,7 @@ describe("Game Resolution Invalidation by Judges", () => {
 
 
     beforeEach(() => {
-        mockChain.reset({clearParties: true});
+        mockChain.reset({ clearParties: true });
         mockChain.jumpTo(currentHeight);
     });
 
@@ -116,7 +127,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                 // Estado del juego
                 R4: SInt(1).toHex(),
 
-                
+
                 R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                 // (revealedSecretS, winnerCandidateCommitment)
@@ -140,8 +151,8 @@ describe("Game Resolution Invalidation by Judges", () => {
 
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"),  "",                   // detalles del juego
-                    
+                    stringToBytes("utf8", "{}"), "",                   // detalles del juego
+
                     prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                 ]).toHex()
             }
@@ -169,10 +180,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -220,19 +231,19 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
-                    BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
-                    numericalParams[2],         // participationFee
-                    numericalParams[3],         // perJudgeCommissionPercent
-                    10n,                         // creatorComissionPercentage
-                    extendedDeadline  // resolutionDeadline
+            BigInt(numericalParams[0]), // deadline
+            numericalParams[1],         // creatorStake
+            numericalParams[2],         // participationFee
+            numericalParams[3],         // perJudgeCommissionPercent
+            10n,                         // creatorComissionPercentage
+            extendedDeadline  // resolutionDeadline
         ];
-        
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
@@ -242,7 +253,7 @@ describe("Game Resolution Invalidation by Judges", () => {
                         // Estado del juego
                         R4: SInt(1).toHex(),
 
-                        
+
                         R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
 
                         // (revealedSecretS, winnerCandidateCommitment)
@@ -259,8 +270,8 @@ describe("Game Resolution Invalidation by Judges", () => {
 
                         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"),  "",                       // detalles del juego
-                            
+                            stringToBytes("utf8", "{}"), "",                       // detalles del juego
+
                             prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                         ]).toHex()
                     })
@@ -269,7 +280,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-            
+
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
 
         // --- Aserciones ---
@@ -277,14 +288,14 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox).to.not.be.undefined;
-        
+
         // 1. Fondos retornados al pool
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
         const newR6 = newGameBox.additionalRegisters.R6;
         expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
-        
+
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
         const newR8 = newGameBox.additionalRegisters.R8;
         expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
@@ -310,7 +321,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -353,8 +364,8 @@ describe("Game Resolution Invalidation by Judges", () => {
 
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                    
+                    stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
                     prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                 ]).toHex()
             }
@@ -368,7 +379,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -381,10 +392,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -429,19 +440,19 @@ describe("Game Resolution Invalidation by Judges", () => {
             }
         );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
-                                BigInt(numericalParams[0]), // deadline
-                                numericalParams[1],         // creatorStake
-                                numericalParams[2],         // participationFee
-                                numericalParams[3],         // perJudgeCommissionPercent
-                                10n,                 // creatorComissionPercentage
-                                extendedDeadline // resolutionDeadline
-                            ]
-        
+            BigInt(numericalParams[0]), // deadline
+            numericalParams[1],         // creatorStake
+            numericalParams[2],         // participationFee
+            numericalParams[3],         // perJudgeCommissionPercent
+            10n,                 // creatorComissionPercentage
+            extendedDeadline // resolutionDeadline
+        ]
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
@@ -469,8 +480,8 @@ describe("Game Resolution Invalidation by Judges", () => {
 
                             // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
                             R9: SColl(SColl(SByte), [
-                                stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                                
+                                stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
                                 prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
                             ]).toHex()
                         }
@@ -480,7 +491,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-            
+
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
 
         // --- Aserciones ---
@@ -488,14 +499,14 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox).to.not.be.undefined;
-        
+
         // 1. Fondos retornados al pool
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
-        const newR6= newGameBox.additionalRegisters.R6;
+        const newR6 = newGameBox.additionalRegisters.R6;
         expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
-        
+
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
         const newR8 = newGameBox.additionalRegisters.R8;
         expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
@@ -522,7 +533,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
         extraParticipantCommitment = createCommitment("solver-extra", 40n, "logs-extra", prependHexPrefix(extraParticipant.address.getPublicKeys()[0]), secret);
 
@@ -537,14 +548,14 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                 R6: SPair(
-                        SColl(SByte, secret),
-                        SColl(SByte, invalidatedCommitment)
-                    ).toHex(),
+                    SColl(SByte, secret),
+                    SColl(SByte, invalidatedCommitment)
+                ).toHex(),
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
@@ -554,11 +565,11 @@ describe("Game Resolution Invalidation by Judges", () => {
                     10n,                 // creatorComissionPercentage
                     BigInt(numericalParams[4])  // resolutionDeadline
                 ]).toHex(),
-                 R9: SColl(SColl(SByte), [
-                                stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                                
-                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
-                            ]).toHex()
+                R9: SColl(SColl(SByte), [
+                    stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
             }
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
@@ -570,7 +581,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -583,10 +594,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -599,10 +610,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Participante extra que no será invalidado
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(extraParticipant.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(extraParticipant.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, extraParticipantCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-extra")).toHex(),
@@ -649,19 +660,19 @@ describe("Game Resolution Invalidation by Judges", () => {
             }
         );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
-                            BigInt(numericalParams[0]), // deadline
-                            numericalParams[1],         // creatorStake
-                            numericalParams[2],         // participationFee
-                            numericalParams[3],         // perJudgeCommissionPercent
-                            10n,                 // creatorComissionPercentage
-                            extendedDeadline  // resolutionDeadline
-                        ];
-        
+            BigInt(numericalParams[0]), // deadline
+            numericalParams[1],         // creatorStake
+            numericalParams[2],         // participationFee
+            numericalParams[3],         // perJudgeCommissionPercent
+            10n,                 // creatorComissionPercentage
+            extendedDeadline  // resolutionDeadline
+        ];
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
@@ -672,16 +683,16 @@ describe("Game Resolution Invalidation by Judges", () => {
                             R4: SInt(1).toHex(), // Estado: Resolución
                             R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                             R6: SPair(
-                                    SColl(SByte, secret),
-                                    SColl(SByte, nextWinnerCommitment)
-                                ).toHex(),
+                                SColl(SByte, secret),
+                                SColl(SByte, nextWinnerCommitment)
+                            ).toHex(),
                             R7: SColl(SColl(SByte), judges).toHex(),
                             R8: SColl(SLong, newNumericalParams).toHex(),
                             R9: SColl(SColl(SByte), [
-                                    stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                                    
-                                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
-                                ]).toHex()
+                                stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
                         }
                     )
             ])
@@ -689,7 +700,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-            
+
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
 
         // --- Aserciones ---
@@ -697,14 +708,14 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox).to.not.be.undefined;
-        
+
         // 1. Fondos retornados al pool
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
         const newR6 = newGameBox.additionalRegisters.R6;
         expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, nextWinnerCommitment)).toHex());
-        
+
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
         const newR8 = newGameBox.additionalRegisters.R8;
         expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
@@ -732,7 +743,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
@@ -745,14 +756,14 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                 R6: SPair(
-                        SColl(SByte, secret),
-                        SColl(SByte, invalidatedCommitment)
-                    ).toHex(),
+                    SColl(SByte, secret),
+                    SColl(SByte, invalidatedCommitment)
+                ).toHex(),
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
@@ -762,11 +773,11 @@ describe("Game Resolution Invalidation by Judges", () => {
                     10n,                 // creatorComissionPercentage
                     BigInt(numericalParams[4])  // resolutionDeadline
                 ]).toHex(),
-                 R9: SColl(SColl(SByte), [
-                                stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                                
-                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
-                            ]).toHex()
+                R9: SColl(SColl(SByte), [
+                    stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
             }
         });
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
@@ -778,7 +789,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -825,19 +836,19 @@ describe("Game Resolution Invalidation by Judges", () => {
             }
         );
         judge1ReputationBox = reputationProofContract.utxos.toArray()[0];
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
-                            BigInt(numericalParams[0]), // deadline
-                            numericalParams[1],         // creatorStake
-                            numericalParams[2],         // participationFee
-                            numericalParams[3],         // perJudgeCommissionPercent
-                            10n,                 // creatorComissionPercentage
-                            extendedDeadline  // resolutionDeadline
-                        ];
-        
+            BigInt(numericalParams[0]), // deadline
+            numericalParams[1],         // creatorStake
+            numericalParams[2],         // participationFee
+            numericalParams[3],         // perJudgeCommissionPercent
+            10n,                 // creatorComissionPercentage
+            extendedDeadline  // resolutionDeadline
+        ];
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
@@ -848,16 +859,16 @@ describe("Game Resolution Invalidation by Judges", () => {
                             R4: SInt(1).toHex(), // Estado: Resolución
                             R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
                             R6: SPair(
-                                    SColl(SByte, secret),
-                                    SColl(SByte, [])
-                                ).toHex(),
+                                SColl(SByte, secret),
+                                SColl(SByte, [])
+                            ).toHex(),
                             R7: SColl(SColl(SByte), judges).toHex(),
                             R8: SColl(SLong, newNumericalParams).toHex(),
                             R9: SColl(SColl(SByte), [
-                                        stringToBytes("utf8", "{}"),  "",                    // detalles del juego
-                                        
-                                        prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
-                                    ]).toHex()
+                                stringToBytes("utf8", "{}"), "",                    // detalles del juego
+
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
                         }
                     )
             ])
@@ -865,7 +876,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-            
+
         const executionResult = mockChain.execute(tx, { signers: [resolver] });
 
         // --- Aserciones ---
@@ -873,14 +884,14 @@ describe("Game Resolution Invalidation by Judges", () => {
 
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox).to.not.be.undefined;
-        
+
         // 1. Fondos retornados al pool
         expect(newGameBox.value).to.equal(newFunds);
 
         // 2. El candidato a ganador ha sido actualizado
         const newR6 = newGameBox.additionalRegisters.R6;
         expect(newR6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex());
-        
+
         // 3. El deadline de resolución se ha extendido y el contador de participantes resueltos ha disminuido
         const newR8 = newGameBox.additionalRegisters.R8;
         expect(newR8).to.equal(SColl(SLong, newNumericalParams).toHex());
@@ -909,7 +920,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -925,7 +936,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -944,7 +955,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -960,7 +971,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1050,7 +1061,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1066,7 +1077,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1085,7 +1096,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1098,10 +1109,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1151,12 +1162,12 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
-        
+
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
             .to([
@@ -1172,11 +1183,11 @@ describe("Game Resolution Invalidation by Judges", () => {
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
-            
+
         const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
         expect(executionResult).to.be.false;
     });
-    
+
     it("should fail if trying to invalidate after the judge period", () => {
         // --- Crear Estado Inicial del Juego ---
 
@@ -1184,7 +1195,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -1195,7 +1206,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1211,7 +1222,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1230,7 +1241,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1243,10 +1254,10 @@ describe("Game Resolution Invalidation by Judges", () => {
         participationContract.addUTxOs({ // Próximo candidato a ganador
             ergoTree: participationErgoTree.toHex(),
             value: 1_000_000n,
-            creationHeight: 700_000 - 30,  
+            creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1294,12 +1305,12 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
-        
+
         mockChain.newBlocks(41); // Advance beyond the judge period
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -1328,7 +1339,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -1339,7 +1350,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1355,7 +1366,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1374,7 +1385,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1390,7 +1401,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 + 30,  // Candidate created after deadline.
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1438,7 +1449,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
@@ -1470,7 +1481,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -1481,7 +1492,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1497,7 +1508,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1516,7 +1527,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1532,7 +1543,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,  // Candidate created after deadline.
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1580,7 +1591,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
@@ -1612,7 +1623,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -1623,7 +1634,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1640,7 +1651,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1659,7 +1670,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1675,7 +1686,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,  // Candidate created after deadline.
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1723,7 +1734,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
@@ -1755,7 +1766,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
         reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProof");
-    
+
         // --- Inicializar Actores ---
         resolver = mockChain.newParty("Resolver");
         invalidatedWinner = mockChain.newParty("InvalidatedWinner");
@@ -1766,7 +1777,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
 
         // 1. Generar compromisos para los participantes
-        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid",  prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
+        invalidatedCommitment = createCommitment("solver-invalid", 230n, "logs-invalid", prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
         nextWinnerCommitment = createCommitment("solver-next-winner", 100n, "logs-next-winner", prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
@@ -1782,7 +1793,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
             assets: [{ tokenId: gameNftId, amount: 1n }],
-            creationHeight: mockChain.height - 30,  
+            creationHeight: mockChain.height - 30,
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Estado: Resolución
                 R5: SPair(SColl(SByte, secret), SColl(SByte, invalidatedCommitment)).toHex(),
@@ -1801,7 +1812,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix( invalidatedWinner.address.getPublicKeys()[0])).toHex(),
+                R4: SColl(SByte, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0])).toHex(),
                 R5: SColl(SByte, invalidatedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-invalid")).toHex(),
@@ -1817,7 +1828,7 @@ describe("Game Resolution Invalidation by Judges", () => {
             creationHeight: 700_000 - 30,  // Candidate created after deadline.
             assets: [],
             additionalRegisters: {
-                R4: SColl(SByte,  nextWinner.address.getPublicKeys()[0]).toHex(),
+                R4: SColl(SByte, nextWinner.address.getPublicKeys()[0]).toHex(),
                 R5: SColl(SByte, nextWinnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
@@ -1865,7 +1876,7 @@ describe("Game Resolution Invalidation by Judges", () => {
         judge2ReputationBox = reputationProofContract.utxos.toArray()[1];
 
         const requiredVotes = 2; // (3 / 2) + 1 = 2
-        
+
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;

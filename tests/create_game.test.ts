@@ -20,7 +20,17 @@ import { getGopGameActiveErgoTree } from "$lib/ergo/contract";
 
 // --- Test Suite ---
 
-describe("Game Creation (create_game)", () => {
+const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN_NAME = "ERG";
+const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN_NAME = "USD";
+
+const baseModes = [
+  { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
+  { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
+];
+
+describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
   // `mockChain` simulates an Ergo blockchain, allowing transactions to be
   // executed and their results verified without a real network.
   let mockChain: MockChain;
@@ -28,7 +38,7 @@ describe("Game Creation (create_game)", () => {
   // --- Involved Parties ---
   // A 'creator' is defined as the main actor in the game creation.
   let creator: ReturnType<MockChain["newParty"]>;
-  
+
   // A 'party' representing the game contract address.
   let gameActiveContract: ReturnType<MockChain["newParty"]>;
 
@@ -36,9 +46,9 @@ describe("Game Creation (create_game)", () => {
   // These variables will store the compiled ErgoTrees of our contracts.
   // Compilation is done once for the entire test suite.
   let gameActiveErgoTree: ReturnType<typeof compile>;
-  
+
   gameActiveErgoTree = getGopGameActiveErgoTree();
-  
+
   // Initialize the chain and actors before each test.
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
@@ -46,7 +56,14 @@ describe("Game Creation (create_game)", () => {
 
     // Funds are assigned to the creator to create the game box and pay the transaction fee.
     // It's crucial that the balance is greater than the game stake + fee.
-    creator.addBalance({ nanoergs: 10_000_000_000n }); // 10 ERG
+    if (mode.token !== ERG_BASE_TOKEN) {
+      creator.addBalance({
+        tokens: [{ tokenId: mode.token, amount: 10_000_000_000n }],
+        nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
+      });
+    } else {
+      creator.addBalance({ nanoergs: 10_000_000_000n }); // 10 ERG
+    }
 
     // A "party" is added to the mockchain representing the `game_active` contract address.
     // This allows us to easily query UTXOs belonging to this contract.
@@ -78,18 +95,26 @@ describe("Game Creation (create_game)", () => {
     // --- 2. Act ---
 
     // Build the output box that will represent the active game.
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+
     const gameBoxOutput = new OutputBuilder(
-        creatorStake,
-        gameActiveErgoTree
+      gameBoxValue,
+      gameActiveErgoTree
     )
-    // Mint the Game NFT. It's a unique token that identifies the game.
-    .mintToken({
+      // Mint the Game NFT. It's a unique token that identifies the game.
+      .mintToken({
         amount: 1n, // Only one is created.
         name: "Game NFT"
-    })
+      });
+
+    // Add token stake if in token mode (NFT is always at index 0, token at index 1)
+    if (mode.token !== ERG_BASE_TOKEN) {
+      gameBoxOutput.addTokens([{ tokenId: mode.token, amount: creatorStake }]);
+    }
+
     // Set the additional registers with the game information,
     // following the specification in `game_active.es`.
-    .setAdditionalRegisters({
+    gameBoxOutput.setAdditionalRegisters({
       // R4: Game state (0: Active)
       R4: SInt(0).toHex(),
 
@@ -128,7 +153,7 @@ describe("Game Creation (create_game)", () => {
 
     // Execute the transaction on the mockchain. The creator must sign it.
     const executionResult = mockChain.execute(transaction, { signers: [creator] });
-    
+
     // --- 3. Assert ---
 
     // The transaction should have been executed successfully.
@@ -136,16 +161,24 @@ describe("Game Creation (create_game)", () => {
 
     // There should be a single UTXO at the game contract's address.
     expect(gameActiveContract.utxos.length).to.equal(1);
-    
+
     // Get the created box to verify its properties.
     const createdGameBox = gameActiveContract.utxos.toArray()[0];
 
-    // The nanoERG value of the box must equal the creator's stake.
-    expect(createdGameBox.value).to.equal(creatorStake);
-    // The ID of the minted token (Game NFT) must match the input box ID.
+    // The nanoERG value of the box must equal the creator's stake in ERG mode,
+    // or RECOMMENDED_MIN_FEE_VALUE in token mode.
+    expect(createdGameBox.value).to.equal(gameBoxValue);
+
+    // The ID of the minted token (Game NFT) must match the input box ID (always at index 0).
     expect(createdGameBox.assets[0].tokenId).to.equal(gameNftId);
     // The amount of the NFT must be 1.
     expect(createdGameBox.assets[0].amount).to.equal(1n);
+
+    // In token mode, verify the token stake is at index 1
+    if (mode.token !== ERG_BASE_TOKEN) {
+      expect(createdGameBox.assets[1].tokenId).to.equal(mode.token);
+      expect(createdGameBox.assets[1].amount).to.equal(creatorStake);
+    }
 
     // Verify that each register contains the correct, serialized information.
     // This is the most important part to ensure compatibility with the contract.

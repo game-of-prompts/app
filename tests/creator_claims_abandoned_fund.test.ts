@@ -13,8 +13,17 @@ import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 import { stringToBytes } from "@scure/base";
 
+const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN_NAME = "ERG";
+const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN_NAME = "USD";
 
-describe("Creator Claims Abandoned Funds", () => {
+const baseModes = [
+  { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
+  { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
+];
+
+describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
   let mockChain: MockChain;
   let creator: ReturnType<MockChain["newParty"]>;
   let participant: ReturnType<MockChain["newParty"]>;
@@ -36,15 +45,29 @@ describe("Creator Claims Abandoned Funds", () => {
     mockChain = new MockChain({ height: 800_000 });
     creator = mockChain.newParty("GameCreator");
     participant = mockChain.newParty("Participant");
-    creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
+
+    if (mode.token !== ERG_BASE_TOKEN) {
+      creator.addBalance({
+        tokens: [{ tokenId: mode.token, amount: participationFee * 2n }],
+        nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
+      });
+    } else {
+      creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
+    }
 
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
 
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+    ];
+
     gameResolutionContract.addUTxOs({
-      value: creatorStake,
+      value: gameBoxValue,
       ergoTree: gameResolutionErgoTree.toHex(),
-      assets: [{ tokenId: gameNftId, amount: 1n }],
+      assets: gameAssets,
       creationHeight: mockChain.height,
       additionalRegisters: {
         // Estado del juego
@@ -55,8 +78,8 @@ describe("Creator Claims Abandoned Funds", () => {
 
         // (revealedSecretS, winnerCandidateCommitment)
         R6: SPair(
-            SColl(SByte, "aa".repeat(32)), // revealedSecretS
-            SColl(SByte, "bb".repeat(32))  // winnerCandidateCommitment
+          SColl(SByte, "aa".repeat(32)), // revealedSecretS
+          SColl(SByte, "bb".repeat(32))  // winnerCandidateCommitment
         ).toHex(),
 
         // participatingJudges (en este caso vacío)
@@ -64,27 +87,32 @@ describe("Creator Claims Abandoned Funds", () => {
 
         // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
         R8: SColl(SLong, [
-            0n, // deadline
-            creatorStake,         // creatorStake
-            participationFee,         // participationFee
-            0n,         // perJudgeCommissionPercent
-            10n,                        // creatorComissionPercentage
-            BigInt(resolutionDeadline)  // resolutionDeadline
+          0n, // deadline
+          creatorStake,         // creatorStake
+          participationFee,         // participationFee
+          0n,         // perJudgeCommissionPercent
+          10n,                        // creatorComissionPercentage
+          BigInt(resolutionDeadline)  // resolutionDeadline
         ]).toHex(),
 
         // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
         R9: SColl(SColl(SByte), [
-            stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
-            prependHexPrefix(creator.key.publicKey, "0008cd"), // script del creador original
-            prependHexPrefix(creator.key.publicKey, "0008cd")  // script del resolvedor
+          stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+          prependHexPrefix(creator.key.publicKey, "0008cd"), // script del creador original
+          prependHexPrefix(creator.key.publicKey, "0008cd")  // script del resolvedor
         ]).toHex()
-    },
+      },
     });
 
+    const participationValue = mode.token === ERG_BASE_TOKEN ? participationFee : RECOMMENDED_MIN_FEE_VALUE;
+    const participationAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     participationContract.addUTxOs({
-      value: participationFee,
+      value: participationValue,
       ergoTree: participationErgoTree.toHex(),
-      assets: [],
+      assets: participationAssets,
       creationHeight: mockChain.height,
       additionalRegisters: {
         R4: SColl(SByte, participant.address.getPublicKeys()[0]).toHex(),
@@ -101,18 +129,23 @@ describe("Creator Claims Abandoned Funds", () => {
   });
 
   afterEach(() => {
-    mockChain.reset({clearParties: true});
+    mockChain.reset({ clearParties: true });
   });
 
   it("should allow the creator to claim abandoned funds if the abandon period has passed", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
     const creatorInitialBalance = creator.balance.nanoergs;
-    
+
+    const claimValue = mode.token === ERG_BASE_TOKEN ? participationBox.value : RECOMMENDED_MIN_FEE_VALUE;
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...creator.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, creator.address))
+      .to(new OutputBuilder(claimValue, creator.address).addTokens(claimAssets))
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -121,8 +154,15 @@ describe("Creator Claims Abandoned Funds", () => {
 
     expect(executionResult).to.be.true;
     expect(participationContract.utxos.length).to.equal(0);
-    const expectedBalance = creatorInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
-    expect(creator.balance.nanoergs).to.equal(expectedBalance);
+
+    if (mode.token === ERG_BASE_TOKEN) {
+      const expectedBalance = creatorInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
+      expect(creator.balance.nanoergs).to.equal(expectedBalance);
+    } else {
+      const creatorTokenBalance = creator.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(creatorTokenBalance).to.equal(participationFee * 2n); // Initial balance
+    }
+
     expect(gameResolutionContract.utxos.length).to.equal(1);
   });
 
