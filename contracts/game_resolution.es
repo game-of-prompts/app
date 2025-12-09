@@ -510,7 +510,7 @@
         val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
             box_value(b) >= finalResolverPayout &&
             b.propositionBytes == resolverPK &&
-            b.tokens.size == 1 && // El resolutor recibe el NFT
+            b.tokens.size > 0 &&
             b.tokens(0)._1 == gameNftId
         })
         
