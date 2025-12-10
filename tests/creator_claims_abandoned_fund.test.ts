@@ -74,7 +74,7 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
         // Estado del juego
         R4: SInt(1).toHex(),
 
-        // Nuevo SEED (32 bytes aleatorios)
+        // SEED (32 bytes aleatorios)
         R5: SColl(SByte, hexToBytes("d4e5f6a7b8c90123456789abcdef0123456789abcdef0123d4e5f6a7b8c90123") ?? "").toHex(),
 
         // (revealedSecretS, winnerCandidateCommitment)
@@ -160,10 +160,14 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS - 10;
     mockChain.jumpTo(abandonHeight);
 
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .to(new OutputBuilder(participationBox.value, resolver.address).addTokens(claimAssets))
       .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -178,9 +182,13 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...resolver.utxos.toArray()])
-      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .to(new OutputBuilder(participationBox.value, resolver.address).addTokens(claimAssets))
       .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -237,10 +245,14 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     });
     const wrongGameResolutionBox = gameResolutionContract.utxos.toArray()[1];
 
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([wrongGameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .to(new OutputBuilder(participationBox.value, resolver.address).addTokens(claimAssets))
       .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -296,10 +308,14 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     });
     const wrongStateGameBox = gameResolutionContract.utxos.toArray()[1];
 
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([wrongStateGameBox])
-      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .to(new OutputBuilder(participationBox.value, resolver.address).addTokens(claimAssets))
       .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -314,10 +330,14 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
+    const claimAssets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: participationFee }];
+
     const claimTx = new TransactionBuilder(mockChain.height)
       .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, participant.address))
+      .to(new OutputBuilder(participationBox.value, participant.address).addTokens(claimAssets))
       .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -328,21 +348,4 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     expect(participationContract.utxos.length).to.equal(1);
   });
 
-  it("should FAIL to claim abandoned funds if not signed by resolver", () => {
-    const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
-    mockChain.jumpTo(abandonHeight);
-
-    const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...participant.utxos.toArray()])
-      .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, resolver.address))
-      .sendChangeTo(resolver.address)
-      .payFee(RECOMMENDED_MIN_FEE_VALUE)
-      .build();
-
-    const executionResult = mockChain.execute(claimTx, { signers: [participant], throw: false });
-
-    expect(executionResult).to.be.false;
-    expect(participationContract.utxos.length).to.equal(1);
-  });
 });

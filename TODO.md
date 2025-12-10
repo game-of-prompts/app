@@ -97,6 +97,10 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - HEIGHT: altura donde se agregó la participación.
 
 
+-  Al comprobar que alguien recibe un valor se debería de tener en cuenta:
+    - Que tal vez está fraccionado en varias cajas.
+    - Que el valor de la caja no provenga de un input (calcular la diferencia primero)  -  tal como se hace en participation.es accion 5.
+
 
 ##### game-service-factory
 [] Game obfuscated

@@ -144,15 +144,7 @@
         val participationTokenId = mainGameBox.R9[Coll[Coll[Byte]]].get(1)
         val resolverPK = mainGameBox.R9[Coll[Coll[Byte]]].get(2)
 
-        // --- Condición 2: Autenticación del creador ---
-        val prefix = resolverPK.slice(0, 3)
-        val pubKey = resolverPK.slice(3, resolverPK.size)
-
-        val signedByCreator = 
-          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) ||
-          sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
-
-        // --- Condición 3: Destino de los fondos ---
+        // --- Condición 2: Destino de los fondos ---
         val outputGoesToCreator = {
 
           // Calculamos el valor requerido (ERG o tokens) que debe recibir el creador.
@@ -164,24 +156,35 @@
             }
           }
 
-          OUTPUTS.exists({(b:Box) => 
-            b.propositionBytes == resolverPK && {
-              // Calculamos el valor (ERG o tokens) que recibe el creador en esta caja de salida.
-              val outputValue = {
-                if (participationTokenId == Coll[Byte]()) {
-                  b.value
-                } else {
-                  b.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
-                }
-              }
-
-              // Comprobamos que el valor recibido es al menos el requerido.
-              outputValue >= requiredValue
+          // Calculamos el valor (ERG o tokens) que posee el creador en las entradas.
+          val inputValue = {
+            if (participationTokenId == Coll[Byte]()) {
+              INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + b.value })
+            } else {
+              INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK})
+                .flatMap({(b:Box) => b.tokens}) 
+                .filter({(token:(Coll[Byte], Long)) => token._1 == participationTokenId}) 
+                .fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 }) 
             }
-          })
+          }
+
+          val outputValue = {
+            if (participationTokenId == Coll[Byte]()) {
+              OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + b.value })
+            } else {
+              OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK})
+                .flatMap({(b:Box) => b.tokens}) 
+                .filter({(token:(Coll[Byte], Long)) => token._1 == participationTokenId}) 
+                .fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 }) 
+            }
+          }
+
+          val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }  // Consider tx fee and min box value only for ERG transfers.
+          val addedValue = outputValue - inputValue
+          addedValue >= requiredValue - txFee
         }
 
-        signedByCreator && sigmaProp(outputGoesToCreator)
+        sigmaProp(outputGoesToCreator)
       } else {
         sigmaProp(false)
       }
