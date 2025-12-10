@@ -141,6 +141,7 @@
       val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
 
       if (isAfter90Days) {
+        val participationTokenId = mainGameBox.R9[Coll[Coll[Byte]]].get(1)
         val resolverPK = mainGameBox.R9[Coll[Coll[Byte]]].get(2)
 
         // --- Condición 2: Autenticación del creador ---
@@ -152,10 +153,33 @@
           sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
 
         // --- Condición 3: Destino de los fondos ---
-        val outputGoesToCreator = OUTPUTS.exists({(b:Box) => 
-          b.propositionBytes == resolverPK &&
-          b.value >= SELF.value
-        })
+        val outputGoesToCreator = {
+
+          // Calculamos el valor requerido (ERG o tokens) que debe recibir el creador.
+          val requiredValue = {
+            if (participationTokenId == Coll[Byte]()) {
+              SELF.value
+            } else {
+              SELF.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+            }
+          }
+
+          OUTPUTS.exists({(b:Box) => 
+            b.propositionBytes == resolverPK && {
+              // Calculamos el valor (ERG o tokens) que recibe el creador en esta caja de salida.
+              val outputValue = {
+                if (participationTokenId == Coll[Byte]()) {
+                  b.value
+                } else {
+                  b.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+                }
+              }
+
+              // Comprobamos que el valor recibido es al menos el requerido.
+              outputValue >= requiredValue
+            }
+          })
+        }
 
         signedByCreator && sigmaProp(outputGoesToCreator)
       } else {
