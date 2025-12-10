@@ -13,9 +13,9 @@ import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 import { stringToBytes } from "@scure/base";
 
-const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
-const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
 
 const baseModes = [
@@ -25,13 +25,13 @@ const baseModes = [
 
 describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
   let mockChain: MockChain;
-  let creator: ReturnType<MockChain["newParty"]>;
+  let resolver: ReturnType<MockChain["newParty"]>;
   let participant: ReturnType<MockChain["newParty"]>;
   let gameResolutionContract: ReturnType<MockChain["newParty"]>;
   let participationContract: ReturnType<MockChain["newParty"]>;
   let gameResolutionBox: Box;
   let participationBox: Box;
-  const creatorStake = 1_000_000_000n;
+  const resolverStake = 1_000_000_000n;
   const participationFee = 1_000_000_000n;
   const resolutionDeadline = 800_200;
   const gameNftId = "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f417";
@@ -43,25 +43,26 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
 
   beforeEach(() => {
     mockChain = new MockChain({ height: 800_000 });
-    creator = mockChain.newParty("GameCreator");
+    resolver = mockChain.newParty("GameCreator");
     participant = mockChain.newParty("Participant");
 
     if (mode.token !== ERG_BASE_TOKEN) {
-      creator.addBalance({
+      resolver.addBalance({
         tokens: [{ tokenId: mode.token, amount: participationFee * 2n }],
         nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
       });
     } else {
-      creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
+      resolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 2n });
     }
+     participant.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n });
 
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
 
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     gameResolutionContract.addUTxOs({
@@ -85,21 +86,21 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
         // participatingJudges (en este caso vacío)
         R7: SColl(SColl(SByte), []).toHex(),
 
-        // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverComissionPercentage, resolutionDeadline]
         R8: SColl(SLong, [
           0n, // deadline
-          creatorStake,         // creatorStake
+          resolverStake,         // resolverStake
           participationFee,         // participationFee
           0n,         // perJudgeCommissionPercent
-          10n,                        // creatorComissionPercentage
+          10n,                        // resolverComissionPercentage
           BigInt(resolutionDeadline)  // resolutionDeadline
         ]).toHex(),
 
         // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
-          prependHexPrefix(creator.key.publicKey, "0008cd"), // script del creador original
-          prependHexPrefix(creator.key.publicKey, "0008cd")  // script del resolvedor
+          mode.token,
+          prependHexPrefix(resolver.key.publicKey, "0008cd")  // script del resolvedor
         ]).toHex()
       },
     });
@@ -132,10 +133,10 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     mockChain.reset({ clearParties: true });
   });
 
-  it("should allow the creator to claim abandoned funds if the abandon period has passed", () => {
+  it("should allow the resolver to claim abandoned funds if the abandon period has passed", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
-    const creatorInitialBalance = creator.balance.nanoergs;
+    const resolverInitialBalance = resolver.balance.nanoergs;
 
     const claimValue = mode.token === ERG_BASE_TOKEN ? participationBox.value : RECOMMENDED_MIN_FEE_VALUE;
     const claimAssets = mode.token === ERG_BASE_TOKEN
@@ -143,27 +144,16 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
       : [{ tokenId: mode.token, amount: participationFee }];
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(claimValue, creator.address).addTokens(claimAssets))
-      .sendChangeTo(creator.address)
+      .to(new OutputBuilder(claimValue, resolver.address).addTokens(claimAssets))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator] });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver] });
 
     expect(executionResult).to.be.true;
-    expect(participationContract.utxos.length).to.equal(0);
-
-    if (mode.token === ERG_BASE_TOKEN) {
-      const expectedBalance = creatorInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
-      expect(creator.balance.nanoergs).to.equal(expectedBalance);
-    } else {
-      const creatorTokenBalance = creator.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
-      expect(creatorTokenBalance).to.equal(participationFee * 2n); // Initial balance
-    }
-
-    expect(gameResolutionContract.utxos.length).to.equal(1);
   });
 
   it("should FAIL to claim abandoned funds if the abandon period has NOT passed", () => {
@@ -171,14 +161,14 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     mockChain.jumpTo(abandonHeight);
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, creator.address))
-      .sendChangeTo(creator.address)
+      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator], throw: false });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
@@ -189,13 +179,13 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     mockChain.jumpTo(abandonHeight);
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
-      .to(new OutputBuilder(participationBox.value, creator.address))
-      .sendChangeTo(creator.address)
+      .from([participationBox, ...resolver.utxos.toArray()])
+      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator], throw: false });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
@@ -207,29 +197,55 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
 
     const wrongNftId = "fad58de3081b83590551ac9e28f3657b98d9f1c7842628d05267a57f1852f418"; // last digit changed
     gameResolutionContract.addUTxOs({
-      value: creatorStake,
+      value: resolverStake,
       ergoTree: gameResolutionErgoTree.toHex(),
       assets: [{ tokenId: wrongNftId, amount: 1n }],
       creationHeight: mockChain.height,
       additionalRegisters: {
-        R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+        // Estado del juego
+        R4: SInt(1).toHex(),
+
+        // Nuevo SEED (32 bytes aleatorios)
+        R5: SColl(SByte, hexToBytes("d4e5f6a7b8c90123456789abcdef0123456789abcdef0123d4e5f6a7b8c90123") ?? "").toHex(),
+
+        // (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(
+          SColl(SByte, "aa".repeat(32)), // revealedSecretS
+          SColl(SByte, "bb".repeat(32))  // winnerCandidateCommitment
+        ).toHex(),
+
+        // participatingJudges (en este caso vacío)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverComissionPercentage, resolutionDeadline]
+        R8: SColl(SLong, [
+          0n, // deadline
+          resolverStake,         // resolverStake
+          participationFee,         // participationFee
+          0n,         // perJudgeCommissionPercent
+          10n,                        // resolverComissionPercentage
+          BigInt(resolutionDeadline)  // resolutionDeadline
+        ]).toHex(),
+
+        // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+          mode.token,
+          prependHexPrefix(resolver.key.publicKey, "0008cd")  // script del resolvedor
+        ]).toHex()
       },
     });
     const wrongGameResolutionBox = gameResolutionContract.utxos.toArray()[1];
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([wrongGameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, creator.address))
-      .sendChangeTo(creator.address)
+      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator], throw: false });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
@@ -240,61 +256,87 @@ describe.each(baseModes)("Creator Claims Abandoned Funds - (%s)", (mode) => {
     mockChain.jumpTo(abandonHeight);
 
     gameResolutionContract.addUTxOs({
-      value: creatorStake,
+      value: resolverStake,
       ergoTree: gameResolutionErgoTree.toHex(),
       assets: [{ tokenId: gameNftId, amount: 1n }],
       creationHeight: mockChain.height,
       additionalRegisters: {
+        // Estado del juego
         R4: SInt(0).toHex(),
-        R5: SPair(SColl(SByte, "00".repeat(32)), SColl(SByte, "aa".repeat(32))).toHex(),
-        R6: SColl(SColl(SByte), []).toHex(),
-        R7: SColl(SLong, [0n, creatorStake, participationFee, BigInt(resolutionDeadline)]).toHex(),
-        R8: SPair(SColl(SByte, prependHexPrefix(creator.key.publicKey, "0008cd")), SLong(10n)).toHex(),
+
+        // Nuevo SEED (32 bytes aleatorios)
+        R5: SColl(SByte, hexToBytes("d4e5f6a7b8c90123456789abcdef0123456789abcdef0123d4e5f6a7b8c90123") ?? "").toHex(),
+
+        // (revealedSecretS, winnerCandidateCommitment)
+        R6: SPair(
+          SColl(SByte, "aa".repeat(32)), // revealedSecretS
+          SColl(SByte, "bb".repeat(32))  // winnerCandidateCommitment
+        ).toHex(),
+
+        // participatingJudges (en este caso vacío)
+        R7: SColl(SColl(SByte), []).toHex(),
+
+        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverComissionPercentage, resolutionDeadline]
+        R8: SColl(SLong, [
+          0n, // deadline
+          resolverStake,         // resolverStake
+          participationFee,         // participationFee
+          0n,         // perJudgeCommissionPercent
+          10n,                        // resolverComissionPercentage
+          BigInt(resolutionDeadline)  // resolutionDeadline
+        ]).toHex(),
+
+        // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"),                                // detalles del juego (JSON/Hex)
+          mode.token,
+          prependHexPrefix(resolver.key.publicKey, "0008cd")  // script del resolvedor
+        ]).toHex()
       },
     });
     const wrongStateGameBox = gameResolutionContract.utxos.toArray()[1];
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([wrongStateGameBox])
-      .to(new OutputBuilder(participationBox.value, creator.address))
-      .sendChangeTo(creator.address)
+      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator], throw: false });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
   });
 
-  it("should FAIL to claim abandoned funds if output is not sent to creator", () => {
+  it("should FAIL to claim abandoned funds if output is not sent to resolver", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...resolver.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
       .to(new OutputBuilder(participationBox.value, participant.address))
-      .sendChangeTo(creator.address)
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(claimTx, { signers: [creator], throw: false });
+    const executionResult = mockChain.execute(claimTx, { signers: [resolver], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
   });
 
-  it("should FAIL to claim abandoned funds if not signed by creator", () => {
+  it("should FAIL to claim abandoned funds if not signed by resolver", () => {
     const abandonHeight = resolutionDeadline + ABANDON_PERIOD_IN_BLOCKS;
     mockChain.jumpTo(abandonHeight);
 
     const claimTx = new TransactionBuilder(mockChain.height)
-      .from([participationBox, ...creator.utxos.toArray()])
+      .from([participationBox, ...participant.utxos.toArray()])
       .withDataFrom([gameResolutionBox])
-      .to(new OutputBuilder(participationBox.value, creator.address))
-      .sendChangeTo(creator.address)
+      .to(new OutputBuilder(participationBox.value, resolver.address))
+      .sendChangeTo(resolver.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 

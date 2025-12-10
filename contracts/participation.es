@@ -130,7 +130,7 @@
   // Esto actúa como un mecanismo de limpieza para fondos no reclamados o atascados.
   val creatorClaimsAbandonedFunds = {
     // Buscamos la caja principal del juego en estado "Finalizado" (1) entre los DataInputs.
-    val mainGameBoxes = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
+    val mainGameBoxes = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
