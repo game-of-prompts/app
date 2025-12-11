@@ -27,7 +27,7 @@ import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputatio
 
 const ERG_BASE_TOKEN = "ERG";
 const ERG_BASE_TOKEN_NAME = "ERG";
-const USD_BASE_TOKEN = "11".repeat(32);
+const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
 
 const baseModes = [
