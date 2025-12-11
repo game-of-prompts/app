@@ -375,7 +375,10 @@
       
       // 3. Verificación de que el DEV recibe su pago
       val devGetsPaid = if (finalDevPayout > 0L) {
-          OUTPUTS.exists({(b:Box) => box_value(b) >= finalDevPayout && b.propositionBytes == DEV_SCRIPT})
+          val devInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+          val devOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+          val devAddedValue = devOutputValue - devInputValue
+          devAddedValue >= finalDevPayout
       } else { true }
       
       // 4. Verificación de que los JUECES reciben su pago
@@ -390,13 +393,14 @@
             })
             .map({(box: Box) => box.R7[Coll[Byte]].get})
 
-          // Comprobar que todos los jueces que participaron tienen una salida a su dirección P2S
+
+          // Comprobar que todos los jueces que participaron reciben su comisión
           judgesScripts.forall({
               (judgeAddress: Coll[Byte]) => 
-                OUTPUTS.exists({
-                  (b:Box) => b.propositionBytes == judgeAddress &&
-                             box_value(b) >= perJudgeComission
-                  })
+                val judgeInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val judgeOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val judgeAddedValue = judgeOutputValue - judgeInputValue
+                judgeAddedValue >= perJudgeComission
             })
 
           // No es necesario comprobar unicidad, ni en el conjunto de scripts, ni en los outputs, ya que se asegura de que todos reciben como minimo su parte y el monto total deberá cuadrar.
@@ -454,7 +458,11 @@
 
             // Ajustar las verificaciones de pago para usar los valores ajustados
             val adjustedDevGetsPaid = if (adjustedDevPayout > 0L) {
-                OUTPUTS.exists({(b:Box) => box_value(b) >= adjustedDevPayout && b.propositionBytes == DEV_SCRIPT})
+                val devInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val devOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val devAddedValue = devOutputValue - devInputValue
+                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+                devAddedValue >= adjustedDevPayout - txFee
             } else { true }
 
             val adjustedJudgesGetsPaid = if (adjustedJudgesPayout > 0L) {
@@ -466,28 +474,38 @@
                   })
                   .map({(box: Box) => box.R7[Coll[Byte]].get})
 
+                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+
                 judgesScripts.forall({
                     (judgeAddress: Coll[Byte]) => 
-                      OUTPUTS.exists({
-                        (b:Box) => b.propositionBytes == judgeAddress &&
-                                   box_value(b) >= adjustedPerJudge
-                        })
+                      val judgeInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                      val judgeOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                      val judgeAddedValue = judgeOutputValue - judgeInputValue
+                      judgeAddedValue >= adjustedPerJudge - txFee
                   })
             } else { true }
 
             // Verificación de la salida del ganador
-            val winnerGetsPaid = OUTPUTS.exists({ (b: Box) =>
-                box_value(b) >= adjustedWinnerPrize &&
-                b.propositionBytes == winnerPK && // Usamos la clave extraída de la caja de participación
-                b.tokens.size > 0 &&
-                b.tokens(0)._1 == gameNftId
-            })
+            val winnerGetsPaid = {
+                val winnerInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val winnerOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val winnerAddedValue = winnerOutputValue - winnerInputValue
+                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+                val winnerHasNFT = OUTPUTS.exists({ (b: Box) =>
+                    b.propositionBytes == winnerPK &&
+                    b.tokens.size > 0 &&
+                    b.tokens(0)._1 == gameNftId
+                })
+                winnerAddedValue >= adjustedWinnerPrize - txFee && winnerHasNFT
+            }
 
             val finalResolverPayout = creatorStake + adjustedResolverCommission  // In case of erg, we know creator_stake > MIN_ERG_BOX.
-            val resolverGetsPaid = OUTPUTS.exists({ (b:Box) => 
-                box_value(b) >= finalResolverPayout && 
-                b.propositionBytes == resolverPK
-            })
+            val resolverGetsPaid = {
+                val resolverInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val resolverOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val resolverAddedValue = resolverOutputValue - resolverInputValue
+                resolverAddedValue >= finalResolverPayout
+            }
             
             authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && adjustedDevGetsPaid && adjustedJudgesGetsPaid)
           } else {
@@ -507,12 +525,18 @@
         // El resolutor se lleva todo lo demás.
         val finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout
 
-        val resolverGetsPaid = OUTPUTS.exists({ (b: Box) =>
-            box_value(b) >= finalResolverPayout &&
-            b.propositionBytes == resolverPK &&
-            b.tokens.size > 0 &&
-            b.tokens(0)._1 == gameNftId
-        })
+        val resolverGetsPaid = {
+            val resolverInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+            val resolverOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+            val resolverAddedValue = resolverOutputValue - resolverInputValue
+            val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+            val resolverHasNFT = OUTPUTS.exists({ (b: Box) =>
+                b.propositionBytes == resolverPK &&
+                b.tokens.size > 0 &&
+                b.tokens(0)._1 == gameNftId
+            })
+            resolverAddedValue >= finalResolverPayout - txFee && resolverHasNFT
+        }
         
         // La condición final ya incluye las validaciones movidas fuera.
         authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
