@@ -889,11 +889,15 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     const judgesTokenIds = [judge1ReputationTokenId, judge2ReputationTokenId].map(id => Buffer.from(id, "hex"));
 
+      const assets = mode.token === ERG_BASE_TOKEN
+        ? []
+        : [{ tokenId: mode.token, amount: creatorStake }];
+
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
       value: creatorStake,
       ergoTree: gameResolutionErgoTree.toHex(),
-      assets: [{ tokenId: gameNftId, amount: 1n }],
+      assets: [{ tokenId: gameNftId, amount: 1n }, ...assets],
       additionalRegisters: {
         // Estado del juego
         R4: SInt(1).toHex(),
@@ -922,7 +926,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
         R9: SColl(SColl(SByte), [
           stringToBytes('utf8', gameDetailsJson),             // detalles del juego
-          "",
+          mode.token !== ERG_BASE_TOKEN ? (hexToBytes(mode.token) || new Uint8Array(0)) : new Uint8Array(0),
           prependHexPrefix(resolver.key.publicKey, "0008cd") // script resolvedor
         ]).toHex()
       },
