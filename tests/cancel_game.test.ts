@@ -17,6 +17,7 @@ import {
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
+import { hexToBytes } from "$lib/ergo/utils";
 
 const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
@@ -85,7 +86,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                     500n,
                     1000n
                 ]).toHex(),
-                R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), mode.token]).toHex()
+                R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex()
             }
         });
 
@@ -139,7 +140,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                         R6: SColl(SByte, secret).toHex(), // Secreto revelado
                         R7: SLong(stakePortionForGame).toHex(),
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
-                        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), mode.token]).toHex(),
+                        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex(),
                     }),
                 
                 // Salida 1: Pago al Reclamante (20% del Stake)
