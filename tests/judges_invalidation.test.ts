@@ -22,7 +22,7 @@ import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
 import { DefaultGameConstants } from "$lib/common/constants";
 
-const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";

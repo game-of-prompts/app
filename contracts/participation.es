@@ -36,7 +36,7 @@
   // Permite al jugador recuperar sus fondos si el juego es cancelado (el secreto 'S' es revelado prematuramente).
   val spentInValidGameCancellation = {
     if (CONTEXT.dataInputs.size > 0) {
-      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 2})  // Caja del juego game_cancelled.es como Data Input.
+      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 2})  // Caja del juego game_cancelled.es como Data Input.
 
       if (gameBoxInDataArr.size != 1) { sigmaProp(false) } // Debe haber exactamente una caja del juego en estado "Cancelado".
       else {
@@ -89,7 +89,7 @@
 
   // --- ACCIÓN 3: Gasto en la finalización normal del juego (EndGame) ---
   val isValidEndGame = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size > 0 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
+    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
@@ -103,7 +103,7 @@
 
   // --- ACCIÓN 4: Gasto cuando esta participación es invalidada por los jueces ---
   val isInvalidatedByJudges = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size > 0 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
+    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)

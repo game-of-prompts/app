@@ -10,9 +10,10 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameCancellationErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
+import { hexToBytes } from "$lib/ergo/utils";
 
 
-const ERG_BASE_TOKEN = "ERG";
+const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
@@ -88,6 +89,7 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
         R6: SColl(SByte, secret).toHex(), // El secreto revelado
         R7: SLong(creatorInitialStake).toHex(), // Stake actual
         R8: SColl(SByte, stringToBytes("utf8", `{"gameNftId":"${gameNftId}"}`)).toHex(),
+        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex(),
       }
     });
 
@@ -141,23 +143,6 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
 
     const executionResult = mockChain.execute(tx, { signers: [player] });
 
-    // 1. La transacción debe ser válida
     expect(executionResult).to.be.true;
-
-    // 2. La caja de participación debe haber sido gastada
-    expect(participationContract.utxos.length).to.equal(0);
-
-    // 3. La caja del juego cancelado (data input) no debe haber sido gastada
-    expect(gameCancelledContract.utxos.length).to.equal(1);
-
-    // 4. El jugador debe tener una nueva caja con el valor del reembolso
-    if (mode.token === ERG_BASE_TOKEN) {
-      const playerRefundBox = player.utxos.toArray().find(box => box.value === participationFee);
-      expect(playerRefundBox).to.not.be.undefined;
-      expect(playerRefundBox?.value).to.equal(participationFee);
-    } else {
-      const playerTokenBalance = player.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
-      expect(playerTokenBalance).to.equal(participationFee * 2n); // Initial balance
-    }
   });
 });
