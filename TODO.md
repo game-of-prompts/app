@@ -78,7 +78,7 @@
 [x] Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
 [x] Implementar acción mediante código.
 
-[] Soporte multi-token
+[x] Soporte multi-token
 
 [] Lotes de participaciones 
 (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
@@ -89,7 +89,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
 - No hay vote, asi que no llama la atención.
 - Esperar al último momento permite probar durante mas tiempo.
-Una posible idea para incentivar a participar de manera prematura (si es que lo considera adecuado el creador) es que el puntaje no solo dependa de la puntuacion del juego, si no del bloque en el que se agregó la participación. Algo como `score = game_score + N*(DEADLINE - HEIGHT)` donde:
+Una posible idea para incentivar a participar de manera prematura (si es que lo considera adecuado el creador) es que el puntaje no solo dependa de la puntuacion del juego, si no del bloque en el que se agregó la participación. Algo como `score = game_score * (DEADLINE - HEIGHT)` donde:
 - score: es la puntuación final
 - game_score: es la puntuación del solver en el juego.
 - N: factor constante.
