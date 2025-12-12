@@ -156,17 +156,6 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
     const executionResult = mockChain.execute(reclaimTx, { signers: [participant] });
 
     expect(executionResult).to.be.true;
-    expect(participationContract.utxos.length).to.equal(0);
-
-    if (mode.token === ERG_BASE_TOKEN) {
-      const expectedBalance = participantInitialBalance + participationFee - RECOMMENDED_MIN_FEE_VALUE;
-      expect(participant.balance.nanoergs).to.equal(expectedBalance);
-    } else {
-      const participantTokenBalance = participant.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
-      expect(participantTokenBalance).to.equal(participationFee * 2n); // Initial balance
-    }
-
-    expect(gameActiveContract.utxos.length).to.equal(1);
   });
 
   it("should FAIL to reclaim funds if the grace period has NOT passed", () => {

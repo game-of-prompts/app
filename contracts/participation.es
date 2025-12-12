@@ -64,7 +64,7 @@
   // (no se ha resuelto después de un período de gracia tras la fecha límite).
   val playerReclaimsAfterGracePeriod = {
     if (CONTEXT.dataInputs.size > 0) {
-      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size == 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 0}) // Caja del juego game_active.es como Data Input.
+      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 0}) // Caja del juego game_active.es como Data Input.
 
       if (gameBoxInDataArr.size == 1) {
         val gameDeadline = gameBoxInDataArr(0).R8[Coll[Long]].get(0)
