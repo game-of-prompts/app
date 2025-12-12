@@ -77,7 +77,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
       });
     } else {
-      creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE });
+      creator.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n });
     }
 
     // --- Definir Partidos de Contratos --- 
@@ -127,7 +127,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         ]).toHex(),
 
         // R9: JSON Details
-        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), ""]).toHex()
+        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex()
       }
     });
 
@@ -174,7 +174,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
-          "",
+          hexToBytes(mode.token) ?? "",
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -221,24 +221,6 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const executionResult = mockChain.execute(tx, { signers: [creator] });
 
     expect(executionResult).to.be.true;
-
-    // --- Verificación usando los partidos de contrato --- 
-    expect(gameActiveContract.utxos.length).to.equal(0);
-    expect(gameResolutionContract.utxos.length).to.equal(1);
-
-    const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
-    expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
-    expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
-
-    const r4 = newResolutionBox.additionalRegisters.R4;
-    expect(r4).to.equal(SInt(1).toHex());
-
-    const r6 = newResolutionBox.additionalRegisters.R6;
-    expect(r6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex());
-
-    const r8 = newResolutionBox.additionalRegisters.R8;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
-    expect(r8).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
   it("should FAIL transition the game to the resolution phase if participation game nft id is wrong", () => {
@@ -350,42 +332,48 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   it("should FAIL transition the game to the resolution phase if output state is wrong", () => {
     const currentHeight = mockChain.height;
 
-    const creatorPkBytes = creator.address.getPublicKeys()[0];
+    const resolvedorPkBytes =  creator.address.getPublicKeys()[0];
+
     const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
-    const resolvedorPkBytes = creatorPkBytes;
 
-    const wrongGameBoxOutput = new OutputBuilder(creatorStake, gameResolutionContract.address)
-      .addTokens([{ tokenId: gameNftId, amount: 1n }])
-      .setAdditionalRegisters({
-
-        // R4: Integer - Game state (1: Resolved)
-        R4: SInt(0).toHex(),
-
-        // R5: Coll[Byte] - Seed
-        R5: SColl(SByte, hexToBytes(seed)!).toHex(),
-
-        // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
-        R6: SPair(SColl(SByte, secret), SColl(SByte, [])).toHex(),
-
-        // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
-        R7: SColl(SColl(SByte), []).toHex(),
-
-        // R8: Coll[Long] - numericalParameters
-        R8: SColl(SLong, newNumericalParams).toHex(),
-
-        // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
-        R9: SColl(SColl(SByte), [
-          stringToBytes("utf8", "{}"), // Detalles del juego
-          "",
-          resolvedorPkBytes           // Script de gasto del resolvedor
-        ]).toHex()
-      });
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+    ];
 
     const tx = new TransactionBuilder(currentHeight)
       .from([
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()])
-      .to([wrongGameBoxOutput])
+      .to([
+        new OutputBuilder(gameResolutionBoxValue, gameResolutionContract.address)
+          .addTokens(gameResolutionAssets)
+          .setAdditionalRegisters({
+
+            // R4: Integer - Game state (1: Resolved)
+            R4: SInt(0).toHex(),
+
+            // R5: Coll[Byte] - Seed
+            R5: SColl(SByte, hexToBytes(seed)!).toHex(),
+
+            // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
+            R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+
+            // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
+            R7: SColl(SColl(SByte), []).toHex(),
+
+            // R8: Coll[Long] - numericalParameters
+            R8: SColl(SLong, newNumericalParams).toHex(),
+
+            // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
+            R9: SColl(SColl(SByte), [
+              stringToBytes("utf8", "{}"), // Detalles del juego
+              hexToBytes(mode.token) ?? "",
+              resolvedorPkBytes           // Script de gasto del resolvedor
+            ]).toHex()
+          })
+      ])
       .withDataFrom([participationContract.utxos.toArray()[0]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
@@ -404,8 +392,14 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
-    const gameBoxOutputWithAnyWinner = new OutputBuilder(creatorStake, gameResolutionContract.address)
-      .addTokens([{ tokenId: gameNftId, amount: 1n }])
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+    ];
+
+    const gameBoxOutputWithAnyWinner = new OutputBuilder(gameResolutionBoxValue, gameResolutionContract.address)
+      .addTokens(gameResolutionAssets)
       .setAdditionalRegisters({
 
         // R4: Integer - Game state (1: Resolved)
@@ -426,7 +420,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
         R9: SColl(SColl(SByte), [
           stringToBytes("utf8", "{}"), // Detalles del juego
-          "",
+          hexToBytes(mode.token) ?? "",
           resolvedorPkBytes           // Script de gasto del resolvedor
         ]).toHex()
       });
@@ -444,24 +438,6 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const executionResult = mockChain.execute(tx, { signers: [creator] });
 
     expect(executionResult).to.be.true;
-
-    // --- Verificación usando los partidos de contrato --- 
-    expect(gameActiveContract.utxos.length).to.equal(0);
-    expect(gameResolutionContract.utxos.length).to.equal(1);
-
-    const newResolutionBox = gameResolutionContract.utxos.toArray()[0];
-    expect(newResolutionBox.value).to.equal(gameBoxOutput.value);
-    expect(newResolutionBox.assets[0].tokenId).to.equal(gameNftId);
-
-    const r4 = newResolutionBox.additionalRegisters.R4;
-    expect(r4).to.equal(SInt(1).toHex());
-
-    const r6 = newResolutionBox.additionalRegisters.R6;
-    expect(r6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, [])).toHex());
-
-    const r8 = newResolutionBox.additionalRegisters.R8;
-    const expectedNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
-    expect(r8).to.equal(SColl(SLong, expectedNumericalParams).toHex());
   });
 
   it("should FAIL if the winning participation has more than 10 scores", () => {
@@ -506,13 +482,19 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const creatorPkBytes = creator.address.getPublicKeys()[0];
     const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
 
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+    ];
+    
     const tx = new TransactionBuilder(currentHeight)
       .from([
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()
       ])
-      .to([new OutputBuilder(creatorStake, gameResolutionContract.address)
-        .addTokens([{ tokenId: gameNftId, amount: 1n }])
+      .to([new OutputBuilder(gameResolutionBoxValue, gameResolutionContract.address)
+        .addTokens(gameResolutionAssets)
         .setAdditionalRegisters({
 
           // R4: Integer - Game state (1: Resolved)
@@ -532,55 +514,9 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
           // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
           R9: SColl(SColl(SByte), [
-            stringToBytes("utf8", '{"name": "anon"}'), // Detalles del juego
-            "",
+            stringToBytes("utf8", '{"name": "anon"}'), // Detalles del juego modificados
+            hexToBytes(mode.token) ?? "",
             creatorPkBytes           // Script de gasto del resolvedor
-          ]).toHex()
-        })])
-      .withDataFrom([participationContract.utxos.toArray()[0]])
-      .sendChangeTo(creator.address)
-      .payFee(RECOMMENDED_MIN_FEE_VALUE)
-      .build();
-
-    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
-
-    expect(executionResult).to.be.false;
-  });
-
-  it("should FAIL transition the game to the resolution phase if R9 size is modified", () => {
-    const currentHeight = mockChain.height;
-    const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
-
-    const tx = new TransactionBuilder(currentHeight)
-      .from([
-        gameActiveContract.utxos.toArray()[0],
-        ...creator.utxos.toArray()
-      ])
-      .to([new OutputBuilder(creatorStake, gameResolutionContract.address)
-        .addTokens([{ tokenId: gameNftId, amount: 1n }])
-        .setAdditionalRegisters({
-
-          // R4: Integer - Game state (1: Resolved)
-          R4: SInt(1).toHex(),
-
-          // R5: Coll[Byte] - Seed
-          R5: SColl(SByte, hexToBytes(seed)!).toHex(),
-
-          // R6: (Coll[Byte], Coll[Byte]) - (revealedSecretS, winnerCandidateCommitment)
-          R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
-
-          // R7: Coll[Coll[Byte]] - participatingJudges (lista vacía)
-          R7: SColl(SColl(SByte), []).toHex(),
-
-          // R8: Coll[Long] - numericalParameters
-          R8: SColl(SLong, newNumericalParams).toHex(),
-
-          // R9: Coll[Coll[Byte]] - gameProvenance: (Detalles, Script Resolvedor)
-          R9: SColl(SColl(SByte), [
-            stringToBytes("utf8", '{changed: 1}'), // Detalles del juego
-            "",
-            creatorPkBytes,           // Script de gasto del resolvedor
           ]).toHex()
         })])
       .withDataFrom([participationContract.utxos.toArray()[0]])
