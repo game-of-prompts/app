@@ -39,7 +39,7 @@ export async function resolve_game(
 ): Promise<string | null> {
 
     console.log(`Iniciando transición a resolución para el juego: ${game.boxId}`);
-    
+
     const dataMap = await fetchJudges();
     const judgeProofBoxes: Box<Amount>[] = judgeProofs.flatMap(key => {
         const judge = dataMap.get(key);
@@ -139,14 +139,14 @@ export async function resolve_game(
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
 
     const newNumericalParams = [
-        BigInt(game.deadlineBlock), 
-        game.creatorStakeAmount, 
+        BigInt(game.deadlineBlock),
+        game.creatorStakeAmount,
         game.participationFeeAmount,
         game.perJudgeComissionPercentage,
         BigInt(game.commissionPercentage),
         resolutionDeadline
     ];
-    
+
     let winnerCommitmentBytes = null;
     if (winnerCandidateCommitment) {
         winnerCommitmentBytes = hexToBytes(winnerCandidateCommitment);
@@ -162,9 +162,9 @@ export async function resolve_game(
 
     // devuelve número de bytes representados por la cadena hex (sin prefijo)
     const hexBytesLen = (hexStr: string): number => {
-    if (!hexStr) return 0;
-    const h = stripHexPrefix(hexStr);
-    return Math.ceil(h.length / 2);
+        if (!hexStr) return 0;
+        const h = stripHexPrefix(hexStr);
+        return Math.ceil(h.length / 2);
     };
 
     // max para BigInt
@@ -176,9 +176,9 @@ export async function resolve_game(
     const PER_REGISTER_OVERHEAD = 1;       // bytes por índice/encabezado de registro
     const SIZE_MARGIN = 120;               // margen de seguridad en bytes
 
-    const seedBytes = hexToBytes(game.seed); 
+    const seedBytes = hexToBytes(game.seed);
     if (!seedBytes) throw new Error("No se pudo obtener el 'seed' del objeto game (game.seedHex).");
-    
+
     const gameDetailsBytes = stringToBytes('utf8', game.content.rawJsonString);
 
     const r4Hex = SInt(1).toHex(); // R4: Estado (1: Resuelto)
@@ -186,8 +186,8 @@ export async function resolve_game(
     const r6Hex = SPair(SColl(SByte, secretS_bytes), SColl(SByte, winnerCommitmentBytes)).toHex(); // R6: (secretS, winnerCommitment)
     const r7Hex = SColl(SColl(SByte), participatingJudgesTokens.map(t => hexToBytes(t)!)).toHex(); // R7: Jueces participantes
     const r8Hex = SColl(SLong, newNumericalParams).toHex(); // R8: Parámetros numéricos
-    
-    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, hexToBytes(game.participationTokenId) ?? "", prependHexPrefix(resolverPkBytes)]).toHex(); 
+
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, hexToBytes(game.participationTokenId) ?? "", prependHexPrefix(resolverPkBytes)]).toHex();
 
     // Conteos y tamaños
     const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];
@@ -215,11 +215,11 @@ export async function resolve_game(
 
     // tamaño total estimado
     const totalEstimatedSize = BigInt(
-    BASE_BOX_OVERHEAD
-    + ergoTreeBytes
-    + tokensBytes
-    + registersBytes
-    + SIZE_MARGIN
+        BASE_BOX_OVERHEAD
+        + ergoTreeBytes
+        + tokensBytes
+        + registersBytes
+        + SIZE_MARGIN
     );
 
     // mínimo requerido en nanoErgs
@@ -234,7 +234,7 @@ export async function resolve_game(
     const resolutionBoxOutput = new OutputBuilder(
         resolutionBoxValue,
         resolutionErgoTree
-        )
+    )
         .addTokens(game.box.assets)
         .setAdditionalRegisters({
             R4: r4Hex,
@@ -263,7 +263,7 @@ export async function resolve_game(
 
         console.log(`Transición a resolución enviada con éxito. ID de la transacción: ${txId}`);
         return txId;
-        
+
     } catch (error) {
         console.error("Error al construir o enviar la transacción:", error);
         throw error;

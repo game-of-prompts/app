@@ -55,9 +55,9 @@
     let participationTokenName: string = "ERG";
 
     let selectedTokenOption: string = "ERG";
-    let customTokenId: string = ""; 
+    let customTokenId: string = "";
     let isCustomToken: boolean = false;
-    
+
     const DEFAULT_TOKENS = [
         {
             tokenId:
@@ -110,10 +110,12 @@
             contentValidation = validateGameContent(
                 gameDetailsObject,
                 judgesCount,
+                participationTokenId,
             );
             contentUsagePercentage = getUsagePercentage(
                 gameDetailsObject,
                 judgesCount,
+                participationTokenId,
             );
         }, 500);
     }
@@ -207,10 +209,11 @@
             if (customTokenId && customTokenId.length === 64) {
                 participationTokenId = customTokenId;
                 participationTokenName = "Loading...";
-                
+
                 customTokenDebounceTimer = setTimeout(async () => {
                     try {
-                        const { name, decimals } = await fetch_token_details(customTokenId);
+                        const { name, decimals } =
+                            await fetch_token_details(customTokenId);
                         participationTokenName = name;
                         participationTokenDecimals = decimals;
                     } catch (e) {
@@ -227,12 +230,12 @@
             const token = DEFAULT_TOKENS.find(
                 (t) => t.tokenId === selectedTokenOption,
             );
-            
+
             participationTokenId = token?.tokenId || "";
             participationTokenDecimals = token?.decimals || 0;
             participationTokenName = token?.title || "Unknown";
         } else {
-            selectedTokenOption = "ERG"; 
+            selectedTokenOption = "ERG";
             participationTokenId = "";
             participationTokenDecimals = 9;
             participationTokenName = "ERG";
@@ -323,8 +326,13 @@
                 hashedSecret: hashedSecret,
                 deadlineBlock: deadlineBlock,
                 creatorStakeAmount: toTokenSmallestUnit(creatorStakeAmount),
-                participationFeeAmount: toTokenSmallestUnit(participationFeeAmount),
-                participationTokenId: participationTokenId === "" ? undefined : participationTokenId,
+                participationFeeAmount: toTokenSmallestUnit(
+                    participationFeeAmount,
+                ),
+                participationTokenId:
+                    participationTokenId === ""
+                        ? undefined
+                        : participationTokenId,
                 commissionPercentage: Math.round(commissionPercentage),
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
@@ -484,7 +492,9 @@
                         {/if}
                     </div>
                     <div class="form-group">
-                        <Label for="creatorStakeAmount">Creator Stake ({participationTokenName})</Label>
+                        <Label for="creatorStakeAmount"
+                            >Creator Stake ({participationTokenName})</Label
+                        >
                         <Input
                             id="creatorStakeAmount"
                             bind:value={creatorStakeAmount}
@@ -510,20 +520,21 @@
                                 required
                                 class="flex-grow"
                             />
-                            
+
                             <select
                                 bind:value={selectedTokenOption}
                                 class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
                             >
                                 <option value="ERG">ERG (Ergo)</option>
-                                
+
                                 {#each DEFAULT_TOKENS as token (token.tokenId)}
                                     <option value={token.tokenId}>
                                         {token.title}
                                     </option>
                                 {/each}
-                                
-                                <option value="custom">Other Token ID...</option>
+
+                                <option value="custom">Other Token ID...</option
+                                >
                             </select>
                         </div>
 
@@ -544,8 +555,11 @@
                                     pattern="[a-fA-F0-9]{64}"
                                 />
                                 {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
-                                    <p class="text-xs text-muted-foreground mt-1">
-                                        Token: {participationTokenName} (Decimals: {participationTokenDecimals})
+                                    <p
+                                        class="text-xs text-muted-foreground mt-1"
+                                    >
+                                        Token: {participationTokenName} (Decimals:
+                                        {participationTokenDecimals})
                                     </p>
                                 {/if}
                             </div>
