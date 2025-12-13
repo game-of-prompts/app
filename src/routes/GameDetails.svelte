@@ -1040,7 +1040,6 @@
                     ? 'bg-dark'
                     : 'bg-white'}"
             >
-                <h2 class="text-2xl font-semibold mb-6">Details</h2>
                 {#if game}
                     {@const creator = game.content.creatorReputationProof}
                     <div
@@ -1053,27 +1052,6 @@
                                 /\n/g,
                                 "<br/>",
                             ) || "No description available."}
-                        </div>
-
-                        <div
-                            class="info-block col-span-1 md:col-span-2 lg:col-span-3"
-                        >
-                            <span class="info-label"
-                                >Creator Address {isOwner ? "(You)" : ""}</span
-                            >
-                            {#if creator}
-                                <a
-                                    href={get(web_explorer_uri_tkn) + creator}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="info-value font-mono text-xs break-all hover:underline"
-                                    title={creator}
-                                >
-                                    {creator.slice(0, 12)}...{creator.slice(-6)}
-                                </a>
-                            {:else}
-                                <span class="info-value">N/A</span>
-                            {/if}
                         </div>
 
                         <div
@@ -1109,6 +1087,27 @@
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 text-sm"
                                 >
+                                    <div
+                                        class="info-block col-span-1 md:col-span-2"
+                                    >
+                                        <span class="info-label"
+                                            >Creator Address {isOwner ? "(You)" : ""}</span
+                                        >
+                                        {#if creator}
+                                            <a
+                                                href={get(web_explorer_uri_tkn) + creator}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="info-value font-mono text-xs break-all hover:underline"
+                                                title={creator}
+                                            >
+                                                {creator.slice(0, 12)}...{creator.slice(-6)}
+                                            </a>
+                                        {:else}
+                                            <span class="info-value">N/A</span>
+                                        {/if}
+                                    </div>
+
                                     <div class="info-block">
                                         <span class="info-label"
                                             >Competition ID (NFT)</span
@@ -1121,12 +1120,10 @@
                                             class="info-value font-mono text-xs break-all hover:underline"
                                             title={game.gameId}
                                         >
-                                            {game.gameId.slice(
-                                                0,
-                                                20,
-                                            )}...{game.gameId.slice(-4)}
+                                            {game.gameId}
                                         </a>
                                     </div>
+
                                     <div class="info-block">
                                         <span class="info-label"
                                             >Service ID</span
@@ -1138,6 +1135,7 @@
                                             {game.content.serviceId}
                                         </span>
                                     </div>
+
                                     <div class="info-block">
                                         <span class="info-label"
                                             >Indeterminism Index</span
@@ -1148,6 +1146,7 @@
                                             {game.content.indetermismIndex}
                                         </span>
                                     </div>
+
                                     <div class="info-block">
                                         <span class="info-label">Seed</span>
                                         <span
@@ -1156,6 +1155,7 @@
                                             {game.seed ?? "N/A"}
                                         </span>
                                     </div>
+
                                     {#if game.status === "Resolution" && game.revealedS_Hex}
                                         <div class="info-block md:col-span-2">
                                             <span class="info-label"
@@ -1168,6 +1168,7 @@
                                             </span>
                                         </div>
                                     {/if}
+                                    
                                 </div>
                             </details>
                         </div>
@@ -1515,8 +1516,7 @@
                                         The competition has ended and prizes
                                         have been distributed.
                                     {:else}
-                                        The game was cancelled due to a rule
-                                        violation.
+                                        The game was cancelled after the creator’s secret was compromised.
                                     {/if}
                                 </p>
                             </div>
@@ -2119,7 +2119,7 @@
                             : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
                         on:click={() => (activeTab = "forum")}
                     >
-                        Forum
+                        Comments
                     </button>
                 </div>
 
