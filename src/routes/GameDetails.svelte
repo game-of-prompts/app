@@ -58,7 +58,11 @@
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
-    import { getDisplayStake, getParticipationFee, formatTokenBigInt } from "$lib/utils";
+    import {
+        getDisplayStake,
+        getParticipationFee,
+        formatTokenBigInt,
+    } from "$lib/utils";
     import {
         fetchJudges,
         fetchReputationProofByTokenId,
@@ -137,6 +141,9 @@
     let scores_input = "";
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
+
+    // Tabs State
+    let activeTab: "participations" | "forum" = "participations";
 
     // --- LOGIC ---
     const unsubscribeGameDetail = game_detail.subscribe((value) => {
@@ -1048,47 +1055,13 @@
                             ) || "No description available."}
                         </div>
 
-                        <div class="info-block">
-                            <span class="info-label">Competition ID (NFT)</span>
-                            <a
-                                href={get(web_explorer_uri_tkn) + game.gameId}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="info-value font-mono text-xs break-all hover:underline"
-                                title={game.gameId}
+                        <div
+                            class="info-block col-span-1 md:col-span-2 lg:col-span-3"
+                        >
+                            <span class="info-label"
+                                >Creator Address {isOwner ? "(You)" : ""}</span
                             >
-                                {game.gameId.slice(0, 20)}...{game.gameId.slice(
-                                    -4,
-                                )}
-                            </a>
-                        </div>
-                        <div class="info-block">
-                            <span class="info-label">Service ID</span>
-                            <span
-                                class="info-value font-mono text-xs break-all"
-                                title={game.content.serviceId}
-                                >{game.content.serviceId}</span
-                            >
-                        </div>
-                        <div class="info-block">
-                            <span class="info-label">Indeterminisim index</span>
-                            <span class="info-value font-mono text-xs break-all"
-                                >{game.content.indetermismIndex}</span
-                            >
-                        </div>
-                        <div class="info-block">
-                            <span class="info-label">Seed</span>
-                            <span class="info-value font-mono text-xs break-all"
-                                >{game.seed ?? "N/A"}</span
-                            >
-                        </div>
-                        {#if creator}
-                            <div class="info-block">
-                                <span class="info-label"
-                                    >Creator Address {isOwner
-                                        ? "(You)"
-                                        : ""}</span
-                                >
+                            {#if creator}
                                 <a
                                     href={get(web_explorer_uri_tkn) + creator}
                                     target="_blank"
@@ -1098,21 +1071,106 @@
                                 >
                                     {creator.slice(0, 12)}...{creator.slice(-6)}
                                 </a>
-                            </div>
-                        {/if}
-                        {#if game.status === "Resolution" && game.revealedS_Hex}
-                            <div
-                                class="info-block col-span-1 md:col-span-2 lg:col-span-3"
+                            {:else}
+                                <span class="info-value">N/A</span>
+                            {/if}
+                        </div>
+
+                        <div
+                            class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
+                        >
+                            <details
+                                class="group p-4 rounded-lg border {$mode ===
+                                'dark'
+                                    ? 'border-slate-700 bg-slate-800/50'
+                                    : 'border-gray-200 bg-gray-50'}"
                             >
-                                <span class="info-label"
-                                    >Revealed Secret (S)</span
+                                <summary
+                                    class="flex justify-between items-center font-medium cursor-pointer list-none"
                                 >
-                                <span
-                                    class="info-value font-mono text-xs break-all"
-                                    >{game.revealedS_Hex}</span
+                                    <span>Technical Details</span>
+                                    <span
+                                        class="transition group-open:rotate-180"
+                                    >
+                                        <svg
+                                            fill="none"
+                                            height="24"
+                                            shape-rendering="geometricPrecision"
+                                            stroke="currentColor"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.5"
+                                            viewBox="0 0 24 24"
+                                            width="24"
+                                            ><path d="M6 9l6 6 6-6"></path></svg
+                                        >
+                                    </span>
+                                </summary>
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 text-sm"
                                 >
-                            </div>
-                        {/if}
+                                    <div class="info-block">
+                                        <span class="info-label"
+                                            >Competition ID (NFT)</span
+                                        >
+                                        <a
+                                            href={get(web_explorer_uri_tkn) +
+                                                game.gameId}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="info-value font-mono text-xs break-all hover:underline"
+                                            title={game.gameId}
+                                        >
+                                            {game.gameId.slice(
+                                                0,
+                                                20,
+                                            )}...{game.gameId.slice(-4)}
+                                        </a>
+                                    </div>
+                                    <div class="info-block">
+                                        <span class="info-label"
+                                            >Service ID</span
+                                        >
+                                        <span
+                                            class="info-value font-mono text-xs break-all"
+                                            title={game.content.serviceId}
+                                        >
+                                            {game.content.serviceId}
+                                        </span>
+                                    </div>
+                                    <div class="info-block">
+                                        <span class="info-label"
+                                            >Indeterminism Index</span
+                                        >
+                                        <span
+                                            class="info-value font-mono text-xs break-all"
+                                        >
+                                            {game.content.indetermismIndex}
+                                        </span>
+                                    </div>
+                                    <div class="info-block">
+                                        <span class="info-label">Seed</span>
+                                        <span
+                                            class="info-value font-mono text-xs break-all"
+                                        >
+                                            {game.seed ?? "N/A"}
+                                        </span>
+                                    </div>
+                                    {#if game.status === "Resolution" && game.revealedS_Hex}
+                                        <div class="info-block md:col-span-2">
+                                            <span class="info-label"
+                                                >Revealed Secret (S)</span
+                                            >
+                                            <span
+                                                class="info-value font-mono text-xs break-all"
+                                            >
+                                                {game.revealedS_Hex}
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
+                            </details>
+                        </div>
 
                         {#if game.status === "Resolution" || game.status === "Active"}
                             <div class="form-group lg:col-span-2">
@@ -1204,49 +1262,464 @@
             </section>
 
             <section
-                class="game-status status-actions-panel grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode ===
+                class="game-status status-actions-panel grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode ===
                 'dark'
                     ? 'bg-slate-800'
                     : 'bg-white'}"
             >
                 <div class="status-side">
-                    <h2 class="text-2xl font-semibold mb-3">Status</h2>
-                    {#if game.status === "Active" && !participationIsEnded}
-                        <p class="text-xl font-medium text-green-500">
-                            Open for Participation
-                        </p>
-                    {:else if game.status === "Active" && participationIsEnded}
-                        <p class="text-xl font-medium text-yellow-500">
-                            Awaiting Resolution
-                        </p>
-                    {:else if game.status === "Resolution"}
-                        <p class="text-xl font-medium text-blue-500">
-                            Resolving Winner
-                        </p>
-                    {:else if game.status === "Cancelled_Draining"}
-                        <p class="text-xl font-medium text-red-500">
-                            Cancelled - Draining Stake
-                        </p>
-                    {:else}
-                        <p class="text-xl font-medium text-gray-500">
-                            Game Over
-                        </p>
-                    {/if}
-                    <p
-                        class="text-xs {$mode === 'dark'
-                            ? 'text-slate-400'
-                            : 'text-gray-600'} mt-1"
+                    <h2 class="text-2xl font-semibold mb-6">Game Progress</h2>
+
+                    <!-- Game Phase Stepper -->
+                    <div
+                        class="relative flex items-center justify-between mb-8 w-full px-4"
                     >
-                        Contract Status: {game.status}
-                    </p>
+                        <!-- Progress Lines Background -->
+                        <div
+                            class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-gray-200 dark:bg-gray-700 -z-10 mx-4"
+                        ></div>
+
+                        {#if game.status === "Cancelled_Draining"}
+                            <!-- CANCELLED FLOW: Active -> Cancelled -> Draining -->
+
+                            <!-- Line 1: Active -> Cancelled (Always Red in this state) -->
+                            <div
+                                class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 -z-10 mx-4 bg-red-500"
+                                style="width: 50%;"
+                            ></div>
+
+                            <!-- Line 2: Cancelled -> Draining (Orange) -->
+                            <div
+                                class="absolute left-1/2 top-1/2 transform -translate-y-1/2 h-1 -z-10 bg-orange-500"
+                                style="width: 50%;"
+                            ></div>
+
+                            <!-- Step 1: Active (Completed) -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-green-500 border-green-500 text-white"
+                                >
+                                    <Check class="w-6 h-6" />
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                    >Active</span
+                                >
+                            </div>
+
+                            <!-- Step 2: Cancelled (Completed Event) -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-red-600 border-red-600 text-white shadow-lg scale-110"
+                                >
+                                    <XCircle class="w-6 h-6" />
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider text-red-600"
+                                    >Cancelled</span
+                                >
+                            </div>
+
+                            <!-- Step 3: Draining (Active State) -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-orange-500 border-orange-500 text-white shadow-lg scale-110 animate-pulse"
+                                >
+                                    <ShieldCheck class="w-5 h-5" />
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider text-orange-500"
+                                    >Draining</span
+                                >
+                            </div>
+                        {:else}
+                            <!-- STANDARD FLOW: Active -> Resolution -> Finalized -->
+
+                            <!-- Line 1: Active -> Resolution -->
+                            <div
+                                class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 -z-10 mx-4 transition-all duration-500 {game.status !==
+                                'Active'
+                                    ? 'bg-blue-500'
+                                    : 'w-0'}"
+                                style="width: {game.status !== 'Active'
+                                    ? '50%'
+                                    : '0%'};"
+                            ></div>
+
+                            <!-- Line 2: Resolution -> Finalized -->
+                            <div
+                                class="absolute left-1/2 top-1/2 transform -translate-y-1/2 h-1 -z-10 transition-all duration-500 {game.status ===
+                                'Finalized'
+                                    ? 'bg-green-500'
+                                    : 'w-0'}"
+                                style="width: {game.status === 'Finalized'
+                                    ? '50%'
+                                    : '0%'};"
+                            ></div>
+
+                            <!-- Step 1: Active -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 {game.status ===
+                                    'Active'
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
+                                        : 'bg-green-500 border-green-500 text-white'}"
+                                >
+                                    {#if game.status !== "Active"}
+                                        <Check class="w-6 h-6" />
+                                    {:else}
+                                        <span class="text-base font-bold"
+                                            >1</span
+                                        >
+                                    {/if}
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider {game.status ===
+                                    'Active'
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-500 dark:text-gray-400'}"
+                                    >Active</span
+                                >
+                            </div>
+
+                            <!-- Step 2: Resolution -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 {game.status ===
+                                    'Resolution'
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
+                                        : game.status === 'Finalized'
+                                          ? 'bg-green-500 border-green-500 text-white'
+                                          : 'bg-gray-200 border-gray-300 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}"
+                                >
+                                    {#if game.status === "Finalized"}
+                                        <Check class="w-6 h-6" />
+                                    {:else if game.status === "Resolution"}
+                                        <Gavel class="w-5 h-5" />
+                                    {:else}
+                                        <span class="text-base font-bold"
+                                            >2</span
+                                        >
+                                    {/if}
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider {game.status ===
+                                    'Resolution'
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-500 dark:text-gray-400'}"
+                                    >Resolution</span
+                                >
+                            </div>
+
+                            <!-- Step 3: Finalized -->
+                            <div
+                                class="flex flex-col items-center bg-transparent z-10 px-2"
+                            >
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 {game.status ===
+                                    'Finalized'
+                                        ? 'bg-green-600 border-green-600 text-white shadow-lg scale-110'
+                                        : 'bg-gray-200 border-gray-300 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}"
+                                >
+                                    {#if game.status === "Finalized"}
+                                        <Trophy class="w-5 h-5" />
+                                    {:else}
+                                        <span class="text-base font-bold"
+                                            >3</span
+                                        >
+                                    {/if}
+                                </div>
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider {game.status ===
+                                    'Finalized'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-gray-500 dark:text-gray-400'}"
+                                    >Finalized</span
+                                >
+                            </div>
+                        {/if}
+                    </div>
 
                     <div
-                        class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:mt-8"
+                        class="status-description mb-8 rounded-xl border overflow-hidden {$mode ===
+                        'dark'
+                            ? 'bg-slate-800 border-slate-700'
+                            : 'bg-white border-gray-200'} shadow-sm"
                     >
-                        {#if game.judges && game.judges.length > 0}
+                        <!-- Header with State Title -->
+                        <div
+                            class="p-4 border-b {$mode === 'dark'
+                                ? 'border-slate-700'
+                                : 'border-gray-100'} flex items-center gap-3"
+                        >
                             <div
-                                class="info-block col-span-1 md:col-span-2 lg:col-span-3"
+                                class="p-2 rounded-lg {game.status === 'Active'
+                                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                    : game.status === 'Resolution'
+                                      ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                                      : game.status === 'Finalized'
+                                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
                             >
+                                {#if game.status === "Active"}
+                                    <Sparkles class="w-5 h-5" />
+                                {:else if game.status === "Resolution"}
+                                    <Gavel class="w-5 h-5" />
+                                {:else if game.status === "Finalized"}
+                                    <Trophy class="w-5 h-5" />
+                                {:else}
+                                    <XCircle class="w-5 h-5" />
+                                {/if}
+                            </div>
+                            <div>
+                                <h3
+                                    class="text-lg font-bold {game.status ===
+                                    'Active'
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : game.status === 'Resolution'
+                                          ? 'text-purple-600 dark:text-purple-400'
+                                          : game.status === 'Finalized'
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : 'text-red-600 dark:text-red-400'}"
+                                >
+                                    {#if game.status === "Active"}
+                                        ACTIVE STATE
+                                    {:else if game.status === "Resolution"}
+                                        RESOLUTION STATE
+                                    {:else if game.status === "Finalized"}
+                                        FINALIZED STATE
+                                    {:else}
+                                        CANCELLED (DRAINING)
+                                    {/if}
+                                </h3>
+                                <p
+                                    class="text-sm text-gray-500 dark:text-gray-400"
+                                >
+                                    {#if game.status === "Active"}
+                                        The game is live and accepting
+                                        participations.
+                                    {:else if game.status === "Resolution"}
+                                        The game has ended. The winner is being
+                                        verified.
+                                    {:else if game.status === "Finalized"}
+                                        The competition has ended and prizes
+                                        have been distributed.
+                                    {:else}
+                                        The game was cancelled due to a rule
+                                        violation.
+                                    {/if}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Content Grid: Allowed vs Restricted -->
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x {$mode ===
+                            'dark'
+                                ? 'divide-slate-700'
+                                : 'divide-gray-100'}"
+                        >
+                            <!-- Allowed Actions -->
+                            <div class="p-4">
+                                <h4
+                                    class="text-sm font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 mb-3 flex items-center"
+                                >
+                                    <CheckCircle class="w-4 h-4 mr-2" />
+                                    What can happen?
+                                </h4>
+                                <ul class="space-y-2">
+                                    {#if game.status === "Active"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Players:</span
+                                            > Join the game and submit scores.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Creator:</span
+                                            > Cancel the game (if needed).
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Anyone:</span
+                                            > Rescue funds (if stuck after grace
+                                            period).
+                                        </li>
+                                    {:else if game.status === "Resolution"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Judges:</span
+                                            > Validate or invalidate the candidate.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Creator:</span
+                                            > Propose a winner (if not done).
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Anyone:</span
+                                            > Finalize game (after deadline).
+                                        </li>
+                                    {:else if game.status === "Finalized"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Everyone:</span
+                                            > View results and history.
+                                        </li>
+                                    {:else}
+                                        <!-- Cancelled -->
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Players:</span
+                                            > Claim full refund immediately.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Creator:</span
+                                            > Drain stake (slowly, over time).
+                                        </li>
+                                    {/if}
+                                </ul>
+                            </div>
+
+                            <!-- Restricted Actions -->
+                            <div class="p-4 bg-gray-50 dark:bg-slate-800/50">
+                                <h4
+                                    class="text-sm font-semibold uppercase tracking-wider text-red-500 dark:text-red-400 mb-3 flex items-center"
+                                >
+                                    <XCircle class="w-4 h-4 mr-2" />
+                                    What cannot happen?
+                                </h4>
+                                <ul class="space-y-2">
+                                    {#if game.status === "Active"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Verify scores:</span
+                                            > The secret S is hidden.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Distribute prizes:</span
+                                            > Funds are locked until resolution.
+                                        </li>
+                                    {:else if game.status === "Resolution"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >New players:</span
+                                            > Participation is closed.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Change secret:</span
+                                            > The secret S is revealed and immutable.
+                                        </li>
+                                    {:else if game.status === "Finalized"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Modifying state:</span
+                                            > The game is closed.
+                                        </li>
+                                    {:else}
+                                        <!-- Cancelled -->
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Winning:</span
+                                            > No winner can be declared.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Resuming:</span
+                                            > The game is permanently invalid.
+                                        </li>
+                                    {/if}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="actions-side md:border-l {$mode === 'dark'
+                        ? 'border-slate-700'
+                        : 'border-gray-200'} md:pl-8"
+                >
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <ShieldCheck class="w-5 h-5 mr-2 text-blue-500" />
+                        Trust & Security
+                    </h2>
+
+                    <div class="grid grid-cols-1 gap-y-6">
+                        {#if game.judges && game.judges.length > 0}
+                            <div class="info-block">
+                                <div
+                                    class="mb-4 p-3 rounded bg-green-500/10 border border-green-500/20"
+                                >
+                                    <span
+                                        class="text-sm font-bold text-green-500"
+                                        >Risk Level: Low (Decentralized Jury)</span
+                                    >
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                                    >
+                                        This game uses a decentralized jury
+                                        system. The creator cannot arbitrarily
+                                        decide the winner; a majority of judges
+                                        must agree.
+                                    </p>
+                                </div>
+
                                 <p
                                     class="text {$mode === 'dark'
                                         ? 'text-slate-400'
@@ -1305,13 +1778,13 @@
                                         ) + 1} out of {game.judges.length} judges.
                                     </p>
                                     <p
-                                        class="text-sm font-medium {$mode ===
+                                        class="text-xs italic opacity-75 mt-1 {$mode ===
                                         'dark'
-                                            ? 'text-slate-300'
-                                            : 'text-gray-400'} mt-1"
+                                            ? 'text-slate-400'
+                                            : 'text-gray-500'}"
                                     >
-                                        Verify judges' history with a script to
-                                        check past performance.
+                                        Advanced: You can verify judges' past
+                                        performance using external scripts.
                                     </p>
                                 {:else if game.status === "Resolution"}
                                     {#if new Date().getTime() < targetDate}
@@ -1332,9 +1805,24 @@
                                 {/if}
                             </div>
                         {:else}
-                            <div
-                                class="info-block col-span-1 md:col-span-2 lg:col-span-3"
-                            >
+                            <div class="info-block">
+                                <div
+                                    class="mb-4 p-3 rounded bg-yellow-500/10 border border-yellow-500/20"
+                                >
+                                    <span
+                                        class="text-sm font-bold text-yellow-500"
+                                        >Risk Level: High (Trust Creator)</span
+                                    >
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                                    >
+                                        This game relies entirely on the
+                                        creator's honesty. If the creator acts
+                                        maliciously, there are no judges to
+                                        intervene.
+                                    </p>
+                                </div>
+
                                 <p
                                     class="text {$mode === 'dark'
                                         ? 'text-slate-400'
@@ -1348,729 +1836,891 @@
                                     Participants must trust the creator.
                                 </p>
                                 <p
-                                    class="text-sm font-medium {$mode === 'dark'
-                                        ? 'text-slate-300'
-                                        : 'text-gray-400'} mt-2"
+                                    class="text-xs italic opacity-75 mt-2 {$mode ===
+                                    'dark'
+                                        ? 'text-slate-400'
+                                        : 'text-gray-500'}"
                                 >
-                                    Verify creator’s history with a script to
-                                    check past competition honesty.
+                                    Advanced: You can verify the creator's
+                                    history using external scripts.
                                 </p>
                             </div>
                         {/if}
                     </div>
                 </div>
 
-                <div
-                    class="actions-side md:border-l {$mode === 'dark'
-                        ? 'border-slate-700'
-                        : 'border-gray-200'} md:pl-8"
-                >
-                    <h2 class="text-2xl font-semibold mb-4">
-                        Available Actions
-                    </h2>
-                    <div class="space-y-4">
-                        {#if $connected}
-                            {#if game.status === "Active"}
-                                <Button
-                                    on:click={() =>
-                                        setupActionModal("open_ceremony")}
-                                    disabled={!openCeremony}
-                                    class="w-full"
-                                >
-                                    <!-- svelte-ignore missing-declaration -->
-                                    <Sparkles class="mr-2 h-4 w-4" /> Add Seed Randomness
-                                </Button>
-                            {/if}
-
-                            {#if game.status === "Active" && !participationIsEnded}
-                                {#if isNominatedJudge && !isJudge}
-                                    <!-- Could be added !isOwner -->
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal(
-                                                "accept_judge_nomination",
-                                            )}
-                                        class="w-full"
-                                    >
-                                        <Gavel class="mr-2 h-4 w-4" /> Accept Judge
-                                        Nomination
-                                    </Button>
+                <div class="col-span-1 lg:col-span-2">
+                    <div
+                        class="actions-section mt-8 pt-8 border-t {$mode ===
+                        'dark'
+                            ? 'border-slate-700'
+                            : 'border-gray-200'}"
+                    >
+                        <h2 class="text-2xl font-semibold mb-6">
+                            Available Actions
+                        </h2>
+                        <div class="space-y-4">
+                            {#if $connected}
+                                {#if game.status === "Active"}
+                                    <div class="action-item">
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "open_ceremony",
+                                                )}
+                                            disabled={!openCeremony}
+                                            class="w-full"
+                                        >
+                                            <!-- svelte-ignore missing-declaration -->
+                                            <Sparkles class="mr-2 h-4 w-4" /> Add
+                                            Seed Randomness
+                                        </Button>
+                                        <p
+                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                        >
+                                            {#if openCeremony}
+                                                Add entropy to the game seed.
+                                                Available because the ceremony
+                                                period is open.
+                                            {:else}
+                                                Adding randomness is no longer
+                                                available (ceremony period
+                                                ended).
+                                            {/if}
+                                        </p>
+                                    </div>
                                 {/if}
 
-                                <Button
-                                    on:click={() =>
-                                        setupActionModal("submit_score")}
-                                    disabled={!openCeremony}
-                                    class="w-full"
-                                >
-                                    <Edit class="mr-2 h-4 w-4" />Submit My Score
-                                </Button>
+                                {#if game.status === "Active" && !participationIsEnded}
+                                    {#if isNominatedJudge && !isJudge}
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "accept_judge_nomination",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                <Gavel class="mr-2 h-4 w-4" /> Accept
+                                                Judge Nomination
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                You are nominated as a judge.
+                                                Accept to participate in the
+                                                resolution process.
+                                            </p>
+                                        </div>
+                                    {/if}
 
-                                <Button
-                                    on:click={() =>
-                                        setupActionModal("cancel_game")}
-                                    variant="destructive"
-                                    class="w-full"
-                                >
-                                    <XCircle class="mr-2 h-4 w-4" />Cancel
-                                    Competition
-                                </Button>
-                            {/if}
+                                    <div class="action-item">
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "submit_score",
+                                                )}
+                                            disabled={!openCeremony}
+                                            class="w-full"
+                                        >
+                                            <Edit class="mr-2 h-4 w-4" />Submit
+                                            My Score
+                                        </Button>
+                                        <p
+                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                        >
+                                            Submit your solution and score.
+                                            {#if !openCeremony}
+                                                Disabled because the ceremony
+                                                period is closed.
+                                            {/if}
+                                        </p>
+                                    </div>
 
-                            {#if game.status === "Active" && participationIsEnded}
-                                <Button
-                                    on:click={() =>
-                                        setupActionModal("resolve_game")}
-                                    class="w-full"
-                                >
-                                    <CheckSquare class="mr-2 h-4 w-4" />Resolve
-                                    Competition
-                                </Button>
-                            {/if}
-
-                            {#if game.status === "Resolution"}
-                                {@const isBeforeDeadline =
-                                    new Date().getTime() < targetDate}
-
-                                {#if isBeforeDeadline}
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal("include_omitted")}
-                                        variant="outline"
-                                        class="w-full"
-                                        title="Anyone can execute this action to claim the resolver's commission."
-                                    >
-                                        <Users class="mr-2 h-4 w-4" /> Include Omitted
-                                        Participations
-                                    </Button>
-
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal(
-                                                "invalidate_winner",
-                                            )}
-                                        disabled={!isJudge}
-                                        variant="destructive"
-                                        class="w-full"
-                                    >
-                                        <XCircle class="mr-2 h-4 w-4" /> Judges:
-                                        Invalidate Winner
-                                    </Button>
-                                {:else}
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal("end_game")}
-                                        disabled={isBeforeDeadline &&
-                                            isResolver}
-                                        class="w-full"
-                                    >
-                                        <Trophy class="mr-2 h-4 w-4" /> End Competition
-                                        & Distribute Prizes
-                                    </Button>
+                                    <div class="action-item">
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal("cancel_game")}
+                                            variant="destructive"
+                                            class="w-full"
+                                        >
+                                            <XCircle
+                                                class="mr-2 h-4 w-4"
+                                            />Cancel Competition
+                                        </Button>
+                                        <p
+                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                        >
+                                            Cancel the game if the secret has
+                                            been revealed prematurely.
+                                        </p>
+                                    </div>
                                 {/if}
-                            {/if}
 
-                            {#if iGameDrainingStaking(game)}
-                                {#await isGameDrainingAllowed(game) then isAllowed}
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal("drain_stake")}
-                                        disabled={!isAllowed}
-                                        class="w-full"
-                                    >
-                                        <Trophy class="mr-2 h-4 w-4" />Drain
-                                        Creator Stake
-                                    </Button>
-                                {/await}
+                                {#if game.status === "Active" && participationIsEnded}
+                                    <div class="action-item">
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "resolve_game",
+                                                )}
+                                            class="w-full"
+                                        >
+                                            <CheckSquare
+                                                class="mr-2 h-4 w-4"
+                                            />Resolve Competition
+                                        </Button>
+                                        <p
+                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                        >
+                                            The participation period has ended.
+                                            The creator can now resolve the game
+                                            and declare a winner.
+                                        </p>
+                                    </div>
+                                {/if}
+
+                                {#if game.status === "Resolution"}
+                                    {@const isBeforeDeadline =
+                                        new Date().getTime() < targetDate}
+
+                                    {#if isBeforeDeadline}
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "include_omitted",
+                                                    )}
+                                                variant="outline"
+                                                class="w-full"
+                                                title="Anyone can execute this action to claim the resolver's commission."
+                                            >
+                                                <Users class="mr-2 h-4 w-4" /> Include
+                                                Omitted Participations
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                If a valid participation was
+                                                omitted by the creator, you can
+                                                include it now.
+                                            </p>
+                                        </div>
+
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "invalidate_winner",
+                                                    )}
+                                                disabled={!isJudge}
+                                                variant="destructive"
+                                                class="w-full"
+                                            >
+                                                <XCircle class="mr-2 h-4 w-4" />
+                                                Judges: Invalidate Winner
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                {#if isJudge}
+                                                    As a judge, you can vote to
+                                                    invalidate the winner if the
+                                                    solution is incorrect.
+                                                {:else}
+                                                    Only judges can invalidate
+                                                    the winner.
+                                                {/if}
+                                            </p>
+                                        </div>
+                                    {:else}
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "end_game",
+                                                    )}
+                                                disabled={isBeforeDeadline &&
+                                                    isResolver}
+                                                class="w-full"
+                                            >
+                                                <Trophy class="mr-2 h-4 w-4" /> End
+                                                Competition & Distribute Prizes
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                The resolution period has ended.
+                                                Finalize the game to distribute
+                                                prizes.
+                                            </p>
+                                        </div>
+                                    {/if}
+                                {/if}
+
+                                {#if iGameDrainingStaking(game)}
+                                    {#await isGameDrainingAllowed(game) then isAllowed}
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "drain_stake",
+                                                    )}
+                                                disabled={!isAllowed}
+                                                class="w-full"
+                                            >
+                                                <Trophy
+                                                    class="mr-2 h-4 w-4"
+                                                />Drain Creator Stake
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                {#if isAllowed}
+                                                    The game was cancelled. You
+                                                    can drain the creator's
+                                                    stake.
+                                                {:else}
+                                                    Draining stake is not yet
+                                                    available.
+                                                {/if}
+                                            </p>
+                                        </div>
+                                    {/await}
+                                {/if}
+                            {:else}
+                                <p class="info-box">
+                                    Connect your wallet to interact with the
+                                    game competition.
+                                </p>
                             {/if}
-                        {:else}
-                            <p class="info-box">
-                                Connect your wallet to interact with the game
-                                competition.
-                            </p>
-                        {/if}
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {#if participations && participations.length > 0}
-                <section class="participations-section">
-                    <h2 class="text-3xl font-semibold mb-8 text-center">
-                        Participations <span
-                            class="text-lg font-normal {$mode === 'dark'
-                                ? 'text-slate-400'
-                                : 'text-slate-500'}"
-                            >({participations.length})</span
-                        >
-                    </h2>
-                    <div class="flex flex-col gap-6">
-                        {#each participations as p (p.boxId)}
-                            {@const isCurrentParticipationWinner =
-                                game.status === "Resolution" &&
-                                game.winnerCandidateCommitment ===
-                                    p.commitmentC_Hex}
-                            {@const actualScoreForThisParticipation =
-                                game.status === "Resolution"
-                                    ? resolve_participation_commitment(
-                                          p,
-                                          game.revealedS_Hex,
-                                          game.seed,
-                                      )
-                                    : null}
+            <section class="mb-12">
+                <div
+                    class="flex border-b border-gray-200 dark:border-gray-700 mb-6"
+                >
+                    <button
+                        class="py-2 px-4 font-medium text-sm focus:outline-none {activeTab ===
+                        'participations'
+                            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+                        on:click={() => (activeTab = "participations")}
+                    >
+                        Participations ({participations.length})
+                    </button>
+                    <button
+                        class="py-2 px-4 font-medium text-sm focus:outline-none {activeTab ===
+                        'forum'
+                            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+                        on:click={() => (activeTab = "forum")}
+                    >
+                        Forum
+                    </button>
+                </div>
 
-                            {@const isCurrentUserParticipant =
-                                $connected &&
-                                $address ===
-                                    pkHexToBase58Address(p.playerPK_Hex)}
-                            {@const canClaimCancellationRefund =
-                                game.status === "Cancelled_Draining" &&
-                                isCurrentUserParticipant &&
-                                p.status === "Submitted"}
-                            {@const isGracePeriodOver =
-                                game.status === GameState.Active &&
-                                participationIsEnded &&
-                                currentHeight >
-                                    game.deadlineBlock + GRACE_PERIOD_IN_BLOCKS}
-                            {@const canReclaimAfterGrace =
-                                isGracePeriodOver &&
-                                isCurrentUserParticipant &&
-                                !p.spent}
-                            {@const reclaimedAfterGrace =
-                                isGracePeriodOver &&
-                                isCurrentUserParticipant &&
-                                p.spent}
-                            {@const isMalformed = p.status === "Malformed"}
-                            {@const isSubmitted = p.status === "Submitted"}
-                            {@const isConsumedByWinner =
-                                p.status === "Consumed" &&
-                                p.reason === "bywinner"}
-                            {@const isConsumedByParticipant =
-                                p.status === "Consumed" &&
-                                p.reason === "byparticipant"}
-                            {@const isInvalidated =
-                                p.status === "Consumed" &&
-                                p.reason === "invalidated"}
-                            {@const isCancelled =
-                                p.status === "Consumed" &&
-                                p.reason === "cancelled"}
+                {#if activeTab === "participations"}
+                    {#if participations && participations.length > 0}
+                        <div class="flex flex-col gap-6">
+                            {#each participations as p (p.boxId)}
+                                {@const isCurrentParticipationWinner =
+                                    game.status === "Resolution" &&
+                                    game.winnerCandidateCommitment ===
+                                        p.commitmentC_Hex}
+                                {@const actualScoreForThisParticipation =
+                                    game.status === "Resolution"
+                                        ? resolve_participation_commitment(
+                                              p,
+                                              game.revealedS_Hex,
+                                              game.seed,
+                                          )
+                                        : null}
 
-                            <div
-                                class="participation-card relative rounded-lg shadow-lg overflow-hidden border
-                            {isCurrentParticipationWinner
-                                    ? 'winner-card border-green-500/50'
-                                    : $mode === 'dark'
-                                      ? 'bg-slate-800 border-slate-700'
-                                      : 'bg-white border-gray-200'}
-                            {isMalformed
-                                    ? $mode === 'dark'
-                                        ? 'bg-gray-700 border-gray-800 opacity-70'
-                                        : 'bg-gray-200 border-gray-300 opacity-70'
-                                    : ''}"
-                            >
-                                {#if isCurrentParticipationWinner}
-                                    <div class="winner-badge">
-                                        <Trophy class="w-4 h-4 mr-2" />
-                                        <span>WINNER CANDIDATE</span>
-                                    </div>
-                                {/if}
-
-                                {#if isMalformed}
-                                    <div
-                                        class="expired-badge absolute top-6 right-16 bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold"
-                                    >
-                                        MALFORMED
-                                    </div>
-                                {/if}
-
-                                {#if isInvalidated}
-                                    <div
-                                        class="expired-badge absolute top-6 right-16 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold"
-                                    >
-                                        DISQUALIFIED
-                                    </div>
-                                {/if}
+                                {@const isCurrentUserParticipant =
+                                    $connected &&
+                                    $address ===
+                                        pkHexToBase58Address(p.playerPK_Hex)}
+                                {@const canClaimCancellationRefund =
+                                    game.status === "Cancelled_Draining" &&
+                                    isCurrentUserParticipant &&
+                                    p.status === "Submitted"}
+                                {@const isGracePeriodOver =
+                                    game.status === GameState.Active &&
+                                    participationIsEnded &&
+                                    currentHeight >
+                                        game.deadlineBlock +
+                                            GRACE_PERIOD_IN_BLOCKS}
+                                {@const canReclaimAfterGrace =
+                                    isGracePeriodOver &&
+                                    isCurrentUserParticipant &&
+                                    !p.spent}
+                                {@const reclaimedAfterGrace =
+                                    isGracePeriodOver &&
+                                    isCurrentUserParticipant &&
+                                    p.spent}
+                                {@const isMalformed = p.status === "Malformed"}
+                                {@const isSubmitted = p.status === "Submitted"}
+                                {@const isConsumedByWinner =
+                                    p.status === "Consumed" &&
+                                    p.reason === "bywinner"}
+                                {@const isConsumedByParticipant =
+                                    p.status === "Consumed" &&
+                                    p.reason === "byparticipant"}
+                                {@const isInvalidated =
+                                    p.status === "Consumed" &&
+                                    p.reason === "invalidated"}
+                                {@const isCancelled =
+                                    p.status === "Consumed" &&
+                                    p.reason === "cancelled"}
 
                                 <div
-                                    class="card-header p-4 border-b {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
+                                    class="participation-card relative rounded-lg shadow-lg overflow-hidden border
+                            {isCurrentParticipationWinner
+                                        ? 'winner-card border-green-500/50'
+                                        : $mode === 'dark'
+                                          ? 'bg-slate-800 border-slate-700'
+                                          : 'bg-white border-gray-200'}
+                            {isMalformed
+                                        ? $mode === 'dark'
+                                            ? 'bg-gray-700 border-gray-800 opacity-70'
+                                            : 'bg-gray-200 border-gray-300 opacity-70'
+                                        : ''}"
                                 >
+                                    {#if isCurrentParticipationWinner}
+                                        <div class="winner-badge">
+                                            <Trophy class="w-4 h-4 mr-2" />
+                                            <span>WINNER CANDIDATE</span>
+                                        </div>
+                                    {/if}
+
+                                    {#if isMalformed}
+                                        <div
+                                            class="expired-badge absolute top-6 right-16 bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold"
+                                        >
+                                            MALFORMED
+                                        </div>
+                                    {/if}
+
+                                    {#if isInvalidated}
+                                        <div
+                                            class="expired-badge absolute top-6 right-16 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold"
+                                        >
+                                            DISQUALIFIED
+                                        </div>
+                                    {/if}
+
                                     <div
-                                        class="flex items-center justify-between"
+                                        class="card-header p-4 border-b {$mode ===
+                                        'dark'
+                                            ? 'border-slate-700'
+                                            : 'border-gray-200'}"
                                     >
-                                        <div>
-                                            <div
-                                                class="text-xs uppercase text-slate-500 dark:text-slate-400"
-                                            >
-                                                Player Address
-                                            </div>
-                                            <a
-                                                href={get(
-                                                    web_explorer_uri_addr,
-                                                ) +
-                                                    pkHexToBase58Address(
+                                        <div
+                                            class="flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div
+                                                    class="text-xs uppercase text-slate-500 dark:text-slate-400"
+                                                >
+                                                    Player Address
+                                                </div>
+                                                <a
+                                                    href={get(
+                                                        web_explorer_uri_addr,
+                                                    ) +
+                                                        pkHexToBase58Address(
+                                                            p.playerPK_Hex,
+                                                        )}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="font-mono text-sm break-all {$mode ===
+                                                    'dark'
+                                                        ? 'text-slate-300 hover:text-white'
+                                                        : 'text-slate-700 hover:text-black'}"
+                                                    title={pkHexToBase58Address(
                                                         p.playerPK_Hex,
                                                     )}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="font-mono text-sm break-all {$mode ===
-                                                'dark'
-                                                    ? 'text-slate-300 hover:text-white'
-                                                    : 'text-slate-700 hover:text-black'}"
-                                                title={pkHexToBase58Address(
-                                                    p.playerPK_Hex,
-                                                )}
-                                            >
-                                                {pkHexToBase58Address(
-                                                    p.playerPK_Hex,
-                                                )}
-                                            </a>
-                                        </div>
-                                        {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
-                                            <span
-                                                class="
+                                                >
+                                                    {pkHexToBase58Address(
+                                                        p.playerPK_Hex,
+                                                    )}
+                                                </a>
+                                            </div>
+                                            {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
+                                                <span
+                                                    class="
                                             text-xs font-semibold ml-4 px-2 py-1 rounded-full
                                             {$mode === 'dark'
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-blue-200 text-blue-800'}
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'bg-blue-200 text-blue-800'}
                                             {isCurrentParticipationWinner
-                                                    ? 'inline-block mt-6'
-                                                    : ''}
+                                                        ? 'inline-block mt-6'
+                                                        : ''}
                                             "
-                                            >
-                                                You
-                                            </span>
-                                        {/if}
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4"
-                                >
-                                    <div class="info-block">
-                                        <span class="info-label">Fee Paid</span>
-                                        <span class="info-value"
-                                            >{formatTokenBigInt(
-                                                p.value,
-                                                tokenDecimals,
-                                            )}
-                                            {tokenSymbol}</span
-                                        >
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label">Solver ID</span
-                                        >
-                                        <span
-                                            class="info-value font-mono text-xs"
-                                            title={p.solverId_String ||
-                                                p.solverId_RawBytesHex}
-                                        >
-                                            {#if p.solverId_String}
-                                                {p.solverId_String.slice(
-                                                    0,
-                                                    10,
-                                                )}...{p.solverId_String.slice(
-                                                    -4,
-                                                )}
-                                            {:else}
-                                                N/A
-                                            {/if}
-                                        </span>
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Transaction ID</span
-                                        >
-                                        <a
-                                            href={get(web_explorer_uri_tx) +
-                                                p.transactionId}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="info-value font-mono text-xs break-all hover:underline"
-                                            title={p.transactionId}
-                                        >
-                                            {p.transactionId.slice(
-                                                0,
-                                                10,
-                                            )}...{p.transactionId.slice(-4)}
-                                        </a>
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Commitment</span
-                                        >
-                                        <!-- svelte-ignore a11y-missing-attribute -->
-                                        <a
-                                            class="info-value font-mono text-xs"
-                                            title={p.commitmentC_Hex}
-                                        >
-                                            {p.commitmentC_Hex.slice(
-                                                0,
-                                                10,
-                                            )}...{p.commitmentC_Hex.slice(-4)}
-                                        </a>
-                                    </div>
-                                    <div class="info-block">
-                                        <span class="info-label">Hash logs</span
-                                        >
-                                        <!-- svelte-ignore a11y-missing-attribute -->
-                                        <a
-                                            class="info-value font-mono text-xs"
-                                            title={p.hashLogs_Hex}
-                                        >
-                                            {p.hashLogs_Hex.slice(
-                                                0,
-                                                10,
-                                            )}...{p.hashLogs_Hex.slice(-4)}
-                                        </a>
-                                    </div>
-                                    <div
-                                        class="info-block sm:col-span-2 lg:col-span-3"
-                                    >
-                                        <span class="info-label"
-                                            >Score List</span
-                                        >
-                                        <div
-                                            class="font-mono text-xs {$mode ===
-                                            'dark'
-                                                ? 'text-lime-400'
-                                                : 'text-lime-600'}"
-                                        >
-                                            {#if p.scoreList && p.scoreList.length > 0}
-                                                {#each p.scoreList as score, i}
-                                                    <span
-                                                        class:font-bold={actualScoreForThisParticipation !==
-                                                            null &&
-                                                            score ===
-                                                                actualScoreForThisParticipation}
-                                                        class:opacity-50={actualScoreForThisParticipation !==
-                                                            null &&
-                                                            score !==
-                                                                actualScoreForThisParticipation}
-                                                    >
-                                                        {score.toString()}
-                                                    </span>{#if i < p.scoreList.length - 1}<span
-                                                            class={$mode ===
-                                                            "dark"
-                                                                ? "text-slate-500"
-                                                                : "text-gray-400"}
-                                                            >,
-                                                        </span>{/if}
-                                                {/each}
-                                                <span
-                                                    class="text-xs italic {$mode ===
-                                                    'dark'
-                                                        ? 'text-gray-400'
-                                                        : 'text-gray-500'} ml-2"
                                                 >
-                                                    {#if actualScoreForThisParticipation === null}
-                                                        (one of these is the
-                                                        real one)
-                                                    {:else}
-                                                        (Real Score: {actualScoreForThisParticipation})
-                                                    {/if}
+                                                    You
                                                 </span>
                                             {/if}
                                         </div>
                                     </div>
-                                    <div class="info-block">
-                                        <span class="info-label">Block</span>
-                                        <!-- svelte-ignore a11y-missing-attribute -->
-                                        <a class="info-value font-mono text-xs">
-                                            {p.creationHeight}
-                                        </a>
+
+                                    <div
+                                        class="card-body p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4"
+                                    >
+                                        <div class="info-block">
+                                            <span class="info-label"
+                                                >Fee Paid</span
+                                            >
+                                            <span class="info-value"
+                                                >{formatTokenBigInt(
+                                                    p.value,
+                                                    tokenDecimals,
+                                                )}
+                                                {tokenSymbol}</span
+                                            >
+                                        </div>
+                                        <div class="info-block">
+                                            <span class="info-label"
+                                                >Solver ID</span
+                                            >
+                                            <span
+                                                class="info-value font-mono text-xs"
+                                                title={p.solverId_String ||
+                                                    p.solverId_RawBytesHex}
+                                            >
+                                                {#if p.solverId_String}
+                                                    {p.solverId_String.slice(
+                                                        0,
+                                                        10,
+                                                    )}...{p.solverId_String.slice(
+                                                        -4,
+                                                    )}
+                                                {:else}
+                                                    N/A
+                                                {/if}
+                                            </span>
+                                        </div>
+                                        <div class="info-block">
+                                            <span class="info-label"
+                                                >Transaction ID</span
+                                            >
+                                            <a
+                                                href={get(web_explorer_uri_tx) +
+                                                    p.transactionId}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="info-value font-mono text-xs break-all hover:underline"
+                                                title={p.transactionId}
+                                            >
+                                                {p.transactionId.slice(
+                                                    0,
+                                                    10,
+                                                )}...{p.transactionId.slice(-4)}
+                                            </a>
+                                        </div>
+                                        <div class="info-block">
+                                            <span class="info-label"
+                                                >Commitment</span
+                                            >
+                                            <!-- svelte-ignore a11y-missing-attribute -->
+                                            <a
+                                                class="info-value font-mono text-xs"
+                                                title={p.commitmentC_Hex}
+                                            >
+                                                {p.commitmentC_Hex.slice(
+                                                    0,
+                                                    10,
+                                                )}...{p.commitmentC_Hex.slice(
+                                                    -4,
+                                                )}
+                                            </a>
+                                        </div>
+                                        <div class="info-block">
+                                            <span class="info-label"
+                                                >Hash logs</span
+                                            >
+                                            <!-- svelte-ignore a11y-missing-attribute -->
+                                            <a
+                                                class="info-value font-mono text-xs"
+                                                title={p.hashLogs_Hex}
+                                            >
+                                                {p.hashLogs_Hex.slice(
+                                                    0,
+                                                    10,
+                                                )}...{p.hashLogs_Hex.slice(-4)}
+                                            </a>
+                                        </div>
+                                        <div
+                                            class="info-block sm:col-span-2 lg:col-span-3"
+                                        >
+                                            <span class="info-label"
+                                                >Score List</span
+                                            >
+                                            <div
+                                                class="font-mono text-xs {$mode ===
+                                                'dark'
+                                                    ? 'text-lime-400'
+                                                    : 'text-lime-600'}"
+                                            >
+                                                {#if p.scoreList && p.scoreList.length > 0}
+                                                    {#each p.scoreList as score, i}
+                                                        <span
+                                                            class:font-bold={actualScoreForThisParticipation !==
+                                                                null &&
+                                                                score ===
+                                                                    actualScoreForThisParticipation}
+                                                            class:opacity-50={actualScoreForThisParticipation !==
+                                                                null &&
+                                                                score !==
+                                                                    actualScoreForThisParticipation}
+                                                        >
+                                                            {score.toString()}
+                                                        </span>{#if i < p.scoreList.length - 1}<span
+                                                                class={$mode ===
+                                                                "dark"
+                                                                    ? "text-slate-500"
+                                                                    : "text-gray-400"}
+                                                                >,
+                                                            </span>{/if}
+                                                    {/each}
+                                                    <span
+                                                        class="text-xs italic {$mode ===
+                                                        'dark'
+                                                            ? 'text-gray-400'
+                                                            : 'text-gray-500'} ml-2"
+                                                    >
+                                                        {#if actualScoreForThisParticipation === null}
+                                                            (one of these is the
+                                                            real one)
+                                                        {:else}
+                                                            (Real Score: {actualScoreForThisParticipation})
+                                                        {/if}
+                                                    </span>
+                                                {/if}
+                                            </div>
+                                        </div>
+                                        <div class="info-block">
+                                            <span class="info-label">Block</span
+                                            >
+                                            <!-- svelte-ignore a11y-missing-attribute -->
+                                            <a
+                                                class="info-value font-mono text-xs"
+                                            >
+                                                {p.creationHeight}
+                                            </a>
+                                        </div>
+
+                                        {#if canReclaimAfterGrace}
+                                            <div
+                                                class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
+                                            >
+                                                <p
+                                                    class="text-xs mb-2 {$mode ===
+                                                    'dark'
+                                                        ? 'text-orange-400'
+                                                        : 'text-orange-600'}"
+                                                >
+                                                    The game creator failed to
+                                                    resolve the game in time.
+                                                    You can now reclaim your
+                                                    participation fee.
+                                                </p>
+                                                <Button
+                                                    on:click={() =>
+                                                        handleReclaimAfterGrace(
+                                                            p,
+                                                        )}
+                                                    disabled={isReclaimingGraceFor ===
+                                                        p.boxId}
+                                                    class="w-full text-base bg-orange-600 hover:bg-orange-700"
+                                                >
+                                                    {#if isReclaimingGraceFor === p.boxId}
+                                                        Reclaiming...
+                                                    {:else}
+                                                        <ShieldCheck
+                                                            class="mr-2 h-4 w-4"
+                                                        /> Reclaim Participation
+                                                        Fee
+                                                    {/if}
+                                                </Button>
+
+                                                {#if reclaimGraceSuccessTxId[p.boxId]}
+                                                    <div
+                                                        class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50"
+                                                    >
+                                                        <strong
+                                                            >Success!
+                                                            Transaction ID:</strong
+                                                        ><br />
+                                                        <a
+                                                            href={get(
+                                                                web_explorer_uri_tx,
+                                                            ) +
+                                                                reclaimGraceSuccessTxId[
+                                                                    p.boxId
+                                                                ]}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="underline break-all hover:text-slate-400"
+                                                        >
+                                                            {reclaimGraceSuccessTxId[
+                                                                p.boxId
+                                                            ]}
+                                                        </a>
+                                                    </div>
+                                                {/if}
+
+                                                {#if reclaimGraceError[p.boxId]}
+                                                    <p
+                                                        class="text-xs mt-1 text-red-400"
+                                                    >
+                                                        {reclaimGraceError[
+                                                            p.boxId
+                                                        ]}
+                                                    </p>
+                                                {/if}
+                                            </div>
+                                        {/if}
+                                        {#if reclaimedAfterGrace}
+                                            <div
+                                                class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
+                                            >
+                                                <div
+                                                    class="my-2 p-3 rounded-md text-sm bg-blue-600/30 text-blue-300 border border-blue-500/50 flex items-center"
+                                                >
+                                                    <CheckCircle
+                                                        class="mr-2 h-5 w-5"
+                                                    />
+                                                    <p class="font-medium">
+                                                        Your participation fee
+                                                        has been successfully
+                                                        reclaimed after the
+                                                        grace period.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        {/if}
+
+                                        {#if canClaimCancellationRefund}
+                                            <div
+                                                class="info-block sm:col-span-2 lg:col-span-3 mt-2"
+                                            >
+                                                <p
+                                                    class="text-xs mb-2 {$mode ===
+                                                    'dark'
+                                                        ? 'text-blue-400'
+                                                        : 'text-blue-600'}"
+                                                >
+                                                    With the secret now
+                                                    revealed, the game has been
+                                                    canceled. Please claim a
+                                                    refund of your participation
+                                                    fee.
+                                                </p>
+                                                <Button
+                                                    on:click={() =>
+                                                        handleClaimRefund(p)}
+                                                    disabled={isClaimingRefundFor ===
+                                                        p.boxId}
+                                                    class="w-full text-base bg-blue-600 hover:bg-blue-700"
+                                                >
+                                                    {#if isClaimingRefundFor === p.boxId}
+                                                        Processing...
+                                                    {:else}
+                                                        <Trophy
+                                                            class="mr-2 h-4 w-4"
+                                                        /> Claim Refund
+                                                    {/if}
+                                                </Button>
+
+                                                {#if claimRefundSuccessTxId[p.boxId]}
+                                                    <div
+                                                        class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50"
+                                                    >
+                                                        <strong
+                                                            >Success!
+                                                            Transaction ID:</strong
+                                                        ><br />
+                                                        <a
+                                                            href={get(
+                                                                web_explorer_uri_tx,
+                                                            ) +
+                                                                claimRefundSuccessTxId[
+                                                                    p.boxId
+                                                                ]}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="underline break-all hover:text-slate-400"
+                                                        >
+                                                            {claimRefundSuccessTxId[
+                                                                p.boxId
+                                                            ]}
+                                                        </a>
+                                                    </div>
+                                                {/if}
+
+                                                {#if claimRefundError[p.boxId]}
+                                                    <p
+                                                        class="text-xs mt-1 text-red-400"
+                                                    >
+                                                        {claimRefundError[
+                                                            p.boxId
+                                                        ]}
+                                                    </p>
+                                                {/if}
+                                            </div>
+                                        {:else if isCancelled && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Finalized)}
+                                            <div
+                                                class="info-block sm:col-span-2 lg:col-span-3 mt-2"
+                                            >
+                                                <div
+                                                    class="p-3 rounded-md text-sm text-center {$mode ===
+                                                    'dark'
+                                                        ? 'bg-slate-700 text-slate-400'
+                                                        : 'bg-slate-200 text-slate-600'}"
+                                                >
+                                                    <Check
+                                                        class="inline-block mr-2 h-5 w-5 text-gray-500"
+                                                    />
+                                                    A refund has already been requested.
+                                                </div>
+                                            </div>
+                                        {/if}
                                     </div>
 
-                                    {#if canReclaimAfterGrace}
+                                    {#if isMalformed && isCurrentUserParticipant}
                                         <div
-                                            class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
-                                            'dark'
-                                                ? 'border-slate-700'
-                                                : 'border-gray-200'}"
+                                            class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
                                         >
                                             <p
-                                                class="text-xs mb-2 {$mode ===
-                                                'dark'
-                                                    ? 'text-orange-400'
-                                                    : 'text-orange-600'}"
+                                                class="text-xs {$mode === 'dark'
+                                                    ? 'text-gray-400'
+                                                    : 'text-gray-500'}"
                                             >
-                                                The game creator failed to
-                                                resolve the game in time. You
-                                                can now reclaim your
-                                                participation fee.
+                                                The funds will be awarded to the
+                                                winner if the competition
+                                                concludes successfully. If there
+                                                is no winner, the funds will be
+                                                allocated to the
+                                                creator/resolver.
                                             </p>
-                                            <Button
-                                                on:click={() =>
-                                                    handleReclaimAfterGrace(p)}
-                                                disabled={isReclaimingGraceFor ===
-                                                    p.boxId}
-                                                class="w-full text-base bg-orange-600 hover:bg-orange-700"
-                                            >
-                                                {#if isReclaimingGraceFor === p.boxId}
-                                                    Reclaiming...
-                                                {:else}
-                                                    <ShieldCheck
-                                                        class="mr-2 h-4 w-4"
-                                                    /> Reclaim Participation Fee
-                                                {/if}
-                                            </Button>
-
-                                            {#if reclaimGraceSuccessTxId[p.boxId]}
-                                                <div
-                                                    class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50"
-                                                >
-                                                    <strong
-                                                        >Success! Transaction
-                                                        ID:</strong
-                                                    ><br />
-                                                    <a
-                                                        href={get(
-                                                            web_explorer_uri_tx,
-                                                        ) +
-                                                            reclaimGraceSuccessTxId[
-                                                                p.boxId
-                                                            ]}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        class="underline break-all hover:text-slate-400"
-                                                    >
-                                                        {reclaimGraceSuccessTxId[
-                                                            p.boxId
-                                                        ]}
-                                                    </a>
-                                                </div>
-                                            {/if}
-
-                                            {#if reclaimGraceError[p.boxId]}
-                                                <p
-                                                    class="text-xs mt-1 text-red-400"
-                                                >
-                                                    {reclaimGraceError[p.boxId]}
-                                                </p>
-                                            {/if}
-                                        </div>
-                                    {/if}
-                                    {#if reclaimedAfterGrace}
-                                        <div
-                                            class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
-                                            'dark'
-                                                ? 'border-slate-700'
-                                                : 'border-gray-200'}"
-                                        >
-                                            <div
-                                                class="my-2 p-3 rounded-md text-sm bg-blue-600/30 text-blue-300 border border-blue-500/50 flex items-center"
-                                            >
-                                                <CheckCircle
-                                                    class="mr-2 h-5 w-5"
-                                                />
-                                                <p class="font-medium">
-                                                    Your participation fee has
-                                                    been successfully reclaimed
-                                                    after the grace period.
-                                                </p>
-                                            </div>
                                         </div>
                                     {/if}
 
-                                    {#if canClaimCancellationRefund}
+                                    {#if isInvalidated && isCurrentUserParticipant}
                                         <div
-                                            class="info-block sm:col-span-2 lg:col-span-3 mt-2"
+                                            class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
                                         >
                                             <p
-                                                class="text-xs mb-2 {$mode ===
-                                                'dark'
-                                                    ? 'text-blue-400'
-                                                    : 'text-blue-600'}"
+                                                class="text-xs {$mode === 'dark'
+                                                    ? 'text-red-400'
+                                                    : 'text-red-600'}"
                                             >
-                                                With the secret now revealed,
-                                                the game has been canceled.
-                                                Please claim a refund of your
-                                                participation fee.
+                                                Your participation was <strong
+                                                    >disqualified</strong
+                                                > because the majority of judges
+                                                deemed it malicious after attempting
+                                                to reproduce its result. Since participations
+                                                are deterministic, the judges invalidate
+                                                any that cannot be correctly replicated.
                                             </p>
-                                            <Button
-                                                on:click={() =>
-                                                    handleClaimRefund(p)}
-                                                disabled={isClaimingRefundFor ===
-                                                    p.boxId}
-                                                class="w-full text-base bg-blue-600 hover:bg-blue-700"
-                                            >
-                                                {#if isClaimingRefundFor === p.boxId}
-                                                    Processing...
-                                                {:else}
-                                                    <Trophy
-                                                        class="mr-2 h-4 w-4"
-                                                    /> Claim Refund
-                                                {/if}
-                                            </Button>
+                                        </div>
+                                    {/if}
 
-                                            {#if claimRefundSuccessTxId[p.boxId]}
-                                                <div
-                                                    class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50"
+                                    {#if isMalformed}
+                                        <div
+                                            class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
+                                        >
+                                            {#if p.reason === "expired"}
+                                                <p
+                                                    class="text-xs {$mode ===
+                                                    'dark'
+                                                        ? 'text-orange-400'
+                                                        : 'text-orange-600'}"
                                                 >
                                                     <strong
-                                                        >Success! Transaction
-                                                        ID:</strong
-                                                    ><br />
-                                                    <a
-                                                        href={get(
-                                                            web_explorer_uri_tx,
-                                                        ) +
-                                                            claimRefundSuccessTxId[
-                                                                p.boxId
-                                                            ]}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        class="underline break-all hover:text-slate-400"
-                                                    >
-                                                        {claimRefundSuccessTxId[
-                                                            p.boxId
-                                                        ]}
-                                                    </a>
-                                                </div>
-                                            {/if}
-
-                                            {#if claimRefundError[p.boxId]}
+                                                        >Invalid participation:</strong
+                                                    > The participation was received
+                                                    outside the participation period
+                                                    and could not be processed.
+                                                </p>
+                                            {:else if p.reason === "wrongcommitment"}
                                                 <p
-                                                    class="text-xs mt-1 text-red-400"
+                                                    class="text-xs {$mode ===
+                                                    'dark'
+                                                        ? 'text-orange-400'
+                                                        : 'text-orange-600'}"
                                                 >
-                                                    {claimRefundError[p.boxId]}
+                                                    <strong
+                                                        >Invalid participation:</strong
+                                                    > There was an inconsistency
+                                                    when verifying the participation's
+                                                    data.
+                                                </p>
+                                            {:else if p.reason === "maxscores"}
+                                                <p
+                                                    class="text-xs {$mode ===
+                                                    'dark'
+                                                        ? 'text-orange-400'
+                                                        : 'text-orange-600'}"
+                                                >
+                                                    <strong
+                                                        >Invalid participation:</strong
+                                                    > The participation reached the
+                                                    maximum possible score, which
+                                                    is not eligible for the prize
+                                                    according to the game rules.
+                                                </p>
+                                            {:else if p.reason === "unknown"}
+                                                <p
+                                                    class="text-xs {$mode ===
+                                                    'dark'
+                                                        ? 'text-orange-400'
+                                                        : 'text-orange-600'}"
+                                                >
+                                                    <strong
+                                                        >Invalid participation:</strong
+                                                    > The participation could not
+                                                    be processed due to an unknown
+                                                    error.
                                                 </p>
                                             {/if}
-                                        </div>
-                                    {:else if isCancelled && isCurrentUserParticipant && (game.status === GameState.Cancelled_Draining || game.status === GameState.Finalized)}
-                                        <div
-                                            class="info-block sm:col-span-2 lg:col-span-3 mt-2"
-                                        >
-                                            <div
-                                                class="p-3 rounded-md text-sm text-center {$mode ===
-                                                'dark'
-                                                    ? 'bg-slate-700 text-slate-400'
-                                                    : 'bg-slate-200 text-slate-600'}"
-                                            >
-                                                <Check
-                                                    class="inline-block mr-2 h-5 w-5 text-gray-500"
-                                                />
-                                                A refund has already been requested.
-                                            </div>
                                         </div>
                                     {/if}
                                 </div>
-
-                                {#if isMalformed && isCurrentUserParticipant}
-                                    <div
-                                        class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
-                                    >
-                                        <p
-                                            class="text-xs {$mode === 'dark'
-                                                ? 'text-gray-400'
-                                                : 'text-gray-500'}"
-                                        >
-                                            The funds will be awarded to the
-                                            winner if the competition concludes
-                                            successfully. If there is no winner,
-                                            the funds will be allocated to the
-                                            creator/resolver.
-                                        </p>
-                                    </div>
-                                {/if}
-
-                                {#if isInvalidated && isCurrentUserParticipant}
-                                    <div
-                                        class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
-                                    >
-                                        <p
-                                            class="text-xs {$mode === 'dark'
-                                                ? 'text-red-400'
-                                                : 'text-red-600'}"
-                                        >
-                                            Your participation was <strong
-                                                >disqualified</strong
-                                            > because the majority of judges deemed
-                                            it malicious after attempting to reproduce
-                                            its result. Since participations are
-                                            deterministic, the judges invalidate
-                                            any that cannot be correctly replicated.
-                                        </p>
-                                    </div>
-                                {/if}
-
-                                {#if isMalformed}
-                                    <div
-                                        class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
-                                    >
-                                        {#if p.reason === "expired"}
-                                            <p
-                                                class="text-xs {$mode === 'dark'
-                                                    ? 'text-orange-400'
-                                                    : 'text-orange-600'}"
-                                            >
-                                                <strong
-                                                    >Invalid participation:</strong
-                                                > The participation was received
-                                                outside the participation period
-                                                and could not be processed.
-                                            </p>
-                                        {:else if p.reason === "wrongcommitment"}
-                                            <p
-                                                class="text-xs {$mode === 'dark'
-                                                    ? 'text-orange-400'
-                                                    : 'text-orange-600'}"
-                                            >
-                                                <strong
-                                                    >Invalid participation:</strong
-                                                > There was an inconsistency when
-                                                verifying the participation's data.
-                                            </p>
-                                        {:else if p.reason === "maxscores"}
-                                            <p
-                                                class="text-xs {$mode === 'dark'
-                                                    ? 'text-orange-400'
-                                                    : 'text-orange-600'}"
-                                            >
-                                                <strong
-                                                    >Invalid participation:</strong
-                                                > The participation reached the maximum
-                                                possible score, which is not eligible
-                                                for the prize according to the game
-                                                rules.
-                                            </p>
-                                        {:else if p.reason === "unknown"}
-                                            <p
-                                                class="text-xs {$mode === 'dark'
-                                                    ? 'text-orange-400'
-                                                    : 'text-orange-600'}"
-                                            >
-                                                <strong
-                                                    >Invalid participation:</strong
-                                                > The participation could not be
-                                                processed due to an unknown error.
-                                            </p>
-                                        {/if}
-                                    </div>
-                                {/if}
-                            </div>
-                        {/each}
+                            {/each}
+                        </div>
+                    {:else}
+                        <p
+                            class="text-center text-gray-500 dark:text-gray-400 py-8"
+                        >
+                            No participations yet.
+                        </p>
+                    {/if}
+                {:else if activeTab === "forum"}
+                    <div class="forum-container">
+                        <Forum
+                            topic_id={game.gameId}
+                            {web_explorer_uri_tx}
+                            {web_explorer_uri_addr}
+                            {web_explorer_uri_tkn}
+                            {explorer_uri}
+                            maxWidth="100%"
+                            profile={$reputation_proof}
+                            connected={$connected}
+                        />
                     </div>
-                </section>
-            {/if}
-
-            <section class="forum-section mt-12 mb-12">
-                <h2 class="text-3xl font-semibold mb-8 text-center">
-                    Discussion
-                </h2>
-                <div class="flex justify-center w-full">
-                    <Forum
-                        topic_id={game.gameId}
-                        {web_explorer_uri_tx}
-                        {web_explorer_uri_addr}
-                        {web_explorer_uri_tkn}
-                        {explorer_uri}
-                        maxWidth="100%"
-                        profile={get(reputation_proof)}
-                        connected={get(connected)}
-                    />
-                </div>
+                {/if}
             </section>
         </div>
 
