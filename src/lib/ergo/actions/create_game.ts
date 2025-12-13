@@ -4,7 +4,8 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder,
     ErgoAddress,
-    type InputBox
+    type InputBox,
+    BOX_VALUE_PER_BYTE
 } from '@fleet-sdk/core';
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils';
@@ -77,16 +78,6 @@ export async function create_game(
         throw new Error("No UTXOs found in the wallet to create the game.");
     }
 
-    if (participationTokenId == "" && creatorStakeAmount < SAFE_MIN_BOX_VALUE) {
-        throw new Error(`The creator's stake (${creatorStakeAmount}) is less than the safe minimum.`);
-    }
-
-    const gameValue = participationTokenId == "" ? creatorStakeAmount : SAFE_MIN_BOX_VALUE;
-    const gameTokens = participationTokenId == "" ? [] : [{
-        tokenId: participationTokenId,
-        amount: creatorStakeAmount
-    }]; 
-
     // --- 2. Game Box Construction ---
 
     const activeGameErgoTree = getGopGameActiveErgoTreeHex();
@@ -110,43 +101,100 @@ export async function create_game(
     const participationTokenIdBytes = participationTokenId ? hexToBytes(participationTokenId)! : new Uint8Array(0);
     if (participationTokenId && !participationTokenIdBytes) throw new Error("Failed to convert participationTokenId to bytes.");
 
+    // Registers preparation
+    const r4Hex = SInt(0).toHex();
+    const r5Hex = SPair(
+        SColl(SByte, seedBytes),
+        SLong(BigInt(ceremonyDeadlineBlock))
+    ).toHex();
+    const r6Hex = SColl(SByte, hashedSecretBytes).toHex();
+    const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
+    const r8Hex = SColl(SLong, [
+        BigInt(deadlineBlock),
+        creatorStakeAmount,
+        participationFeeAmount,
+        BigInt(perJudgeComissionPercentage),
+        BigInt(commissionPercentage)
+    ]).toHex();
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
+
+    const registers = {
+        R4: r4Hex,
+        R5: r5Hex,
+        R6: r6Hex,
+        R7: r7Hex,
+        R8: r8Hex,
+        R9: r9Hex
+    };
+
+    // Size estimation
+    const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
+    const isHex = (s: string) => typeof s === 'string' && /^0x?[0-9a-fA-F]+$/.test(s);
+    const hexBytesLen = (hexStr: string): number => {
+        if (!hexStr) return 0;
+        const h = stripHexPrefix(hexStr);
+        return Math.ceil(h.length / 2);
+    };
+
+    const BASE_BOX_OVERHEAD = 60;
+    const PER_TOKEN_BYTES = 40; // approx: 32 (id) + 8 (amount)
+    const PER_REGISTER_OVERHEAD = 1;
+    const SIZE_MARGIN = 120;
+
+    let ergoTreeBytes = 0;
+    if (typeof activeGameErgoTree === 'string' && isHex(activeGameErgoTree)) {
+        ergoTreeBytes = hexBytesLen(activeGameErgoTree);
+    } else {
+        ergoTreeBytes = new TextEncoder().encode(String(activeGameErgoTree || '')).length;
+    }
+
+    const gameTokens = participationTokenId == "" ? [] : [{
+        tokenId: participationTokenId,
+        amount: creatorStakeAmount
+    }];
+    // We also mint a token, so +1 token count
+    const tokensCount = gameTokens.length + 1;
+    const tokensBytes = 1 + tokensCount * PER_TOKEN_BYTES;
+
+    let registersBytes = 0;
+    for (const h of Object.values(registers)) {
+        const len = hexBytesLen(h);
+        registersBytes += len + PER_REGISTER_OVERHEAD;
+    }
+
+    const totalEstimatedSize = BigInt(
+        BASE_BOX_OVERHEAD
+        + ergoTreeBytes
+        + tokensBytes
+        + registersBytes
+        + SIZE_MARGIN
+    );
+
+    const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;
+
+    let gameValue: bigint;
+    if (participationTokenId == "") {
+        // ERG Mode
+        if (creatorStakeAmount < minRequiredValue) {
+            throw new Error(`The creator's stake (${creatorStakeAmount}) is less than the minimum required for box size (${minRequiredValue}).`);
+        }
+        gameValue = creatorStakeAmount;
+    } else {
+        // Token Mode
+        const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
+        gameValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
+    }
+
     const gameBoxOutput = new OutputBuilder(
-            gameValue,
-            activeGameErgoTree
-        )
+        gameValue,
+        activeGameErgoTree
+    )
         .mintToken({
             amount: 1n,
             decimals: 0
         })
         .addTokens(gameTokens)
-        .setAdditionalRegisters({
-            // R4: Game state (0: Active)
-            R4: SInt(0).toHex(),
-
-            // R5: (Seed, Ceremony deadline)
-            R5: SPair(
-                SColl(SByte, seedBytes),
-                SLong(BigInt(ceremonyDeadlineBlock))
-            ).toHex(),
-
-            // R6: Hash of the secret 'S'
-            R6: SColl(SByte, hashedSecretBytes).toHex(),
-
-            // R7: Invited judges
-            R7: SColl(SColl(SByte), judgesColl).toHex(),
-
-            // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
-            R8: SColl(SLong, [
-                BigInt(deadlineBlock),
-                creatorStakeAmount,
-                participationFeeAmount,
-                BigInt(perJudgeComissionPercentage),
-                BigInt(commissionPercentage)
-            ]).toHex(),
-
-            // R9: [JSON, ParticipationTokenID]
-            R9: SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex()
-        });
+        .setAdditionalRegisters(registers);
 
     // --- 3. Transaction Construction and Submission ---
     const creationHeight = await ergo.get_current_height();

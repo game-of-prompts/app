@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { MockChain } from "@fleet-sdk/mock-chain";
+import { KeyedMockChainParty, MockChain } from "@fleet-sdk/mock-chain";
 import { compile } from "@fleet-sdk/compiler";
 import {
   OutputBuilder,
   RECOMMENDED_MIN_FEE_VALUE,
-  TransactionBuilder
+  TransactionBuilder,
+  BOX_VALUE_PER_BYTE,
+  SAFE_MIN_BOX_VALUE
 } from "@fleet-sdk/core";
 import {
   SByte,
@@ -37,7 +39,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
   // --- Involved Parties ---
   // A 'creator' is defined as the main actor in the game creation.
-  let creator: ReturnType<MockChain["newParty"]>;
+  let creator: KeyedMockChainParty;
 
   // A 'party' representing the game contract address.
   let gameActiveContract: ReturnType<MockChain["newParty"]>;
@@ -94,8 +96,63 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
     // --- 2. Act ---
 
+    // --- 2. Act ---
+
     // Build the output box that will represent the active game.
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+
+    // Calculate expected size and value
+    const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
+    const hexBytesLen = (hexStr: string) => hexStr ? Math.ceil(stripHexPrefix(hexStr).length / 2) : 0;
+    const BASE_BOX_OVERHEAD = 60;
+    const PER_TOKEN_BYTES = 40;
+    const PER_REGISTER_OVERHEAD = 1;
+    const SIZE_MARGIN = 120;
+    const BOX_VALUE_PER_BYTE = 360n; // Hardcoded or imported, better to match implementation
+    const SAFE_MIN_BOX_VALUE = 1000000n; // Assuming this is the value used
+
+    // Registers
+    const r4Hex = SInt(0).toHex();
+    const r5Hex = SPair(
+      SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")),
+      SLong(BigInt(deadlineBlock + 50))
+    ).toHex();
+    const r6Hex = SColl(SByte, hashedSecret).toHex();
+    const r7Hex = SColl(SColl(SByte), []).toHex();
+    const r8Hex = SColl(SLong, [
+      BigInt(deadlineBlock),
+      creatorStake,
+      participationFee,
+      500n,
+      1000n
+    ]).toHex();
+    const r9Hex = SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex();
+
+    const registers = { R4: r4Hex, R5: r5Hex, R6: r6Hex, R7: r7Hex, R8: r8Hex, R9: r9Hex };
+
+    let ergoTreeBytes = hexBytesLen(gameActiveErgoTree.toHex());
+
+    // Tokens: NFT + (Token if mode.token != ERG)
+    const tokensCount = mode.token !== ERG_BASE_TOKEN ? 2 : 1;
+    const tokensBytes = 1 + tokensCount * PER_TOKEN_BYTES;
+
+    let registersBytes = 0;
+    for (const h of Object.values(registers)) {
+      registersBytes += hexBytesLen(h) + PER_REGISTER_OVERHEAD;
+    }
+
+    const totalEstimatedSize = BigInt(
+      BASE_BOX_OVERHEAD + ergoTreeBytes + tokensBytes + registersBytes + SIZE_MARGIN
+    );
+    const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;
+
+    const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
+
+    let gameBoxValue: bigint;
+    if (mode.token === ERG_BASE_TOKEN) {
+      gameBoxValue = creatorStake;
+    } else {
+      gameBoxValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
+    }
 
     const gameBoxOutput = new OutputBuilder(
       gameBoxValue,
@@ -116,31 +173,22 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
     // following the specification in `game_active.es`.
     gameBoxOutput.setAdditionalRegisters({
       // R4: Game state (0: Active)
-      R4: SInt(0).toHex(),
+      R4: r4Hex,
 
       // R5: (Seed, Ceremony deadline)
-      R5: SPair(
-        SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")),
-        SLong(BigInt(deadlineBlock + 50))
-      ).toHex(),
+      R5: r5Hex,
 
       // R6: Hash of the secret 'S'
-      R6: SColl(SByte, hashedSecret).toHex(),
+      R6: r6Hex,
 
       // R7: Invited judges (empty in this test)
-      R7: SColl(SColl(SByte), []).toHex(),
+      R7: r7Hex,
 
       // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
-      R8: SColl(SLong, [
-        BigInt(deadlineBlock),
-        creatorStake,
-        participationFee,
-        500n,  // 5.00% comisión por juez
-        1000n  // 10.00% comisión del creador
-      ]).toHex(),
+      R8: r8Hex,
 
       // R9: Detalles del juego
-      R9: SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex()
+      R9: r9Hex
     });
 
     // Build the transaction.
