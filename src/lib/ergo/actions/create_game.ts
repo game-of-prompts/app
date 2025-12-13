@@ -162,12 +162,14 @@ export async function create_game(
         registersBytes += len + PER_REGISTER_OVERHEAD;
     }
 
+    const CREATOR_PK_BUFFER = 100;
     const totalEstimatedSize = BigInt(
         BASE_BOX_OVERHEAD
         + ergoTreeBytes
         + tokensBytes
         + registersBytes
         + SIZE_MARGIN
+        + CREATOR_PK_BUFFER
     );
 
     const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;

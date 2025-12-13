@@ -100,7 +100,11 @@ export function estimateRegisterSizes(
         }
     }
 
-    const r9Hex = SColl(SColl(SByte), [jsonBytes, tokenIdBytes]).toHex();
+    // Add a buffer for the Creator PK (future use)
+    const CREATOR_PK_BUFFER_SIZE = 100;
+    const dummyCreatorPkBuffer = new Uint8Array(CREATOR_PK_BUFFER_SIZE).fill(0);
+
+    const r9Hex = SColl(SColl(SByte), [jsonBytes, tokenIdBytes, dummyCreatorPkBuffer]).toHex();
 
     return {
         r4Bytes: hexByteLength(r4Hex) + PER_REGISTER_OVERHEAD,
