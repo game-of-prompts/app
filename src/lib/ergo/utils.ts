@@ -13,16 +13,16 @@ export function hexToUtf8(hexString: string): string | null {
         if (hexString.length % 2 !== 0) {
             return null;
         }
-    
+
         const byteArray = new Uint8Array(hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
         const decoder = new TextDecoder('utf-8');
         const utf8String = decoder.decode(byteArray);
-    
+
         return utf8String;
     } catch {
         return null;
     }
-  }
+}
 
 /**
  * A utility function to convert a serialized value to its "rendered" format (for debugging/display).
@@ -49,7 +49,7 @@ export function SString(value: string): string {
     return SConstant(SColl(SByte, stringToBytes('utf8', value)));
 }
 
-export function uint8ArrayToHex(array: Uint8Array): string { 
+export function uint8ArrayToHex(array: Uint8Array): string {
     return [...new Uint8Array(array)]
         .map(x => x.toString(16).padStart(2, '0'))
         .join('');
@@ -77,7 +77,7 @@ export function hexToBytes(hexString: string | undefined | null): Uint8Array | n
         return null;
     }
     if (hexString.length % 2 !== 0) {
-        return null; 
+        return null;
     }
     try {
         const byteArray = new Uint8Array(hexString.length / 2);
@@ -177,14 +177,15 @@ export function parseBox(e: Box<Amount>): InputBox {
  */
 export function parseGameContent(
     rawJsonDetails: string | undefined | null,
-    gameBoxId: string, 
+    gameBoxId: string,
     nft?: TokenEIP4
 ): GameContent {
     const defaultImageUrl = [
         "https://images5.alphacoders.com/136/thumb-1920-1364878.png",
         "https://backiee.com/static/wallpapers/560x315/302851.jpg",
         "https://wallpaperaccess.com/full/5027932.png",
-        "https://wallpaperaccess.com/full/6273500.jpg"
+        "https://wallpaperaccess.com/full/6273500.jpg",
+        "https://http2.mlstatic.com/storage/pog-cm-admin/calm-assets/grafico-muestra-volatilidad-de-criptomonedas--f77e1016.jpg"
     ][rawJsonDetails?.length % 4];
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
@@ -212,7 +213,7 @@ export function parseGameContent(
             console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);
         }
     }
-    
+
     return content;
 }
 

@@ -13,6 +13,7 @@
         isOpenCeremony,
         resolve_participation_commitment,
     } from "$lib/common/game";
+    import { marked } from "marked";
     import {
         address,
         connected,
@@ -842,7 +843,9 @@
             ? 'bg-slate-900 text-gray-200'
             : 'bg-gray-50 text-gray-800'}"
     >
-        <div class="game-container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div
+            class="game-container max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        >
             <section
                 class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12"
             >
@@ -1035,7 +1038,9 @@
             </section>
         </div>
 
-        <div class="game-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div
+            class="game-container max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        >
             <section
                 class="game-info-section mb-12 p-6 rounded-xl shadow {$mode ===
                 'dark'
@@ -1050,10 +1055,10 @@
                         <div
                             class="prose prose-sm text-slate-300 max-w-none mb-6 md:col-span-2 lg:col-span-3"
                         >
-                            {@html game.content.description?.replace(
-                                /\n/g,
-                                "<br/>",
-                            ) || "No description available."}
+                            {@html marked.parse(
+                                game.content.description ||
+                                    "No description available.",
+                            )}
                         </div>
 
                         <div
@@ -1183,7 +1188,9 @@
 
                         {#if game.status === "Resolution" || game.status === "Active"}
                             <div class="form-group lg:col-span-2">
-                                <Label>Prize Distribution</Label>
+                                <Label class="mb-3 block"
+                                    >Prize Distribution</Label
+                                >
 
                                 <div class="distribution-bar">
                                     <div
@@ -1218,7 +1225,7 @@
                                     ></div>
                                 </div>
 
-                                <div class="distribution-legend">
+                                <div class="distribution-legend mt-4">
                                     <div class="legend-item">
                                         <div class="legend-color winner"></div>
                                         <span
@@ -1573,7 +1580,20 @@
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Creator:</span
-                                                > Cancel the game (if needed).
+                                                >
+                                                Resolve the game by revealing the
+                                                secret once the time expires.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Cancel the game by revealing the
+                                                secret and receive a portion of the
+                                                creator’s stake.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -1892,7 +1912,7 @@
                                                     "open_ceremony",
                                                 )}
                                             disabled={!openCeremony}
-                                            class="w-full"
+                                            class="w-full bg-purple-600 hover:bg-purple-700 text-white"
                                         >
                                             <!-- svelte-ignore missing-declaration -->
                                             <Sparkles class="mr-2 h-4 w-4" /> Add
@@ -1922,7 +1942,7 @@
                                                     setupActionModal(
                                                         "accept_judge_nomination",
                                                     )}
-                                                class="w-full"
+                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                             >
                                                 <Gavel class="mr-2 h-4 w-4" /> Accept
                                                 Judge Nomination
@@ -1943,8 +1963,8 @@
                                                 setupActionModal(
                                                     "submit_score",
                                                 )}
-                                            disabled={!openCeremony}
-                                            class="w-full"
+                                            disabled={openCeremony}
+                                            class="w-full bg-slate-500 hover:bg-slate-600 text-white"
                                         >
                                             <Edit class="mr-2 h-4 w-4" />Submit
                                             My Score
@@ -1953,9 +1973,9 @@
                                             class="text-xs mt-1 text-gray-500 dark:text-gray-400"
                                         >
                                             Submit your solution and score.
-                                            {#if !openCeremony}
+                                            {#if openCeremony}
                                                 Disabled because the ceremony
-                                                period is closed.
+                                                period is open.
                                             {/if}
                                         </p>
                                     </div>
@@ -1965,7 +1985,7 @@
                                             on:click={() =>
                                                 setupActionModal("cancel_game")}
                                             variant="destructive"
-                                            class="w-full"
+                                            class="w-full bg-red-600 hover:bg-red-700 text-white"
                                         >
                                             <XCircle
                                                 class="mr-2 h-4 w-4"
@@ -1987,7 +2007,7 @@
                                                 setupActionModal(
                                                     "resolve_game",
                                                 )}
-                                            class="w-full"
+                                            class="w-full bg-slate-600 hover:bg-slate-700 text-white"
                                         >
                                             <CheckSquare
                                                 class="mr-2 h-4 w-4"
@@ -2015,7 +2035,7 @@
                                                         "include_omitted",
                                                     )}
                                                 variant="outline"
-                                                class="w-full"
+                                                class="w-full bg-gray-600 hover:bg-gray-700 text-white"
                                                 title="Anyone can execute this action to claim the resolver's commission."
                                             >
                                                 <Users class="mr-2 h-4 w-4" /> Include
@@ -2038,7 +2058,7 @@
                                                     )}
                                                 disabled={!isJudge}
                                                 variant="destructive"
-                                                class="w-full"
+                                                class="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
                                             >
                                                 <XCircle class="mr-2 h-4 w-4" />
                                                 Judges: Invalidate Winner
@@ -2065,7 +2085,7 @@
                                                     )}
                                                 disabled={isBeforeDeadline &&
                                                     isResolver}
-                                                class="w-full"
+                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                             >
                                                 <Trophy class="mr-2 h-4 w-4" /> End
                                                 Competition & Distribute Prizes
@@ -2090,7 +2110,7 @@
                                                         "drain_stake",
                                                     )}
                                                 disabled={!isAllowed}
-                                                class="w-full"
+                                                class="w-full bg-orange-600 hover:bg-orange-700 text-white"
                                             >
                                                 <Trophy
                                                     class="mr-2 h-4 w-4"
