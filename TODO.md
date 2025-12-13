@@ -102,6 +102,33 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
     - Que el valor de la caja no provenga de un input (calcular la diferencia primero)  -  tal como se hace en participation.es accion 5.
 
 
+====
+
+### TODOs
+
+- ¿Porque no usar timestamp en lugar de height?
+
+- Controlar tamaños máximos en la creación (pensando que el estado de resolución requiere mas espacio)
+
+
+====
+
+
+Para usar Bene, se podría utilizar la librería de Bene, que contiene todas las acciones de Bene y dos componentes de svelte:
+- Un formulario, por ejemplo para darle a "Subir juego mediante fundraissing"
+- Tarjeta de campañas ... de forma que muestre los juegos de GoP que todavía no han empezado porque se activarán si la campaña de recaudación es satisfactoria. En este caso si se da a visualizar se abrirá una pestaña nueva a la web de Bene o ejecutará el servicio de Bene en caso de Celaut.
+
+De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
+
+> A partir de esta idea consideramos que: Todas las aplicaciones poseen 1. Lógica de negocio TS, 2. Componentes svelte reutilizables y 3. Aplicacion completa. De forma que 1. y 2. se distribuyen como paquetes y se pueden reutiliar.
+
+
+===========
+
+
+# Servicios
+
+
 ##### game-service-factory
 [] Game obfuscated
 [] Señuelos
@@ -115,23 +142,3 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 > Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
 
 ----
-
-
-
-
-====
-====
-
-¿Porque no usar timestamp en lugar de height?
-
-
-====
-
-
-Para usar Bene, se podría utilizar la librería de Bene, que contiene todas las acciones de Bene y dos componentes de svelte:
-- Un formulario, por ejemplo para darle a "Subir juego mediante fundraissing"
-- Tarjeta de campañas ... de forma que muestre los juegos de GoP que todavía no han empezado porque se activarán si la campaña de recaudación es satisfactoria. En este caso si se da a visualizar se abrirá una pestaña nueva a la web de Bene o ejecutará el servicio de Bene en caso de Celaut.
-
-De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
-
-> A partir de esta idea consideramos que: Todas las aplicaciones poseen 1. Lógica de negocio TS, 2. Componentes svelte reutilizables y 3. Aplicacion completa. De forma que 1. y 2. se distribuyen como paquetes y se pueden reutiliar.
