@@ -3,13 +3,10 @@ import {
     type GameActive,
     type GameResolution,
     type GameCancellation,
-    type ValidParticipation,
-    type GameFinalized
+    type ValidParticipation
 } from '../common/game';
-import { fetchActiveGames, fetchResolutionGames, fetchCancellationGames, fetchFinalizedGames } from './fetch';
 import { create_game } from './actions/create_game';
-import { CACHE_DURATION_MS, explorer_uri, network_id } from './envs';
-import { address, connected, network, balance, games } from "../common/store";
+import { explorer_uri } from './envs';
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
@@ -24,9 +21,7 @@ import { reclaim_after_grace } from './actions/reclaim_after_grace';
 import { update_reputation_proof } from './reputation/submit';
 import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
-
-// Un tipo de unión para representar un juego en cualquier estado posible.
-type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
+import { reclaim_abandoned_participation } from './actions/reclaim_abandoned_participation';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;

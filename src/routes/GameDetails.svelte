@@ -5,6 +5,7 @@
         type AnyParticipation,
         type GameActive,
         type GameCancellation,
+        type GameResolution,
         type ValidParticipation,
         GameState,
         iGameDrainingStaking,
@@ -13,7 +14,6 @@
         isGameEnded,
         isOpenCeremony,
         resolve_participation_commitment,
-        GameResolution,
     } from "$lib/common/game";
     import { marked } from "marked";
     import {
