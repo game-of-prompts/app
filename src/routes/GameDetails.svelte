@@ -862,7 +862,7 @@
                     ></div>
                 </div>
                 <div
-                    class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center"
+                    class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white"
                 >
                     {#if game.content.imageURL}
                         <div class="md:w-1/3 flex-shrink-0">
@@ -883,7 +883,7 @@
                         </h1>
 
                         <div
-                            class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 text-white"
+                            class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4"
                         >
                             <div class="stat-block">
                                 <Users class="stat-icon" />
@@ -951,8 +951,8 @@
                                 >b.{game.status == "Active"
                                     ? game.deadlineBlock
                                     : game.status == "Resolution"
-                                      ? game.resolutionDeadline
-                                      : game.status == "Cancelled_Draining"
+                                    ? game.resolutionDeadline
+                                    : game.status == "Cancelled_Draining"
                                         ? game.unlockHeight
                                         : "N/A"}</a
                             >
@@ -1811,7 +1811,7 @@
                                 </div>
                                 {#if game.status === "Active"}
                                     <p
-                                        class="text-sm font-medium text-yellow-400 mt-2"
+                                        class="text-sm font-medium text-yellow-600 dark:text-yellow-400 mt-2"
                                     >
                                         Trust requires a majority of {Math.floor(
                                             game.judges.length / 2,
