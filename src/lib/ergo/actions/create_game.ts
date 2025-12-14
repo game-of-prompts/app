@@ -139,7 +139,7 @@ export async function create_game(
     const BASE_BOX_OVERHEAD = 60;
     const PER_TOKEN_BYTES = 40; // approx: 32 (id) + 8 (amount)
     const PER_REGISTER_OVERHEAD = 1;
-    const SIZE_MARGIN = 120;
+    const SIZE_MARGIN = 500;
 
     let ergoTreeBytes = 0;
     if (typeof activeGameErgoTree === 'string' && isHex(activeGameErgoTree)) {
@@ -162,7 +162,7 @@ export async function create_game(
         registersBytes += len + PER_REGISTER_OVERHEAD;
     }
 
-    const CREATOR_PK_BUFFER = 100;
+    const CREATOR_PK_BUFFER = 100;  // Aprox.
     const totalEstimatedSize = BigInt(
         BASE_BOX_OVERHEAD
         + ergoTreeBytes

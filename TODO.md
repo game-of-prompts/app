@@ -108,8 +108,6 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 
 - ¿Porque no usar timestamp en lugar de height?
 
-- Controlar tamaños máximos en la creación (pensando que el estado de resolución requiere mas espacio)
-
 
 ====
 

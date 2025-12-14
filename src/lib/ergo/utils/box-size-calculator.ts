@@ -137,7 +137,7 @@ export function estimateTotalBoxSize(
     // If we mint a token, it is present in the box.
     const MINTED_TOKEN_BYTES = 34; // TokenID (32) + Amount (VInt) ~ 2-9 bytes. Let's say 34-40.
 
-    const SIZE_MARGIN = 100; // Safety margin
+    const SIZE_MARGIN = 500; // Safety margin
 
     // ErgoTree
     // We use the actual ErgoTree from the contract
