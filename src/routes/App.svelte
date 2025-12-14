@@ -20,10 +20,8 @@
     import { network_id } from "$lib/ergo/envs";
     import Kya from "./kya.svelte";
     import Theme from "./Theme.svelte";
-    import { Badge } from "$lib/components/ui/badge";
-    import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { get } from "svelte/store";
-    import { fade } from "svelte/transition";
+    import { slide } from "svelte/transition";
     import CreateJudge from "./CreateJudge.svelte";
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
@@ -38,7 +36,7 @@
         walletBalance,
         walletManager,
     } from "wallet-svelte-component";
-    import { Settings } from "lucide-svelte";
+    import { Settings, Menu, X, Wallet } from "lucide-svelte";
     import SettingsModal from "./SettingsModal.svelte";
     import {
         explorer_uri,
@@ -83,9 +81,6 @@
 
         network.set(network_id == "mainnet" ? "ergo-mainnet" : "ergo-testnet");
 
-        // Conectar wallet
-        // await platform.connect(); // Handled by wallet-svelte-component
-
         const gameToken = $page.url.searchParams.get("game");
         if (gameToken) {
             loadGameById(gameToken);
@@ -117,7 +112,6 @@
             }
         }
 
-        // Subscribe to changes to save settings
         const unsubscribeSettings = [
             explorer_uri,
             web_explorer_uri_tx,
@@ -241,7 +235,7 @@
         <a
             href="#"
             on:click|preventDefault={() => changeTab("participateGame")}
-            class="logo-container"
+            class="logo-container hidden md:flex"
         >
             <img
                 src="logo-large.svg"
@@ -299,7 +293,7 @@
             </ul>
         </nav>
 
-        <div class="user-section">
+        <div class="user-section hidden md:flex">
             <WalletButton />
             <div class="theme-toggle">
                 <Theme />
@@ -318,16 +312,62 @@
             on:click={() => (mobileMenuOpen = !mobileMenuOpen)}
             aria-label="Toggle menu"
         >
-            <div class="hamburger" class:open={mobileMenuOpen}>
-                <span /><span /><span />
-            </div>
+            {#if mobileMenuOpen}
+                <X class="h-6 w-6" />
+            {:else}
+                <Menu class="h-6 w-6" />
+            {/if}
         </button>
     </div>
 </header>
 
 {#if mobileMenuOpen}
-    <div class="mobile-nav" transition:fade={{ duration: 200 }}>
-        <ul class="mobile-nav-links"></ul>
+    <div class="mobile-nav" transition:slide={{ duration: 200 }}>
+        <ul class="mobile-nav-links">
+             <li class:active={activeTab === "participateGame"}>
+                <a href="#" on:click|preventDefault={() => changeTab("participateGame")}>Competitions</a>
+            </li>
+            <li class:active={activeTab === "createGame"}>
+                <a href="#" on:click|preventDefault={() => changeTab("createGame")}>Create Competition</a>
+            </li>
+            <li class:active={activeTab === "judges"}>
+                <a href="#" on:click|preventDefault={() => changeTab("judges")}>Judges</a>
+            </li>
+            {#if !$reputation_proof}
+                <li class:active={activeTab === "createJudge"}>
+                    <a href="#" on:click|preventDefault={() => changeTab("createJudge")}>Become a Judge</a>
+                </li>
+            {:else}
+                <li class:active={activeTab === "showJudge"}>
+                    <a href="#" on:click|preventDefault={() => changeTab("showJudge")}>My reputation</a>
+                </li>
+            {/if}
+        </ul>
+
+        <div class="my-4 border-t border-border"></div>
+
+        <div class="mobile-user-controls">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-muted-foreground">Theme & Settings</span>
+                <div class="flex gap-2">
+                    <Theme />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        on:click={() => {
+                            showSettings = true;
+                            mobileMenuOpen = false;
+                        }}
+                    >
+                        <Settings class="h-5 w-5" />
+                    </Button>
+                </div>
+            </div>
+            
+            <div class="w-full flex justify-center">
+                <WalletButton />
+            </div>
+        </div>
     </div>
 {/if}
 
@@ -403,14 +443,17 @@
 
     .navbar-content {
         @apply container flex h-16 items-center;
+        @apply justify-end md:justify-start; 
     }
 
     .logo-container {
-        @apply mr-4 flex items-center;
+        @apply mr-6 flex items-center;
     }
 
     .logo-image {
-        @apply h-10 w-auto;
+        height: 2rem;
+        width: auto;
+        margin-right: 5rem;
     }
 
     .desktop-nav {
@@ -434,19 +477,36 @@
     }
 
     .user-section {
-        @apply flex items-center gap-4;
-    }
-
-    .user-info {
-        @apply hidden sm:flex;
-    }
-
-    .badge-container {
-        @apply flex items-center gap-2;
+        @apply items-center gap-4;
     }
 
     .mobile-menu-button {
-        @apply md:hidden;
+        @apply md:hidden p-2 rounded-md hover:bg-accent hover:text-accent-foreground;
+    }
+
+    .mobile-nav {
+        @apply md:hidden fixed left-0 right-0 z-40 border-b shadow-lg flex flex-col;
+        top: 4rem;
+        background-color: hsl(var(--background));
+        border-bottom-color: hsl(var(--border));
+        max-height: calc(100vh - 4rem);
+        overflow-y: auto;
+    }
+
+    .mobile-nav-links {
+        @apply flex flex-col p-4 space-y-4;
+    }
+
+    .mobile-nav-links li a {
+        @apply block text-base font-medium transition-colors hover:text-primary;
+    }
+    
+    .mobile-nav-links li.active a {
+        @apply text-primary font-bold;
+    }
+
+    .mobile-user-controls {
+        @apply p-4 bg-accent/10;
     }
 
     main {
