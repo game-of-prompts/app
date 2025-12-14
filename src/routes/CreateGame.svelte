@@ -839,7 +839,7 @@
                     It may take a few moments to confirm.
                 </p>
                 <p
-                    class="font-mono text-xs p-2 rounded bg-slate-800/50 break-all"
+                    class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
                 >
                     <a
                         href={get(web_explorer_uri_tx) + transactionId}
