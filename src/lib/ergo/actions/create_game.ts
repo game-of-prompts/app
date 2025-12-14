@@ -89,6 +89,10 @@ export async function create_game(
 
     const ceremonyDeadlineBlock = (await ergo.get_current_height()) + DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
 
+    if (ceremonyDeadlineBlock >= deadlineBlock) {
+        throw new Error("Deadline can't be before ceremony deadline. You are trying to create a fast-game. Select Fast Game Mode constants instead.")
+    }
+
     const gameDetailsBytes = stringToBytes("utf8", gameDetailsJson);
 
     const judgesColl = judges
