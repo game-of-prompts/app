@@ -2191,7 +2191,7 @@
                                     participationIsEnded &&
                                     currentHeight >
                                         game.deadlineBlock +
-                                            GRACE_PERIOD_IN_BLOCKS}
+                                            game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
                                 {@const canReclaimAfterGrace =
                                     isGracePeriodOver &&
                                     isCurrentUserParticipant &&
