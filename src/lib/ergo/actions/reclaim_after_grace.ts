@@ -8,9 +8,6 @@ import {
 import { parseBox } from '$lib/ergo/utils'; // Assuming you have a utility function to parse JSON
 import type { GameActive, ValidParticipation } from '$lib/common/game'; // Assuming your data types
 
-// Declaration for the wallet connector (dApp connector)
-declare var ergo: any;
-
 /**
  * Builds and sends a transaction for a participant to claim their share
  * if the game creator fails to resolve it after a grace period has passed.

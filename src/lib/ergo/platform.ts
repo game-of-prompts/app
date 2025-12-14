@@ -232,10 +232,28 @@ export class ErgoPlatform implements Platform {
             throw new Error("Solo se pueden reclamar participaciones no gastadas.");
         }
         const currentHeight = await this.get_current_height();
-        if (currentHeight <= game.deadlineBlock + 720) { // 720 bloques = 24 horas
+        if (currentHeight <= game.deadlineBlock + game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS) {
             throw new Error("El período de gracia aún no ha terminado.");
         }
         return await reclaim_after_grace(game, participation);
+    }
+
+    async reclaimAbandoned(
+        game: GameResolution,
+        participation: ValidParticipation
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+        if (game.status !== 'Resolution') {
+            throw new Error("El juego no está en estado de resolución.");
+        }
+        if (participation.status !== 'Submitted') {
+            throw new Error("Solo se pueden reclamar participaciones no gastadas.");
+        }
+        const currentHeight = await this.get_current_height();
+        if (currentHeight <= game.deadlineBlock + game.constants.PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD) {
+            throw new Error("El período de gracia aún no ha terminado.");
+        }
+        return await reclaim_abandoned_participation(game, participation);
     }
 
     /**
