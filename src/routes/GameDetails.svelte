@@ -10,6 +10,7 @@
         iGameDrainingStaking,
         isGameDrainingAllowed,
         isGameParticipationEnded,
+        isGameEnded,
         isOpenCeremony,
         resolve_participation_commitment,
     } from "$lib/common/game";
@@ -1889,6 +1890,7 @@
                     </div>
                 </div>
 
+                {#if !isGameEnded(game)}
                 <div class="col-span-1 lg:col-span-2">
                     <div
                         class="actions-section mt-8 pt-8 border-t {$mode ===
@@ -2021,6 +2023,7 @@
                                 {/if}
 
                                 {#if game.status === "Resolution"}
+                                    
                                     {@const isBeforeDeadline =
                                         new Date().getTime() < targetDate}
 
@@ -2137,6 +2140,7 @@
                         </div>
                     </div>
                 </div>
+                {/if}
             </section>
 
             <section class="mb-12">
