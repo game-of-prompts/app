@@ -184,8 +184,8 @@
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
                 (
-                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == resolverPK ||
-                  (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT
+                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == resolverPK ||  // Allow the resolver to set a new candidate after a judge invalidation action.
+                  (resolutionDeadline - JUDGE_PERIOD) + CREATOR_OMISSION_NO_PENALTY_PERIOD < HEIGHT  // New resolver can be set.
                 ) && 
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 3
               }
