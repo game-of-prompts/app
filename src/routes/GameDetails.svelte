@@ -1061,6 +1061,91 @@
                             )}
                         </div>
 
+                        <div class="form-group lg:col-span-2">
+                        
+                            <span class="mb-3 block">Prize Distribution</span>
+
+                            <div class="distribution-bar">
+                                <div
+                                    class="bar-segment winner"
+                                    style:width="{clampPct(winnerPct)}%"
+                                    title="Winner(s): {winnerPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                                <div
+                                    class="bar-segment creator"
+                                    style:width="{clampPct(creatorPct)}%"
+                                    title="Creator: {creatorPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                                <div
+                                    class="bar-segment judges"
+                                    style:width="{clampPct(
+                                        judgesTotalPct,
+                                    )}%"
+                                    title="Judges Total: {judgesTotalPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                                <div
+                                    class="bar-segment developers"
+                                    style:width="{clampPct(developersPct)}%"
+                                    title="Dev Fund: {developersPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                            </div>
+
+                            <div class="distribution-legend mt-4">
+                                <div class="legend-item">
+                                    <div class="legend-color winner"></div>
+                                    <span
+                                        >Winner(s) ({winnerPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color creator"></div>
+                                    <span
+                                        >{game.status === "Resolution"
+                                            ? "Resolver"
+                                            : "Creator"} ({creatorPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color judges"></div>
+                                    <span
+                                        >Judges ({judgesTotalPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div
+                                        class="legend-color developers"
+                                    ></div>
+                                    <span
+                                        >Protocol fee ({developersPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                            </div>
+
+                            {#if overAllocated > 0}
+                                <p class="text-xs mt-2 text-red-500">
+                                    Warning: Total commission exceeds 100%
+                                    by {overAllocated}%! The winner's prize
+                                    will be 0.
+                                </p>
+                            {/if}
+                        </div>
+
                         <div
                             class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                         >
@@ -1185,94 +1270,6 @@
                                 </div>
                             </details>
                         </div>
-
-                        {#if game.status === "Resolution" || game.status === "Active"}
-                            <div class="form-group lg:col-span-2">
-                                <Label class="mb-3 block"
-                                    >Prize Distribution</Label
-                                >
-
-                                <div class="distribution-bar">
-                                    <div
-                                        class="bar-segment winner"
-                                        style:width="{clampPct(winnerPct)}%"
-                                        title="Winner(s): {winnerPct.toFixed(
-                                            2,
-                                        )}%"
-                                    ></div>
-                                    <div
-                                        class="bar-segment creator"
-                                        style:width="{clampPct(creatorPct)}%"
-                                        title="Creator: {creatorPct.toFixed(
-                                            2,
-                                        )}%"
-                                    ></div>
-                                    <div
-                                        class="bar-segment judges"
-                                        style:width="{clampPct(
-                                            judgesTotalPct,
-                                        )}%"
-                                        title="Judges Total: {judgesTotalPct.toFixed(
-                                            2,
-                                        )}%"
-                                    ></div>
-                                    <div
-                                        class="bar-segment developers"
-                                        style:width="{clampPct(developersPct)}%"
-                                        title="Dev Fund: {developersPct.toFixed(
-                                            2,
-                                        )}%"
-                                    ></div>
-                                </div>
-
-                                <div class="distribution-legend mt-4">
-                                    <div class="legend-item">
-                                        <div class="legend-color winner"></div>
-                                        <span
-                                            >Winner(s) ({winnerPct.toFixed(
-                                                2,
-                                            )}%)</span
-                                        >
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-color creator"></div>
-                                        <span
-                                            >{game.status === "Resolution"
-                                                ? "Resolver"
-                                                : "Creator"} ({creatorPct.toFixed(
-                                                2,
-                                            )}%)</span
-                                        >
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-color judges"></div>
-                                        <span
-                                            >Judges ({judgesTotalPct.toFixed(
-                                                2,
-                                            )}%)</span
-                                        >
-                                    </div>
-                                    <div class="legend-item">
-                                        <div
-                                            class="legend-color developers"
-                                        ></div>
-                                        <span
-                                            >Protocol fee ({developersPct.toFixed(
-                                                2,
-                                            )}%)</span
-                                        >
-                                    </div>
-                                </div>
-
-                                {#if overAllocated > 0}
-                                    <p class="text-xs mt-2 text-red-500">
-                                        Warning: Total commission exceeds 100%
-                                        by {overAllocated}%! The winner's prize
-                                        will be 0.
-                                    </p>
-                                {/if}
-                            </div>
-                        {/if}
                     </div>
                 {/if}
             </section>
