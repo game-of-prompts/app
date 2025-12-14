@@ -98,3 +98,14 @@
     @apply text-foreground;
   }
 }
+
+  /* --- Menú de filtros --- */
+  .filter-menu { @apply flex items-center gap-2 md:gap-3 mb-6 flex-wrap px-2 md:px-0; }
+  .filter-badge {
+      @apply px-4 py-1.5 text-sm font-medium border rounded-full transition-colors duration-200;
+      @apply border-input bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+  .filter-badge.active {
+      @apply bg-primary text-primary-foreground border-transparent hover:bg-primary/90;
+      cursor: default;
+  }

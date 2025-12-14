@@ -132,7 +132,7 @@
 
 			{#if displayProof.current_boxes && displayProof.current_boxes.length > 0}
 				<h3 class="section-title mt-8">Opinions Issued</h3>
-				<div class="filter-menu">
+				<div class="filter-menu justify-center">
 					<button class="filter-badge" class:active={selectedType === GAME} on:click={() => (selectedType = GAME)}>Games</button>
 					<button class="filter-badge" class:active={selectedType === PARTICIPATION} on:click={() => (selectedType = PARTICIPATION)}>Participations</button>
 					<button class="filter-badge" class:active={selectedType === JUDGE} on:click={() => (selectedType = JUDGE)}>Judges</button>
@@ -215,17 +215,6 @@
     }
     .section-title { @apply text-2xl font-semibold mb-4 text-slate-800 dark:text-slate-200 px-2 md:px-0; }
     .proof-details { @apply text-base text-muted-foreground leading-relaxed list-disc pl-6 space-y-3 mb-8 px-2 md:px-0; }
-
-    /* --- Menú de filtros --- */
-    .filter-menu { @apply flex items-center justify-center gap-2 md:gap-3 mb-6 flex-wrap px-2 md:px-0; }
-    .filter-badge {
-        @apply px-4 py-1.5 text-sm font-medium border rounded-full transition-colors duration-200;
-        @apply border-input bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground;
-    }
-    .filter-badge.active {
-        @apply bg-primary text-primary-foreground border-transparent hover:bg-primary/90;
-        cursor: default;
-    }
 
     /* --- Contenedor de las opiniones --- */
     .boxes-container { 
