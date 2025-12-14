@@ -6,8 +6,9 @@
   // Prefijo P2PK para la validación de direcciones.
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   
-  // Período de gracia en bloques para que el jugador reclame si el juego se atasca.
+  // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.
   val GRACE_PERIOD_IN_BLOCKS = `+GRACE_PERIOD_IN_BLOCKS+`L // Aprox. 24 horas
+  // Periodo de grace en bloques para que el creador reclame la participación si el jugador no toma los fondos. (en caso de que el juego esté resuelto y todavía no finalizado)
   val ABANDONED_FUNDS_GRACE_PERIOD = `+ABANDONED_FUNDS_GRACE_PERIOD+`L // 90 días
 
   // =================================================================
