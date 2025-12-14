@@ -126,10 +126,10 @@
 
   // ### Acción 5: Reclamo del creador por abandono
   // Permite al creador del juego reclamar los fondos de esta participación si
-  // ha pasado un tiempo muy largo (90 días) desde la finalización del juego.
+  // ha pasado un tiempo muy largo (90 días) desde la resolución del juego.
   // Esto actúa como un mecanismo de limpieza para fondos no reclamados o atascados.
   val creatorClaimsAbandonedFunds = {
-    // Buscamos la caja principal del juego en estado "Finalizado" (1) entre los DataInputs.
+    // Buscamos la caja principal del juego en estado "Resuelto" (1) entre los DataInputs.
     val mainGameBoxes = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
 
     if (mainGameBoxes.size == 1) {

@@ -13,6 +13,7 @@
         isGameEnded,
         isOpenCeremony,
         resolve_participation_commitment,
+        GameResolution,
     } from "$lib/common/game";
     import { marked } from "marked";
     import {
@@ -48,6 +49,7 @@
         CheckCircle,
         Sparkles,
         Info,
+        Trash2,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -107,6 +109,11 @@
     let isClaimingRefundFor: string | null = null;
     let claimRefundError: { [boxId: string]: string | null } = {};
     let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
+
+    // Abandoned Refund State
+    let isAbandonedRefundFor: string | null = null;
+    let abandonedRefundError: { [boxId: string]: string | null } = {};
+    let abandonedRefundSuccessTxId: { [boxId: string]: string | null } = {};
 
     // Reclaim after Grace Period State
     let isReclaimingGraceFor: string | null = null;
@@ -503,6 +510,41 @@
                 e.message || "Error reclaiming participation fee.";
         } finally {
             isReclaimingGraceFor = null;
+        }
+    }
+
+    /**
+     * Handles the reclaim (refund) of a participation that has been abandoned.
+     * It should only execute if the game status is 'Resolution'
+     * and the participation status is 'Submitted'.
+     * @param participation The valid participation to reclaim.
+     */
+    async function handleReclaimAbandoned(participation: ValidParticipation) {
+        // Precondition validation
+        if (game?.status !== GameState.Resolution || participation.status !== "Submitted")
+            return;
+
+        // 1. Set the loading state and clear previous errors/successes
+        isAbandonedRefundFor = participation.boxId;
+        abandonedRefundError[participation.boxId] = null;
+        abandonedRefundSuccessTxId[participation.boxId] = null;
+
+        try {
+            // 2. Execute the platform function for the reclaim
+            const result = await platform.reclaimAbandoned(
+                game as GameResolution,
+                participation,
+            );
+            
+            // 3. Store the transaction result
+            abandonedRefundSuccessTxId[participation.boxId] = result;
+        } catch (e: any) {
+            // 4. Handle and store any error
+            abandonedRefundError[participation.boxId] =
+                e.message || "Error reclaiming abandoned participation fee.";
+        } finally {
+            // 5. Finish the loading state
+            isAbandonedRefundFor = null;
         }
     }
 
@@ -2186,9 +2228,9 @@
                                     game.status === "Cancelled_Draining" &&
                                     isCurrentUserParticipant &&
                                     p.status === "Submitted"}
+
+                                <!-- Grace Period because owner doesn't interact -->
                                 {@const isGracePeriodOver =
-                                    game.status === GameState.Active &&
-                                    participationIsEnded &&
                                     currentHeight >
                                         game.deadlineBlock +
                                             game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
@@ -2196,10 +2238,24 @@
                                     isGracePeriodOver &&
                                     isCurrentUserParticipant &&
                                     !p.spent}
+
+                                {@const isAbandonedFundsGracePeriodOver = 
+                                    game.status === GameState.Resolution &&
+                                    currentHeight >
+                                        game.resolutionDeadline +
+                                            game.constants.PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD}
+                                {@const canReclaimAbandonedFunds =
+                                    isAbandonedFundsGracePeriodOver &&
+                                    isCurrentUserParticipant &&
+                                    !p.spent}
+                                
+                                <!-- Could be reclaimed for participant or owner, not easily to kwnow -->
                                 {@const reclaimedAfterGrace =
-                                    isGracePeriodOver &&
+                                    (isGracePeriodOver || isAbandonedFundsGracePeriodOver) &&
                                     isCurrentUserParticipant &&
                                     p.spent}
+
+                                <!-- States -->
                                 {@const isMalformed = p.status === "Malformed"}
                                 {@const isSubmitted = p.status === "Submitted"}
                                 {@const isConsumedByWinner =
@@ -2526,6 +2582,62 @@
                                                 {/if}
                                             </div>
                                         {/if}
+
+                                        {#if canReclaimAbandonedFunds}
+                                            <div
+                                                class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode === 'dark' 
+                                                    ? 'border-indigo-900/50' 
+                                                    : 'border-indigo-100'}"
+                                            >
+                                                <div class="flex items-start space-x-3">
+                                                    <div class="p-2 bg-indigo-500/10 rounded-lg">
+                                                        <Trash2 class="h-5 w-5 text-indigo-500" />
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <h4 class="text-sm font-semibold {$mode === 'dark' ? 'text-indigo-300' : 'text-indigo-800'}">
+                                                            Abandoned Funds Cleanup
+                                                        </h4>
+                                                        <p class="text-xs mb-3 {$mode === 'dark' ? 'text-slate-400' : 'text-slate-600'}">
+                                                            This participation has been inactive for over 90 days post-resolution. 
+                                                            As the game creator, you can now claim these funds to clean up the contract.
+                                                        </p>
+                                                        
+                                                        <Button
+                                                            on:click={() => handleReclaimAbandoned(p)}
+                                                            disabled={isAbandonedRefundFor === p.boxId}
+                                                            class="w-full text-base bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                        >
+                                                            {#if isAbandonedRefundFor === p.boxId}
+                                                                Processing Claim...
+                                                            {:else}
+                                                                <Gavel class="mr-2 h-4 w-4" /> Claim Abandoned Funds
+                                                            {/if}
+                                                        </Button>
+
+                                                        {#if abandonedRefundSuccessTxId[p.boxId]}
+                                                            <div class="my-2 p-2 rounded-md text-xs bg-green-600/30 text-green-300 border border-green-500/50">
+                                                                <strong>Successful Claim! Transaction ID:</strong><br />
+                                                                <a
+                                                                    href={get(web_explorer_uri_tx) + abandonedRefundSuccessTxId[p.boxId]}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    class="underline break-all hover:text-white"
+                                                                >
+                                                                    {abandonedRefundSuccessTxId[p.boxId]}
+                                                                </a>
+                                                            </div>
+                                                        {/if}
+
+                                                        {#if abandonedRefundError[p.boxId]}
+                                                            <p class="text-xs mt-2 text-red-400 font-medium">
+                                                                {abandonedRefundError[p.boxId]}
+                                                            </p>
+                                                        {/if}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {/if}
+
                                         {#if reclaimedAfterGrace}
                                             <div
                                                 class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
