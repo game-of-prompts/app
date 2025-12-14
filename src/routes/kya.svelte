@@ -61,7 +61,7 @@
   role="button"
   tabindex="0"
 >
-  KYA (Game of Prompts)
+  KYA
 </span>
 
 <Dialog.Root bind:open={showModal}>
