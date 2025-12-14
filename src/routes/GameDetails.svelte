@@ -1053,7 +1053,7 @@
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6"
                     >
                         <div
-                            class="prose prose-sm text-slate-300 max-w-none mb-6 md:col-span-2 lg:col-span-3"
+                            class="prose prose-sm {$mode === 'dark' ? 'text-slate-300' : 'text-gray-800'} max-w-none mb-6 md:col-span-2 lg:col-span-3"
                         >
                             {@html marked.parse(
                                 game.content.description ||
@@ -1067,7 +1067,7 @@
                             <details
                                 class="group p-4 rounded-lg border {$mode ===
                                 'dark'
-                                    ? 'border-slate-700 bg-slate-800/50'
+                                    ? 'border-slate-700 bg-500/50'
                                     : 'border-gray-200 bg-gray-50'}"
                             >
                                 <summary
@@ -1551,7 +1551,7 @@
                         <!-- Content Grid: Allowed vs Restricted -->
                         {#if showInfoBlocks}
                             <div
-                                class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x {$mode ===
+                                class="grid grid-cols-1 md:grid-cols-1 divide-y md:divide-y-0 md:divide-x {$mode ===
                                 'dark'
                                     ? 'divide-slate-700'
                                     : 'divide-gray-100'}"
