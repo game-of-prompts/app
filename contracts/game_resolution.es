@@ -4,7 +4,8 @@
   // =================================================================
 
   val JUDGE_PERIOD = `+JUDGE_PERIOD+`L
-  val CREATOR_OMISSION_NO_PENALTY_PERIOD = `+CREATOR_OMISSION_NO_PENALTY_PERIOD+`L  // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize creator after this period. UI must control this constants correctly to avoid malicious contract configurations.
+  val CREATOR_OMISSION_NO_PENALTY_PERIOD = `+CREATOR_OMISSION_NO_PENALTY_PERIOD+`L
+  val END_GAME_AUTH_GRACE_PERIOD = `+END_GAME_AUTH_GRACE_PERIOD+`L
   val DEV_SCRIPT = fromBase16("`+DEV_SCRIPT+`")
   val DEV_COMMISSION_PERCENTAGE = `+DEV_COMMISSION_PERCENTAGE+`L
 
@@ -308,8 +309,23 @@
       // Requerimos autorización explícita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),
       // si NO hay candidato, debe firmar el resolver.
       val authorizedToEnd: SigmaProp = {
-        if (winnerCandidateCommitment != Coll[Byte]()) {
-          // Hay candidato a ganador: requerimos que la transacción esté firmada por la clave pública del ganador
+        
+        val isAfterResolutionDeadlineWithGracePeriod = sigmaProp(HEIGHT >= resolutionDeadline + END_GAME_AUTH_GRACE_PERIOD)
+
+        val resolverAuth: SigmaProp = {
+          val prefix = resolverPK.slice(0, 3)
+          val addr_content = resolverPK.slice(3, resolverPK.size)
+
+          val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
+          if (isP2PK) {
+            proveDlog(decodePoint(addr_content))
+          }
+          else {
+            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
+          }
+        }
+        
+        val winnerAuth: SigmaProp = {
           val winnerBoxes = INPUTS.filter({ (box: Box) => 
               blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
               box.R5[Coll[Byte]].get == winnerCandidateCommitment 
@@ -330,18 +346,14 @@
             // Si no se encuentra la caja del ganador, la autorización falla
             sigmaProp(false)
           }
-        } else {
-          // No hay candidato: requerimos que la transacción esté firmada por la clave del creador
-          val prefix = resolverPK.slice(0, 3)
-          val addr_content = resolverPK.slice(3, resolverPK.size)
+        }
 
-          val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
-          if (isP2PK) {
-            proveDlog(decodePoint(addr_content))
-          }
-          else {
-            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
-          }
+        if (winnerCandidateCommitment != Coll[Byte]()) {
+          // En caso de existir ganador, debe autorizar él.  Si pasa el periodo de gracia, tambien puede autorizarse el resolver.
+          winnerAuth || (isAfterResolutionDeadlineWithGracePeriod && resolverAuth)
+        } else {
+          // Si no hay ganador tan solo puede autorizar el resolver.
+          resolverAuth
         }
       }
 

@@ -35,8 +35,7 @@ function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
 
     const source = PARTICIPATION_SOURCE
-        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString())
-        .replace(/`\+ABANDONED_FUNDS_GRACE_PERIOD\+`/g, DefaultGameConstants.PARTICIPATION_ABANDONED_FUNDS_GRACE_PERIOD.toString());
+        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString());
 
     _participation.ergoTree = compile(source, { version: ergoTreeVersion });
 }
@@ -60,6 +59,7 @@ function ensureGameResolutionCompiled(): void {
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
+        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
         .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
         .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
         .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, DefaultGameConstants.DEV_COMMISSION_PERCENTAGE.toString())
