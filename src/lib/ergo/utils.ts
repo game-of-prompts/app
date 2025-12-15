@@ -180,12 +180,11 @@ export function parseGameContent(
     gameBoxId: string,
     nft?: TokenEIP4
 ): GameContent {
+    // Get image from static, img1.png, img2.png, img3.png
     const defaultImageUrl = [
-        "https://images5.alphacoders.com/136/thumb-1920-1364878.png",
-        "https://backiee.com/static/wallpapers/560x315/302851.jpg",
-        "https://wallpaperaccess.com/full/5027932.png",
-        "https://wallpaperaccess.com/full/6273500.jpg",
-        "https://http2.mlstatic.com/storage/pog-cm-admin/calm-assets/grafico-muestra-volatilidad-de-criptomonedas--f77e1016.jpg"
+        "/img1.png",
+        "/img2.png",
+        "/img3.png",
     ][rawJsonDetails?.length % 4];
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
