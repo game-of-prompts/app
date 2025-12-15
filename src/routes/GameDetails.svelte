@@ -1397,7 +1397,19 @@
                                 >
                             </div>
                         {:else}
-                            <!-- STANDARD FLOW: Active -> Resolution -> Finalized -->
+                            <!-- STANDARD FLOW: Ceremony -> Active -> Resolution -> Finalized -->
+
+                            {#if game.status === "Active"}
+                            <!-- Line 0: Ceremony -> Active -->
+                            <div
+                                class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 -z-10 mx-4 transition-all duration-500 {!openCeremony
+                                    ? 'bg-blue-500'
+                                    : 'w-0'}"
+                                style="width: {!openCeremony
+                                    ? '50%'
+                                    : '0%'};"
+                            ></div>
+                            {/if}
 
                             <!-- Line 1: Active -> Resolution -->
                             <div
@@ -1420,6 +1432,33 @@
                                     ? '50%'
                                     : '0%'};"
                             ></div>
+
+                            {#if game.status === "Active"}
+                            <!-- Step 0: Ceremony -->
+                            <div class="flex flex-col items-center bg-transparent z-10 px-2">
+                                <div
+                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
+                                    {openCeremony
+                                        ? 'bg-purple-500/15 text-purple-400 text-white shadow-lg scale-110'
+                                        : 'bg-purple-400 border-purple-400 text-white'}"
+                                >
+                                    {#if !openCeremony}
+                                        <Check class="w-6 h-6" />
+                                    {:else}
+                                        <span class="text-base font-bold">0</span>
+                                    {/if}
+                                </div>
+
+                                <span
+                                    class="mt-2 text-xs font-bold uppercase tracking-wider
+                                    {openCeremony
+                                        ? 'text-purple-600 dark:text-purple-400'
+                                        : 'text-purple-400 dark:text-purple-300'}"
+                                >
+                                    Ceremony
+                                </span>
+                            </div>
+                            {/if}
 
                             <!-- Step 1: Active -->
                             <div
