@@ -2283,6 +2283,7 @@
 
                                 <!-- Grace Period because owner doesn't interact -->
                                 {@const isGracePeriodOver =
+                                    game.status === GameState.Active &&
                                     currentHeight >
                                         game.deadlineBlock +
                                             game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
@@ -2291,6 +2292,7 @@
                                     isCurrentUserParticipant &&
                                     !p.spent}
 
+                                <!-- Abandoned grace period because participant doesn't interact -->
                                 {@const isAbandonedFundsGracePeriodOver = 
                                     game.status === GameState.Resolution &&
                                     currentHeight >
