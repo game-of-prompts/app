@@ -73,17 +73,13 @@
 
 [x] Fetch debe asegurarse de que las participaciones son válidas, y marcar las maliciosas.
 
-**Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.**
+[»]Obtener semilla de particpaciones de forma pseudo-aleatoria a partir del estado inicial del juego.
 [x]Permitir agregar entropia por cualquiera mediante nueva acción en game_active.es
 [x] Agregar semilla dentro del commitment, para no requerir a los jueces a la hora de probar si la participación utilizó la semilla correcta.
 [x] Implementar acción mediante código.
 
 [x] Soporte multi-token
 
-[] Lotes de participaciones 
-(Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
-De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
-Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Incentivo a participación temprana.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
@@ -97,9 +93,11 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - HEIGHT: altura donde se agregó la participación.
 
 
--  Al comprobar que alguien recibe un valor se debería de tener en cuenta:
-    - Que tal vez está fraccionado en varias cajas.
-    - Que el valor de la caja no provenga de un input (calcular la diferencia primero)  -  tal como se hace en participation.es accion 5.
+
+[] Lotes de participaciones 
+(Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
+De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
+Teoricamente se permite un numero ilimitado de participaciones.
 
 
 ====
