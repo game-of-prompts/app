@@ -188,27 +188,6 @@ Esta acción **no resuelve el juego**, solo corrige el conjunto de candidatos.
 
 ---
 
-### 5.5 Acción permitida: Limpieza de Fondos Abandonados
-
-**Objetivo:** Evitar acumulación de UTXOs olvidados.
-
-**Condiciones formales:**
-
-* `MainGameBox.R4 == 1`
-* `HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD`
-* Los fondos se envían a `resolverPK`
-
-**Ejecutor:**
-
-* Creador / resolver
-
-**Efecto:**
-
-* Las Participation Boxes remanentes se consumen
-* El estado on-chain se limpia
-
----
-
 ## 6. Estado 2 — CANCELLED_DRAINING
 
 ### 6.1 Definición

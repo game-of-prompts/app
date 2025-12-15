@@ -125,79 +125,8 @@
     else { false }
   }
 
-  // ### Acción 5: Reclamo del creador por abandono
-  // Permite al creador del juego reclamar los fondos de esta participación si
-  // ha pasado un tiempo muy largo (90 días) desde la resolución del juego.
-  // Esto actúa como un mecanismo de limpieza para fondos no reclamados o atascados.
-  val creatorClaimsAbandonedFunds = {
-    // Buscamos la caja principal del juego en estado "Resuelto" (1) entre los DataInputs.
-    val mainGameBoxes = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.R4[Int].get == 1})
-
-    if (mainGameBoxes.size == 1) {
-      val mainGameBox = mainGameBoxes(0)
-      
-      // --- Condición 1: Plazo de 90 días superado ---
-      // Se comprueba que han pasado 90 días (64800 bloques) desde la fecha límite de resolución.
-      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
-      val isAfter90Days = HEIGHT >= resolutionDeadline + ABANDONED_FUNDS_GRACE_PERIOD
-
-      if (isAfter90Days) {
-        val participationTokenId = mainGameBox.R9[Coll[Coll[Byte]]].get(1)
-        val resolverPK = mainGameBox.R9[Coll[Coll[Byte]]].get(2)
-
-        // --- Condición 2: Destino de los fondos ---
-        val outputGoesToCreator = {
-
-          // Calculamos el valor requerido (ERG o tokens) que debe recibir el creador.
-          val requiredValue = {
-            if (participationTokenId == Coll[Byte]()) {
-              SELF.value
-            } else {
-              SELF.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
-            }
-          }
-
-          // Calculamos el valor (ERG o tokens) que posee el creador en las entradas.
-          val inputValue = {
-            if (participationTokenId == Coll[Byte]()) {
-              INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + b.value })
-            } else {
-              INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK})
-                .flatMap({(b:Box) => b.tokens}) 
-                .filter({(token:(Coll[Byte], Long)) => token._1 == participationTokenId}) 
-                .fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 }) 
-            }
-          }
-
-          val outputValue = {
-            if (participationTokenId == Coll[Byte]()) {
-              OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + b.value })
-            } else {
-              OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK})
-                .flatMap({(b:Box) => b.tokens}) 
-                .filter({(token:(Coll[Byte], Long)) => token._1 == participationTokenId}) 
-                .fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 }) 
-            }
-          }
-
-          val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }  // Consider tx fee and min box value only for ERG transfers.
-          val addedValue = outputValue - inputValue
-          addedValue >= requiredValue - txFee
-        }
-
-        sigmaProp(outputGoesToCreator)
-      } else {
-        sigmaProp(false)
-      }
-    } 
-    else { 
-      sigmaProp(false) 
-    }
-  }
-
   spentInValidGameCancellation || 
   playerReclaimsAfterGracePeriod || 
   sigmaProp(isValidEndGame) || 
-  sigmaProp(isInvalidatedByJudges) ||
-  creatorClaimsAbandonedFunds
+  sigmaProp(isInvalidatedByJudges)
 }

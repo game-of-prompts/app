@@ -138,11 +138,6 @@ export interface Platform {
         participation: ValidParticipation
     ): Promise<string | null>;
 
-    reclaimAbandoned(
-        game: GameResolution,
-        participation: ValidParticipation
-    ): Promise<string | null>;
-
     /**
      * 
      */
