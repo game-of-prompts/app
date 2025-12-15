@@ -182,7 +182,7 @@ export function parseGameContent(
 ): GameContent {
     // Get image from static, img1.png, img2.png, img3.png
     const defaultImageUrl = [
-        "/img1.png",
+        ("/img1.png"),
         "/img2.png",
         "/img3.png",
     ][rawJsonDetails?.length % 4];
