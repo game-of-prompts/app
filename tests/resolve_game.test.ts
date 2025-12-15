@@ -11,6 +11,7 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameActiveErgoTree, getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
@@ -52,7 +53,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
   const creatorStake = 2_000_000_000n;
-  const resolutionDeadline = BigInt(deadlineBlock + 40);  // Seems that the mockchain goes various blocks forward when executing the tx!
+  const resolutionDeadline = BigInt(deadlineBlock + DefaultGameConstants.JUDGE_PERIOD + 10);  // Seems that the mockchain goes various blocks forward when executing the tx!
   let commitment1Hex: string;
   let gameBoxOutput: OutputBuilder;
   let score1: bigint;

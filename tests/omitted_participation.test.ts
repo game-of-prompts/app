@@ -20,6 +20,7 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
@@ -49,7 +50,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
 
     // --- Game State Variables ---
-    const resolutionDeadline = 800_030;  // initial height + 30 (JUDGE_PERIOD)
+    const resolutionDeadline = 800_000 + DefaultGameConstants.JUDGE_PERIOD;  // initial height + JUDGE_PERIOD
     const gameNftId = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22";
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
     const game_deadline = 700_700n;
