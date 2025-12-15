@@ -1550,8 +1550,8 @@
                     <div
                         class="status-description mb-8 rounded-xl border overflow-hidden {$mode ===
                         'dark'
-                            ? 'bg-slate-800 border-slate-700'
-                            : 'bg-white border-gray-200'} shadow-sm"
+                            ? 'border-slate-700'
+                            : 'border-gray-200'} shadow-sm"
                     >
                         <!-- Header with State Title -->
                         <div
@@ -1561,11 +1561,11 @@
                         >
                             <div
                                 class="p-2 rounded-lg {game.status === 'Active'
-                                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
                                     : game.status === 'Resolution'
-                                      ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                                       : game.status === 'Finalized'
-                                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                        ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400'
                                         : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
                             >
                                 {#if game.status === "Active"}
@@ -1582,11 +1582,11 @@
                                 <h3
                                     class="text-lg font-bold flex items-center gap-2 {game.status ===
                                     'Active'
-                                        ? 'text-blue-600 dark:text-blue-400'
+                                        ? 'text-green-600 dark:text-green-400'
                                         : game.status === 'Resolution'
-                                          ? 'text-purple-600 dark:text-purple-400'
+                                          ? 'text-amber-600 dark:text-amber-400'
                                           : game.status === 'Finalized'
-                                            ? 'text-green-600 dark:text-green-400'
+                                            ? 'text-gray-600 dark:text-gray-400'
                                             : 'text-red-600 dark:text-red-400'}"
                                 >
                                     {#if game.status === "Active"}
