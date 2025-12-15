@@ -7,6 +7,7 @@ import {
     type TokenEIP4 // <-- Importar TokenEIP4
 } from '@fleet-sdk/core';
 import type { GameContent } from "../common/game"; // <-- Importar GameContent
+import { base } from '$app/paths';
 
 export function hexToUtf8(hexString: string): string | null {
     try {
@@ -182,10 +183,10 @@ export function parseGameContent(
 ): GameContent {
     // Get image from static, img1.png, img2.png, img3.png
     const defaultImageUrl = [
-        ("/img1.png"),
-        "/img2.png",
-        "/img3.png",
-    ][rawJsonDetails?.length % 4];
+        `${base}/img1.png`,
+        `${base}/img2.png`,
+        `${base}/img3.png`,
+    ][rawJsonDetails?.length % 3];
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
     let content: GameContent = {
