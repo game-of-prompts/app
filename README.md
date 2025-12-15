@@ -46,7 +46,7 @@ The process for a creator to design and publish a game on the GoP platform invol
 1.  **Game Design**
 
       * The core of the design is a challenge that produces a **quantifiable score**. This means the result is not simply binary (solved/unsolved), but allows for ranking among different solvers. For example, in a maze game, the score could be inversely proportional to the time or number of steps, or proportional to how close it was to the exit.
-      * For the Ergohack MVP, the focus is on games with **objective** scoring, such as puzzles, mazes, prediction games, classification tasks, etc., where evaluation can be algorithmic and deterministic. Specifically, two games have been implemented: [Snake](games/snake/README.md) and [Trading](games/trading/README.md)
+      * In the current version, the focus is on games with **objective** scoring, such as puzzles, mazes, prediction games, classification tasks, etc., where evaluation can be algorithmic and deterministic. Specifically, two games have been implemented: [Snake](games/snake/README.md) and [Trading](games/trading/README.md)
 
     > ⚠️ **Variability:** It's crucial for a game to exhibit a high Scenario Dispersion Coefficient (CDE). If the Game Service always presents the same input or problem, players could simply "hardcode" an optimal solution. To avoid this, the game should generate variable scenarios in each execution; for example, if it's a story generation game, each game could ask "create a story about [random_topic]" where `random_topic` changes, ensuring the solver must be general and not tailored to a single case.
 
@@ -78,7 +78,7 @@ The process for a creator to design and publish a game on the GoP platform invol
           * The deadline (`deadline`) for players to submit their participations.
           * The commission percentage (`commissionPercentage`) the creator will receive from the prize pool.
           * Optionally, they can link to proof of their reputation or history.
-      * The GoP Web acts as an interface for "Game Creation (Contract Deployment)" on the Ergo blockchain (see Section 6). Through it, the creator publishes the `GameBox` containing `hashS`, `deadline`, `participationFee`, `commissionPercentage`, `creatorStake`, and the `gameNftId`, thus officializing the game on the platform.
+      * The GoP Web acts as an interface for "Game Creation (Contract Deployment)" on the Ergo blockchain (see Section 6). Through it, the creator publishes the `GameBox` containing `hashS`, `deadline`, `participationFee`, `commissionPercentage`, `creatorStake`, `participatingJudges` (list of nominated judges), and the `gameNftId`, thus officializing the game on the platform.
 
 -----
 
@@ -128,14 +128,13 @@ For a player to participate in a GoP game, they follow these steps:
 
   * **Collection and Comparison**
 
-      * The winner is the solver with the **highest score**, determined and validated on-chain during Action 1 (Game Resolution) using the secret `S` revealed by the creator and each participant's `commitmentC`.
+      * The winner is the solver with the **highest score**, determined and validated on-chain during the **Resolution State (State 1)** using the secret `S` revealed by the creator and each participant's `commitmentC`.
       * In case of a tie:
-          * The one added first in the resolution transaction wins (according to the processing order in the `game.es` contract fold).
-          * If they are in the same block, the order within the transaction is determinant.
+          * The one added first in the resolution transaction wins.
 
-  * **Prize Distribution - Game Resolution**
+  * **Prize Distribution**
 
-      * The `game.es` contract (GameBox), when Action 1 (Resolution) is executed, distributes the accumulated funds (from participation fees) to the winner and the commission to the creator. The creator is incentivized to execute this action to receive their commission and recover their `creatorStake`.
+      * During the **Normal Game Finalization** action (in State 1), the protocol distributes the accumulated funds (from participation fees) to the winner and the commission to the creator. The creator is incentivized to reveal the secret `S` (transitioning to State 1) to receive their commission and recover their `creatorStake`.
 
     > A low stake by the creator means they might ultimately not want to resolve the game, so the lower the reputation or trust in the creator, the higher the necessary stake should be, although participating or not is the players' decision.
 
@@ -143,7 +142,7 @@ For a player to participate in a GoP game, they follow these steps:
 
 ## 5. Security, Transparency, and MVP Assumptions
 
-Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the following aspects are considered:
+Trust and clarity are fundamental in GoP. For the current version, the following aspects are considered:
 
   * **Obfuscated Game Logic:**
 
@@ -153,7 +152,7 @@ Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the foll
 
       * The `commitmentC` stored in each `ParticipationBox` can only be validated with the game's secret `S`. A participant's actual score is not publicly visible on-chain until the revelation of `S` during Action 1 (Resolution), thanks to the use of `scoreList` and `commitmentC`.
 
-  * **Detailed Score Validation Mechanism (Action 1 - Resolution):**
+  * **Detailed Score Validation Mechanism (State 1 - Resolution):**
     The system implemented in the contracts (`game.es` and `participation.es`) ensures score integrity without revealing it prematurely through the following process:
 
     1.  **Data Stored in the `ParticipationBox` (on-chain by the player):**
@@ -163,7 +162,7 @@ Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the foll
           * `commitmentC` (in register R5): A cryptographic commitment calculated by the game service using the secret `S` (not yet publicly revealed). Its format is:
             `commitmentC = blake2b256(solverId ++ longToByteArray(TRUE_SCORE) ++ hashLogs ++ S_game)`
             The `TRUE_SCORE` is one of the scores present in the `scoreList`.
-    2.  **Validation Process during Action 1 (Game Resolution) in `game.es`:**
+    2.  **Validation Process during Resolution (State 1) in `game.es`:**
           * The game creator reveals the secret `S` (in `OUTPUTS(1).R4` of the resolution transaction).
           * For each candidate `ParticipationBox` (included as an `INPUT` in the transaction), the `game.es` contract iterates through each `scoreAttempt` in the `pBoxScoreList` (extracted from `R9` of the `ParticipationBox`).
           * For each `scoreAttempt`, the contract calculates a `testCommitment` using the `pBoxSolverId` (from `R7`) and `pBoxHashLogs` (from `R8`) of that `ParticipationBox`, the current `scoreAttempt`, and the `S` revealed by the creator:
@@ -178,11 +177,11 @@ Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the foll
 
   * **Public Validation of Resolution:**
 
-      * All results of Action 1 (Resolution) are verifiable on-chain using the `game.es` contract script, the secret `S` revealed by the creator, and the public data in the participating `ParticipationBox`es.
+      * All results of State 1 (Resolution) are verifiable on-chain using the `game.es` contract script, the secret `S` revealed by the creator, and the public data in the participating `ParticipationBox`es.
 
   * **Winner Validation (Post-Resolution):**
 
-      * For the MVP, the winner, once announced, is expected to share "in good faith" their complete solver-service (`<solver_id>.celaut.bee`), the log file of the winning game, their game seed (if applicable), and the indeterminism index (which is the estimated number of times tests must be run to obtain those logs) to allow community verification. As there is no formal judge system in the MVP (ideas about judges are explored in Section 10.2.2), the prize is delivered immediately after on-chain resolution.
+      * The winner is determined on-chain. However, to ensure fairness, a **Judge System** is in place. The creator nominates a set of judges (`participatingJudges`) upon game creation. During the resolution phase, these judges can vote to invalidate a participation if they detect fraud (e.g., by replaying the game and finding discrepancies with the committed logs). A majority vote is required to invalidate a candidate.
 
   * **Isolated Solver Execution:**
 
@@ -233,74 +232,57 @@ Trust and clarity are fundamental in GoP. For the Ergohack MVP version, the foll
 
   * **Creator's Incentives for Resolution (MVP):**
 
-      * The creator has the incentive to reveal the secret `S` after the `deadline` and correctly execute Action 1 (Resolution) to receive their `commissionPercentage` and recover their `creatorStake`. Failure to do so would mean losing these benefits and locking up the participation funds.
+      * The creator has the incentive to reveal the secret `S` after the `deadline` and correctly execute Action 1 (Resolution) to receive their `commissionPercentage` and recover their `creatorStake`. Failure to do so would mean losing these benefits and locking up the participation funds. If the secret is revealed prematurely, the creator faces a penalty where their stake is drained slowly (see Section 6.5).
 
 -----
 
-## 6. Ergo Contract (Ergohack MVP Version)
+## 6. Protocol Specification
 
-The Game of Prompts system on Ergo is based on two main contracts: `game.es` which protects the `GameBox` (the main game box) and `participation.es` which protects the `ParticipationBox`es (the players' participation boxes). For the Ergohack MVP, the key stages and actions are:
+The Game of Prompts protocol is formally defined by the on-chain state and the spending rights of the boxes. It adopts the Ergo UTXO model, where system behavior emerges from which boxes can be spent, when, and by whom.
 
-  * **Game Creation (Deployment of `game.es` Contract):**
-    An initial `GameBox` is created on the blockchain with the game data, including:
+### 6.1. Fundamental Entities
 
-      * A unique `gameNftId` for the game (contained in `SELF.tokens(0)._1` of the `GameBox`).
-      * `hashS` (Blake2b256 hash of the game's secret `S`) in register `R5`.
-      * `numericalParameters` in `R7`, which is a collection containing:
-          * `deadline` (block height limit for participation and resolution).
-          * `creatorStake` (creator's ERG stake).
-          * `participationFee` (ERG fee per participation).
-      * `commissionPercentage` (commission percentage for the creator) in `R8`.
-      * `gameCreatorPK` (bytes of the creator's public key) in `R4`.
-      * {TODO} in `R6`.
-      * `gameDetailsJsonHex` (game details in hexadecimal JSON format) in `R9`.
-      * The `game.es` script governs the behavior of this `GameBox`.
+*   **Main Game Box**: Represents the canonical state of the game. It contains the game NFT (`gameNftId`), the global state (`R4`), critical deadlines, and cryptographic commitments. It publishes verifiable information that Participation Boxes use to self-validate.
+*   **Participation Box**: Represents a player's economic participation. It contains locked funds (stake/entry fee), the player's identity, the `gameNftId`, and a cryptographic commitment of the score (`R5`). Each box is autonomous and defines its own spending paths based on the Main Game Box state, time, and signer identity.
 
-  * **Participation Registration (Creation of `ParticipationBox` according to `participation.es`):**
-    A player publishes a game by creating a `ParticipationBox` before the game's `deadline`. This action involves:
+### 6.2. Global Game States (`R4`)
 
-      * Paying the `participationFee`, which is stored as the value (`SELF.value`) of the `ParticipationBox`.
-      * Storing in the `ParticipationBox`:
-          * `playerPKBytes` (bytes of the player's public key) in `R4`.
-          * `commitmentC` (cryptographic commitment with their true score, `solverId`, `hashLogs`, and `S_game`) in `R5`.
-          * `gameNftId` (ID of the game NFT to which the participation belongs) in `R6`.
-          * `solverId` (ID of the player's solver) in `R7`.
-          * `hashLogs` (hash of the game logs) in `R8`.
-          * `scoreList` (collection of scores, one of which is the true one) in `R9`.
-      * This `ParticipationBox` becomes eligible to be processed in the game resolution if it meets the conditions of the `participation.es` contract, mainly being spent as part of a valid game resolution.
+The global state is encoded in register `R4` of the Main Game Box.
 
-  * **Action 1: Game Resolution (`action1_isValidResolution` logic in `game.es` code)**
-    Once the `deadline` is reached (`HEIGHT >= deadline`), the game creator can execute this action to spend the original `GameBox` and include valid `ParticipationBox`es as inputs (`INPUTS`) in the transaction. This action allows:
+| `R4` Value | State | Description |
+| :--- | :--- | :--- |
+| `0` | **ACTIVE** | Game is active, accepting participations. Secret `S` is hidden. |
+| `1` | **RESOLUTION** | Secret `S` revealed. Scores are verifiable. Resolution phase. |
+| `2` | **CANCELLED_DRAINING** | Secret `S` revealed prematurely. Game is invalid. Creator punished. |
 
-      * **Revealing the secret `S`**: The creator includes it in register `R4` of their own output box (`OUTPUTS(1).R4[Coll[Byte]].get`). The contract verifies that `blake2b256(revealedS_fromOutput) == hashS_in_self` (the original `hashS` from the `GameBox`).
-      * **Validating each candidate `ParticipationBox` (`pBox`)**:
-          * Must have the correct `gameNftId` in its `R6`.
-          * Must have a value (`pBox.value`) greater than or equal to `participationFee`.
-          * The hash of its protection script (`pBox.propositionBytes`) must match `expectedParticipationScriptHash` stored in the `GameBox`.
-          * Must have all registers R4-R9 defined.
-      * **Verifying the score of each valid `ParticipationBox`**:
-          * For each `pBox`, the contract iterates over its `pBoxScoreList` (from `R9`).
-          * For each `scoreAttempt` in the list, it calculates `testCommitment = blake2b256(pBoxSolverId ++ longToByteArray(scoreAttempt) ++ pBoxHashLogs ++ revealedS_fromOutput)`.
-          * If `testCommitment == pBoxCommitment` (the `commitmentC` of the `pBox` in `R5`), then `scoreAttempt` is the `actualScoreForThisPBox`.
-      * **Determining the winner**:
-          * The `prizePool` is accumulated by summing the `pBox.value` of all validated `ParticipationBox`es with verified scores.
-          * The player (`pBoxPlayerPK`) with the highest `actualScoreForThisPBox` is identified.
-          * Ties favor the first `ParticipationBox` processed in the transaction that achieves the maximum score.
-      * **Distributing the funds**:
-          * If there is a winner, `creatorCommissionAmount = finalTotalPrizePool * commissionPercentage / 100` is calculated.
-          * `finalWinnerPrize = finalTotalPrizePool - creatorCommissionAmount`.
-          * **Winner's Output (`OUTPUTS(0)`):** Receives at least `finalWinnerPrize`, is protected by the winner's public key (`winnerPK`), and contains the `gameNftId`.
-          * **Creator's Output (`OUTPUTS(1)`):** Receives at least `creatorCommissionAmount + creatorStake`, is protected by the creator's public key (`gameCreatorP2PKPropBytes`), and does not contain the `gameNftId`.
+### 6.3. State 0 — ACTIVE
 
-> ⚖️ For the MVP, the incentive structure focuses on the creator executing Action 1 (Resolution) to get their commission and `creatorStake`. Action 2 (Cancellation for Early Secret Revelation, variable `action2_isValidCancellation` in `game.es`), which introduces stronger disincentives against early secret revelation or game abandonment by the creator, is designed but commented out in the current code and is considered for future development (see Section 10.1.1).
+The game is open. The secret `S` must remain private.
+*   **Phases (Off-chain/UI)**:
+    *   **Ceremony Phase** (First ~720 blocks / 24h): The seed is renewable. Intended for setup and initial testing.
+    *   **Playing Phase**: The seed is immutable. Players compete.
+*   **Action: Stuck Game Rescue (Grace Period)**: If the game is abandoned (`HEIGHT > gameDeadline + GRACE_PERIOD`), players can spend their Participation Box to recover their funds entirely. `GRACE_PERIOD` is typically ~720 blocks (24h). This is the only legitimate exit from ACTIVE for a participation.
 
-More details on the specific implementation of the contracts can be found in [contracts/README.md](contracts/README.md).
+### 6.4. State 1 — RESOLUTION
+
+The creator has revealed the secret `S`, moving the game to this state. Scores are now verifiable.
+*   **Action: Invalidation of Candidate Participation**: If a Participation Box has an invalid commitment (fraudulent score), it can be consumed by the protocol if a **majority of the nominated judges** vote to invalidate it. This removes the fraudulent participation from the prize pool.
+*   **Action: Include Omitted Participation**: If the creator failed to include a valid participation with a higher score in the resolution, any user can perform this action to force its inclusion and update the winner candidate, ensuring censorship resistance.
+*   **Action: Normal Game Finalization**: Once `HEIGHT >= resolutionDeadline`, the Main Game Box and valid Participation Boxes are spent together. Funds are distributed to the winner and the creator (commission).
+
+### 6.5. State 2 — CANCELLED_DRAINING
+
+This state is reached if the secret `S` is revealed prematurely (while the game should be ACTIVE). The game is considered invalid.
+*   **Creator Punishment**: The creator's stake is drained progressively (**1/5 every 30 blocks**), creating economic friction and public visibility of the failure. Anyone can execute this drainage action.
+*   **Action: Cancellation Refund**: Players can immediately spend their Participation Boxes to get a full refund.
+
+More details on the specific implementation of the contracts can be found in [STATES.md](STATES.md).
 
 -----
 
-## 8. MVP Failure Points and Known Weaknesses
+## 8. Known Limitations and Trust Model
 
-The following describes potential failure points, weaknesses, or areas that rely on trust in the MVP version of Game of Prompts:
+The following describes potential failure points, weaknesses, or areas that rely on trust in the current version of Game of Prompts:
 
   * **Insufficient Game Variability (Low Scenario Dispersion Coefficient - CDE):**
 
@@ -320,26 +302,20 @@ The following describes potential failure points, weaknesses, or areas that rely
           * Post-victory transparency: The winner (whether the creator or any other player) must share their solver and logs. If the community detects that the winning solver is trivial, exploits a non-obvious game feature, or the logs seem anomalous, it could be flagged as an unfair game.
           * The creator, if participating, must do so with a `solverId` and a `ParticipationBox` like any other player. Their `commitmentC` would be subject to the same on-chain validation.
           * The player receives the `commitmentC` from the `game-service` *before* the revelation of `S`. The `game.es` contract validates this `commitmentC` objectively once `S` is revealed. The main risk lies in trusting that the `game-service` honestly generated the `commitmentC` for the score obtained by the player with the `S` that will be universally revealed.
-      * **Impact:** This is an attack vector that depends on the honesty of the `game-service`. In the MVP, detection relies on *post-hoc* community auditing and the creator's reputation.
-      * **Proposed Solution (Future):** A judge system (see Section 10.2.2) would be necessary for more formal adjudication in suspicious cases.
+      * **Impact:** This is an attack vector that depends on the honesty of the `game-service`. In the current version, detection relies on *post-hoc* community auditing and the creator's reputation.
+      * **Solution:** The **Judge System** allows for formal adjudication in suspicious cases.
 
   * **Selection (Censorship) of Participations by the Creator in the Resolution:**
 
       * **Problem:** In Action 1 (Game Resolution), it is the creator who builds the transaction. This gives them the ability to choose which `ParticipationBox`es to include as inputs. A malicious creator could omit (censor) `ParticipationBox`es from players with high scores (they know `S` and could verify `commitmentC`s off-chain before building the transaction) to favor another participation (possibly their own or an ally's) with a lower score. The on-chain script can only determine the winner among the participations presented to it.
-      * **Mitigation in MVP:** There is no on-chain mechanism in the MVP to prevent this directly. It relies on:
-          * The creator's reputation and honesty.
-          * Possible public observation that known participations were not included (although this is difficult to coordinate without a centralized record of all candidate `ParticipationBox`es outside of exploring the chain itself).
-      * **Impact:** This is a significant failure point in terms of fair play if the creator is malicious.
-      * **Proposed Solution (Future):** See Section 10.1.2 for "Proof of Omitted Participation."
+      * **Mitigation:** The protocol implements an **"Include Omitted Participation"** action (see Section 6.4). During the Resolution state, anyone can submit a valid `ParticipationBox` that was omitted. If this participation has a higher score than the current candidate, the contract updates the winner candidate. This effectively prevents censorship by the creator.
+      * **Impact:** Significantly reduces the risk of censorship, as long as there is at least one honest actor monitoring the chain during the resolution phase.
 
   * **Non-Sharing of Proofs by the Winner for Public Verification:**
 
       * **Problem:** In the MVP (as described in Section 5, "Winner Validation"), the winner is expected to share their solver-service, logs, scenario seed, etc., in good faith to allow community verification. However, since the prize is delivered immediately after on-chain resolution, a winner might decide not to share this information, preventing full validation of their victory and undermining trust in the fairness of the specific game.
-      * **Mitigation in MVP:** Currently, this aspect relies on the winner's good faith and possible social pressure from the community. There is no on-chain mechanism in the MVP to force this sharing or withhold the prize.
-      * **Impact:** Makes it difficult to detect subtle cheating or the use of non-obvious exploits that only analysis of the solver and detailed logs could reveal. This can create doubts about the legitimacy of some victories.
-      * **Considerations for Future Solutions:**
-          * One proposal is for the creator to verify the "availability" of this data (perhaps through a prior on-chain commitment by the player to reveal it) before including a participation in the resolution transaction. However, granting the creator this unilateral omission capability could exacerbate the censorship problem (mentioned in the previous point) and would need to be designed very carefully to be compatible with anti-censorship mechanisms.
-          * More robust alternatives could include an escrow system for the prize, which is only released after sharing and validation of the source data (the `solverId` and `hashLogs` already present in the `ParticipationBox` would allow verification of the authenticity of the shared solver service and logs). For complete validation, especially if the scenario seed is crucial and not covered by `hashLogs`, including a commitment to the seed in the `ParticipationBox` could be considered in future contract versions. These ideas align with proposals for a "Judge System" or improvements to "Advanced Contract Mechanisms" (see Section 10).
+      * **Mitigation:** The **Judge System** allows nominated judges to verify the validity of the win. If the winner refuses to share proofs or if the proofs are invalid (e.g., logs don't match), the judges can vote to invalidate the participation.
+      * **Impact:** Increases trust, but relies on the honesty and diligence of the nominated judges.
 
 -----
 
@@ -402,28 +378,13 @@ This section groups elements that, although part of the complete vision of Game 
 
 These are improvements focused on strengthening the robustness and fairness of the main gameplay flow.
 
-  * **10.1.1. Action 2 of the `game.es` Contract: Penalty for Early Secret Revelation**
-      * This action (defined in the `action2_isValidCancellation` variable) is designed to be activated if the secret **`S`** is publicly revealed *before* the game's **`deadline`** expires.
-      * It allows any party, not just players, to initiate the penalty process. The executor can claim a fraction of the creator's stake (`1/STAKE_DENOMINATOR`) every set number of blocks (`COOLDOWN_IN_BLOCKS`).
-      * Once **`S`** is revealed in the first claim, it becomes public on-chain. This prevents the creator from using this action as a controlled withdrawal method, as anyone can then compete to claim the subsequent portions of the stake.
-      * In turn, participating players can claim a refund of their `participationFee`. To do so, they execute the `spentInValidGameCancellation` action in the `participation.es` contract, which verifies that the secret has already been revealed in the main game contract (by providing it as a `dataInput`).
-      * **Primary Incentive:** This mechanism strongly discourages the creator from prematurely revealing **`S`** or abandoning the game, as they risk losing a significant portion or all of their **`creatorStake`**.
-
-  * **10.1.2. Proof of Omitted Participation (to counteract Creator Censorship)**
-
-      * **Problem (Reiteration of point 8):** In Action 1 (Resolution), the creator chooses which `ParticipationBox`es to include as inputs, potentially omitting participations with high scores.
-      * **Possible Future Improvement:** Implement a post-resolution mechanism ("Proof of Omitted Participation") where, after the revelation of `S`, a brief dispute period opens to present valid `ParticipationBox`es (created before the `deadline` and with the correct `gameNftId`) not included by the creator in the resolution transaction. If one of these omitted `ParticipationBox`es had a score (verifiable on-chain with the now public `S`) that would change the game's outcome (i.e., be higher than the declared winner's), a penalty could be activated on the `creatorStake`. Whoever demonstrates the omission and the higher score could receive a reward from this `creatorStake`. This system could be verified on-chain without needing judges once `S` is public.
-
-  * **10.1.3. Advanced Solver Obfuscation (against malicious Celaut nodes)**
-
+  * **10.1.1. Advanced Solver Obfuscation (against malicious Celaut nodes)**
       * To prevent a malicious Celaut node controlled by the player from deceiving the game-service (beyond network isolation checks), the game-service could implement techniques like generating N instances of possible solvers and obfuscating the real solver by encapsulating it within another service to modify its hash before launching it.
 
-  * **10.1.4. Creator Reputation Proof**
-
+  * **10.1.3. Creator Reputation Proof**
       * Using an on-chain reputation system for game creators could help players choose games from trustworthy designers with a good track record of CDE and fair resolutions. For example, systems like those proposed at [https://github.com/reputation-systems](https://github.com/reputation-systems), which Celaut itself already uses, could be explored.
 
-  * **10.1.5. Definition and Verification of Execution Requirements for Solvers**
-
+  * **10.1.4. Definition and Verification of Execution Requirements for Solvers**
       * **Concept:** Allow game creators to specify restrictions on Solver Services that can participate. These restrictions could include computational resource limits (CPU, RAM, execution time per move), specific hardware/software architectures, or a list of allowed or prohibited APIs/dependencies.
       * **Mechanism:** Celaut, as an execution platform, allows the Game Service to verify the architecture, resources, etc., of the Solver Service it is about to execute simply by reading its service specification (in this case, the .celaut.bee file).
       * **Benefit:**
@@ -438,11 +399,6 @@ These ideas aim to enrich the gaming experience and platform capabilities.
   * **10.2.1. Advanced Game Types: Subjective Games**
 
       * Evaluating games based on storytelling, creativity, style, or humor would likely require the use of LLMs within the game-service for scoring. This would add complexity in validating results and would probably require a judge system for disputed cases.
-
-  * **10.2.2. Judge System**
-
-      * To resolve disputes (e.g., about the validity of a game in a subjective game, or in case of suspected cheating by the creator or a player that cannot be algorithmically resolved on-chain), a judge system could be implemented.
-      * Judges could have the ability to review logs, solver behavior, and the game-service in a specific scenario to make binding decisions. This system could have on-chain components (staking for judges, dispute contracts) and off-chain components (deliberation). This system would be particularly relevant for "Winner Validation (Post-Resolution)" in cases where good faith is not sufficient.
 
   * **10.2.3. Poker Incentive**
 
@@ -473,7 +429,7 @@ These are ideas for expanding the scope and variety of competitions on GoP.
               * **Not mandatory to "submit a game" (Solver):** Competition would not focus on evaluating an autonomous solver, but on direct interaction. Showing a "solver" (if any tool or script was used to interact) could be optional. To incentivize transparency and community learning in certain contexts, not sharing the method or "lightweight solver" could incur a penalty in the final score, if the game defines it so.
               * **New Game Types:** Enables games like "first to guess wins," useful for riddles (perhaps interacting with an LLM within the game-service), real-time puzzle solving, etc.
           * **Broadening the User Base:** By reducing or eliminating the barrier of having to program a complete Celaut service as a solver, the platform would open up to a much larger number of users, including those who are not programmers but are good strategists or problem solvers.
-          * **Secret Management:** Similar to pay-per-attempt, the game-service could self-manage the revelation of the main game's secret `S` if the victory condition is objective and verifiable by the service itself. For games of a more subjective nature using this direct interaction mode, a "Judge System" (described in Section 10.2.2) would still be relevant for final validation.
+          * **Secret Management:** Similar to pay-per-attempt, the game-service could self-manage the revelation of the main game's secret `S` if the victory condition is objective and verifiable by the service itself. For games of a more subjective nature using this direct interaction mode, the **Judge System** would still be relevant for final validation.
 
     These capabilities would transform Game of Prompts from a purely "bot-vs-bot" platform to a more diverse ecosystem for competition and problem-solving.
 
@@ -487,14 +443,14 @@ These are ideas for expanding the scope and variety of competitions on GoP.
       * **Participation Flow on Satellite Chain:**
         1.  Players on the external chain would interact with the satellite contract to register their participation, paying the fee in the local currency. Their participation details (similar to `commitmentC`, `solverId`, etc., adapted if necessary) would be stored or referenced in this satellite contract.
         2.  The satellite contract would accumulate participation fees.
-      * **Resolution and Synchronization with Ergo (Modified GameBox Action 1):**
+      * **Resolution and Synchronization with Ergo (Modified GameBox Resolution):**
         1.  Once the `deadline` on the satellite chain is reached (or just before the main `deadline` on Ergo), a function in the satellite contract would be activated. This function's sole purpose would be to securely transfer all accumulated funds and participation data (possibly `commitmentC`s and `playerPKs`) via Rosen Bridge to a designated box on Ergo. This "satellite aggregation box" on Ergo would be controlled by or readable by the main `gameBox` contract. It is crucial that Rosen Bridge allows the reliable transfer of this data (registers or structured data); for this, **we must be able to perform P2HS transfers instead of P2PK**.
-        2.  The **Action 1** transaction (Game Resolution) in the main `gameBox` on Ergo would be modified from the current version. In addition to `INPUTS` from native Ergo `ParticipationBox`es, it would now also take these "satellite aggregation boxes" (one for each supported external chain) as inputs.
+        2.  The **Resolution** transaction in the main `gameBox` on Ergo would be modified from the current version. In addition to `INPUTS` from native Ergo `ParticipationBox`es, it would now also take these "satellite aggregation boxes" (one for each supported external chain) as inputs.
         3.  The `gameBox` script would process participations from all chains (both native Ergo and those from satellites via Rosen Bridge) to determine the global winner. The `commitmentC` validation logic with the secret `S` (revealed in `OUTPUTS(1).R4` of the `gameBox`) would apply universally.
         4.  Prize distribution would occur on Ergo. If winners are from external chains, they could claim their prizes in ERG, or Rosen Bridge could facilitate the transfer of value back to the winner's origin chain.
         5.  Rosen Bridge fees would be distributed as an aggregate in the participation fee cost for participants from the satellite for the way in, and, if applicable, from the winner for the way out.
       * **Security and Restrictions:**
           * The satellite contract on the external chain would be designed to be very simple: collect participations and funds, and only allow them to be spent (after the satellite's `deadline`) to a specific Rosen Bridge address destined for the predefined aggregation box on Ergo.
-          * The aggregation box on Ergo, in turn, could only be spent as an input in Action 1 of the original `gameBox`.
+          * The aggregation box on Ergo, in turn, could only be spent as an input in the Resolution transaction of the original `gameBox`.
 
     > This approach would allow Game of Prompts to become a truly interoperable competition platform, leveraging Ergo's security and capabilities for core game logic and settlement, while expanding its reach to a broader blockchain ecosystem.
