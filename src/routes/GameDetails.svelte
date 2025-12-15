@@ -85,7 +85,6 @@
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
     let currentHeight: number = 0;
-    const GRACE_PERIOD_IN_BLOCKS = 720;
 
     // UI State
     let transactionId: string | null = null;
@@ -179,6 +178,8 @@
             cleanupTimers();
             return;
         }
+
+        currentHeight = await ergo.get_current_height();
 
         isSubmitting = false;
         transactionId = null;
@@ -1684,30 +1685,42 @@
                                                 period).
                                             </li>
                                         {:else if game.status === "Resolution"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Judges:</span
-                                                > Validate or invalidate the candidate.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Creator:</span
-                                                > Propose a winner (if not done).
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Anyone:</span
-                                                > Finalize game (after deadline).
-                                            </li>
+                                            <div class="space-y-4">
+                                                
+                                                <div>
+                                                    <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                        Before judge period ends
+                                                    </h4>
+                                                    <ul class="space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
+                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Judges:</span>
+                                                            <span>Validate or invalidate the candidate.</span>
+                                                        </li>
+                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
+                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Anyone:</span>
+                                                            <span>Propose a new winner with valid commitment and higher score.</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+
+                                                <div>
+                                                    <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">
+                                                        When judge period ends
+                                                    </h4>
+                                                    <ul class="space-y-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900">
+                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
+                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Winner:</span>
+                                                            <span>Finalize game.</span>
+                                                        </li>
+                                                    </ul>
+                                                    <ul class="space-y-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900">
+                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
+                                                            <span>Or participants will be able to claim participation fees after the grace period.</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+
+                                            </div>
                                         {:else if game.status === "Finalized"}
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
