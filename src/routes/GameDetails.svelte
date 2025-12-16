@@ -1583,18 +1583,17 @@
                                 <p
                                     class="text-sm text-gray-500 dark:text-gray-400"
                                 >
-                                    {#if game.status === "Active"}
-                                        The game is live and accepting
-                                        participations.
+                                    {#if game.status === "Active" && openCeremony}
+                                        Seed ceremony is open. Colaborate to ensure a random seed.
+                                    {:else if game.status === "Active"}
+                                        The game is live and accepting participations.
                                     {:else if game.status === "Resolution"}
                                         The game has ended. The winner is being
                                         verified.
                                     {:else if game.status === "Finalized"}
-                                        The competition has ended and prizes
-                                        have been distributed.
+                                        The competition has ended and prizes have been distributed.
                                     {:else}
-                                        The game was cancelled after the
-                                        creator’s secret was compromised.
+                                        The game was cancelled after the creator’s secret was compromised.
                                     {/if}
                                 </p>
                             </div>
@@ -1617,7 +1616,28 @@
                                         What can happen?
                                     </h4>
                                     <ul class="space-y-2">
-                                        {#if game.status === "Active"}
+                                        {#if game.status === "Active" && openCeremony}
+                                           <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Anyone:</span
+                                                > Contribute to the random number
+                                                generation process (free) to ensure the game's seed is random.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Cancel the game by revealing the
+                                                secret and receive a portion of the
+                                                creator’s stake.
+                                            </li>
+                                        {:else if game.status === "Active"}
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
