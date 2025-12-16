@@ -76,6 +76,8 @@
     import Return from "./Return.svelte";
     import { Forum } from "forum-application";
 
+    const strictMode = false;
+
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
@@ -2020,7 +2022,7 @@
                                                 setupActionModal(
                                                     "submit_score",
                                                 )}
-                                            disabled={openCeremony}
+                                            disabled={strictMode && openCeremony}
                                             class="w-full bg-slate-500 hover:bg-slate-600 text-white"
                                         >
                                             <Edit class="mr-2 h-4 w-4" />Submit
