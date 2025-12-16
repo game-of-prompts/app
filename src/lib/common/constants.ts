@@ -17,7 +17,7 @@ export interface GameConstants {
 }
 
 const DevelopmentMode: GameConstants = {
-    JUDGE_PERIOD: 20,  // aprox 40 minutes para permitir agregar varias participaciones.
+    JUDGE_PERIOD: 5,
     CREATOR_OMISSION_NO_PENALTY_PERIOD: 5,
     MAX_SCORE_LIST: 10,
     DEV_COMMISSION_PERCENTAGE: 5,
