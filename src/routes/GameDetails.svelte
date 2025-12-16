@@ -1860,7 +1860,7 @@
                                                 <span class="text-green-500">
                                                     (validated)</span
                                                 >
-                                            {:else if game.status === "Resolution"}
+                                            {:else if game.status === "Resolution" && new Date().getTime() < targetDate}
                                                 <span class="text-yellow-500">
                                                     (pending)</span
                                                 >
