@@ -201,10 +201,10 @@ export async function end_game(
 
     // --- 6. Transacción ---
     const utxos = await ergo.get_utxos();
-    const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box))];
+    const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box)), ...utxos];
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
-        .from([...inputs, ...utxos])
+        .from(inputs)
         .to(outputs)
         .withDataFrom(dataInputs)
         .sendChangeTo(userAddress) 
