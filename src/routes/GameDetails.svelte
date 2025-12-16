@@ -1527,13 +1527,15 @@
                                 : 'border-gray-100'} flex items-center gap-3"
                         >
                             <div
-                                class="p-2 rounded-lg {game.status === 'Active'
-                                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                                    : game.status === 'Resolution'
-                                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                                      : game.status === 'Finalized'
-                                        ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400'
-                                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
+                                class="p-2 rounded-lg {game.status === 'Active' && openCeremony
+                                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : game.status === 'Active'
+                                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                        : game.status === 'Resolution'
+                                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                        : game.status === 'Finalized'
+                                            ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400'
+                                            : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
                             >
                                 {#if game.status === "Active"}
                                     <Sparkles class="w-5 h-5" />
@@ -1548,15 +1550,19 @@
                             <div>
                                 <h3
                                     class="text-lg font-bold flex items-center gap-2 {game.status ===
-                                    'Active'
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : game.status === 'Resolution'
-                                          ? 'text-amber-600 dark:text-amber-400'
-                                          : game.status === 'Finalized'
-                                            ? 'text-gray-600 dark:text-gray-400'
-                                            : 'text-red-600 dark:text-red-400'}"
+                                    'Active' && openCeremony
+                                        ? 'text-purple-600 dark:text-purple-400'
+                                        : game.status === 'Active'
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : game.status === 'Resolution'
+                                                ? 'text-amber-600 dark:text-amber-400'
+                                                : game.status === 'Finalized'
+                                                    ? 'text-gray-600 dark:text-gray-400'
+                                                    : 'text-red-600 dark:text-red-400'}"
                                 >
-                                    {#if game.status === "Active"}
+                                    {#if game.status === "Active" && openCeremony}
+                                        SEED CEREMONY
+                                    {:else if game.status === "Active"}
                                         ACTIVE STATE
                                     {:else if game.status === "Resolution"}
                                         RESOLUTION STATE
