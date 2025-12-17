@@ -76,7 +76,7 @@
     import Return from "./Return.svelte";
     import { Forum } from "forum-application";
 
-    const strictMode = false;
+    const strictMode = true;
 
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
@@ -109,11 +109,6 @@
     let isClaimingRefundFor: string | null = null;
     let claimRefundError: { [boxId: string]: string | null } = {};
     let claimRefundSuccessTxId: { [boxId: string]: string | null } = {};
-
-    // Abandoned Refund State
-    let isAbandonedRefundFor: string | null = null;
-    let abandonedRefundError: { [boxId: string]: string | null } = {};
-    let abandonedRefundSuccessTxId: { [boxId: string]: string | null } = {};
 
     // Reclaim after Grace Period State
     let isReclaimingGraceFor: string | null = null;
@@ -961,8 +956,8 @@
                                 >b.{game.status == "Active"
                                     ? game.deadlineBlock
                                     : game.status == "Resolution"
-                                    ? game.resolutionDeadline
-                                    : game.status == "Cancelled_Draining"
+                                      ? game.resolutionDeadline
+                                      : game.status == "Cancelled_Draining"
                                         ? game.unlockHeight
                                         : "N/A"}</a
                             >
@@ -1063,7 +1058,9 @@
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6"
                     >
                         <div
-                            class="prose prose-sm {$mode === 'dark' ? 'text-slate-300' : 'text-gray-800'} max-w-none mb-6 md:col-span-2 lg:col-span-3"
+                            class="prose prose-sm {$mode === 'dark'
+                                ? 'text-slate-300'
+                                : 'text-gray-800'} max-w-none mb-6 md:col-span-2 lg:col-span-3"
                         >
                             {@html marked.parse(
                                 game.content.description ||
@@ -1072,29 +1069,22 @@
                         </div>
 
                         <div class="form-group lg:col-span-2">
-                        
                             <span class="mb-3 block">Prize Distribution</span>
 
                             <div class="distribution-bar">
                                 <div
                                     class="bar-segment winner"
                                     style:width="{clampPct(winnerPct)}%"
-                                    title="Winner(s): {winnerPct.toFixed(
-                                        2,
-                                    )}%"
+                                    title="Winner(s): {winnerPct.toFixed(2)}%"
                                 ></div>
                                 <div
                                     class="bar-segment creator"
                                     style:width="{clampPct(creatorPct)}%"
-                                    title="Creator: {creatorPct.toFixed(
-                                        2,
-                                    )}%"
+                                    title="Creator: {creatorPct.toFixed(2)}%"
                                 ></div>
                                 <div
                                     class="bar-segment judges"
-                                    style:width="{clampPct(
-                                        judgesTotalPct,
-                                    )}%"
+                                    style:width="{clampPct(judgesTotalPct)}%"
                                     title="Judges Total: {judgesTotalPct.toFixed(
                                         2,
                                     )}%"
@@ -1136,9 +1126,7 @@
                                     >
                                 </div>
                                 <div class="legend-item">
-                                    <div
-                                        class="legend-color developers"
-                                    ></div>
+                                    <div class="legend-color developers"></div>
                                     <span
                                         >Protocol fee ({developersPct.toFixed(
                                             2,
@@ -1149,9 +1137,8 @@
 
                             {#if overAllocated > 0}
                                 <p class="text-xs mt-2 text-red-500">
-                                    Warning: Total commission exceeds 100%
-                                    by {overAllocated}%! The winner's prize
-                                    will be 0.
+                                    Warning: Total commission exceeds 100% by {overAllocated}%!
+                                    The winner's prize will be 0.
                                 </p>
                             {/if}
                         </div>
@@ -1366,18 +1353,6 @@
                         {:else}
                             <!-- STANDARD FLOW: Ceremony -> Active -> Resolution -> Finalized -->
 
-                            {#if game.status === "Active"}
-                            <!-- Line 0: Ceremony -> Active -->
-                            <div
-                                class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 -z-10 mx-4 transition-all duration-500 {!openCeremony
-                                    ? 'bg-blue-500'
-                                    : 'w-0'}"
-                                style="width: {!openCeremony
-                                    ? '50%'
-                                    : '0%'};"
-                            ></div>
-                            {/if}
-
                             <!-- Line 1: Active -> Resolution -->
                             <div
                                 class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 -z-10 mx-4 transition-all duration-500 {game.status !==
@@ -1399,33 +1374,6 @@
                                     ? '50%'
                                     : '0%'};"
                             ></div>
-
-                            {#if game.status === "Active"}
-                            <!-- Step 0: Ceremony -->
-                            <div class="flex flex-col items-center bg-transparent z-10 px-2">
-                                <div
-                                    class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                                    {openCeremony
-                                        ? 'bg-purple-500/15 text-purple-400 text-white shadow-lg scale-110'
-                                        : 'bg-purple-400 border-purple-400 text-white'}"
-                                >
-                                    {#if !openCeremony}
-                                        <Check class="w-6 h-6" />
-                                    {:else}
-                                        <span class="text-base font-bold">0</span>
-                                    {/if}
-                                </div>
-
-                                <span
-                                    class="mt-2 text-xs font-bold uppercase tracking-wider
-                                    {openCeremony
-                                        ? 'text-purple-600 dark:text-purple-400'
-                                        : 'text-purple-400 dark:text-purple-300'}"
-                                >
-                                    Ceremony
-                                </span>
-                            </div>
-                            {/if}
 
                             <!-- Step 1: Active -->
                             <div
@@ -1527,15 +1475,16 @@
                                 : 'border-gray-100'} flex items-center gap-3"
                         >
                             <div
-                                class="p-2 rounded-lg {game.status === 'Active' && openCeremony
+                                class="p-2 rounded-lg {game.status ===
+                                    'Active' && openCeremony
                                     ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
                                     : game.status === 'Active'
-                                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                                        : game.status === 'Resolution'
+                                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                      : game.status === 'Resolution'
                                         ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                                         : game.status === 'Finalized'
-                                            ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400'
-                                            : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
+                                          ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400'
+                                          : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}"
                             >
                                 {#if game.status === "Active"}
                                     <Sparkles class="w-5 h-5" />
@@ -1550,22 +1499,30 @@
                             <div>
                                 <h3
                                     class="text-lg font-bold flex items-center gap-2 {game.status ===
-                                    'Active' && openCeremony
+                                        'Active' && openCeremony
                                         ? 'text-purple-600 dark:text-purple-400'
                                         : game.status === 'Active'
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : game.status === 'Resolution'
-                                                ? 'text-amber-600 dark:text-amber-400'
-                                                : game.status === 'Finalized'
-                                                    ? 'text-gray-600 dark:text-gray-400'
-                                                    : 'text-red-600 dark:text-red-400'}"
+                                          ? 'text-green-600 dark:text-green-400'
+                                          : game.status === 'Resolution'
+                                            ? 'text-amber-600 dark:text-amber-400'
+                                            : game.status === 'Finalized'
+                                              ? 'text-gray-600 dark:text-gray-400'
+                                              : 'text-red-600 dark:text-red-400'}"
                                 >
                                     {#if game.status === "Active" && openCeremony}
                                         SEED CEREMONY
-                                    {:else if game.status === "Active"}
-                                        ACTIVE STATE
+                                    {:else if game.status === "Active" && !participationIsEnded}
+                                        PLAYING
+                                    {:else if game.status === "Active" && participationIsEnded}
+                                        AWAITING RESOLUTION
                                     {:else if game.status === "Resolution"}
-                                        RESOLUTION STATE
+                                        {@const isBeforeDeadline =
+                                            new Date().getTime() < targetDate}
+                                        {#if isBeforeDeadline}
+                                            JUDGE PERIOD
+                                        {:else}
+                                            READY TO FINALIZE
+                                        {/if}
                                     {:else if game.status === "Finalized"}
                                         FINALIZED STATE
                                     {:else}
@@ -1584,16 +1541,30 @@
                                     class="text-sm text-gray-500 dark:text-gray-400"
                                 >
                                     {#if game.status === "Active" && openCeremony}
-                                        Seed ceremony is open. Colaborate to ensure a random seed.
-                                    {:else if game.status === "Active"}
-                                        The game is live and accepting participations.
+                                        Seed ceremony is open. Collaborate to
+                                        ensure a random seed.
+                                    {:else if game.status === "Active" && !participationIsEnded}
+                                        The game is live. Solvers can submit
+                                        their scores until the deadline.
+                                    {:else if game.status === "Active" && participationIsEnded}
+                                        Time is up. The creator must now resolve
+                                        the game.
                                     {:else if game.status === "Resolution"}
-                                        The game has ended. The winner is being
-                                        verified.
+                                        {@const isBeforeDeadline =
+                                            new Date().getTime() < targetDate}
+                                        {#if isBeforeDeadline}
+                                            Judges are validating the winner.
+                                            New candidates can be proposed.
+                                        {:else}
+                                            Judge period ended. The game can be
+                                            finalized.
+                                        {/if}
                                     {:else if game.status === "Finalized"}
-                                        The competition has ended and prizes have been distributed.
+                                        The competition has ended and prizes
+                                        have been distributed.
                                     {:else}
-                                        The game was cancelled after the creator’s secret was compromised.
+                                        The game was cancelled after the
+                                        creator’s secret was compromised.
                                     {/if}
                                 </p>
                             </div>
@@ -1617,14 +1588,15 @@
                                     </h4>
                                     <ul class="space-y-2">
                                         {#if game.status === "Active" && openCeremony}
-                                           <li
+                                            <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
-                                                >Anyone:</span
+                                                    >Anyone:</span
                                                 > Contribute to the random number
-                                                generation process (free) to ensure the game's seed is random.
+                                                generation process (free) to ensure
+                                                the game's seed is random.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -1638,81 +1610,136 @@
                                                 creator’s stake.
                                             </li>
                                         {:else if game.status === "Active"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Players:</span
-                                                > Join the game and submit scores.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Creator:</span
+                                            {#if openCeremony}
+                                                <!-- CEREMONY PHASE -->
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                                 >
-                                                Resolve the game by revealing the
-                                                secret once the time expires.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Anyone:</span
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Contribute to the random number
+                                                    generation process (free).
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                                 >
-                                                Cancel the game by revealing the
-                                                secret and receive a portion of the
-                                                creator’s stake.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Anyone:</span
-                                                > Rescue funds (if stuck after grace
-                                                period).
-                                            </li>
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Cancel the game (if secret leaked).
+                                                </li>
+                                            {:else if !participationIsEnded}
+                                                <!-- PLAYING PHASE -->
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Players:</span
+                                                    >
+                                                    Join the game and submit scores.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Cancel the game (if secret leaked).
+                                                </li>
+                                            {:else}
+                                                <!-- AWAITING RESOLUTION PHASE -->
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Creator:</span
+                                                    >
+                                                    Resolve the game by revealing
+                                                    the secret.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Cancel the game (if secret leaked).
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Rescue funds (if stuck after
+                                                    grace period).
+                                                </li>
+                                            {/if}
                                         {:else if game.status === "Resolution"}
-                                            <div class="space-y-4">
-                                                
-                                                <div>
-                                                    <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                        Before judge period ends
-                                                    </h4>
-                                                    <ul class="space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
-                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
-                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Judges:</span>
-                                                            <span>Validate or invalidate the candidate.</span>
-                                                        </li>
-                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
-                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Anyone:</span>
-                                                            <span>Propose a new winner with valid commitment and higher score.</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-
-                                                <div>
-                                                    <h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">
-                                                        When judge period ends
-                                                    </h4>
-                                                    <ul class="space-y-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900">
-                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
-                                                            <span class="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">Winner:</span>
-                                                            <span>Finalize game.</span>
-                                                        </li>
-                                                    </ul>
-                                                    <ul class="space-y-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900">
-                                                        <li class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300 pl-2">
-                                                            <span>Or participants will be able to claim participation fees after the grace period.</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-
-                                            </div>
+                                            {@const isBeforeDeadline =
+                                                new Date().getTime() <
+                                                targetDate}
+                                            {#if isBeforeDeadline}
+                                                <!-- JUDGE PERIOD -->
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Judges:</span
+                                                    >
+                                                    Validate or invalidate the candidate.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Propose a new winner (if higher
+                                                    score).
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Anyone:</span
+                                                    >
+                                                    Include omitted participations.
+                                                </li>
+                                            {:else}
+                                                <!-- POST-JUDGE PERIOD -->
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Winner/Resolver:</span
+                                                    >
+                                                    Finalize the game and distribute
+                                                    prizes.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                                >
+                                                    <span
+                                                        class="font-medium text-gray-900 dark:text-gray-100"
+                                                        >Participants:</span
+                                                    >
+                                                    Claim refunds (if grace period
+                                                    passes).
+                                                </li>
+                                            {/if}
                                         {:else if game.status === "Finalized"}
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -1756,35 +1783,89 @@
                                     </h4>
                                     <ul class="space-y-2">
                                         {#if game.status === "Active"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                            >
-                                                <span class="font-medium"
-                                                    >Verify scores:</span
-                                                > The secret S is hidden.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                            >
-                                                <span class="font-medium"
-                                                    >Distribute prizes:</span
-                                                > Funds are locked until resolution.
-                                            </li>
+                                            {#if openCeremony}
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Submit Score:</span
+                                                    >
+                                                    Wait for ceremony to end.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Resolve Game:</span
+                                                    >
+                                                    Cannot resolve during ceremony.
+                                                </li>
+                                            {:else if !participationIsEnded}
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Resolve Game:</span
+                                                    >
+                                                    Wait for deadline to expire.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Ceremony:</span
+                                                    >
+                                                    Ceremony is closed.
+                                                </li>
+                                            {:else}
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Submit Score:</span
+                                                    >
+                                                    Deadline has passed.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Ceremony:</span
+                                                    >
+                                                    Ceremony is closed.
+                                                </li>
+                                            {/if}
                                         {:else if game.status === "Resolution"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                            >
-                                                <span class="font-medium"
-                                                    >New players:</span
-                                                > Participation is closed.
-                                            </li>
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                            >
-                                                <span class="font-medium"
-                                                    >Change secret:</span
-                                                > The secret S is revealed and immutable.
-                                            </li>
+                                            {@const isBeforeDeadline =
+                                                new Date().getTime() <
+                                                targetDate}
+                                            {#if isBeforeDeadline}
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Finalize Game:</span
+                                                    >
+                                                    Wait for judge period to end.
+                                                </li>
+                                            {:else}
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Invalidate Winner:</span
+                                                    >
+                                                    Judge period has ended.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
+                                                        >Propose Winner:</span
+                                                    >
+                                                    Judge period has ended.
+                                                </li>
+                                            {/if}
                                         {:else if game.status === "Finalized"}
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
@@ -1977,56 +2058,56 @@
                 </div>
 
                 {#if !isGameEnded(game)}
-                <div class="col-span-1 lg:col-span-2">
-                    <div
-                        class="actions-section mt-8 pt-8 border-t {$mode ===
-                        'dark'
-                            ? 'border-slate-700'
-                            : 'border-gray-200'}"
-                    >
-                        <h2 class="text-2xl font-semibold mb-6">
-                            Available Actions
-                        </h2>
-                        <div class="space-y-4">
-                            {#if $connected}
-                                {#if game.status === "Active"}
-                                    <div class="action-item">
-                                        <Button
-                                            on:click={() =>
-                                                setupActionModal(
-                                                    "open_ceremony",
-                                                )}
-                                            disabled={!openCeremony}
-                                            class="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                                        >
-                                            <!-- svelte-ignore missing-declaration -->
-                                            <Sparkles class="mr-2 h-4 w-4" /> Add
-                                            Seed Randomness
-                                        </Button>
-                                        <p
-                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                        >
-                                            {#if openCeremony}
-                                                Add entropy to the game seed.
-                                                Available because the ceremony
-                                                period is open.
-                                            {:else}
-                                                Adding randomness is no longer
-                                                available (ceremony period
-                                                ended).
-                                            {/if}
-                                        </p>
-                                    </div>
-                                {/if}
+                    <div class="col-span-1 lg:col-span-2">
+                        <div
+                            class="actions-section mt-8 pt-8 border-t {$mode ===
+                            'dark'
+                                ? 'border-slate-700'
+                                : 'border-gray-200'}"
+                        >
+                            <h2 class="text-2xl font-semibold mb-6">
+                                Available Actions
+                            </h2>
+                            <div class="space-y-4">
+                                {#if $connected}
+                                    {#if game.status === "Active"}
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "open_ceremony",
+                                                    )}
+                                                disabled={!openCeremony}
+                                                class="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                            >
+                                                <!-- svelte-ignore missing-declaration -->
+                                                <Sparkles
+                                                    class="mr-2 h-4 w-4"
+                                                /> Add Seed Randomness
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                {#if openCeremony}
+                                                    Add entropy to the game
+                                                    seed. Available because the
+                                                    ceremony period is open.
+                                                {:else}
+                                                    Adding randomness is no
+                                                    longer available (ceremony
+                                                    period ended).
+                                                {/if}
+                                            </p>
+                                        </div>
 
-                                {#if game.status === "Active" && !participationIsEnded}
-                                    {#if isNominatedJudge && !isJudge}
                                         <div class="action-item">
                                             <Button
                                                 on:click={() =>
                                                     setupActionModal(
                                                         "accept_judge_nomination",
                                                     )}
+                                                disabled={!isNominatedJudge ||
+                                                    isJudge}
                                                 class="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                             >
                                                 <Gavel class="mr-2 h-4 w-4" /> Accept
@@ -2035,85 +2116,102 @@
                                             <p
                                                 class="text-xs mt-1 text-gray-500 dark:text-gray-400"
                                             >
-                                                You are nominated as a judge.
-                                                Accept to participate in the
-                                                resolution process.
+                                                {#if !isNominatedJudge}
+                                                    You are not nominated as a
+                                                    judge.
+                                                {:else if isJudge}
+                                                    You are already a judge.
+                                                {:else}
+                                                    You are nominated as a
+                                                    judge. Accept to participate
+                                                    in the resolution process.
+                                                {/if}
+                                            </p>
+                                        </div>
+
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "submit_score",
+                                                    )}
+                                                disabled={participationIsEnded ||
+                                                    (strictMode &&
+                                                        openCeremony)}
+                                                class="w-full bg-slate-500 hover:bg-slate-600 text-white"
+                                            >
+                                                <Edit
+                                                    class="mr-2 h-4 w-4"
+                                                />Submit My Score
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                Submit your solution and score.
+                                                {#if strictMode && openCeremony}
+                                                    Disabled because the
+                                                    ceremony period is open.
+                                                {:else if participationIsEnded}
+                                                    Disabled because the
+                                                    deadline has passed.
+                                                {/if}
+                                            </p>
+                                        </div>
+
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "cancel_game",
+                                                    )}
+                                                variant="destructive"
+                                                class="w-full bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                <XCircle
+                                                    class="mr-2 h-4 w-4"
+                                                />Cancel Competition
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                Cancel the game if the secret
+                                                has been revealed prematurely.
+                                            </p>
+                                        </div>
+
+                                        <div class="action-item">
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "resolve_game",
+                                                    )}
+                                                disabled={!participationIsEnded}
+                                                class="w-full bg-slate-600 hover:bg-slate-700 text-white"
+                                            >
+                                                <CheckSquare
+                                                    class="mr-2 h-4 w-4"
+                                                />Resolve Competition
+                                            </Button>
+                                            <p
+                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                            >
+                                                {#if participationIsEnded}
+                                                    The participation period has
+                                                    ended. The creator can now
+                                                    resolve the game and declare
+                                                    a winner.
+                                                {:else}
+                                                    Available after the
+                                                    participation deadline.
+                                                {/if}
                                             </p>
                                         </div>
                                     {/if}
 
-                                    <div class="action-item">
-                                        <Button
-                                            on:click={() =>
-                                                setupActionModal(
-                                                    "submit_score",
-                                                )}
-                                            disabled={strictMode && openCeremony}
-                                            class="w-full bg-slate-500 hover:bg-slate-600 text-white"
-                                        >
-                                            <Edit class="mr-2 h-4 w-4" />Submit
-                                            My Score
-                                        </Button>
-                                        <p
-                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                        >
-                                            Submit your solution and score.
-                                            {#if openCeremony}
-                                                Disabled because the ceremony
-                                                period is open.
-                                            {/if}
-                                        </p>
-                                    </div>
+                                    {#if game.status === "Resolution"}
+                                        {@const isBeforeDeadline =
+                                            new Date().getTime() < targetDate}
 
-                                    <div class="action-item">
-                                        <Button
-                                            on:click={() =>
-                                                setupActionModal("cancel_game")}
-                                            variant="destructive"
-                                            class="w-full bg-red-600 hover:bg-red-700 text-white"
-                                        >
-                                            <XCircle
-                                                class="mr-2 h-4 w-4"
-                                            />Cancel Competition
-                                        </Button>
-                                        <p
-                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                        >
-                                            Cancel the game if the secret has
-                                            been revealed prematurely.
-                                        </p>
-                                    </div>
-                                {/if}
-
-                                {#if game.status === "Active" && participationIsEnded}
-                                    <div class="action-item">
-                                        <Button
-                                            on:click={() =>
-                                                setupActionModal(
-                                                    "resolve_game",
-                                                )}
-                                            class="w-full bg-slate-600 hover:bg-slate-700 text-white"
-                                        >
-                                            <CheckSquare
-                                                class="mr-2 h-4 w-4"
-                                            />Resolve Competition
-                                        </Button>
-                                        <p
-                                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                        >
-                                            The participation period has ended.
-                                            The creator can now resolve the game
-                                            and declare a winner.
-                                        </p>
-                                    </div>
-                                {/if}
-
-                                {#if game.status === "Resolution"}
-                                    
-                                    {@const isBeforeDeadline =
-                                        new Date().getTime() < targetDate}
-
-                                    {#if isBeforeDeadline}
                                         <div class="action-item">
                                             <Button
                                                 on:click={() =>
@@ -2121,6 +2219,7 @@
                                                         "include_omitted",
                                                     )}
                                                 variant="outline"
+                                                disabled={!isBeforeDeadline}
                                                 class="w-full bg-gray-600 hover:bg-gray-700 text-white"
                                                 title="Anyone can execute this action to claim the resolver's commission."
                                             >
@@ -2133,6 +2232,10 @@
                                                 If a valid participation was
                                                 omitted by the creator, you can
                                                 include it now.
+                                                {#if !isBeforeDeadline}
+                                                    Disabled because judge
+                                                    period has ended.
+                                                {/if}
                                             </p>
                                         </div>
 
@@ -2142,7 +2245,8 @@
                                                     setupActionModal(
                                                         "invalidate_winner",
                                                     )}
-                                                disabled={!isJudge}
+                                                disabled={!isJudge ||
+                                                    !isBeforeDeadline}
                                                 variant="destructive"
                                                 class="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
                                             >
@@ -2160,17 +2264,20 @@
                                                     Only judges can invalidate
                                                     the winner.
                                                 {/if}
+                                                {#if !isBeforeDeadline}
+                                                    Disabled because judge
+                                                    period has ended.
+                                                {/if}
                                             </p>
                                         </div>
-                                    {:else}
+
                                         <div class="action-item">
                                             <Button
                                                 on:click={() =>
                                                     setupActionModal(
                                                         "end_game",
                                                     )}
-                                                disabled={isBeforeDeadline &&
-                                                    isResolver}
+                                                disabled={isBeforeDeadline}
                                                 class="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                             >
                                                 <Trophy class="mr-2 h-4 w-4" /> End
@@ -2182,65 +2289,68 @@
                                                 The resolution period has ended.
                                                 Finalize the game to distribute
                                                 prizes.
-                                            </p>
-                                        </div>
-                                    {/if}
-                                {/if}
-
-                                {#if iGameDrainingStaking(game)}
-                                    {#await isGameDrainingAllowed(game) then isAllowed}
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "drain_stake",
-                                                    )}
-                                                disabled={!isAllowed}
-                                                class="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                                            >
-                                                <Trophy
-                                                    class="mr-2 h-4 w-4"
-                                                />Drain Creator Stake
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                {#if isAllowed}
-                                                    The game was cancelled. You
-                                                    can drain the creator's
-                                                    stake.
-                                                {:else}
-                                                    Draining stake is not yet
-                                                    available.
+                                                {#if isBeforeDeadline}
+                                                    Disabled because judge
+                                                    period is still active.
                                                 {/if}
                                             </p>
                                         </div>
-                                    {/await}
+                                    {/if}
+
+                                    {#if iGameDrainingStaking(game)}
+                                        {#await isGameDrainingAllowed(game) then isAllowed}
+                                            <div class="action-item">
+                                                <Button
+                                                    on:click={() =>
+                                                        setupActionModal(
+                                                            "drain_stake",
+                                                        )}
+                                                    disabled={!isAllowed}
+                                                    class="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                                                >
+                                                    <Trophy
+                                                        class="mr-2 h-4 w-4"
+                                                    />Drain Creator Stake
+                                                </Button>
+                                                <p
+                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    {#if isAllowed}
+                                                        The game was cancelled.
+                                                        You can drain the
+                                                        creator's stake.
+                                                    {:else}
+                                                        Draining stake is not
+                                                        yet available.
+                                                    {/if}
+                                                </p>
+                                            </div>
+                                        {/await}
+                                    {/if}
+                                {:else}
+                                    <p class="info-box">
+                                        Connect your wallet to interact with the
+                                        game competition.
+                                    </p>
                                 {/if}
-                            {:else}
-                                <p class="info-box">
-                                    Connect your wallet to interact with the
-                                    game competition.
-                                </p>
-                            {/if}
+                            </div>
                         </div>
                     </div>
-                </div>
                 {/if}
             </section>
 
             <section class="mb-12">
-                <div
-                    class="filter-menu"
-                >
+                <div class="filter-menu">
                     <button
-                        class="filter-badge" class:active={activeTab === 'participations'}
+                        class="filter-badge"
+                        class:active={activeTab === "participations"}
                         on:click={() => (activeTab = "participations")}
                     >
                         Participations ({participations.length})
                     </button>
                     <button
-                        class="filter-badge" class:active={activeTab === 'forum'}
+                        class="filter-badge"
+                        class:active={activeTab === "forum"}
                         on:click={() => (activeTab = "forum")}
                     >
                         Comments
@@ -2278,7 +2388,8 @@
                                     game.status === GameState.Active &&
                                     currentHeight >
                                         game.deadlineBlock +
-                                            game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
+                                            game.constants
+                                                .PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
                                 {@const canReclaimAfterGrace =
                                     isGracePeriodOver &&
                                     isCurrentUserParticipant &&
@@ -2616,7 +2727,8 @@
                                             </div>
                                         {/if}
 
-                                        {#if reclaimedAfterGrace}
+                                        {#if reclaimedAfterGrace && false}
+                                            <!-- TODO Needs to check exactly if the spent participation was reclaimed by the user. Maybe was spent during the End Competition action. -->
                                             <div
                                                 class="info-block sm:col-span-2 lg:col-span-3 mt-4 pt-4 border-t {$mode ===
                                                 'dark'
