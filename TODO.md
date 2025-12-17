@@ -80,8 +80,7 @@
 
 [x] Soporte multi-token
 
-
-[] authorizedToEnd game_resolution action 3.  Autorizar al siguiente a los 3 meses.
+[x] authorizedToEnd game_resolution action 3.  Autorizar al siguiente a los 3 meses.
 
 [] Incentivo a participación temprana.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
