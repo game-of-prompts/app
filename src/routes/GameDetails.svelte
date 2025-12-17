@@ -1047,10 +1047,7 @@
             class="game-container max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8"
         >
             <section
-                class="game-info-section mb-12 p-6 rounded-xl shadow {$mode ===
-                'dark'
-                    ? 'bg-dark'
-                    : 'bg-white'}"
+                class="game-info-section mb-12 p-6 rounded-xl shadow-lg bg-card border border-border/50"
             >
                 {#if game}
                     {@const creator = game.content.creatorReputationProof}
@@ -1272,10 +1269,7 @@
             </section>
 
             <section
-                class="game-status status-actions-panel grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow rounded-xl {$mode ===
-                'dark'
-                    ? 'bg-slate-800'
-                    : 'bg-white'}"
+                class="game-status status-actions-panel grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 p-6 md:p-8 shadow-lg rounded-xl bg-card border border-border/50"
             >
                 <div class="status-side">
                     <div class="flex items-center justify-between mb-6">
@@ -1772,9 +1766,7 @@
                                 </div>
 
                                 <!-- Restricted Actions -->
-                                <div
-                                    class="p-4 bg-gray-50 dark:bg-slate-800/50"
-                                >
+                                <div class="p-4">
                                     <h4
                                         class="text-sm font-semibold uppercase tracking-wider text-red-500 dark:text-red-400 mb-3 flex items-center"
                                     >
@@ -2416,12 +2408,10 @@
                                     p.reason === "cancelled"}
 
                                 <div
-                                    class="participation-card relative rounded-lg shadow-lg overflow-hidden border
+                                    class="participation-card relative rounded-lg shadow-lg overflow-hidden border bg-card
                             {isCurrentParticipationWinner
                                         ? 'winner-card border-green-500/50'
-                                        : $mode === 'dark'
-                                          ? 'bg-slate-800 border-slate-700'
-                                          : 'bg-white border-gray-200'}
+                                        : 'border-border/50'}
                             {isMalformed
                                         ? $mode === 'dark'
                                             ? 'bg-gray-700 border-gray-800 opacity-70'
