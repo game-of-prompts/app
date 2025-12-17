@@ -9,7 +9,7 @@ import {
     SAFE_MIN_BOX_VALUE
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
-import { bigintToLongByteArray, hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
+import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { resolve_participation_commitment, type GameActive, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
@@ -17,9 +17,10 @@ import { stringToBytes } from '@scure/base';
 import { GAME } from '../reputation/types';
 import { fetchJudges } from '../reputation/fetch';
 import { prependHexPrefix } from '$lib/utils';
+import { DefaultGameConstants } from '$lib/common/constants';
 
 // Constante del contrato game_resolution.es
-const JUDGE_PERIOD = 40;
+const JUDGE_PERIOD = DefaultGameConstants.JUDGE_PERIOD + 10;
 
 /**
  * Inicia la transición de un juego del estado Activo al de Resolución.

@@ -25,7 +25,7 @@ const DevelopmentMode: GameConstants = {
     COOLDOWN_IN_BLOCKS: 30,
     END_GAME_AUTH_GRACE_PERIOD: 5,
     PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: 5,
-    OPEN_CEREMONY_BLOCKS: 5,  // Suficiente para probar
+    OPEN_CEREMONY_BLOCKS: 1,  // Suficiente para probar
 
     PARTICIPATION_TYPE_ID: PARTICIPATION,
     ACCEPT_GAME_INVITATION_TYPE_ID: GAME,
@@ -40,7 +40,7 @@ const ProductionMode: GameConstants = {
     STAKE_DENOMINATOR: 5,
     COOLDOWN_IN_BLOCKS: 30,
     END_GAME_AUTH_GRACE_PERIOD: 64800,  // aprox. 90 days
-    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: 720,  // aprox. one day
+    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: 2160,  // aprox. three days
     OPEN_CEREMONY_BLOCKS: 720,  // aprox. one day
 
     PARTICIPATION_TYPE_ID: PARTICIPATION,

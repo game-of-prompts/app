@@ -309,8 +309,6 @@
       // Requerimos autorización explícita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),
       // si NO hay candidato, debe firmar el resolver.
       val authorizedToEnd: SigmaProp = {
-        
-        val isAfterResolutionDeadlineWithGracePeriod = sigmaProp(HEIGHT >= resolutionDeadline + END_GAME_AUTH_GRACE_PERIOD)
 
         val resolverAuth: SigmaProp = {
           val prefix = resolverPK.slice(0, 3)
@@ -349,10 +347,14 @@
         }
 
         if (winnerCandidateCommitment != Coll[Byte]()) {
-          // En caso de existir ganador, debe autorizar él.  Si pasa el periodo de gracia, tambien puede autorizarse el resolver.
-          winnerAuth || (isAfterResolutionDeadlineWithGracePeriod && resolverAuth)
+          // winnerAuth || resolverAuth  // Raises "Malformed transaction: Scripts of all transaction inputs should pass verification. b32bbdd8dd9b5d92894439d0a60c1ba6201d727b9dbd5f419786f510046ad02d: #0 => Success((false,1712))"
+          val isAfterResolutionDeadlineWithGracePeriod = HEIGHT >= resolutionDeadline + END_GAME_AUTH_GRACE_PERIOD
+          if (isAfterResolutionDeadlineWithGracePeriod) {
+            resolverAuth
+          } else {
+            winnerAuth
+          }
         } else {
-          // Si no hay ganador tan solo puede autorizar el resolver.
           resolverAuth
         }
       }
