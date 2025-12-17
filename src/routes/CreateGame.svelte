@@ -363,7 +363,11 @@
 
 <div class="create-game-container">
     <div class="hero-section text-center">
-        <h2 class="project-title">Create a New Competition</h2>
+        <h2
+            class="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent inline-block"
+        >
+            Create a New Competition
+        </h2>
         <p class="subtitle">Fill in the details to launch your game.</p>
     </div>
 
@@ -867,15 +871,9 @@
     .create-game-container {
         max-width: 900px;
         margin: 0 auto;
-        padding: 10px 15px 4rem;
+        padding: 2rem 15px 4rem;
     }
-    .project-title {
-        text-align: center;
-        font-size: 2.8rem;
-        font-family: "Russo One", sans-serif;
-        color: hsl(var(--foreground));
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
+
     .subtitle {
         font-size: 1.1rem;
         color: hsl(var(--muted-foreground));

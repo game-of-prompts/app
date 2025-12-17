@@ -591,7 +591,7 @@
 	.show-judge-container {
 		max-width: 1400px;
 		margin: 0 auto;
-		padding: 10px 15px 4rem;
+		padding: 2rem 15px 4rem;
 	}
 
 	/* --- Contenedor de contenido principal --- */
