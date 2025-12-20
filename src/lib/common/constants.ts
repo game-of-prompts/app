@@ -48,4 +48,4 @@ const ProductionMode: GameConstants = {
     DEV_SCRIPT: "0008cd025ac8ab183ffde36068603120b00acdf141b91fe4e0c0c6d562b5f24e1e2cc2d1"
 }
 
-export const DefaultGameConstants: GameConstants = DevelopmentMode;
+export const DefaultGameConstants: GameConstants = ProductionMode;
