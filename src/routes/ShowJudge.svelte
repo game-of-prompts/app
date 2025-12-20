@@ -124,10 +124,6 @@
 	}
 </script>
 
-{#if proof}
-	<Return on:back={handleViewDetails} />
-{/if}
-
 <div class="show-judge-container">
 	<div class="hero-section text-center mb-12">
 		<h2

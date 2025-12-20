@@ -841,7 +841,6 @@
 </script>
 
 {#if game}
-    <Return on:back={handleViewDetails} />
 
     <div
         class="game-detail-page min-h-screen {$mode === 'dark'

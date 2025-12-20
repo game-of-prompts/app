@@ -226,7 +226,6 @@
         window.history.pushState({}, "", url);
     }
 
-    $: ergInErgs = $balance ? ($balance / 1_000_000_000).toFixed(4) : 0;
     $: changeUrl($game_detail);
 </script>
 
