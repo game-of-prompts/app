@@ -11,7 +11,6 @@
 	import { judge_detail } from "$lib/common/store";
 	import GameCard from "./GameCard.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import Return from "./Return.svelte";
 	import { update_reputation_proof } from "$lib/ergo/reputation/submit";
 	import { Flame, Droplets, Coins, ChevronDown } from "lucide-svelte";
 	import { fetch_token_details, type TokenEIP4 } from "$lib/ergo/fetch";

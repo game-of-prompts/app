@@ -49,6 +49,8 @@
         Sparkles,
         Info,
         Trash2,
+        ChevronDown,
+        X,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -62,6 +64,16 @@
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
+
+    // SOURCE APPLICATION IMPORTS
+    import { FileSourceCreation, FileSourceCard } from "source-application";
+    import {
+        searchByHash,
+        fileSources,
+        invalidFileSources,
+        unavailableSources,
+    } from "source-application";
+
     import {
         getDisplayStake,
         getParticipationFee,
@@ -73,7 +85,6 @@
     } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type Judge } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
-    import Return from "./Return.svelte";
     import { Forum } from "forum-application";
 
     const strictMode = true;
@@ -136,9 +147,32 @@
         | "accept_judge_nomination"
         | "open_ceremony"
         | null = null;
-    let modalTitle = "";
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
+
+    // File Source Modal State
+    let showFileSourceModal = false;
+    let modalFileHash = "";
+    let modalFileType: "image" | "service" = "image";
+
+    function openFileSourceModal(hash: string, type: "image" | "service") {
+        modalFileHash = hash;
+        modalFileType = type;
+        showFileSourceModal = true;
+    }
+
+    function closeFileSourceModal() {
+        showFileSourceModal = false;
+        modalFileHash = "";
+    }
+
+    function handleFileSourceAdded(txId: string) {
+        console.log(`${modalFileType} source added:`, txId);
+        closeFileSourceModal();
+        if (modalFileHash) {
+            searchByHash(modalFileHash);
+        }
+    }
 
     // Form Inputs
     let commitmentC_input = "";
@@ -183,6 +217,9 @@
         try {
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
+
+            if (game.content.imageURL) searchByHash(game.content.imageURL);
+            if (game.content.serviceId) searchByHash(game.content.serviceId);
 
             if (game.participationTokenId) {
                 const tokenDetails = await fetch_token_details(
@@ -841,7 +878,6 @@
 </script>
 
 {#if game}
-
     <div
         class="game-detail-page min-h-screen {$mode === 'dark'
             ? 'bg-slate-900 text-gray-200'
@@ -1263,6 +1299,180 @@
                                 </div>
                             </details>
                         </div>
+
+                        <!-- FILE SOURCES SECTIONS -->
+                        {#if game.content.imageURL && game.content.imageURL.length === 64}
+                            <div
+                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
+                            >
+                                <details
+                                    class="group p-4 rounded-lg border {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700 bg-slate-800/50'
+                                        : 'border-gray-200 bg-gray-50'}"
+                                >
+                                    <summary
+                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <Sparkles
+                                                class="w-5 h-5 text-blue-500"
+                                            />
+                                            <span>Game Image Sources</span>
+                                        </div>
+                                        <span
+                                            class="transition group-open:rotate-180"
+                                        >
+                                            <ChevronDown class="w-5 h-5" />
+                                        </span>
+                                    </summary>
+
+                                    <div class="mt-4 space-y-4">
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            Community-verified download sources
+                                            for the game image file (hash: <span
+                                                class="font-mono text-xs"
+                                                >{game.content.imageURL.slice(
+                                                    0,
+                                                    16,
+                                                )}...</span
+                                            >)
+                                        </p>
+
+                                        {#if $reputation_proof}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.imageURL,
+                                                        "image",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                Add Download Source
+                                            </Button>
+                                        {:else}
+                                            <p
+                                                class="text-xs text-muted-foreground italic"
+                                            >
+                                                Create a reputation profile to
+                                                add or manage download sources
+                                            </p>
+                                        {/if}
+
+                                        <div
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
+                                        >
+                                            {#each $fileSources[game.content.imageURL]?.data || [] as source}
+                                                <FileSourceCard
+                                                    {source}
+                                                    invalidSources={$invalidFileSources[
+                                                        game.content.imageURL
+                                                    ]?.data || []}
+                                                    unavailableSources={$unavailableSources[
+                                                        game.content.imageURL
+                                                    ]?.data || []}
+                                                />
+                                            {/each}
+                                        </div>
+
+                                        {#if !$fileSources[game.content.imageURL]?.data?.length}
+                                            <p
+                                                class="text-xs text-muted-foreground italic text-center py-4"
+                                            >
+                                                No sources found for this file.
+                                            </p>
+                                        {/if}
+                                    </div>
+                                </details>
+                            </div>
+                        {/if}
+
+                        {#if game.content.serviceId && game.content.serviceId.length === 64}
+                            <div
+                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
+                            >
+                                <details class="group p-4 rounded-lg border">
+                                    <summary
+                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span>Game Service Sources</span>
+                                        </div>
+                                        <span
+                                            class="transition group-open:rotate-180"
+                                        >
+                                            <ChevronDown class="w-5 h-5" />
+                                        </span>
+                                    </summary>
+
+                                    <div class="mt-4 space-y-4">
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            Community-verified download sources
+                                            for the game service executable
+                                            (hash: <span
+                                                class="font-mono text-xs"
+                                                >{game.content.serviceId.slice(
+                                                    0,
+                                                    16,
+                                                )}...</span
+                                            >)
+                                        </p>
+
+                                        {#if $reputation_proof}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.serviceId,
+                                                        "service",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                Add Download Source
+                                            </Button>
+                                        {:else}
+                                            <p
+                                                class="text-xs text-muted-foreground italic"
+                                            >
+                                                Create a reputation profile to
+                                                add or manage download sources
+                                            </p>
+                                        {/if}
+
+                                        <div
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
+                                        >
+                                            {#each $fileSources[game.content.serviceId]?.data || [] as source}
+                                                <FileSourceCard
+                                                    {source}
+                                                    invalidSources={$invalidFileSources[
+                                                        game.content.serviceId
+                                                    ]?.data || []}
+                                                    unavailableSources={$unavailableSources[
+                                                        game.content.serviceId
+                                                    ]?.data || []}
+                                                />
+                                            {/each}
+                                        </div>
+
+                                        {#if !$fileSources[game.content.serviceId]?.data?.length}
+                                            <p
+                                                class="text-xs text-muted-foreground italic text-center py-4"
+                                            >
+                                                No sources found for this file.
+                                            </p>
+                                        {/if}
+                                    </div>
+                                </details>
+                            </div>
+                        {/if}
                     </div>
                 {/if}
             </section>
@@ -3541,6 +3751,27 @@
             Please choose a game from the list to see its details, or check if
             it's still loading.
         </p>
+    </div>
+{/if}
+
+<!-- File Source Modal -->
+{#if showFileSourceModal}
+    <div
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        on:click={closeFileSourceModal}
+        on:keydown={(e) => e.key === "Escape" && closeFileSourceModal()}
+        role="button"
+        tabindex="0"
+    >
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <div on:click|stopPropagation>
+            <FileSourceCard
+                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                profile={$reputation_proof}
+                fileHash={modalFileHash}
+            />
+        </div>
     </div>
 {/if}
 

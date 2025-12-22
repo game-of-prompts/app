@@ -27,6 +27,10 @@
     import { fetch_token_details } from "$lib/ergo/fetch";
     import { get } from "svelte/store";
 
+    // SOURCE APPLICATION IMPORTS
+    import { FileSourceCreation } from "source-application";
+    import { reputation_proof } from "source-application";
+
     let platform = new ErgoPlatform();
 
     // --- State declarations
@@ -35,7 +39,7 @@
     let showGameSecret: boolean = false;
     let gameTitle: string = "";
     let gameDescription: string = "";
-    let gameImageURL: string = "";
+    let gameImageHash: string = "";
     let gameWebLink: string = "";
     let indetermismIndex: number = 1;
     let deadlineValue: number;
@@ -79,7 +83,7 @@
     $: gameDetailsObject = {
         title: gameTitle,
         description: gameDescription,
-        imageURL: gameImageURL,
+        imageURL: gameImageHash,
         webLink: gameWebLink,
         serviceId: gameServiceId,
         mirrorUrls: mirrors.map((m) => m.value.trim()).filter((url) => url),
@@ -131,6 +135,27 @@
     let judgesExpanded = false;
     let mirrorsExpanded = false;
 
+    // --- Modal state for FileSourceCreation
+    let showFileSourceModal = false;
+    let modalFileHash = "";
+    let modalFileType: "image" | "service" = "image";
+
+    function openFileSourceModal(hash: string, type: "image" | "service") {
+        modalFileHash = hash;
+        modalFileType = type;
+        showFileSourceModal = true;
+    }
+
+    function closeFileSourceModal() {
+        showFileSourceModal = false;
+        modalFileHash = "";
+    }
+
+    function handleSourceAdded(txId: string) {
+        console.log(`${modalFileType} source added:`, txId);
+        closeFileSourceModal();
+    }
+
     // --- Logic for repeaters
     function addJudge() {
         judges = [...judges, { id: nextJudgeId++, value: "" }];
@@ -145,6 +170,26 @@
     function removeMirror(id: number) {
         mirrors = mirrors.filter((m) => m.id !== id);
         if (mirrors.length === 0) addMirror(); // Always keep at least one input
+    }
+    function addImageSource() {
+        imageSources = [
+            ...imageSources,
+            { id: nextImageSourceId++, value: "" },
+        ];
+    }
+    function removeImageSource(id: number) {
+        imageSources = imageSources.filter((s) => s.id !== id);
+        if (imageSources.length === 0) addImageSource();
+    }
+    function addServiceSource() {
+        serviceSources = [
+            ...serviceSources,
+            { id: nextServiceSourceId++, value: "" },
+        ];
+    }
+    function removeServiceSource(id: number) {
+        serviceSources = serviceSources.filter((s) => s.id !== id);
+        if (serviceSources.length === 0) addServiceSource();
     }
 
     // --- Logic functions
@@ -313,7 +358,7 @@
         const gameDetails = JSON.stringify({
             title: gameTitle,
             description: gameDescription,
-            imageURL: gameImageURL,
+            imageURL: gameImageHash,
             webLink: gameWebLink,
             serviceId: gameServiceId,
             mirrorUrls: mirrorUrlsArray,
@@ -752,13 +797,17 @@
                         />
                     </div>
                     <div class="form-group">
-                        <Label for="gameImageURL">Game Image URL</Label>
+                        <Label for="gameImageHash">Game Image Hash</Label>
                         <Input
-                            id="gameImageURL"
-                            type="url"
-                            bind:value={gameImageURL}
-                            placeholder="https://example.com/image.png"
+                            id="gameImageHash"
+                            bind:value={gameImageHash}
+                            placeholder="Blake2b256 hash (64-character hex)"
+                            maxlength={64}
+                            pattern="[a-fA-F0-9]{64}"
                         />
+                        <p class="text-xs mt-1 text-muted-foreground">
+                            The Blake2b256 hash of the game's image file
+                        </p>
                     </div>
                     <div class="form-group lg:col-span-2">
                         <div class="repeater-container">
@@ -811,6 +860,68 @@
                 </div>
             </section>
 
+            <!-- FILE SOURCES SECTIONS -->
+            {#if $reputation_proof}
+                <section class="form-section">
+                    <h3 class="section-title">File Sources (Optional)</h3>
+                    <p class="section-description">
+                        Share download locations for game files. Other users can
+                        confirm or mark sources as invalid/unavailable.
+                    </p>
+
+                    <div
+                        class="form-grid grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"
+                    >
+                        <!-- Image Download Sources -->
+                        {#if gameImageHash && gameImageHash.length === 64}
+                            <div class="form-group">
+                                <Label>Image Download Source</Label>
+                                <p class="text-xs text-muted-foreground mb-2">
+                                    Add download URLs for the game image file
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gameImageHash,
+                                            "image",
+                                        )}
+                                    class="w-full"
+                                >
+                                    Add Image Source
+                                </Button>
+                            </div>
+                        {/if}
+
+                        <!-- Game Service Download Sources -->
+                        {#if gameServiceId && gameServiceId.length === 64}
+                            <div class="form-group">
+                                <Label>Game Service Download Source</Label>
+                                <p class="text-xs text-muted-foreground mb-2">
+                                    Add download URLs for the game service
+                                    executable
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gameServiceId,
+                                            "service",
+                                        )}
+                                    class="w-full"
+                                >
+                                    Add Service Source
+                                </Button>
+                            </div>
+                        {/if}
+                    </div>
+                </section>
+            {/if}
+
             <div class="form-actions mt-2 flex justify-end">
                 <Button
                     on:click={handleSubmit}
@@ -845,14 +956,12 @@
                 <p
                     class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
                 >
-                    <a
-                        href={get(web_explorer_uri_tx) + transactionId}
+                    Transaction ID: <a
+                        href={web_explorer_uri_tx + transactionId}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="hover:underline"
+                        class="text-blue-500 hover:underline">{transactionId}</a
                     >
-                        {transactionId}
-                    </a>
                 </p>
             </div>
         {/if}
@@ -865,6 +974,46 @@
             </div>
         {/if}
     </div>
+
+    <!-- File Source Modal -->
+    {#if showFileSourceModal}
+        <div
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            on:click={closeFileSourceModal}
+            on:keydown={(e) => e.key === "Escape" && closeFileSourceModal()}
+            role="button"
+            tabindex="0"
+        >
+            <div
+                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                on:click|stopPropagation
+            >
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">
+                        Add {modalFileType === "image" ? "Image" : "Service"} Download
+                        Source
+                    </h3>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        on:click={closeFileSourceModal}
+                    >
+                        <X class="w-5 h-5" />
+                    </Button>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                    File Hash: <span class="font-mono text-xs"
+                        >{modalFileHash}</span
+                    >
+                </p>
+                <FileSourceCreation
+                    hasProfile={true}
+                    fileHash={modalFileHash}
+                    onSourceAdded={handleSourceAdded}
+                />
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style lang="postcss">
