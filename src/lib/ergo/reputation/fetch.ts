@@ -1,5 +1,5 @@
 import { Network, type RPBox, type Judge, type TypeNFT } from "$lib/ergo/reputation/objects";
-import { hexToBytes, hexToUtf8, serializedToRendered, SString, uint8ArrayToHex } from "$lib/ergo/utils";
+import { hexToBytes, hexToUtf8, uint8ArrayToHex } from "$lib/ergo/utils";
 import { get } from "svelte/store";
 import { types, connected, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";

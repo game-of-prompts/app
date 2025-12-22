@@ -66,12 +66,10 @@
     import { mode } from "mode-watcher";
 
     // SOURCE APPLICATION IMPORTS
-    import { FileSourceCreation, FileSourceCard } from "source-application";
+    import { FileSourceCard } from "source-application";
     import {
         searchByHash,
-        fileSources,
-        invalidFileSources,
-        unavailableSources,
+        fileSources
     } from "source-application";
 
     import {
@@ -1368,13 +1366,9 @@
                                         >
                                             {#each $fileSources[game.content.imageURL]?.data || [] as source}
                                                 <FileSourceCard
-                                                    {source}
-                                                    invalidSources={$invalidFileSources[
-                                                        game.content.imageURL
-                                                    ]?.data || []}
-                                                    unavailableSources={$unavailableSources[
-                                                        game.content.imageURL
-                                                    ]?.data || []}
+                                                    class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                                                    profile={$reputation_proof}
+                                                    fileHash={game.content.imageURL}
                                                 />
                                             {/each}
                                         </div>
@@ -1424,51 +1418,10 @@
                                             >)
                                         </p>
 
-                                        {#if $reputation_proof}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                on:click={() =>
-                                                    openFileSourceModal(
-                                                        game.content.serviceId,
-                                                        "service",
-                                                    )}
-                                                class="w-full"
-                                            >
-                                                Add Download Source
-                                            </Button>
-                                        {:else}
-                                            <p
-                                                class="text-xs text-muted-foreground italic"
-                                            >
-                                                Create a reputation profile to
-                                                add or manage download sources
-                                            </p>
-                                        {/if}
-
-                                        <div
-                                            class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
-                                        >
-                                            {#each $fileSources[game.content.serviceId]?.data || [] as source}
-                                                <FileSourceCard
-                                                    {source}
-                                                    invalidSources={$invalidFileSources[
-                                                        game.content.serviceId
-                                                    ]?.data || []}
-                                                    unavailableSources={$unavailableSources[
-                                                        game.content.serviceId
-                                                    ]?.data || []}
-                                                />
-                                            {/each}
-                                        </div>
-
-                                        {#if !$fileSources[game.content.serviceId]?.data?.length}
-                                            <p
-                                                class="text-xs text-muted-foreground italic text-center py-4"
-                                            >
-                                                No sources found for this file.
-                                            </p>
-                                        {/if}
+                                        <FileSourceCard
+                                            profile={$reputation_proof}
+                                            fileHash={game.content.serviceId}
+                                        />
                                     </div>
                                 </details>
                             </div>

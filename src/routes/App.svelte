@@ -26,7 +26,7 @@
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
     import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
-    import { total_burned } from "$lib/ergo/reputation/objects";
+    import { Judge, total_burned } from "$lib/ergo/reputation/objects";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
@@ -45,6 +45,7 @@
         web_explorer_uri_tkn,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
+    import { fetchProfile } from "source-application";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -187,18 +188,10 @@
             );
 
             if (proofs.size > 0) {
-                let maxBurned = -Infinity;
-                let selectedProof = null;
-
-                for (const [key, proof] of proofs.entries()) {
-                    const burned = total_burned(proof);
-                    if (burned > maxBurned) {
-                        maxBurned = burned;
-                        selectedProof = proof;
-                    }
-                }
-
-                if (selectedProof) {
+                let proof = await fetchProfile(ergo);
+                if (proof) {
+                    const selectedProof: Judge = {...proof, reputation: 0}
+                    selectedProof.reputation = 0;
                     reputation_proof.set(selectedProof);
                 }
             }
