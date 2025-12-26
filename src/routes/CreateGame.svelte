@@ -2,7 +2,7 @@
     // CORE IMPORTS
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
-    import { web_explorer_uri_tx } from "$lib/ergo/envs";
+    import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { hexToBytes, uint8ArrayToHex } from "$lib/ergo/utils";
     import {
@@ -25,11 +25,12 @@
         X,
     } from "lucide-svelte";
     import { fetch_token_details } from "$lib/ergo/fetch";
-    import { get } from "svelte/store";
 
-    // SOURCE APPLICATION IMPORTS
-    import { FileSourceCreation } from "source-application";
-    import { reputation_proof } from "source-application";
+    import { reputation_proof } from "$lib/common/store";
+    import {
+        FileSourceCreation,
+        fetchFileSourcesByHash,
+    } from "source-application";
 
     let platform = new ErgoPlatform();
 
@@ -154,7 +155,37 @@
     function handleSourceAdded(txId: string) {
         console.log(`${modalFileType} source added:`, txId);
         closeFileSourceModal();
+        updateSourceCounts();
     }
+
+    let imageSourceCount = 0;
+    let serviceSourceCount = 0;
+
+    async function updateSourceCounts() {
+        if (gameImageHash && gameImageHash.length === 64) {
+            const sources = await fetchFileSourcesByHash(
+                gameImageHash,
+                explorer_uri,
+            );
+            imageSourceCount = sources.length;
+        } else {
+            imageSourceCount = 0;
+        }
+
+        if (gameServiceId && gameServiceId.length === 64) {
+            const sources = await fetchFileSourcesByHash(
+                gameServiceId,
+                explorer_uri,
+            );
+            serviceSourceCount = sources.length;
+        } else {
+            serviceSourceCount = 0;
+        }
+    }
+
+    // Trigger search when hashes change (debounced ideally, but simple for now)
+    $: if (gameImageHash && gameImageHash.length === 64) updateSourceCounts();
+    $: if (gameServiceId && gameServiceId.length === 64) updateSourceCounts();
 
     // --- Logic for repeaters
     function addJudge() {
@@ -170,26 +201,6 @@
     function removeMirror(id: number) {
         mirrors = mirrors.filter((m) => m.id !== id);
         if (mirrors.length === 0) addMirror(); // Always keep at least one input
-    }
-    function addImageSource() {
-        imageSources = [
-            ...imageSources,
-            { id: nextImageSourceId++, value: "" },
-        ];
-    }
-    function removeImageSource(id: number) {
-        imageSources = imageSources.filter((s) => s.id !== id);
-        if (imageSources.length === 0) addImageSource();
-    }
-    function addServiceSource() {
-        serviceSources = [
-            ...serviceSources,
-            { id: nextServiceSourceId++, value: "" },
-        ];
-    }
-    function removeServiceSource(id: number) {
-        serviceSources = serviceSources.filter((s) => s.id !== id);
-        if (serviceSources.length === 0) addServiceSource();
     }
 
     // --- Logic functions
@@ -892,6 +903,13 @@
                                 >
                                     Add Image Source
                                 </Button>
+                                {#if imageSourceCount > 0}
+                                    <p
+                                        class="text-xs text-green-500 mt-1 text-center"
+                                    >
+                                        {imageSourceCount} source(s) detected
+                                    </p>
+                                {/if}
                             </div>
                         {/if}
 
@@ -916,6 +934,13 @@
                                 >
                                     Add Service Source
                                 </Button>
+                                {#if serviceSourceCount > 0}
+                                    <p
+                                        class="text-xs text-green-500 mt-1 text-center"
+                                    >
+                                        {serviceSourceCount} source(s) detected
+                                    </p>
+                                {/if}
                             </div>
                         {/if}
                     </div>

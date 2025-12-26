@@ -67,10 +67,7 @@
 
     // SOURCE APPLICATION IMPORTS
     import { FileSourceCard } from "source-application";
-    import {
-        searchByHash,
-        fileSources
-    } from "source-application";
+    import { fetchFileSourcesByHash } from "source-application";
 
     import {
         getDisplayStake,
@@ -152,6 +149,8 @@
     let showFileSourceModal = false;
     let modalFileHash = "";
     let modalFileType: "image" | "service" = "image";
+    let imageSources: any[] = [];
+    let serviceSources: any[] = [];
 
     function openFileSourceModal(hash: string, type: "image" | "service") {
         modalFileHash = hash;
@@ -164,11 +163,22 @@
         modalFileHash = "";
     }
 
-    function handleFileSourceAdded(txId: string) {
+    async function handleFileSourceAdded(txId: string) {
         console.log(`${modalFileType} source added:`, txId);
         closeFileSourceModal();
         if (modalFileHash) {
-            searchByHash(modalFileHash);
+            // Refresh sources
+            if (modalFileType === "image") {
+                imageSources = await fetchFileSourcesByHash(
+                    modalFileHash,
+                    explorer_uri,
+                );
+            } else {
+                serviceSources = await fetchFileSourcesByHash(
+                    modalFileHash,
+                    explorer_uri,
+                );
+            }
         }
     }
 
@@ -216,8 +226,18 @@
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
 
-            if (game.content.imageURL) searchByHash(game.content.imageURL);
-            if (game.content.serviceId) searchByHash(game.content.serviceId);
+            if (game.content.imageURL) {
+                imageSources = await fetchFileSourcesByHash(
+                    game.content.imageURL,
+                    explorer_uri,
+                );
+            }
+            if (game.content.serviceId) {
+                serviceSources = await fetchFileSourcesByHash(
+                    game.content.serviceId,
+                    explorer_uri,
+                );
+            }
 
             if (game.participationTokenId) {
                 const tokenDetails = await fetch_token_details(
@@ -873,6 +893,23 @@
     winnerPct = Math.max(0, 100 - totalPct);
 
     const overAllocated = totalPct > 100 ? (totalPct - 100).toFixed(2) : 0;
+
+    // --- Image Resolution Logic ---
+    let resolvedImageSrc = "";
+    $: {
+        if (game?.content?.imageURL) {
+            // Prioritize sources that are NOT invalid and NOT unavailable
+            // For now, just pick the first one, or use the hash itself if it looks like a URL (backward compatibility?)
+            // But the requirement says imageURL IS a hash.
+            if (imageSources.length > 0) {
+                resolvedImageSrc = imageSources[0].url;
+            } else {
+                resolvedImageSrc = ""; // Or a placeholder?
+            }
+        } else {
+            resolvedImageSrc = "";
+        }
+    }
 </script>
 
 {#if game}
@@ -888,9 +925,9 @@
                 class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12"
             >
                 <div class="hero-bg-image">
-                    {#if game.content.imageURL}
+                    {#if resolvedImageSrc}
                         <img
-                            src={game.content.imageURL}
+                            src={resolvedImageSrc}
                             alt=""
                             class="absolute inset-0 w-full h-full object-cover blur-md scale-110"
                         />
@@ -902,10 +939,10 @@
                 <div
                     class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white"
                 >
-                    {#if game.content.imageURL}
+                    {#if resolvedImageSrc}
                         <div class="md:w-1/3 flex-shrink-0">
                             <img
-                                src={game.content.imageURL}
+                                src={resolvedImageSrc}
                                 alt="{game.content.title} banner"
                                 class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg"
                             />
@@ -1364,16 +1401,17 @@
                                         <div
                                             class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
                                         >
-                                            {#each $fileSources[game.content.imageURL]?.data || [] as source}
-                                                <FileSourceCard
-                                                    class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
-                                                    profile={$reputation_proof}
-                                                    fileHash={game.content.imageURL}
-                                                />
-                                            {/each}
+                                            <FileSourceCard
+                                                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                                                profile={$reputation_proof}
+                                                fileHash={game.content.imageURL}
+                                                sources={imageSources}
+                                                explorerUri={explorer_uri}
+                                                webExplorerUriTkn={web_explorer_uri_tkn}
+                                            />
                                         </div>
 
-                                        {#if !$fileSources[game.content.imageURL]?.data?.length}
+                                        {#if imageSources.length === 0}
                                             <p
                                                 class="text-xs text-muted-foreground italic text-center py-4"
                                             >
@@ -1418,9 +1456,34 @@
                                             >)
                                         </p>
 
+                                        {#if $reputation_proof}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.serviceId,
+                                                        "service",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                Add Download Source
+                                            </Button>
+                                        {:else}
+                                            <p
+                                                class="text-xs text-muted-foreground italic"
+                                            >
+                                                Create a reputation profile to
+                                                add or manage download sources
+                                            </p>
+                                        {/if}
+
                                         <FileSourceCard
                                             profile={$reputation_proof}
                                             fileHash={game.content.serviceId}
+                                            sources={serviceSources}
+                                            explorerUri={explorer_uri}
+                                            webExplorerUriTkn={web_explorer_uri_tkn}
                                         />
                                     </div>
                                 </details>
