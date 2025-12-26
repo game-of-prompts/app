@@ -42,11 +42,11 @@
 		"@scure/base": "^1.1.3",
 		"@sveltejs/adapter-static": "^2.0.3",
 		"date-fns": "^4.1.0",
-		"forum-application": "github:reputation-systems/forum-application",
+		"forum-application": "reputation-systems/forum-application",
 		"source-application": "file:../source-application",
 		"marked": "^17.0.1",
 		"mode-watcher": "^0.5.0",
 		"update": "^0.7.4",
-		"wallet-svelte-component": "github:ergo-basics/wallet-svelte-component"
+		"wallet-svelte-component": "ergo-basics/wallet-svelte-component"
 	}
 }
