@@ -43,6 +43,7 @@ export interface GameContent {
     serviceId: string;
     imageURL?: string;
     webLink?: string;
+    paper?: string; // Blake2b256 hash of the detailed game description markdown file
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
     creatorReputationProof?: string;
 }
@@ -281,6 +282,7 @@ export function parseGameContent(
                 serviceId: parsed.serviceId || "",
                 imageURL: parsed.imageURL || parsed.image || undefined,
                 webLink: parsed.webLink || parsed.link || undefined,
+                paper: parsed.paper || undefined,
             };
         } catch (error) {
             console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);

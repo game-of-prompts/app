@@ -43,6 +43,7 @@
     let gameTitle: string = "";
     let gameDescription: string = "";
     let gameImageHash: string = "";
+    let gamePaperHash: string = "";
     let gameWebLink: string = "";
     let indetermismIndex: number = 1;
     let deadlineValue: number;
@@ -89,6 +90,7 @@
         imageURL: gameImageHash,
         webLink: gameWebLink,
         serviceId: gameServiceId,
+        paper: gamePaperHash,
         indetermismIndex: indetermismIndex,
     } as GameDetails;
 
@@ -99,6 +101,7 @@
             imageURL: "",
             webLink: "",
             serviceId: "",
+            paper: "",
             indetermismIndex: 1,
         },
         0,
@@ -136,9 +139,12 @@
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
     let modalFileHash = "";
-    let modalFileType: "image" | "service" = "image";
+    let modalFileType: "image" | "service" | "paper" = "image";
 
-    function openFileSourceModal(hash: string, type: "image" | "service") {
+    function openFileSourceModal(
+        hash: string,
+        type: "image" | "service" | "paper",
+    ) {
         modalFileHash = hash;
         modalFileType = type;
         showFileSourceModal = true;
@@ -157,6 +163,7 @@
 
     let imageSourceCount = 0;
     let serviceSourceCount = 0;
+    let paperSourceCount = 0;
 
     async function updateSourceCounts() {
         if (gameImageHash && gameImageHash.length === 64) {
@@ -178,11 +185,22 @@
         } else {
             serviceSourceCount = 0;
         }
+
+        if (gamePaperHash && gamePaperHash.length === 64) {
+            const sources = await fetchFileSourcesByHash(
+                gamePaperHash,
+                $explorer_uri,
+            );
+            paperSourceCount = sources.length;
+        } else {
+            paperSourceCount = 0;
+        }
     }
 
     // Trigger search when hashes change (debounced ideally, but simple for now)
     $: if (gameImageHash && gameImageHash.length === 64) updateSourceCounts();
     $: if (gameServiceId && gameServiceId.length === 64) updateSourceCounts();
+    $: if (gamePaperHash && gamePaperHash.length === 64) updateSourceCounts();
 
     // --- Logic for repeaters
     function addJudge() {
@@ -359,6 +377,7 @@
             imageURL: gameImageHash,
             webLink: gameWebLink,
             serviceId: gameServiceId,
+            paper: gamePaperHash,
             indetermismIndex: indetermismIndex,
         });
 
@@ -803,7 +822,7 @@
                                 </p>
                             {/if}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-2">
                             <Label for="gameWebLink">Game Info Link</Label>
                             <Input
                                 id="gameWebLink"
@@ -823,6 +842,22 @@
                             />
                             <p class="text-xs mt-1 text-muted-foreground">
                                 The Blake2b256 hash of the game's image file
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <Label for="gamePaperHash"
+                                >Game Paper Hash (Optional)</Label
+                            >
+                            <Input
+                                id="gamePaperHash"
+                                bind:value={gamePaperHash}
+                                placeholder="Blake2b256 hash (64-character hex)"
+                                maxlength={64}
+                                pattern="[a-fA-F0-9]{64}"
+                            />
+                            <p class="text-xs mt-1 text-muted-foreground">
+                                The Blake2b256 hash of a markdown file with
+                                detailed game description
                             </p>
                         </div>
                     </div>
@@ -956,7 +991,57 @@
                                 </div>
                             {/if}
 
-                            {#if (!gameImageHash || gameImageHash.length !== 64) && (!gameServiceId || gameServiceId.length !== 64)}
+                            <!-- Game Paper Download Sources -->
+                            {#if gamePaperHash && gamePaperHash.length === 64}
+                                <div
+                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                                >
+                                    <Label
+                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-amber-500"
+                                        ></div>
+                                        Paper Source
+                                    </Label>
+                                    <p
+                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                    >
+                                        Provide download locations for the
+                                        detailed game documentation (markdown
+                                        file).
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() =>
+                                            openFileSourceModal(
+                                                gamePaperHash,
+                                                "paper",
+                                            )}
+                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                    >
+                                        Add Paper Source
+                                    </Button>
+                                    {#if paperSourceCount > 0}
+                                        <div
+                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        >
+                                            <div
+                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                            ></div>
+                                            <span
+                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                            >
+                                                {paperSourceCount} source(s) active
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
+                            {/if}
+
+                            {#if (!gameImageHash || gameImageHash.length !== 64) && (!gameServiceId || gameServiceId.length !== 64) && (!gamePaperHash || gamePaperHash.length !== 64)}
                                 <div
                                     class="text-center py-12 px-6 rounded-xl border border-dashed border-slate-500/20 bg-slate-500/5 opacity-60"
                                 >
@@ -1026,7 +1111,9 @@
                         <h3 class="text-xl font-bold">
                             Add {modalFileType === "image"
                                 ? "Image"
-                                : "Service"} Source
+                                : modalFileType === "service"
+                                  ? "Service"
+                                  : "Paper"} Source
                         </h3>
                         <p
                             class="text-xs text-muted-foreground mt-1 font-mono opacity-70"

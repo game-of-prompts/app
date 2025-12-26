@@ -154,11 +154,15 @@
     // File Source Modal State
     let showFileSourceModal = false;
     let modalFileHash = "";
-    let modalFileType: "image" | "service" = "image";
+    let modalFileType: "image" | "service" | "paper" = "image";
     let imageSources: any[] = [];
     let serviceSources: any[] = [];
+    let paperSources: any[] = [];
 
-    function openFileSourceModal(hash: string, type: "image" | "service") {
+    function openFileSourceModal(
+        hash: string,
+        type: "image" | "service" | "paper",
+    ) {
         modalFileHash = hash;
         modalFileType = type;
         showFileSourceModal = true;
@@ -179,8 +183,13 @@
                     modalFileHash,
                     get(explorer_uri),
                 );
-            } else {
+            } else if (modalFileType === "service") {
                 serviceSources = await fetchFileSourcesByHash(
+                    modalFileHash,
+                    get(explorer_uri),
+                );
+            } else if (modalFileType === "paper") {
+                paperSources = await fetchFileSourcesByHash(
                     modalFileHash,
                     get(explorer_uri),
                 );
@@ -241,6 +250,12 @@
             if (game.content.serviceId) {
                 serviceSources = await fetchFileSourcesByHash(
                     game.content.serviceId,
+                    get(explorer_uri),
+                );
+            }
+            if (game.content.paper) {
+                paperSources = await fetchFileSourcesByHash(
+                    game.content.paper,
                     get(explorer_uri),
                 );
             }
@@ -1487,6 +1502,73 @@
                                             profile={$reputation_proof}
                                             fileHash={game.content.serviceId}
                                             sources={serviceSources}
+                                            explorerUri={$explorer_uri}
+                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                        />
+                                    </div>
+                                </details>
+                            </div>
+                        {/if}
+
+                        {#if game.content.paper && game.content.paper.length === 64}
+                            <div
+                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
+                            >
+                                <details class="group p-4 rounded-lg border">
+                                    <summary
+                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span>Game Paper Sources</span>
+                                        </div>
+                                        <span
+                                            class="transition group-open:rotate-180"
+                                        >
+                                            <ChevronDown class="w-5 h-5" />
+                                        </span>
+                                    </summary>
+
+                                    <div class="mt-4 space-y-4">
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            Community-verified download sources
+                                            for the detailed game documentation
+                                            markdown file (hash: <span
+                                                class="font-mono text-xs"
+                                                >{game.content.paper.slice(
+                                                    0,
+                                                    16,
+                                                )}...</span
+                                            >)
+                                        </p>
+
+                                        {#if $reputation_proof}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.paper,
+                                                        "paper",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                Add Download Source
+                                            </Button>
+                                        {:else}
+                                            <p
+                                                class="text-xs text-muted-foreground italic"
+                                            >
+                                                Create a reputation profile to
+                                                add or manage download sources
+                                            </p>
+                                        {/if}
+
+                                        <FileCard
+                                            profile={$reputation_proof}
+                                            fileHash={game.content.paper}
+                                            sources={paperSources}
                                             explorerUri={$explorer_uri}
                                             webExplorerUriTkn={$web_explorer_uri_tkn}
                                         />

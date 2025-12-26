@@ -30,6 +30,7 @@ export interface GameDetails {
     imageURL: string;
     webLink: string;
     serviceId: string;
+    paper: string;
     indetermismIndex: number;
 }
 

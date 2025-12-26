@@ -206,6 +206,7 @@ export function parseGameContent(
                 serviceId: parsed.serviceId || "",
                 imageURL: parsed.imageURL || parsed.image || defaultImageUrl,
                 webLink: parsed.webLink || parsed.link || undefined,
+                paper: parsed.paper || undefined,
                 indetermismIndex: parsed.indetermismIndex || undefined,
             };
         } catch (error) {
