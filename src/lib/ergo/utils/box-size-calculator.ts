@@ -30,7 +30,6 @@ export interface GameDetails {
     imageURL: string;
     webLink: string;
     serviceId: string;
-    mirrorUrls: string[];
     indetermismIndex: number;
 }
 

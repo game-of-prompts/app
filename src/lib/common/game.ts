@@ -43,7 +43,6 @@ export interface GameContent {
     serviceId: string;
     imageURL?: string;
     webLink?: string;
-    mirrorUrls?: string[];
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
     creatorReputationProof?: string;
 }
@@ -282,7 +281,6 @@ export function parseGameContent(
                 serviceId: parsed.serviceId || "",
                 imageURL: parsed.imageURL || parsed.image || undefined,
                 webLink: parsed.webLink || parsed.link || undefined,
-                mirrorUrls: parsed.mirrorUrls || undefined,
             };
         } catch (error) {
             console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);

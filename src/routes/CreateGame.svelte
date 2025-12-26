@@ -89,7 +89,6 @@
         imageURL: gameImageHash,
         webLink: gameWebLink,
         serviceId: gameServiceId,
-        mirrorUrls: mirrors.map((m) => m.value.trim()).filter((url) => url),
         indetermismIndex: indetermismIndex,
     } as GameDetails;
 
@@ -100,7 +99,6 @@
             imageURL: "",
             webLink: "",
             serviceId: "",
-            mirrorUrls: [],
             indetermismIndex: 1,
         },
         0,
@@ -132,11 +130,8 @@
 
     // --- State for repeaters
     let judges: { id: number; value: string }[] = [{ id: 0, value: "" }];
-    let mirrors: { id: number; value: string }[] = [{ id: 0, value: "" }];
     let nextJudgeId = 1;
-    let nextMirrorId = 1;
     let judgesExpanded = false;
-    let mirrorsExpanded = false;
 
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
@@ -196,13 +191,6 @@
     function removeJudge(id: number) {
         judges = judges.filter((j) => j.id !== id);
         if (judges.length === 0) addJudge(); // Always keep at least one input
-    }
-    function addMirror() {
-        mirrors = [...mirrors, { id: nextMirrorId++, value: "" }];
-    }
-    function removeMirror(id: number) {
-        mirrors = mirrors.filter((m) => m.id !== id);
-        if (mirrors.length === 0) addMirror(); // Always keep at least one input
     }
 
     // --- Logic functions
@@ -364,9 +352,6 @@
         const judgesArray = judges
             .map((j) => j.value.trim())
             .filter((id) => id);
-        const mirrorUrlsArray = mirrors
-            .map((m) => m.value.trim())
-            .filter((url) => url);
 
         const gameDetails = JSON.stringify({
             title: gameTitle,
@@ -374,7 +359,6 @@
             imageURL: gameImageHash,
             webLink: gameWebLink,
             serviceId: gameServiceId,
-            mirrorUrls: mirrorUrlsArray,
             indetermismIndex: indetermismIndex,
         });
 
@@ -840,55 +824,6 @@
                             <p class="text-xs mt-1 text-muted-foreground">
                                 The Blake2b256 hash of the game's image file
                             </p>
-                        </div>
-                        <div class="form-group lg:col-span-2">
-                            <div class="repeater-container">
-                                <button
-                                    type="button"
-                                    class="repeater-header"
-                                    on:click={() =>
-                                        (mirrorsExpanded = !mirrorsExpanded)}
-                                >
-                                    <Label
-                                        >Alternative Downloads (Game Service)</Label
-                                    >
-                                    {#if mirrorsExpanded}
-                                        <ChevronUp class="w-5 h-5" />
-                                    {:else}
-                                        <ChevronDown class="w-5 h-5" />
-                                    {/if}
-                                </button>
-                                {#if mirrorsExpanded}
-                                    <div class="repeater-content">
-                                        {#each mirrors as mirror (mirror.id)}
-                                            <div class="repeater-item">
-                                                <Input
-                                                    type="url"
-                                                    bind:value={mirror.value}
-                                                    placeholder="https://example.com/mirror"
-                                                />
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    on:click={() =>
-                                                        removeMirror(mirror.id)}
-                                                    aria-label="Remove Mirror URL"
-                                                >
-                                                    <X
-                                                        class="w-4 h-4 text-red-500"
-                                                    />
-                                                </Button>
-                                            </div>
-                                        {/each}
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            on:click={addMirror}
-                                            >+ Add URL</Button
-                                        >
-                                    </div>
-                                {/if}
-                            </div>
                         </div>
                     </div>
                 </section>
