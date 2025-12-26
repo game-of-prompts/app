@@ -32,6 +32,8 @@
         fetchFileSourcesByHash,
     } from "source-application";
 
+    $: reputationProofAny = $reputation_proof as any;
+
     let platform = new ErgoPlatform();
 
     // --- State declarations
@@ -165,7 +167,7 @@
         if (gameImageHash && gameImageHash.length === 64) {
             const sources = await fetchFileSourcesByHash(
                 gameImageHash,
-                explorer_uri,
+                $explorer_uri,
             );
             imageSourceCount = sources.length;
         } else {
@@ -175,7 +177,7 @@
         if (gameServiceId && gameServiceId.length === 64) {
             const sources = await fetchFileSourcesByHash(
                 gameServiceId,
-                explorer_uri,
+                $explorer_uri,
             );
             serviceSourceCount = sources.length;
         } else {
@@ -427,615 +429,698 @@
         <p class="subtitle">Fill in the details to launch your game.</p>
     </div>
 
-    <div class="space-y-8">
-        {#if !transactionId}
-            <section class="form-section">
-                <h3 class="section-title">Core Game Identity</h3>
-                <p class="section-description">
-                    Essential information that defines your game.
-                </p>
-                <div
-                    class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
-                >
-                    <div class="form-group">
-                        <Label for="gameTitle">Game Title</Label>
-                        <Input
-                            id="gameTitle"
-                            bind:value={gameTitle}
-                            placeholder="The official title of the game"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <Label for="gameServiceId"
-                            >Game Service ID (64-char hash)</Label
-                        >
-                        <Input
-                            id="gameServiceId"
-                            bind:value={gameServiceId}
-                            placeholder="64-character hexadecimal hash"
-                            required
-                            maxlength={64}
-                            pattern="[a-fA-F0-9]{64}"
-                        />
-                    </div>
-                    <div class="form-group lg:col-span-2">
-                        <div class="flex justify-between items-center">
-                            <Label for="gameSecret">Game Secret (S)</Label>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                on:click={generateGameSecret}
-                                class="text-xs"
-                            >
-                                <Wand2 class="w-3 h-3 mr-2" />
-                                Generate
-                            </Button>
-                        </div>
-                        <div class="relative">
+    {#if !transactionId}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-8 space-y-8">
+                <section class="form-section">
+                    <h3 class="section-title">Core Game Identity</h3>
+                    <p class="section-description">
+                        Essential information that defines your game.
+                    </p>
+                    <div
+                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
+                    >
+                        <div class="form-group">
+                            <Label for="gameTitle">Game Title</Label>
                             <Input
-                                type={showGameSecret ? "text" : "password"}
-                                id="gameSecret"
-                                bind:value={gameSecret}
-                                placeholder="Enter or generate a 64-char hex secret"
+                                id="gameTitle"
+                                bind:value={gameTitle}
+                                placeholder="The official title of the game"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <Label for="gameServiceId"
+                                >Game Service ID (64-char hash)</Label
+                            >
+                            <Input
+                                id="gameServiceId"
+                                bind:value={gameServiceId}
+                                placeholder="64-character hexadecimal hash"
                                 required
                                 maxlength={64}
                                 pattern="[a-fA-F0-9]{64}"
                             />
-                            <button
-                                type="button"
-                                on:click={() =>
-                                    (showGameSecret = !showGameSecret)}
-                                class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-200"
-                                aria-label={showGameSecret
-                                    ? "Hide secret"
-                                    : "Show secret"}
-                            >
-                                {#if showGameSecret}
-                                    <EyeOff class="h-5 w-5" />
-                                {:else}
-                                    <Eye class="h-5 w-5" />
-                                {/if}
-                            </button>
                         </div>
-                        <p class="text-xs mt-1 text-muted-foreground">
-                            This will be hashed. Keep the original S safe.
-                        </p>
-                    </div>
-                    <div class="form-group">
-                        <Label for="indetermismIndex">Indetermism Index</Label>
-                        <Input
-                            id="indetermismIndex"
-                            type="number"
-                            bind:value={indetermismIndex}
-                            min="1"
-                            step="1"
-                            placeholder="Number of executions for reproducibility"
-                            required
-                        />
-                    </div>
-                </div>
-            </section>
-
-            <section class="form-section">
-                <h3 class="section-title">On-Chain Rules & Economy</h3>
-                <p class="section-description">
-                    Parameters that will be enforced by the smart contract.
-                </p>
-                <div
-                    class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
-                >
-                    <div class="form-group">
-                        <Label for="deadlineValue">Participation Deadline</Label
-                        >
-                        <div class="flex space-x-2">
-                            <Input
-                                id="deadlineValue"
-                                type="number"
-                                bind:value={deadlineValue}
-                                min="1"
-                                placeholder="Time until deadline"
-                                autocomplete="off"
-                            />
-                            <select
-                                bind:value={deadlineUnit}
-                                class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
-                            >
-                                <option value="days">Days</option>
-                                <option value="minutes">Minutes</option>
-                            </select>
-                        </div>
-                        {#if deadlineBlock && deadlineBlockDateText}
-                            <p class="text-xs mt-1 text-muted-foreground">
-                                Ends on block: {deadlineBlock} (approx. {deadlineBlockDateText})
-                            </p>
-                        {/if}
-                    </div>
-                    <div class="form-group">
-                        <Label for="creatorStakeAmount"
-                            >Creator Stake ({participationTokenName})</Label
-                        >
-                        <Input
-                            id="creatorStakeAmount"
-                            bind:value={creatorStakeAmount}
-                            type="number"
-                            min="0"
-                            step="0.001"
-                            placeholder="{participationTokenName} to stake"
-                            required
-                        />
-                    </div>
-                    <div class="form-group lg:col-span-2">
-                        <Label for="participationFee"
-                            >Participation Fee ({participationTokenName})</Label
-                        >
-                        <div class="flex space-x-2">
-                            <Input
-                                id="participationFee"
-                                bind:value={participationFeeAmount}
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                placeholder="Cost per player"
-                                required
-                                class="flex-grow"
-                            />
-
-                            <select
-                                bind:value={selectedTokenOption}
-                                class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
-                            >
-                                <option value="ERG">ERG (Ergo)</option>
-
-                                {#each DEFAULT_TOKENS as token (token.tokenId)}
-                                    <option value={token.tokenId}>
-                                        {token.title}
-                                    </option>
-                                {/each}
-
-                                <option value="custom">Other Token ID...</option
+                        <div class="form-group lg:col-span-2">
+                            <div class="flex justify-between items-center">
+                                <Label for="gameSecret">Game Secret (S)</Label>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={generateGameSecret}
+                                    class="text-xs"
                                 >
-                            </select>
-                        </div>
-
-                        {#if isCustomToken}
-                            <div class="mt-3 pl-1">
-                                <Label
-                                    for="customTokenId"
-                                    class="text-xs font-medium mb-1.5 block"
-                                >
-                                    Custom Token ID
-                                </Label>
+                                    <Wand2 class="w-3 h-3 mr-2" />
+                                    Generate
+                                </Button>
+                            </div>
+                            <div class="relative">
                                 <Input
-                                    id="customTokenId"
-                                    bind:value={customTokenId}
-                                    placeholder="Enter the 64-character token ID"
-                                    class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
+                                    type={showGameSecret ? "text" : "password"}
+                                    id="gameSecret"
+                                    bind:value={gameSecret}
+                                    placeholder="Enter or generate a 64-char hex secret"
+                                    required
                                     maxlength={64}
                                     pattern="[a-fA-F0-9]{64}"
                                 />
-                                {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
-                                    <p
-                                        class="text-xs text-muted-foreground mt-1"
-                                    >
-                                        Token: {participationTokenName} (Decimals:
-                                        {participationTokenDecimals})
-                                    </p>
-                                {/if}
-                            </div>
-                        {/if}
-                    </div>
-                    <div class="form-group">
-                        <Label for="commissionPercentage"
-                            >Creator Commission (%)</Label
-                        >
-                        <Input
-                            id="commissionPercentage"
-                            bind:value={commissionPercentage}
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            placeholder="e.g., 20 for 20%"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <Label for="perJudgeComissionPercentage"
-                            >Judge Commission (%)</Label
-                        >
-                        <Input
-                            id="perJudgeComissionPercentage"
-                            bind:value={perJudgeComissionPercentage}
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            placeholder="e.g., 1 for 1%"
-                            required
-                        />
-                    </div>
-                    <div class="form-group lg:col-span-2">
-                        <div class="repeater-container">
-                            <button
-                                type="button"
-                                class="repeater-header"
-                                on:click={() =>
-                                    (judgesExpanded = !judgesExpanded)}
-                            >
-                                <Label
-                                    >Invited Judges (Reputation Token IDs)</Label
+                                <button
+                                    type="button"
+                                    on:click={() =>
+                                        (showGameSecret = !showGameSecret)}
+                                    class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-200"
+                                    aria-label={showGameSecret
+                                        ? "Hide secret"
+                                        : "Show secret"}
                                 >
-                                {#if judgesExpanded}
-                                    <ChevronUp class="w-5 h-5" />
-                                {:else}
-                                    <ChevronDown class="w-5 h-5" />
-                                {/if}
-                            </button>
-                            {#if judgesExpanded}
-                                <div class="repeater-content">
-                                    {#each judges as judge (judge.id)}
-                                        <div class="repeater-item">
-                                            <Input
-                                                bind:value={judge.value}
-                                                placeholder="Token ID (optional)"
-                                            />
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                on:click={() =>
-                                                    removeJudge(judge.id)}
-                                                aria-label="Remove Judge"
-                                            >
-                                                <X
-                                                    class="w-4 h-4 text-red-500"
-                                                />
-                                            </Button>
-                                        </div>
-                                    {/each}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={addJudge}>+ Add Judge</Button
-                                    >
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-
-                    <div class="form-group lg:col-span-2">
-                        <Label>Prize Distribution Preview</Label>
-                        <div class="distribution-bar">
-                            <div
-                                class="bar-segment winner"
-                                style:width="{clampPct(winnerPct)}%"
-                                title="Winner(s): {winnerPct.toFixed(2)}%"
-                            ></div>
-                            <div
-                                class="bar-segment creator"
-                                style:width="{clampPct(creatorPct)}%"
-                                title="Creator: {creatorPct.toFixed(2)}%"
-                            ></div>
-                            <div
-                                class="bar-segment judges"
-                                style:width="{clampPct(judgesTotalPct)}%"
-                                title="Judges Total: {judgesTotalPct.toFixed(
-                                    2,
-                                )}%"
-                            ></div>
-                            <div
-                                class="bar-segment developers"
-                                style:width="{clampPct(developersPct)}%"
-                                title="Dev Fund: {developersPct.toFixed(2)}%"
-                            ></div>
-                        </div>
-                        <div class="distribution-legend">
-                            <div class="legend-item">
-                                <div class="legend-color winner"></div>
-                                <span>Winner(s) ({winnerPct.toFixed(2)}%)</span>
+                                    {#if showGameSecret}
+                                        <EyeOff class="h-5 w-5" />
+                                    {:else}
+                                        <Eye class="h-5 w-5" />
+                                    {/if}
+                                </button>
                             </div>
-                            <div class="legend-item">
-                                <div class="legend-color creator"></div>
-                                <span>Creator ({creatorPct.toFixed(2)}%)</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color judges"></div>
-                                <span
-                                    >Judges ({judgesTotalPct.toFixed(2)}%)</span
-                                >
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color developers"></div>
-                                <span
-                                    >Protocol fee ({developersPct.toFixed(
-                                        2,
-                                    )}%)</span
-                                >
-                            </div>
-                        </div>
-                        {#if overAllocated > 0}
-                            <p class="text-xs mt-2 text-red-500">
-                                Warning: Total commission exceeds 100% by {overAllocated}%!
-                                The winner's prize will be 0.
+                            <p class="text-xs mt-1 text-muted-foreground">
+                                This will be hashed. Keep the original S safe.
                             </p>
-                        {/if}
-                    </div>
-                </div>
-            </section>
-
-            <section class="form-section">
-                <h3 class="section-title">Content & Metadata (Optional)</h3>
-                <p class="section-description">
-                    Additional details to enrich your game's presentation.
-                </p>
-                <div
-                    class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
-                >
-                    <div class="form-group lg:col-span-2">
-                        <Label for="gameDescription">Game Description</Label>
-                        <div class="relative">
-                            <Textarea
-                                id="gameDescription"
-                                bind:value={gameDescription}
-                                placeholder="Detailed description of the game, rules, objectives, scoring..."
+                        </div>
+                        <div class="form-group">
+                            <Label for="indetermismIndex"
+                                >Indetermism Index</Label
+                            >
+                            <Input
+                                id="indetermismIndex"
+                                type="number"
+                                bind:value={indetermismIndex}
+                                min="1"
+                                step="1"
+                                placeholder="Number of executions for reproducibility"
                                 required
-                                class="h-32 {contentTooLarge
-                                    ? 'border-red-500 focus:ring-red-500'
-                                    : ''}"
                             />
-                            <div
-                                class="absolute bottom-2 right-2 text-xs {contentTooLarge
-                                    ? 'text-red-500 font-bold'
-                                    : 'text-muted-foreground'} bg-background/80 px-1 rounded"
-                            >
-                                {contentUsagePercentage}% used ({estimatedBoxSize}
-                                bytes)
-                            </div>
                         </div>
-                        {#if contentTooLarge}
-                            <p class="text-xs text-red-500 mt-1">
-                                {contentValidation.message}
-                            </p>
-                        {/if}
-                    </div>
-                    <div class="form-group">
-                        <Label for="gameWebLink">Game Info Link</Label>
-                        <Input
-                            id="gameWebLink"
-                            type="url"
-                            bind:value={gameWebLink}
-                            placeholder="https://example.com/my-game"
-                        />
-                    </div>
-                    <div class="form-group">
-                        <Label for="gameImageHash">Game Image Hash</Label>
-                        <Input
-                            id="gameImageHash"
-                            bind:value={gameImageHash}
-                            placeholder="Blake2b256 hash (64-character hex)"
-                            maxlength={64}
-                            pattern="[a-fA-F0-9]{64}"
-                        />
-                        <p class="text-xs mt-1 text-muted-foreground">
-                            The Blake2b256 hash of the game's image file
-                        </p>
-                    </div>
-                    <div class="form-group lg:col-span-2">
-                        <div class="repeater-container">
-                            <button
-                                type="button"
-                                class="repeater-header"
-                                on:click={() =>
-                                    (mirrorsExpanded = !mirrorsExpanded)}
-                            >
-                                <Label
-                                    >Alternative Downloads (Game Service)</Label
-                                >
-                                {#if mirrorsExpanded}
-                                    <ChevronUp class="w-5 h-5" />
-                                {:else}
-                                    <ChevronDown class="w-5 h-5" />
-                                {/if}
-                            </button>
-                            {#if mirrorsExpanded}
-                                <div class="repeater-content">
-                                    {#each mirrors as mirror (mirror.id)}
-                                        <div class="repeater-item">
-                                            <Input
-                                                type="url"
-                                                bind:value={mirror.value}
-                                                placeholder="https://example.com/mirror"
-                                            />
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                on:click={() =>
-                                                    removeMirror(mirror.id)}
-                                                aria-label="Remove Mirror URL"
-                                            >
-                                                <X
-                                                    class="w-4 h-4 text-red-500"
-                                                />
-                                            </Button>
-                                        </div>
-                                    {/each}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={addMirror}>+ Add URL</Button
-                                    >
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- FILE SOURCES SECTIONS -->
-            {#if $reputation_proof}
-                <section class="form-section">
-                    <h3 class="section-title">File Sources (Optional)</h3>
-                    <p class="section-description">
-                        Share download locations for game files. Other users can
-                        confirm or mark sources as invalid/unavailable.
-                    </p>
-
-                    <div
-                        class="form-grid grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"
-                    >
-                        <!-- Image Download Sources -->
-                        {#if gameImageHash && gameImageHash.length === 64}
-                            <div class="form-group">
-                                <Label>Image Download Source</Label>
-                                <p class="text-xs text-muted-foreground mb-2">
-                                    Add download URLs for the game image file
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    on:click={() =>
-                                        openFileSourceModal(
-                                            gameImageHash,
-                                            "image",
-                                        )}
-                                    class="w-full"
-                                >
-                                    Add Image Source
-                                </Button>
-                                {#if imageSourceCount > 0}
-                                    <p
-                                        class="text-xs text-green-500 mt-1 text-center"
-                                    >
-                                        {imageSourceCount} source(s) detected
-                                    </p>
-                                {/if}
-                            </div>
-                        {/if}
-
-                        <!-- Game Service Download Sources -->
-                        {#if gameServiceId && gameServiceId.length === 64}
-                            <div class="form-group">
-                                <Label>Game Service Download Source</Label>
-                                <p class="text-xs text-muted-foreground mb-2">
-                                    Add download URLs for the game service
-                                    executable
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    on:click={() =>
-                                        openFileSourceModal(
-                                            gameServiceId,
-                                            "service",
-                                        )}
-                                    class="w-full"
-                                >
-                                    Add Service Source
-                                </Button>
-                                {#if serviceSourceCount > 0}
-                                    <p
-                                        class="text-xs text-green-500 mt-1 text-center"
-                                    >
-                                        {serviceSourceCount} source(s) detected
-                                    </p>
-                                {/if}
-                            </div>
-                        {/if}
                     </div>
                 </section>
-            {/if}
 
-            <div class="form-actions mt-2 flex justify-end">
-                <Button
-                    on:click={handleSubmit}
-                    size="lg"
-                    disabled={isSubmitting ||
-                        !gameServiceId.trim() ||
-                        !gameSecret.trim() ||
-                        !gameTitle.trim() ||
-                        !deadlineBlock ||
-                        creatorStakeAmount === undefined ||
-                        participationFeeAmount === undefined ||
-                        commissionPercentage === undefined ||
-                        overAllocated > 0 ||
-                        contentTooLarge}
-                    class="w-full sm:w-auto text-base"
-                >
-                    {isSubmitting ? "Submitting..." : "Create Game"}
-                </Button>
-            </div>
-        {:else}
-            <div class="result-container text-center py-12">
-                <h3 class="text-2xl font-bold text-green-500 mb-4">
-                    Game Submitted!
-                </h3>
-                <p class="mb-2">
-                    Your game creation transaction has been sent to the
-                    blockchain.
-                </p>
-                <p class="text-sm text-muted-foreground mb-4">
-                    It may take a few moments to confirm.
-                </p>
-                <p
-                    class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
-                >
-                    Transaction ID: <a
-                        href={web_explorer_uri_tx + transactionId}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-blue-500 hover:underline">{transactionId}</a
+                <section class="form-section">
+                    <h3 class="section-title">On-Chain Rules & Economy</h3>
+                    <p class="section-description">
+                        Parameters that will be enforced by the smart contract.
+                    </p>
+                    <div
+                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
                     >
-                </p>
-            </div>
-        {/if}
+                        <div class="form-group">
+                            <Label for="deadlineValue"
+                                >Participation Deadline</Label
+                            >
+                            <div class="flex space-x-2">
+                                <Input
+                                    id="deadlineValue"
+                                    type="number"
+                                    bind:value={deadlineValue}
+                                    min="1"
+                                    placeholder="Time until deadline"
+                                    autocomplete="off"
+                                />
+                                <select
+                                    bind:value={deadlineUnit}
+                                    class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
+                                >
+                                    <option value="days">Days</option>
+                                    <option value="minutes">Minutes</option>
+                                </select>
+                            </div>
+                            {#if deadlineBlock && deadlineBlockDateText}
+                                <p class="text-xs mt-1 text-muted-foreground">
+                                    Ends on block: {deadlineBlock} (approx. {deadlineBlockDateText})
+                                </p>
+                            {/if}
+                        </div>
+                        <div class="form-group">
+                            <Label for="creatorStakeAmount"
+                                >Creator Stake ({participationTokenName})</Label
+                            >
+                            <Input
+                                id="creatorStakeAmount"
+                                bind:value={creatorStakeAmount}
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                placeholder="{participationTokenName} to stake"
+                                required
+                            />
+                        </div>
+                        <div class="form-group lg:col-span-2">
+                            <Label for="participationFee"
+                                >Participation Fee ({participationTokenName})</Label
+                            >
+                            <div class="flex space-x-2">
+                                <Input
+                                    id="participationFee"
+                                    bind:value={participationFeeAmount}
+                                    type="number"
+                                    min="0"
+                                    step="0.001"
+                                    placeholder="Cost per player"
+                                    required
+                                    class="flex-grow"
+                                />
 
-        {#if errorMessage && !isSubmitting}
-            <div
-                class="error mt-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-center text-red-500"
-            >
-                <p>{errorMessage}</p>
+                                <select
+                                    bind:value={selectedTokenOption}
+                                    class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
+                                >
+                                    <option value="ERG">ERG (Ergo)</option>
+
+                                    {#each DEFAULT_TOKENS as token (token.tokenId)}
+                                        <option value={token.tokenId}>
+                                            {token.title}
+                                        </option>
+                                    {/each}
+
+                                    <option value="custom"
+                                        >Other Token ID...</option
+                                    >
+                                </select>
+                            </div>
+
+                            {#if isCustomToken}
+                                <div class="mt-3 pl-1">
+                                    <Label
+                                        for="customTokenId"
+                                        class="text-xs font-medium mb-1.5 block"
+                                    >
+                                        Custom Token ID
+                                    </Label>
+                                    <Input
+                                        id="customTokenId"
+                                        bind:value={customTokenId}
+                                        placeholder="Enter the 64-character token ID"
+                                        class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
+                                        maxlength={64}
+                                        pattern="[a-fA-F0-9]{64}"
+                                    />
+                                    {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
+                                        <p
+                                            class="text-xs text-muted-foreground mt-1"
+                                        >
+                                            Token: {participationTokenName} (Decimals:
+                                            {participationTokenDecimals})
+                                        </p>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
+                        <div class="form-group">
+                            <Label for="commissionPercentage"
+                                >Creator Commission (%)</Label
+                            >
+                            <Input
+                                id="commissionPercentage"
+                                bind:value={commissionPercentage}
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                placeholder="e.g., 20 for 20%"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <Label for="perJudgeComissionPercentage"
+                                >Judge Commission (%)</Label
+                            >
+                            <Input
+                                id="perJudgeComissionPercentage"
+                                bind:value={perJudgeComissionPercentage}
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                placeholder="e.g., 1 for 1%"
+                                required
+                            />
+                        </div>
+                        <div class="form-group lg:col-span-2">
+                            <div class="repeater-container">
+                                <button
+                                    type="button"
+                                    class="repeater-header"
+                                    on:click={() =>
+                                        (judgesExpanded = !judgesExpanded)}
+                                >
+                                    <Label
+                                        >Invited Judges (Reputation Token IDs)</Label
+                                    >
+                                    {#if judgesExpanded}
+                                        <ChevronUp class="w-5 h-5" />
+                                    {:else}
+                                        <ChevronDown class="w-5 h-5" />
+                                    {/if}
+                                </button>
+                                {#if judgesExpanded}
+                                    <div class="repeater-content">
+                                        {#each judges as judge (judge.id)}
+                                            <div class="repeater-item">
+                                                <Input
+                                                    bind:value={judge.value}
+                                                    placeholder="Token ID (optional)"
+                                                />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    on:click={() =>
+                                                        removeJudge(judge.id)}
+                                                    aria-label="Remove Judge"
+                                                >
+                                                    <X
+                                                        class="w-4 h-4 text-red-500"
+                                                    />
+                                                </Button>
+                                            </div>
+                                        {/each}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={addJudge}
+                                            >+ Add Judge</Button
+                                        >
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <div class="form-group lg:col-span-2">
+                            <Label>Prize Distribution Preview</Label>
+                            <div class="distribution-bar">
+                                <div
+                                    class="bar-segment winner"
+                                    style:width="{clampPct(winnerPct)}%"
+                                    title="Winner(s): {winnerPct.toFixed(2)}%"
+                                ></div>
+                                <div
+                                    class="bar-segment creator"
+                                    style:width="{clampPct(creatorPct)}%"
+                                    title="Creator: {creatorPct.toFixed(2)}%"
+                                ></div>
+                                <div
+                                    class="bar-segment judges"
+                                    style:width="{clampPct(judgesTotalPct)}%"
+                                    title="Judges Total: {judgesTotalPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                                <div
+                                    class="bar-segment developers"
+                                    style:width="{clampPct(developersPct)}%"
+                                    title="Dev Fund: {developersPct.toFixed(
+                                        2,
+                                    )}%"
+                                ></div>
+                            </div>
+                            <div class="distribution-legend">
+                                <div class="legend-item">
+                                    <div class="legend-color winner"></div>
+                                    <span
+                                        >Winner(s) ({winnerPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color creator"></div>
+                                    <span
+                                        >Creator ({creatorPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color judges"></div>
+                                    <span
+                                        >Judges ({judgesTotalPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color developers"></div>
+                                    <span
+                                        >Protocol fee ({developersPct.toFixed(
+                                            2,
+                                        )}%)</span
+                                    >
+                                </div>
+                            </div>
+                            {#if overAllocated > 0}
+                                <p class="text-xs mt-2 text-red-500">
+                                    Warning: Total commission exceeds 100% by {overAllocated}%!
+                                    The winner's prize will be 0.
+                                </p>
+                            {/if}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h3 class="section-title">Content & Metadata (Optional)</h3>
+                    <p class="section-description">
+                        Additional details to enrich your game's presentation.
+                    </p>
+                    <div
+                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
+                    >
+                        <div class="form-group lg:col-span-2">
+                            <Label for="gameDescription">Game Description</Label
+                            >
+                            <div class="relative">
+                                <Textarea
+                                    id="gameDescription"
+                                    bind:value={gameDescription}
+                                    placeholder="Detailed description of the game, rules, objectives, scoring..."
+                                    required
+                                    class="h-32 {contentTooLarge
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : ''}"
+                                />
+                                <div
+                                    class="absolute bottom-2 right-2 text-xs {contentTooLarge
+                                        ? 'text-red-500 font-bold'
+                                        : 'text-muted-foreground'} bg-background/80 px-1 rounded"
+                                >
+                                    {contentUsagePercentage}% used ({estimatedBoxSize}
+                                    bytes)
+                                </div>
+                            </div>
+                            {#if contentTooLarge}
+                                <p class="text-xs text-red-500 mt-1">
+                                    {contentValidation.message}
+                                </p>
+                            {/if}
+                        </div>
+                        <div class="form-group">
+                            <Label for="gameWebLink">Game Info Link</Label>
+                            <Input
+                                id="gameWebLink"
+                                type="url"
+                                bind:value={gameWebLink}
+                                placeholder="https://example.com/my-game"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <Label for="gameImageHash">Game Image Hash</Label>
+                            <Input
+                                id="gameImageHash"
+                                bind:value={gameImageHash}
+                                placeholder="Blake2b256 hash (64-character hex)"
+                                maxlength={64}
+                                pattern="[a-fA-F0-9]{64}"
+                            />
+                            <p class="text-xs mt-1 text-muted-foreground">
+                                The Blake2b256 hash of the game's image file
+                            </p>
+                        </div>
+                        <div class="form-group lg:col-span-2">
+                            <div class="repeater-container">
+                                <button
+                                    type="button"
+                                    class="repeater-header"
+                                    on:click={() =>
+                                        (mirrorsExpanded = !mirrorsExpanded)}
+                                >
+                                    <Label
+                                        >Alternative Downloads (Game Service)</Label
+                                    >
+                                    {#if mirrorsExpanded}
+                                        <ChevronUp class="w-5 h-5" />
+                                    {:else}
+                                        <ChevronDown class="w-5 h-5" />
+                                    {/if}
+                                </button>
+                                {#if mirrorsExpanded}
+                                    <div class="repeater-content">
+                                        {#each mirrors as mirror (mirror.id)}
+                                            <div class="repeater-item">
+                                                <Input
+                                                    type="url"
+                                                    bind:value={mirror.value}
+                                                    placeholder="https://example.com/mirror"
+                                                />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    on:click={() =>
+                                                        removeMirror(mirror.id)}
+                                                    aria-label="Remove Mirror URL"
+                                                >
+                                                    <X
+                                                        class="w-4 h-4 text-red-500"
+                                                    />
+                                                </Button>
+                                            </div>
+                                        {/each}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={addMirror}
+                                            >+ Add URL</Button
+                                        >
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <div class="form-actions mt-8">
+                    <Button
+                        on:click={handleSubmit}
+                        size="lg"
+                        disabled={isSubmitting ||
+                            !gameServiceId.trim() ||
+                            !gameSecret.trim() ||
+                            !gameTitle.trim() ||
+                            !deadlineBlock ||
+                            creatorStakeAmount === undefined ||
+                            participationFeeAmount === undefined ||
+                            commissionPercentage === undefined ||
+                            overAllocated > 0 ||
+                            contentTooLarge}
+                        class="w-full text-lg font-bold py-6 shadow-lg shadow-primary/20"
+                    >
+                        {isSubmitting ? "Submitting..." : "Create Competition"}
+                    </Button>
+                </div>
             </div>
-        {/if}
-    </div>
+
+            <div class="lg:col-span-4 space-y-8 lg:sticky lg:top-24 h-fit">
+                <!-- FILE SOURCES SECTIONS -->
+                {#if $reputation_proof}
+                    <section class="form-section">
+                        <h3 class="section-title">File Sources (Optional)</h3>
+                        <p class="section-description">
+                            Share download locations for game files.
+                        </p>
+
+                        <div class="flex flex-col gap-6">
+                            <!-- Image Download Sources -->
+                            {#if gameImageHash && gameImageHash.length === 64}
+                                <div
+                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                                >
+                                    <Label
+                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-blue-500"
+                                        ></div>
+                                        Image Source
+                                    </Label>
+                                    <p
+                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                    >
+                                        Provide download locations for the
+                                        game's cover image or assets.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() =>
+                                            openFileSourceModal(
+                                                gameImageHash,
+                                                "image",
+                                            )}
+                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                    >
+                                        Add Image Source
+                                    </Button>
+                                    {#if imageSourceCount > 0}
+                                        <div
+                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        >
+                                            <div
+                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                            ></div>
+                                            <span
+                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                            >
+                                                {imageSourceCount} source(s) active
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
+                            {/if}
+
+                            <!-- Game Service Download Sources -->
+                            {#if gameServiceId && gameServiceId.length === 64}
+                                <div
+                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                                >
+                                    <Label
+                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-purple-500"
+                                        ></div>
+                                        Service Source
+                                    </Label>
+                                    <p
+                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                    >
+                                        Provide download locations for the game
+                                        service executable or package.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() =>
+                                            openFileSourceModal(
+                                                gameServiceId,
+                                                "service",
+                                            )}
+                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                    >
+                                        Add Service Source
+                                    </Button>
+                                    {#if serviceSourceCount > 0}
+                                        <div
+                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        >
+                                            <div
+                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                            ></div>
+                                            <span
+                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                            >
+                                                {serviceSourceCount} source(s) active
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
+                            {/if}
+
+                            {#if (!gameImageHash || gameImageHash.length !== 64) && (!gameServiceId || gameServiceId.length !== 64)}
+                                <div
+                                    class="text-center py-12 px-6 rounded-xl border border-dashed border-slate-500/20 bg-slate-500/5 opacity-60"
+                                >
+                                    <p
+                                        class="text-sm font-medium text-muted-foreground"
+                                    >
+                                        Enter a valid 64-char hash in the form
+                                        to enable file sources.
+                                    </p>
+                                </div>
+                            {/if}
+                        </div>
+                    </section>
+                {/if}
+            </div>
+        </div>
+    {:else}
+        <div class="result-container text-center py-12">
+            <h3 class="text-2xl font-bold text-green-500 mb-4">
+                Game Submitted!
+            </h3>
+            <p class="mb-2">
+                Your game creation transaction has been sent to the blockchain.
+            </p>
+            <p class="text-sm text-muted-foreground mb-4">
+                It may take a few moments to confirm.
+            </p>
+            <p
+                class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
+            >
+                Transaction ID: <a
+                    href={$web_explorer_uri_tx + transactionId}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-blue-500 hover:underline">{transactionId}</a
+                >
+            </p>
+        </div>
+    {/if}
+
+    {#if errorMessage && !isSubmitting}
+        <div
+            class="error mt-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-center text-red-500"
+        >
+            <p>{errorMessage}</p>
+        </div>
+    {/if}
 
     <!-- File Source Modal -->
     {#if showFileSourceModal}
         <div
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md"
             on:click={closeFileSourceModal}
             on:keydown={(e) => e.key === "Escape" && closeFileSourceModal()}
             role="button"
             tabindex="0"
+            aria-label="Close modal"
         >
             <div
-                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden"
                 on:click|stopPropagation
             >
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold">
-                        Add {modalFileType === "image" ? "Image" : "Service"} Download
-                        Source
-                    </h3>
+                <div
+                    class="flex justify-between items-center p-6 border-b border-border bg-slate-500/5"
+                >
+                    <div>
+                        <h3 class="text-xl font-bold">
+                            Add {modalFileType === "image"
+                                ? "Image"
+                                : "Service"} Source
+                        </h3>
+                        <p
+                            class="text-xs text-muted-foreground mt-1 font-mono opacity-70"
+                        >
+                            Hash: {modalFileHash.substring(
+                                0,
+                                8,
+                            )}...{modalFileHash.substring(56)}
+                        </p>
+                    </div>
                     <Button
                         variant="ghost"
                         size="icon"
                         on:click={closeFileSourceModal}
+                        class="rounded-full"
                     >
                         <X class="w-5 h-5" />
                     </Button>
                 </div>
-                <p class="text-sm text-muted-foreground mb-4">
-                    File Hash: <span class="font-mono text-xs"
-                        >{modalFileHash}</span
-                    >
-                </p>
-                <FileSourceCreation
-                    hasProfile={true}
-                    fileHash={modalFileHash}
-                    onSourceAdded={handleSourceAdded}
-                />
+
+                <div class="p-0">
+                    <FileSourceCreation
+                        profile={reputationProofAny}
+                        explorerUri={$explorer_uri}
+                        hash={modalFileHash}
+                        onSourceAdded={handleSourceAdded}
+                        class="border-none shadow-none bg-transparent rounded-none"
+                    />
+                </div>
             </div>
         </div>
     {/if}
@@ -1043,9 +1128,9 @@
 
 <style lang="postcss">
     .create-game-container {
-        max-width: 900px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 2rem 15px 4rem;
+        padding: 2rem 20px 4rem;
     }
 
     .subtitle {
