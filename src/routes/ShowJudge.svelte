@@ -4,20 +4,21 @@
 	import { get } from "svelte/store";
 	import {
 		total_burned_string,
-		type Judge,
+		type ReputationProof,
 		type RPBox,
 	} from "$lib/ergo/reputation/objects";
 	import { GAME, PARTICIPATION, JUDGE } from "$lib/ergo/reputation/types";
 	import { judge_detail } from "$lib/common/store";
 	import GameCard from "./GameCard.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import { update_reputation_proof } from "$lib/ergo/reputation/submit";
+	import { create_opinion, update_opinion } from "ergo-reputation-system";
+	import { explorer_uri } from "$lib/ergo/envs";
 	import { Flame, Droplets, Coins, ChevronDown } from "lucide-svelte";
 	import { fetch_token_details, type TokenEIP4 } from "$lib/ergo/fetch";
 	import { formatTokenBigInt } from "$lib/utils";
 	import { mode } from "mode-watcher";
 
-	let proof: Judge | undefined = undefined;
+	let proof: ReputationProof | undefined = undefined;
 
 	const unsubscribeDetail = judge_detail.subscribe((value) => {
 		proof = value ?? undefined;
@@ -74,13 +75,47 @@
 
 	async function handleOpinionSubmit() {
 		if (!proof) return;
-		await update_reputation_proof(
-			"judge",
-			proof.token_id,
-			polarization,
-			newOpinion,
-		);
-		newOpinion = "";
+		const currentUserProof = get(reputation_proof);
+		if (!currentUserProof) {
+			alert("You need a reputation profile to submit an opinion.");
+			return;
+		}
+
+		try {
+			if (currentOpinion) {
+				await update_opinion(
+					get(explorer_uri),
+					currentOpinion,
+					polarization,
+					newOpinion,
+				);
+			} else {
+				// Create new opinion
+				// We need a main box to spend from. We use the first box of the user's proof.
+				// Ideally we should pick a box with sufficient tokens, but for now we assume the first one is valid.
+				const mainBox = currentUserProof.current_boxes[0];
+				if (!mainBox) {
+					alert("No valid reputation box found to create opinion.");
+					return;
+				}
+
+				await create_opinion(
+					get(explorer_uri),
+					1, // token_amount
+					JUDGE, // type_nft_id
+					proof.token_id, // object_pointer
+					polarization,
+					newOpinion,
+					false, // is_locked
+					mainBox,
+				);
+			}
+			newOpinion = "";
+			showOpinionForm = false;
+		} catch (e: any) {
+			console.error("Error submitting opinion:", e);
+			alert("Failed to submit opinion: " + e.message);
+		}
 	}
 
 	// --- Burned Assets Logic ---

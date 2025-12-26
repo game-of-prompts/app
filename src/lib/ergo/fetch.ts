@@ -36,7 +36,7 @@ import {
     getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
-import { type ReputationOpinion, type RPBox } from "./reputation/objects";
+import { type ReputationOpinion, type RPBox, calculate_reputation as calculate_reputation_proof } from "./reputation/objects";
 import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
@@ -91,7 +91,10 @@ export async function fetch_token_details(id: string): Promise<TokenEIP4> {
 
 function calculate_reputation(game: AnyGame): number {
     let reputation = 0
-    reputation += game.judges.reduce((acc, token) => acc + Number(get(judgesStore).data.get(token)?.reputation || 0), 0);
+    reputation += game.judges.reduce((acc, token) => {
+        const proof = get(judgesStore).data.get(token);
+        return acc + (proof ? calculate_reputation_proof(proof) : 0);
+    }, 0);
     return reputation;
 }
 

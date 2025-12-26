@@ -1,30 +1,35 @@
 <script lang="ts">
-    import { Button } from "$lib/components/ui/button";
-    import { Badge } from "$lib/components/ui/badge";
-    import { total_burned_string, type Judge } from "$lib/ergo/reputation/objects";
-    import { judge_detail } from "$lib/common/store";
+  import { Button } from "$lib/components/ui/button";
+  import { Badge } from "$lib/components/ui/badge";
+  import {
+    total_burned_string,
+    type ReputationProof,
+  } from "$lib/ergo/reputation/objects";
+  import { judge_detail } from "$lib/common/store";
 
-    export let judge: Judge;
-    export let index: number;
+  export let judge: ReputationProof;
+  export let index: number;
 
-    $: tokenId = judge?.token_id ?? "Unknown Token";
-    $: opinionsCount = judge?.number_of_boxes > 0 ? judge.number_of_boxes - 1 : 0;
-    $: totalErgsBurned = total_burned_string(judge);
+  $: tokenId = judge?.token_id ?? "Unknown Token";
+  $: opinionsCount = judge?.number_of_boxes > 0 ? judge.number_of_boxes - 1 : 0;
+  $: totalErgsBurned = total_burned_string(judge);
 
-    function handleViewDetails() {
-        if (judge) judge_detail.set(judge);
-    }
+  function handleViewDetails() {
+    if (judge) judge_detail.set(judge);
+  }
 </script>
 
 <div
-  class="group relative overflow-hidden rounded-xl bg-card border border-border/50 shadow-md 
-  transition-all duration-200 hover:shadow-lg hover:-translate-y-1 p-4 sm:p-5 flex flex-col 
+  class="group relative overflow-hidden rounded-xl bg-card border border-border/50 shadow-md
+  transition-all duration-200 hover:shadow-lg hover:-translate-y-1 p-4 sm:p-5 flex flex-col
   justify-between max-w-sm w-full"
 >
   <div class="space-y-4">
     <!-- Header: Title + Badge -->
     <div class="flex items-center justify-between">
-      <h3 class="text-xl font-bold text-foreground tracking-tight leading-tight">
+      <h3
+        class="text-xl font-bold text-foreground tracking-tight leading-tight"
+      >
         Judge {tokenId.slice(0, 4)}...{tokenId.slice(-2)}
       </h3>
       <Badge
@@ -60,7 +65,9 @@
   </div>
 
   <!-- Footer -->
-  <div class="flex items-center justify-end gap-3 pt-3 mt-3 border-t border-border/40">
+  <div
+    class="flex items-center justify-end gap-3 pt-3 mt-3 border-t border-border/40"
+  >
     <Button
       size="sm"
       class="w-full sm:w-auto transition-all duration-150 hover:scale-[1.02] 

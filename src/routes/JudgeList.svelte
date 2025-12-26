@@ -1,31 +1,32 @@
 <script lang="ts">
     import JudgeCard from "./JudgeCard.svelte";
     import { ErgoPlatform } from "$lib/ergo/platform";
-    import { type Judge } from "$lib/ergo/reputation/objects";
+    import { type ReputationProof } from "$lib/ergo/reputation/objects";
     import { judges } from "$lib/common/store";
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from "lucide-svelte";
     import { onMount, onDestroy } from "svelte";
     import { get } from "svelte/store";
     import { Input } from "$lib/components/ui/input";
-    import {
-        fetchJudges,
-        fetchReputationProofs,
-    } from "$lib/ergo/reputation/fetch";
+    import { fetchJudges } from "$lib/ergo/reputation/fetch";
 
     let platform = new ErgoPlatform();
-    let allFetchedItems: Map<string, Judge> = new Map();
-    let listedItems: Map<string, Judge> | null = null;
+    let allFetchedItems: Map<string, ReputationProof> = new Map();
+    let listedItems: Map<string, ReputationProof> | null = null;
     let errorMessage: string | null = null;
     let isLoadingApi: boolean = true;
     let isFiltering: boolean = false;
     let searchQuery: string = "";
     let offset: number = 0;
 
-    export let filterJudge: ((item: Judge) => Promise<boolean>) | null = null;
+    export let filterJudge:
+        | ((item: ReputationProof) => Promise<boolean>)
+        | null = null;
 
-    async function applyFiltersAndSearch(sourceItems: Map<string, Judge>) {
-        const filteredItemsMap = new Map<string, Judge>();
+    async function applyFiltersAndSearch(
+        sourceItems: Map<string, ReputationProof>,
+    ) {
+        const filteredItemsMap = new Map<string, ReputationProof>();
         for (const [id, item] of sourceItems.entries()) {
             let shouldAdd = true;
             if (filterJudge) {
@@ -72,10 +73,8 @@
     }
 
     onMount(async () => {
-        allFetchedItems = await fetchJudges();
-        applyFiltersAndSearch(allFetchedItems).then(() => {
-            if (isLoadingApi) isLoadingApi = false;
-        });
+        // fetchJudges now uses the library internally and updates the store
+        await fetchJudges();
     });
 
     onDestroy(() => {

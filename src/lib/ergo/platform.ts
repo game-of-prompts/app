@@ -18,7 +18,9 @@ import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
-import { update_reputation_proof } from './reputation/submit';
+import { create_opinion, update_opinion } from 'ergo-reputation-system';
+import { GAME, PARTICIPATION } from '$lib/ergo/reputation/types';
+import { reputation_proof } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
 
@@ -26,13 +28,48 @@ interface CreateGoPGamePlatformParams {
     gameServiceId: string;
     hashedSecret: string; // Hex string of blake2b256(S)
     deadlineBlock: number;
-    creatorStakeAmount: bigint|BigInt;
-    participationFeeAmount: bigint|BigInt;
+    creatorStakeAmount: bigint | BigInt;
+    participationFeeAmount: bigint | BigInt;
     commissionPercentage: number;
     judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
     perJudgeComissionPercentage: number;
     participationTokenId?: string;
+}
+
+async function createOrUpdateOpinion(
+    typeId: string,
+    object_pointer: string,
+    polarization: boolean,
+    content: string | null
+): Promise<string | null> {
+    const proof = get(reputation_proof);
+    if (!proof) throw new Error("User has no reputation proof");
+
+    const existingOpinion = proof.current_boxes.find(b => b.type.tokenId === typeId && b.object_pointer === object_pointer);
+
+    if (existingOpinion) {
+        return await update_opinion(
+            get(explorer_uri),
+            existingOpinion as any,
+            polarization,
+            content
+        );
+    } else {
+        const mainBox = proof.current_boxes[0];
+        if (!mainBox) throw new Error("No main box found");
+
+        return await create_opinion(
+            get(explorer_uri),
+            1,
+            typeId,
+            object_pointer,
+            polarization,
+            content,
+            false,
+            mainBox as any
+        );
+    }
 }
 
 export class ErgoPlatform implements Platform {
@@ -169,7 +206,7 @@ export class ErgoPlatform implements Platform {
             return await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
         }
         else {
-            return await update_reputation_proof("participation", invalidatedParticipation.commitmentC_Hex, false, null);
+            return await createOrUpdateOpinion(PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null);
         }
     }
 
@@ -243,7 +280,7 @@ export class ErgoPlatform implements Platform {
             throw new Error("The game is not in an active state.");
         }
         try {
-            return await update_reputation_proof("game", game.gameId, true, null);
+            return await createOrUpdateOpinion(GAME, game.gameId, true, null);
         } catch (error) {
             console.error("Error in platform method acceptJudgeNomination:", error);
             if (error instanceof Error) throw new Error(`Failed to accept judge nomination: ${error.message}`);

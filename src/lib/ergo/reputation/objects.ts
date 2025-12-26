@@ -9,10 +9,10 @@ export interface TypeNFT {
     description: string;
     schemaURI: string;
     isRepProof: boolean;
-    box: Box<Amount>|null;
+    box: Box<Amount> | null;
 }
 
-interface ReputationProof {
+export interface ReputationProof {
     token_id: string;
     type: TypeNFT;  // SELF identification of the proof type (by Type NFT)
     total_amount: number;
@@ -24,20 +24,22 @@ interface ReputationProof {
     data: object;
 }
 
-export interface Judge extends ReputationProof {
-    reputation: number;
+export function calculate_reputation(proof: ReputationProof): number {
+    const burned_value = proof.current_boxes.reduce((acc, b) => acc + Number(b.box.value), 0);
+    const subjective = 1;
+    return burned_value * subjective;
 }
 
 export interface RPBox {
     box: Box<Amount>;
     box_id: string;
-    type: TypeNFT; 
+    type: TypeNFT;
     token_id: string;
     token_amount: number;
     object_pointer: string;
     is_locked: boolean;
     polarization: boolean;
-    content: object|string|null;
+    content: object | string | null;
 }
 
 export interface ReputationOpinion {

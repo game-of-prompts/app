@@ -1,0 +1,2504 @@
+
+> game-of-prompts@0.0.1 check
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+
+====================================
+Loading svelte-check in workspace: /home/jse/Escritorio/gop
+Getting Svelte diagnostics...
+
+
+
+
+
+
+/home/jse/Escritorio/gop/vite.config.ts:7:2
+Error: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'test' does not exist in type 'UserConfigExport'. 
+	plugins: [sveltekit()],
+	test: {
+		globals: true,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/utils.ts:5:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    type Box,
+    type InputBox,
+    type Amount,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/utils.ts:7:10
+Error: Module '"@fleet-sdk/core"' has no exported member 'TokenEIP4'. 
+    type Amount,
+    type TokenEIP4 // <-- Importar TokenEIP4
+} from '@fleet-sdk/core';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/utils.ts:164:30
+Error: Property 'serializedValue' does not exist on type 'string'. 
+        additionalRegisters: Object.entries(e.additionalRegisters).reduce((acc, [key, value]) => {
+            acc[key] = value.serializedValue;
+            return acc;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/utils.ts:189:7
+Error: 'rawJsonDetails.length' is possibly 'undefined'. 
+        `${base}/img3.png`,
+    ][rawJsonDetails?.length % 3];
+    const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/contract.ts:3:24
+Error: Module '"@fleet-sdk/compiler"' declares 'ErgoTree' locally, but it is not exported. 
+
+import { compile, type ErgoTree } from "@fleet-sdk/compiler";
+import { Network, type ErgoAddress as Address } from "@fleet-sdk/core";
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:7:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    ErgoAddress,
+    type InputBox,
+    BOX_VALUE_PER_BYTE
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:66:40
+Error: Cannot find name 'ergo'. 
+    // --- 1. Data and Address Preparation ---
+    const creatorAddressString = await ergo.get_change_address();
+    if (!creatorAddressString) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:76:38
+Error: Cannot find name 'ergo'. 
+
+    const inputs: InputBox[] = await ergo.get_utxos();
+    if (!inputs || inputs.length === 0) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:90:42
+Error: Cannot find name 'ergo'. 
+
+    const ceremonyDeadlineBlock = (await ergo.get_current_height()) + DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:206:34
+Error: Cannot find name 'ergo'. 
+    // --- 3. Transaction Construction and Submission ---
+    const creationHeight = await ergo.get_current_height();
+    const unsignedTransaction = new TransactionBuilder(creationHeight)
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:214:37
+Error: Cannot find name 'ergo'. 
+
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+    const transactionId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/create_game.ts:215:33
+Error: Cannot find name 'ergo'. 
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+    const transactionId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/submit_score.ts:7:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    ErgoAddress,
+    type InputBox
+} from '@fleet-sdk/core';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/resolve_game.ts:55:33
+Error: Cannot find name 'ergo'. 
+    }
+    const currentHeight = await ergo.get_current_height();
+    if (currentHeight < game.deadlineBlock) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/resolve_game.ts:68:41
+Error: Cannot find name 'ergo'. 
+
+    const resolverAddressString = await ergo.get_change_address();
+    const resolverPkBytes = ErgoAddress.fromBase58(resolverAddressString).getPublicKeys()[0];
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/resolve_game.ts:255:49
+Error: Cannot find name 'ergo'. 
+        const unsignedTransaction = new TransactionBuilder(currentHeight)
+            .from([parseBox(game.box), ...await ergo.get_utxos()])
+            .to([resolutionBoxOutput])
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/resolve_game.ts:262:41
+Error: Cannot find name 'ergo'. 
+
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/resolve_game.ts:263:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/cancel_game.ts:39:33
+Error: Cannot find name 'ergo'. 
+    // --- 1. Obtener datos y realizar pre-chequeos ---
+    const currentHeight = await ergo.get_current_height();
+    if (currentHeight >= game.deadlineBlock) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/cancel_game.ts:123:25
+Error: Cannot find name 'ergo'. 
+    // --- 4. Construir y Enviar la Transacción ---
+    const utxos = await ergo.get_utxos();
+    const inputs = [parseBox(gameBoxToSpend), ...utxos];
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/cancel_game.ts:134:41
+Error: Cannot find name 'ergo'. 
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/cancel_game.ts:135:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/drain_cancelled_game_stake.ts:6:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    SAFE_MIN_BOX_VALUE,
+    type InputBox
+} from '@fleet-sdk/core';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/drain_cancelled_game_stake.ts:33:33
+Error: Cannot find name 'ergo'. 
+    // --- 1. Preliminary Checks ---
+    const currentHeight = await ergo.get_current_height();
+    if (currentHeight < game.unlockHeight) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/drain_cancelled_game_stake.ts:86:37
+Error: Cannot find name 'ergo'. 
+    // --- 3. Build and Send the Transaction ---
+    const utxos: InputBox[] = await ergo.get_utxos();
+    const inputs = [parseBox(game.box), ...utxos];
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/drain_cancelled_game_stake.ts:97:41
+Error: Cannot find name 'ergo'. 
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/drain_cancelled_game_stake.ts:98:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:20:33
+Error: Cannot find name 'ergo'. 
+    
+    const currentHeight = await ergo.get_current_height();
+    const userAddress = await ergo.get_change_address();
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:21:31
+Error: Cannot find name 'ergo'. 
+    const currentHeight = await ergo.get_current_height();
+    const userAddress = await ergo.get_change_address();
+    
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:36:54
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. 
+    if (winnerParticipation === null) {
+        requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex);
+        if (userAddress !== requiredSignerAddress) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:41:54
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. 
+    } else {
+        requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
+        if (userAddress !== requiredSignerAddress) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:203:25
+Error: Cannot find name 'ergo'. 
+    // --- 6. Transacción ---
+    const utxos = await ergo.get_utxos();
+    const inputs = [parseBox(game.box), ...participations.map(p => parseBox(p.box)), ...utxos];
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:216:41
+Error: Cannot find name 'ergo'. 
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction);
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/end_game.ts:217:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction);
+        const txId = await ergo.submit_tx(signedTransaction);
+        console.log(`Success! Tx ID: ${txId}`);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:5:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    RECOMMENDED_MIN_FEE_VALUE,
+    type InputBox,
+    type Box,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:38:33
+Error: Cannot find name 'ergo'. 
+    // --- 1. Preliminary checks ---
+    const currentHeight = await ergo.get_current_height();
+    if (currentHeight >= game.resolutionDeadline) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:52:23
+Error: 'reg.R4' is possibly 'undefined'. 
+
+        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:52:30
+Error: Property 'renderedValue' does not exist on type 'string'. 
+
+        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:53:23
+Error: 'reg.R5' is possibly 'undefined'. 
+        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+                      reg.R6.renderedValue === "true" &&
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:53:30
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+                      reg.R6.renderedValue === "true" &&
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:54:23
+Error: 'reg.R6' is possibly 'undefined'. 
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+                      reg.R6.renderedValue === "true" &&
+                      reg.R8.renderedValue === "false";
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:54:30
+Error: Property 'renderedValue' does not exist on type 'string'. 
+                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
+                      reg.R6.renderedValue === "true" &&
+                      reg.R8.renderedValue === "false";
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:55:23
+Error: 'reg.R8' is possibly 'undefined'. 
+                      reg.R6.renderedValue === "true" &&
+                      reg.R8.renderedValue === "false";
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:55:30
+Error: Property 'renderedValue' does not exist on type 'string'. 
+                      reg.R6.renderedValue === "true" &&
+                      reg.R8.renderedValue === "false";
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:99:39
+Error: Parameter 't' implicitly has an 'any' type. 
+            ? BigInt(pBox.value) 
+            : BigInt(pBox.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:202:31
+Error: Cannot find name 'ergo'. 
+    // --- 5. Build and Submit the Transaction ---
+    const userAddress = await ergo.get_change_address();
+    const utxos: InputBox[] = await ergo.get_utxos();
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:203:37
+Error: Cannot find name 'ergo'. 
+    const userAddress = await ergo.get_change_address();
+    const utxos: InputBox[] = await ergo.get_utxos();
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:220:13
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await Promise.race([
+            ergo.sign_tx(unsignedTransaction.toEIP12Object()),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("sign_tx timeout")), 15000))
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/judges_invalidate.ts:225:28
+Error: Cannot find name 'ergo'. 
+
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:5:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    RECOMMENDED_MIN_FEE_VALUE,
+    type InputBox} from '@fleet-sdk/core';
+import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:8:36
+Error: Duplicate identifier 'ValidParticipation'. 
+import { hexToBytes, parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
+import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
+import { getGopGameResolutionErgoTreeHex } from '../contract';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:8:61
+Error: Duplicate identifier 'ValidParticipation'. 
+import { hexToBytes, parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
+import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
+import { getGopGameResolutionErgoTreeHex } from '../contract';
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:33:33
+Error: Cannot find name 'ergo'. 
+    // --- 1. Verificaciones preliminares ---
+    const currentHeight = await ergo.get_current_height();
+    if (currentHeight >= game.resolutionDeadline) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:81:37
+Error: Cannot find name 'ergo'. 
+    const userAddress = pkHexToBase58Address(newResolverPkHex);
+    const utxos: InputBox[] = await ergo.get_utxos();
+    
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:94:37
+Error: Cannot find name 'ergo'. 
+    
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+    const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/include_omitted_participation.ts:95:24
+Error: Cannot find name 'ergo'. 
+    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+    const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/claim_after_cancellation.ts:5:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    RECOMMENDED_MIN_FEE_VALUE,
+    type InputBox,
+    ErgoAddress,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/claim_after_cancellation.ts:42:53
+Error: Argument of type 'string | null' is not assignable to parameter of type 'ByteInput'.
+  Type 'null' is not assignable to type 'ByteInput'. 
+    // stored in the R4 register of the participation box.
+    const playerAddress = ErgoAddress.fromPublicKey(participation.playerPK_Hex);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:5:10
+Error: Module '"@fleet-sdk/core"' declares 'InputBox' locally, but it is not exported. 
+    RECOMMENDED_MIN_FEE_VALUE,
+    type InputBox,
+    ErgoAddress,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:26:31
+Error: Cannot find name 'ergo'. 
+    // --- 1. Get user and chain data ---
+    const userAddress = await ergo.get_change_address();
+    const utxos: InputBox[] = await ergo.get_utxos();
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:27:37
+Error: Cannot find name 'ergo'. 
+    const userAddress = await ergo.get_change_address();
+    const utxos: InputBox[] = await ergo.get_utxos();
+    const currentHeight = await ergo.get_current_height();
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:28:33
+Error: Cannot find name 'ergo'. 
+    const utxos: InputBox[] = await ergo.get_utxos();
+    const currentHeight = await ergo.get_current_height();
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:39:53
+Error: Argument of type 'string | null' is not assignable to parameter of type 'ByteInput'.
+  Type 'null' is not assignable to type 'ByteInput'. 
+    // This is a contract security requirement.
+    const playerAddress = ErgoAddress.fromPublicKey(participation.playerPK_Hex);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:65:41
+Error: Cannot find name 'ergo'. 
+    try {
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/reclaim_after_grace.ts:66:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:31:19
+Error: Cannot find name 'get'. 
+): Promise<string | null> {
+    const proof = get(reputation_proof);
+    if (!proof) throw new Error("User has no reputation proof");
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:34:54
+Error: Parameter 'b' implicitly has an 'any' type. 
+
+    const existingOpinion = proof.current_boxes.find(b => b.type.tokenId === typeId && b.object_pointer === object_pointer);
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:38:13
+Error: Cannot find name 'get'. 
+        return await update_opinion(
+            get(explorer_uri),
+            existingOpinion as any,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:48:13
+Error: Cannot find name 'get'. 
+        return await create_opinion(
+            get(explorer_uri),
+            1,
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:60:14
+Error: Class 'ErgoPlatform' incorrectly implements interface 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. 
+
+export class ErgoPlatform implements Platform {
+    // ... (existing code)
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:73:14
+Error: Cannot find name 'ergo'. 
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:91:14
+Error: Cannot find name 'ergo'. 
+    async acceptJudgeNomination(game: GameActive): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        if (game.status !== 'Active') {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:117:14
+Error: Cannot find name 'ergo'. 
+    async contribute_to_ceremony(game: GameActive): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        if (game.status !== 'Active') {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/platform.ts:122:26
+Error: Cannot find name 'contribute_to_ceremony'. Did you mean the instance member 'this.contribute_to_ceremony'? 
+        try {
+            return await contribute_to_ceremony(game);
+        } catch (error) {
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:739:62
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    try {
+        const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
+        const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:740:61
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
+        const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
+        const gameNftId = box.additionalRegisters.R6?.renderedValue;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:741:55
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
+        const gameNftId = box.additionalRegisters.R6?.renderedValue;
+        const solverId_RawBytesHex = box.additionalRegisters.R7?.renderedValue;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:742:66
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const gameNftId = box.additionalRegisters.R6?.renderedValue;
+        const solverId_RawBytesHex = box.additionalRegisters.R7?.renderedValue;
+        const hashLogs_Hex = box.additionalRegisters.R8?.renderedValue;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:743:58
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const solverId_RawBytesHex = box.additionalRegisters.R7?.renderedValue;
+        const hashLogs_Hex = box.additionalRegisters.R8?.renderedValue;
+        const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:744:66
+Error: Property 'renderedValue' does not exist on type 'string'. 
+        const hashLogs_Hex = box.additionalRegisters.R8?.renderedValue;
+        const scoreList = JSON.parse(box.additionalRegisters.R9?.renderedValue) ?? [];
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:828:41
+Error: Property 'spentTransactionId' does not exist on type 'Box'. Did you mean 'transactionId'? 
+                if (p_base) {
+                    const spent = !!box.spentTransactionId;
+                    const expired = box.creationHeight >= gameDeadline;
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:859:82
+Error: Property 'spentTransactionId' does not exist on type 'Box'. Did you mean 'transactionId'? 
+                                if (game.status === GameState.Finalized) {
+                                    const spentTx = await getTransactionInfo(box.spentTransactionId!);
+                                    if (!spentTx) return "unknown";
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/fetch.ts:1116:19
+Error: Property 'participationTokenId' is missing in type '{ boxId: string; box: Box<Amount>; platform: ErgoPlatform; status: "Finalized"; deadlineBlock: number; gameId: string; content: GameContent; value: bigint; ... 6 more ...; reputation: number; }' but required in type 'GameFinalized'. 
+        try {
+            const finalized: GameFinalized = {
+                boxId: currentBox ? currentBox.boxId : lastBox.box.boxId,
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:5:58
+Error: Module '"@fleet-sdk/core"' has no exported member 'TokenEIP4'. 
+import { type ReputationOpinion } from "$lib/ergo/reputation/objects";
+import { SAFE_MIN_BOX_VALUE, type Amount, type Box, type TokenEIP4 } from "@fleet-sdk/core";
+import { type GameConstants } from "./constants";
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:218:90
+Error: Property 'get_current_height' does not exist on type 'ErgoPlatform'. 
+export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> {
+    return game.status !== GameState.Active || game.deadlineBlock <= await game.platform.get_current_height();
+}
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:222:52
+Error: Property 'get_current_height' does not exist on type 'ErgoPlatform'. 
+export async function isOpenCeremony(game: AnyGame): Promise<boolean> {
+    const currentHeight = await (new ErgoPlatform).get_current_height();
+    return game.status === "Active" && currentHeight < game.ceremonyDeadline
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:248:42
+Error: Property 'get_current_height' does not exist on type 'ErgoPlatform'. 
+    const platform = new ErgoPlatform();
+    const currentHeight = await platform.get_current_height();
+    const unlocked = currentHeight >= game.unlockHeight;
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:301:39
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    // Parse registers safely
+    const ergoTree = hexToBytes(R.R4?.renderedValue || "");
+    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:302:52
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    const ergoTree = hexToBytes(R.R4?.renderedValue || "");
+    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:303:50
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:304:50
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+    const scoreListRaw = R.R9?.renderedValue;
+
+
+/home/jse/Escritorio/gop/src/lib/common/game.ts:305:32
+Error: Property 'renderedValue' does not exist on type 'string'. 
+    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+    const scoreListRaw = R.R9?.renderedValue;
+    const seedBytes = hexToBytes(seed)!;
+
+
+/home/jse/Escritorio/gop/src/lib/utils.ts:70:14
+Error: Property 'creatorStakeAmount' does not exist on type 'GameActive | GameResolution | GameFinalized'.
+  Property 'creatorStakeAmount' does not exist on type 'GameFinalized'. 
+	}
+	return game.creatorStakeAmount;
+}
+
+
+/home/jse/Escritorio/gop/src/lib/components/ui/progress/progress.svelte:7:7
+Error: Argument of type 'ProgressProps' is not assignable to parameter of type '{ max?: number | undefined; value: number | null | undefined; color?: string | undefined; class?: string | null | undefined; }'.
+  Property 'value' is optional in type '{ max?: number | undefined; value?: number | null | undefined; onValueChange?: OnChangeFn<number | null> | undefined; asChild?: boolean | undefined; el?: HTMLDivElement | undefined; } & HTMLAttributes<...>' but required in type '{ max?: number | undefined; value: number | null | undefined; color?: string | undefined; class?: string | null | undefined; }'. (ts)
+	// Se tipan las propiedades del Progress primitivo
+	type $$Props = ProgressPrimitive.Props;
+	
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/ceremony.ts:31:33
+Error: Cannot find name 'ergo'. 
+
+    const currentHeight = await ergo.get_current_height();
+    
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/ceremony.ts:117:33
+Error: Cannot find name 'ergo'. 
+    
+    const changeAddress = await ergo.get_change_address();
+
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/ceremony.ts:121:45
+Error: Cannot find name 'ergo'. 
+        const unsignedTransaction = new TransactionBuilder(currentHeight)
+            .from([gameBoxToSpend, ...await ergo.get_utxos()])
+            .to([ceremonyOutputBox])
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/ceremony.ts:127:41
+Error: Cannot find name 'ergo'. 
+
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+/home/jse/Escritorio/gop/src/lib/ergo/actions/ceremony.ts:128:28
+Error: Cannot find name 'ergo'. 
+        const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
+        const txId = await ergo.submit_tx(signedTransaction);
+
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:1012:13
+Warn: A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details. (svelte)
+        >
+            <div
+                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                on:click|stopPropagation
+            >
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">
+                        Add {modalFileType === "image" ? "Image" : "Service"} Download
+                        Source
+                    </h3>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        on:click={closeFileSourceModal}
+                    >
+                        <X class="w-5 h-5" />
+                    </Button>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                    File Hash: <span class="font-mono text-xs"
+                        >{modalFileHash}</span
+                    >
+                </p>
+                <FileSourceCreation
+                    hasProfile={true}
+                    fileHash={modalFileHash}
+                    onSourceAdded={handleSourceAdded}
+                />
+            </div>
+        </div>
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:1012:13
+Warn: A11y: <div> with click handler must have an ARIA role (svelte)
+        >
+            <div
+                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                on:click|stopPropagation
+            >
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">
+                        Add {modalFileType === "image" ? "Image" : "Service"} Download
+                        Source
+                    </h3>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        on:click={closeFileSourceModal}
+                    >
+                        <X class="w-5 h-5" />
+                    </Button>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                    File Hash: <span class="font-mono text-xs"
+                        >{modalFileHash}</span
+                    >
+                </p>
+                <FileSourceCreation
+                    hasProfile={true}
+                    fileHash={modalFileHash}
+                    onSourceAdded={handleSourceAdded}
+                />
+            </div>
+        </div>
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:168:17
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                gameImageHash,
+                explorer_uri,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:178:17
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                gameServiceId,
+                explorer_uri,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:237:17
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                target_date.getTime(),
+                platform,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:241:17
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                deadlineBlock,
+                platform,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:380:43
+Error: Property 'createGoPGame' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            const result = await platform.createGoPGame({
+                gameServiceId: gameServiceId,
+
+
+/home/jse/Escritorio/gop/src/routes/CreateGame.svelte:1035:21
+Error: Object literal may only specify known properties, and '"hasProfile"' does not exist in type '{ profile?: ReputationProof | null | undefined; explorerUri: string; onSourceAdded?: ((txId: string) => void) | null | undefined; class?: string | undefined; }'. (ts)
+                <FileSourceCreation
+                    hasProfile={true}
+                    fileHash={modalFileHash}
+
+
+/home/jse/Escritorio/gop/src/routes/GameCard.svelte:159:79
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+        try {
+            remainingTime = await block_to_time_remaining(game.deadlineBlock, game.platform);
+            const ended = await isGameParticipationEnded(game);
+
+
+/home/jse/Escritorio/gop/src/routes/GameCard.svelte:200:17
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                game.status === GameState.Active ? game.deadlineBlock : game.deadlineBlock,
+                game.platform
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameList.svelte:381:5
+Warn: Unused CSS selector ".game-card.active" (svelte)
+    }
+    .game-card.active {
+        outline: 3px solid var(--primary);
+
+
+/home/jse/Escritorio/gop/src/routes/GameList.svelte:38:19
+Error: Property 'state' does not exist on type 'AnyGame'.
+  Property 'state' does not exist on type 'GameActive'. (ts)
+            (item.status as string) ||
+            (item.state as string) ||
+            (item.box?.state as string) ||
+
+
+/home/jse/Escritorio/gop/src/routes/GameList.svelte:39:24
+Error: Property 'state' does not exist on type 'Box<Amount>'. (ts)
+            (item.state as string) ||
+            (item.box?.state as string) ||
+            (item.box?.status as string) ||
+
+
+/home/jse/Escritorio/gop/src/routes/GameList.svelte:40:24
+Error: Property 'status' does not exist on type 'Box<Amount>'. (ts)
+            (item.box?.state as string) ||
+            (item.box?.status as string) ||
+            "unknown"
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:3203:30
+Warn: 'modalTitle' is not defined (svelte)
+                        >
+                            {modalTitle}
+                        </h3>
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:3794:23
+Warn: Unused CSS selector ".section" (svelte)
+
+<style lang="postcss">
+    .game-detail-page {
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:3794:23
+Warn: Unused CSS selector ".stat-icon" (svelte)
+
+<style lang="postcss">
+    .game-detail-page {
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:174:21
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                    modalFileHash,
+                    explorer_uri,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:179:21
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                    modalFileHash,
+                    explorer_uri,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:220:31
+Error: Cannot find name 'ergo'. (ts)
+
+        currentHeight = await ergo.get_current_height();
+
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:232:21
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                    game.content.imageURL,
+                    explorer_uri,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:238:21
+Error: Argument of type 'Writable<string>' is not assignable to parameter of type 'string'. (ts)
+                    game.content.serviceId,
+                    explorer_uri,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:277:30
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'. (ts)
+                    participationVotes
+                        .get(game.winnerCandidateCommitment)
+                        ?.entries() ?? [],
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:287:45
+Error: 'game' is possibly 'null'. (ts)
+                                        box.object_pointer ===
+                                            game.winnerCandidateCommitment &&
+                                        box.type.tokenId === PARTICIPATION &&
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:287:50
+Error: Property 'winnerCandidateCommitment' does not exist on type 'AnyGame'.
+  Property 'winnerCandidateCommitment' does not exist on type 'GameActive'. (ts)
+                                        box.object_pointer ===
+                                            game.winnerCandidateCommitment &&
+                                        box.type.tokenId === PARTICIPATION &&
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:301:45
+Error: 'game' is possibly 'null'. (ts)
+                                        box.object_pointer ===
+                                            game.winnerCandidateCommitment &&
+                                        box.type.tokenId === PARTICIPATION &&
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:301:50
+Error: Property 'winnerCandidateCommitment' does not exist on type 'AnyGame'.
+  Property 'winnerCandidateCommitment' does not exist on type 'GameActive'. (ts)
+                                        box.object_pointer ===
+                                            game.winnerCandidateCommitment &&
+                                        box.type.tokenId === PARTICIPATION &&
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:318:21
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                    game.deadlineBlock,
+                    platform,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:327:21
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                    game.resolutionDeadline,
+                    platform,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:333:21
+Error: Argument of type 'ErgoPlatform' is not assignable to parameter of type 'Platform'.
+  Type 'ErgoPlatform' is missing the following properties from type 'Platform': id, main_token, icon, time_per_block, and 13 more. (ts)
+                    game.unlockHeight,
+                    platform,
+                );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:348:43
+Error: Cannot find name 'ergo'. (ts)
+                                          judge,
+                                          ergo,
+                                      );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:456:44
+Error: Property 'submitScoreToGopGame' does not exist on type 'ErgoPlatform'. (ts)
+                .map((s) => BigInt(s.trim()));
+            transactionId = await platform.submitScoreToGopGame(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:478:44
+Error: Property 'resolveGame' does not exist on type 'ErgoPlatform'. (ts)
+            );
+            transactionId = await platform.resolveGame(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:496:44
+Error: Property 'cancel_game' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            transactionId = await platform.cancel_game(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:509:35
+Error: Argument of type 'AnyGame | null' is not assignable to parameter of type 'AnyGame'.
+  Type 'null' is not assignable to type 'AnyGame'. (ts)
+    async function handleDrainStake() {
+        if (!iGameDrainingStaking(game)) return;
+        errorMessage = null;
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:513:44
+Error: Property 'drain_cancelled_game_stake' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            transactionId = await platform.drain_cancelled_game_stake(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:533:43
+Error: Property 'claimAfterCancellation' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            const result = await platform.claimAfterCancellation(
+                game as GameCancellation,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:555:43
+Error: Property 'reclaimAfterGrace' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            const result = await platform.reclaimAfterGrace(
+                game as GameActive,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:576:44
+Error: Property 'endGame' does not exist on type 'ErgoPlatform'. (ts)
+            );
+            transactionId = await platform.endGame(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:593:24
+Error: 'game' is possibly 'null'. (ts)
+            const winner_participation = participations.filter(
+                (p) => game.winnerCandidateCommitment === p.commitmentC_Hex,
+            )[0];
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:593:29
+Error: Property 'winnerCandidateCommitment' does not exist on type 'AnyGame'.
+  Property 'winnerCandidateCommitment' does not exist on type 'GameActive'. (ts)
+            const winner_participation = participations.filter(
+                (p) => game.winnerCandidateCommitment === p.commitmentC_Hex,
+            )[0];
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:598:17
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'. (ts)
+            const winnerVotes = participationVotes.get(
+                game.winnerCandidateCommitment,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:613:37
+Error: 'game' is possibly 'null'. (ts)
+                                box.object_pointer ===
+                                    game.winnerCandidateCommitment &&
+                                box.type.tokenId === PARTICIPATION
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:613:42
+Error: Property 'winnerCandidateCommitment' does not exist on type 'AnyGame'.
+  Property 'winnerCandidateCommitment' does not exist on type 'GameActive'. (ts)
+                                box.object_pointer ===
+                                    game.winnerCandidateCommitment &&
+                                box.type.tokenId === PARTICIPATION
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:662:29
+Error: Property 'score' does not exist on type 'ValidParticipation'. (ts)
+                (best, current) =>
+                    current.score > best.score ? current : best,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:662:42
+Error: Property 'score' does not exist on type 'ValidParticipation'. (ts)
+                (best, current) =>
+                    current.score > best.score ? current : best,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:668:43
+Error: 'game' is possibly 'null'. (ts)
+                (p) =>
+                    p.commitmentC_Hex === game.winnerCandidateCommitment &&
+                    p.status === "Submitted",
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:668:48
+Error: Property 'winnerCandidateCommitment' does not exist on type 'AnyGame'.
+  Property 'winnerCandidateCommitment' does not exist on type 'GameActive'. (ts)
+                (p) =>
+                    p.commitmentC_Hex === game.winnerCandidateCommitment &&
+                    p.status === "Submitted",
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:694:44
+Error: Property 'includeOmittedParticipations' does not exist on type 'ErgoPlatform'. (ts)
+
+            transactionId = await platform.includeOmittedParticipations(
+                game,
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:803:9
+Error: Cannot find name 'modalTitle'. (ts)
+        };
+        modalTitle = titles[type] || "Action";
+        errorMessage = null;
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:803:29
+Error: Type 'null' cannot be used as an index type. (ts)
+        };
+        modalTitle = titles[type] || "Action";
+        errorMessage = null;
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:860:23
+Error: Parameter 'v' implicitly has an 'any' type. (ts)
+    // Función de utilidad para limitar los porcentajes a [0, 100]
+    function clampPct(v) {
+        return Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0));
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:872:18
+Error: Property 'status' does not exist on type 'never'. (ts)
+    if (game) {
+        if (game.status === "Active") {
+            creatorPct = Number(game.commissionPercentage ?? 0);
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:873:38
+Error: Property 'commissionPercentage' does not exist on type 'never'. (ts)
+        if (game.status === "Active") {
+            creatorPct = Number(game.commissionPercentage ?? 0);
+            judgesTotalPct =
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:875:29
+Error: Property 'perJudgeComissionPercentage' does not exist on type 'never'. (ts)
+            judgesTotalPct =
+                Number(game.perJudgeComissionPercentage ?? 0n) *
+                game.judges.length;
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:876:22
+Error: Property 'judges' does not exist on type 'never'. (ts)
+                Number(game.perJudgeComissionPercentage ?? 0n) *
+                game.judges.length;
+            developersPct = Number(
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:878:22
+Error: Property 'constants' does not exist on type 'never'. (ts)
+            developersPct = Number(
+                game.constants.DEV_COMMISSION_PERCENTAGE ?? 0,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:880:25
+Error: Property 'status' does not exist on type 'never'. (ts)
+            );
+        } else if (game.status === "Resolution") {
+            creatorPct = Number(game.resolverCommission ?? 0);
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:881:38
+Error: Property 'resolverCommission' does not exist on type 'never'. (ts)
+        } else if (game.status === "Resolution") {
+            creatorPct = Number(game.resolverCommission ?? 0);
+            judgesTotalPct =
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:883:29
+Error: Property 'perJudgeComissionPercentage' does not exist on type 'never'. (ts)
+            judgesTotalPct =
+                Number(game.perJudgeComissionPercentage ?? 0n) *
+                game.judges.length;
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:884:22
+Error: Property 'judges' does not exist on type 'never'. (ts)
+                Number(game.perJudgeComissionPercentage ?? 0n) *
+                game.judges.length;
+            developersPct = Number(
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:886:22
+Error: Property 'constants' does not exist on type 'never'. (ts)
+            developersPct = Number(
+                game.constants.DEV_COMMISSION_PERCENTAGE ?? 0,
+            );
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1205:34
+Error: Operator '>' cannot be applied to types 'string | number' and 'number'. (ts)
+
+                            {#if overAllocated > 0}
+                                <p class="text-xs mt-2 text-red-500">
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1318:51
+Error: Property 'seed' does not exist on type 'AnyGame'.
+  Property 'seed' does not exist on type 'GameCancellation'. (ts)
+                                        >
+                                            {game.seed ?? "N/A"}
+                                        </span>
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1385:57
+Error: 'game' is possibly 'null'. (ts)
+                                                    openFileSourceModal(
+                                                        game.content.imageURL,
+                                                        "image",
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1385:57
+Error: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'. (ts)
+                                                    openFileSourceModal(
+                                                        game.content.imageURL,
+                                                        "image",
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1406:49
+Error: Type 'Judge | null' is not assignable to type 'ReputationProof | null | undefined'.
+  Type 'Judge' is missing the following properties from type 'ReputationProof': types, owner_address, owner_serialized (ts)
+                                                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                                                profile={$reputation_proof}
+                                                fileHash={game.content.imageURL}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1409:49
+Error: Type 'Writable<string>' is not assignable to type 'string'. (ts)
+                                                sources={imageSources}
+                                                explorerUri={explorer_uri}
+                                                webExplorerUriTkn={web_explorer_uri_tkn}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1410:49
+Error: Type 'Writable<string>' is not assignable to type 'string'. (ts)
+                                                explorerUri={explorer_uri}
+                                                webExplorerUriTkn={web_explorer_uri_tkn}
+                                            />
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1465:57
+Error: 'game' is possibly 'null'. (ts)
+                                                    openFileSourceModal(
+                                                        game.content.serviceId,
+                                                        "service",
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1482:45
+Error: Type 'Judge | null' is not assignable to type 'ReputationProof | null | undefined'.
+  Type 'Judge' is missing the following properties from type 'ReputationProof': types, owner_address, owner_serialized (ts)
+                                        <FileSourceCard
+                                            profile={$reputation_proof}
+                                            fileHash={game.content.serviceId}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1485:45
+Error: Type 'Writable<string>' is not assignable to type 'string'. (ts)
+                                            sources={serviceSources}
+                                            explorerUri={explorer_uri}
+                                            webExplorerUriTkn={web_explorer_uri_tkn}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:1486:45
+Error: Type 'Writable<string>' is not assignable to type 'string'. (ts)
+                                            explorerUri={explorer_uri}
+                                            webExplorerUriTkn={web_explorer_uri_tkn}
+                                        />
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2181:110
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'. (ts)
+                                                >
+                                            {:else if game.status === "Resolution" && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationInvalidVotes.includes(judge)}
+                                                <span class="text-red-500">
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2185:110
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'. (ts)
+                                                >
+                                            {:else if game.status === "Resolution" && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationValidVotes.includes(judge)}
+                                                <span class="text-green-500">
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2597:62
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+                                    $address ===
+                                        pkHexToBase58Address(p.playerPK_Hex)}
+                                {@const canClaimCancellationRefund =
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2689:61
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+                                                        pkHexToBase58Address(
+                                                            p.playerPK_Hex,
+                                                        )}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2698:57
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+                                                    title={pkHexToBase58Address(
+                                                        p.playerPK_Hex,
+                                                    )}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2702:57
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+                                                    {pkHexToBase58Address(
+                                                        p.playerPK_Hex,
+                                                    )}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2706:98
+Error: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+                                            </div>
+                                            {#if $connected && $address === pkHexToBase58Address(p.playerPK_Hex)}
+                                                <span
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:2891:61
+Error: Argument of type 'ValidParticipation | MalformedParticipation' is not assignable to parameter of type 'ValidParticipation'.
+  Type 'MalformedParticipation' is not assignable to type 'ValidParticipation'.
+    Types of property 'status' are incompatible.
+      Type '"Malformed"' is not assignable to type '"Submitted"'. (ts)
+                                                        handleReclaimAfterGrace(
+                                                            p,
+                                                        )}
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:3203:30
+Error: Cannot find name 'modalTitle'. (ts)
+                        >
+                            {modalTitle}
+                        </h3>
+
+
+/home/jse/Escritorio/gop/src/routes/GameDetails.svelte:3787:17
+Error: Type 'Judge | null' is not assignable to type 'ReputationProof | null | undefined'.
+  Type 'Judge' is missing the following properties from type 'ReputationProof': types, owner_address, owner_serialized (ts)
+                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                profile={$reputation_proof}
+                fileHash={modalFileHash}
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".proof-details" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".proof-details > :not([hidden]) ~ :not([hidden])" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".proof-details" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".proof-details" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".polarization-badge" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".polarization-badge.positive" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".polarization-badge.positive:is(.dark *)" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".polarization-badge.negative" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/ShowJudge.svelte:619:23
+Warn: Unused CSS selector ".polarization-badge.negative:is(.dark *)" (svelte)
+
+<style lang="postcss">
+	/* --- Estilos base --- */
+
+
+/home/jse/Escritorio/gop/src/routes/JudgeCard.svelte:8:16
+Warn: Component has unused export property 'index'. If it is for external reference only, please consider using `export const index` (svelte)
+    export let judge: Judge;
+    export let index: number;
+
+
+
+/home/jse/Escritorio/gop/src/routes/SettingsModal.svelte:32:1
+Warn: A11y: visible, non-interactive elements with an on:click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as <button type="button"> or <a> might be more appropriate. See https://svelte.dev/docs/accessibility-warnings#a11y-click-events-have-key-events for more details. (svelte)
+
+<div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+    on:click|self={close}
+    role="dialog"
+    aria-modal="true"
+>
+    <div
+        class="bg-background border border-border rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
+    >
+        <div
+            class="flex items-center justify-between p-6 border-b border-border"
+        >
+            <h2 class="text-xl font-semibold">Settings</h2>
+            <Button variant="ghost" size="icon" on:click={close}>
+                <X class="h-5 w-5" />
+            </Button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <Label for="explorer_uri">Explorer API URI</Label>
+                    <Input
+                        id="explorer_uri"
+                        bind:value={$explorer_uri}
+                        placeholder="https://api.ergoplatform.com"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_tx"
+                        >Web Explorer Transaction URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_tx"
+                        bind:value={$web_explorer_uri_tx}
+                        placeholder="https://sigmaspace.io/en/transaction/"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_addr"
+                        >Web Explorer Address URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_addr"
+                        bind:value={$web_explorer_uri_addr}
+                        placeholder="https://sigmaspace.io/en/address/"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_tkn"
+                        >Web Explorer Token URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_tkn"
+                        bind:value={$web_explorer_uri_tkn}
+                        placeholder="https://sigmaspace.io/en/token/"
+                    />
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-4 border-t border-border">
+                <Button
+                    variant="outline"
+                    on:click={restoreDefaults}
+                    class="text-muted-foreground hover:text-foreground"
+                >
+                    <RotateCcw class="mr-2 h-4 w-4" />
+                    Restore Defaults
+                </Button>
+                <Button on:click={close}>Done</Button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+/home/jse/Escritorio/gop/src/routes/SettingsModal.svelte:32:1
+Warn: A11y: Non-interactive element <div> should not be assigned mouse or keyboard event listeners. (svelte)
+
+<div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+    on:click|self={close}
+    role="dialog"
+    aria-modal="true"
+>
+    <div
+        class="bg-background border border-border rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
+    >
+        <div
+            class="flex items-center justify-between p-6 border-b border-border"
+        >
+            <h2 class="text-xl font-semibold">Settings</h2>
+            <Button variant="ghost" size="icon" on:click={close}>
+                <X class="h-5 w-5" />
+            </Button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <Label for="explorer_uri">Explorer API URI</Label>
+                    <Input
+                        id="explorer_uri"
+                        bind:value={$explorer_uri}
+                        placeholder="https://api.ergoplatform.com"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_tx"
+                        >Web Explorer Transaction URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_tx"
+                        bind:value={$web_explorer_uri_tx}
+                        placeholder="https://sigmaspace.io/en/transaction/"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_addr"
+                        >Web Explorer Address URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_addr"
+                        bind:value={$web_explorer_uri_addr}
+                        placeholder="https://sigmaspace.io/en/address/"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="web_explorer_uri_tkn"
+                        >Web Explorer Token URI</Label
+                    >
+                    <Input
+                        id="web_explorer_uri_tkn"
+                        bind:value={$web_explorer_uri_tkn}
+                        placeholder="https://sigmaspace.io/en/token/"
+                    />
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-4 border-t border-border">
+                <Button
+                    variant="outline"
+                    on:click={restoreDefaults}
+                    class="text-muted-foreground hover:text-foreground"
+                >
+                    <RotateCcw class="mr-2 h-4 w-4" />
+                    Restore Defaults
+                </Button>
+                <Button on:click={close}>Done</Button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:228:13
+Warn: A11y: '#' is not a valid href attribute (svelte)
+        <a
+            href="#"
+            on:click|preventDefault={() => changeTab("participateGame")}
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:249:25
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                    <a
+                        href="#"
+                        on:click|preventDefault={() =>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:256:25
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                    <a
+                        href="#"
+                        on:click|preventDefault={() => changeTab("createGame")}
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:263:25
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                    <a
+                        href="#"
+                        on:click|preventDefault={() => changeTab("judges")}
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:271:29
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                        <a
+                            href="#"
+                            on:click|preventDefault={() =>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:279:29
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                        <a
+                            href="#"
+                            on:click|preventDefault={() =>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:320:20
+Warn: A11y: '#' is not a valid href attribute (svelte)
+             <li class:active={activeTab === "participateGame"}>
+                <a href="#" on:click|preventDefault={() => changeTab("participateGame")}>Competitions</a>
+            </li>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:323:20
+Warn: A11y: '#' is not a valid href attribute (svelte)
+            <li class:active={activeTab === "createGame"}>
+                <a href="#" on:click|preventDefault={() => changeTab("createGame")}>Create Competition</a>
+            </li>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:326:20
+Warn: A11y: '#' is not a valid href attribute (svelte)
+            <li class:active={activeTab === "judges"}>
+                <a href="#" on:click|preventDefault={() => changeTab("judges")}>Judges</a>
+            </li>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:330:24
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                <li class:active={activeTab === "createJudge"}>
+                    <a href="#" on:click|preventDefault={() => changeTab("createJudge")}>Become a Judge</a>
+                </li>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:334:24
+Warn: A11y: '#' is not a valid href attribute (svelte)
+                <li class:active={activeTab === "showJudge"}>
+                    <a href="#" on:click|preventDefault={() => changeTab("showJudge")}>My reputation</a>
+                </li>
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:48:14
+Error: Module '"source-application"' has no exported member 'fetchProfile'. (ts)
+    import { Button } from "$lib/components/ui/button";
+    import { fetchProfile } from "source-application";
+
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:91:9
+Error: Type 'Timeout' is not assignable to type 'number'. (ts)
+        getCurrentHeight();
+        balanceUpdateInterval = setInterval(updateWalletInfo, 30000);
+
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:181:45
+Error: Property 'get_current_height' does not exist on type 'ErgoPlatform'. (ts)
+            await walletManager.refreshBalance();
+            current_height = await platform.get_current_height();
+
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:191:48
+Error: Cannot find name 'ergo'. (ts)
+            if (proofs.size > 0) {
+                let proof = await fetchProfile(ergo);
+                if (proof) {
+
+
+/home/jse/Escritorio/gop/src/routes/App.svelte:205:45
+Error: Property 'get_current_height' does not exist on type 'ErgoPlatform'. (ts)
+        try {
+            current_height = await platform.get_current_height();
+        } catch (error) {
+
+
+/home/jse/Escritorio/gop/tests/cancel_game.test.ts:154:76
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(transaction, { signers: [claimer] });
+
+
+
+/home/jse/Escritorio/gop/tests/cancel_game.test.ts:182:76
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/cancel_game.test.ts:273:48
+Error: Argument of type 'bigint' is not assignable to parameter of type 'number | Date'. 
+        // Verificamos que el stake restante (960,000n) es menor que el valor mínimo (1,000,000n).
+        expect(newCreatorStake).to.be.lessThan(MIN_BOX_VALUE);
+
+
+
+/home/jse/Escritorio/gop/tests/cancel_game.test.ts:312:76
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+        // En Token Mode, esto pasaría si no se hiciera la verificación dentro del contrato.
+        const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
+        expect(executionResult, "La cancelación debe fallar cuando el nanoERG restante es menor al Min Box Value de 1,000,000n.").to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/drain_stake_cancelled.test.ts:87:51
+Error: 'cancelledGameBox.additionalRegisters.R5' is possibly 'undefined'. 
+        const claimerInitialBalance = claimer.balance.nanoergs;
+        const unlockHeightFromRegister = parseInt(cancelledGameBox.additionalRegisters.R5.substring(4), 16);
+        expect(mockChain.height).to.be.greaterThan(unlockHeightFromRegister);
+
+
+/home/jse/Escritorio/gop/tests/drain_stake_cancelled.test.ts:126:76
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(transaction, { signers: [claimer] });
+
+
+
+/home/jse/Escritorio/gop/tests/drain_stake_cancelled.test.ts:196:76
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+        // --- Assert ---
+        const executionResult = mockChain.execute(transaction, { signers: [claimer], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/end_game.test.ts:73:78
+Error: Type 'Uint8Array<ArrayBufferLike> | null' must have a '[Symbol.iterator]()' method that returns an iterator. 
+  const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, ergotree: Uint8Array, secret: Uint8Array): Uint8Array => {
+    return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...hexToBytes(seed), ...bigintToLongByteArray(score), ...logs, ...ergotree, ...secret]));
+  };
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:156:47
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:236:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:275:55
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:284:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:369:47
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:445:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:485:59
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:495:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:571:47
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:665:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:694:59
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:704:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:779:47
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                    prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:841:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:870:59
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                                prependHexPrefix(resolver.key.publicKey, "0008cd")  // script resolvedor
+                            ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:880:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver] });
+
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:945:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:946:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1022:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        const currentHeight = mockChain.height;
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1042:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1086:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1087:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1167:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1187:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1231:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1232:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1310:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1331:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+            .build();
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1375:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1376:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1454:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1473:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+            .build();
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1517:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1518:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1596:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1615:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+            .build();
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1660:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1661:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1739:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1758:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+            .build();
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1802:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R7: SColl(SLong, numericalParams).toHex(),
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1803:49
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                R8: SPair(SColl(SByte, resolver.key.publicKey), SLong(10n)).toHex(),
+                R9: SPair(SColl(SByte, resolver.key.publicKey), SColl(SByte, stringToBytes("utf8", "{}"))).toHex()
+            }
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1881:26
+Error: Operator '+' cannot be applied to types 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount' and 'import("/home/jse/Escritorio/gop/node_modules/@fleet-sdk/common/dist/index").Amount'. 
+        // --- Estado Esperado de la Nueva Caja de Juego ---
+        const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
+        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+
+
+/home/jse/Escritorio/gop/tests/judges_invalidation.test.ts:1900:67
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+            .build();
+        const executionResult = mockChain.execute(tx, { signers: [resolver], throw: false });
+        expect(executionResult).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:154:55
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                    // script del creador original
+                    prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:231:63
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                            // script del creador original
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:240:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:277:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                            // script del creador original
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:286:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:320:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                            // script del creador original
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:329:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:335:86
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+        expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:368:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                            // script del creador original
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:377:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:412:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                            // script del creador original
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:421:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:466:55
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                    // script del creador original
+                    prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:519:62
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+                                // script del creador original
+                                prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                            ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:528:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:534:86
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+        expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, updatedNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:565:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:574:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:580:86
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+        expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:611:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:620:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:660:55
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                    prependHexPrefix(originalResolver.key.publicKey, "0008cd")
+                ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:715:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:724:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:757:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:766:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:815:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:824:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:876:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:885:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:919:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:928:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:958:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:968:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+        // Should fail because omitted participant has lower score
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:998:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:1007:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:1013:86
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+        expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:1042:58
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/omitted_participation.test.ts:1051:58
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+        const result = mockChain.execute(tx, { signers: [newResolver], throw: false });
+        expect(result).to.be.false;
+
+
+/home/jse/Escritorio/gop/tests/reclaim_after_grace.test.ts:102:13
+Error: No overload matches this call.
+  Overload 2 of 4, '(type: SConstructor<number[], SByteType>, elements: ByteInput[]): SConstant<Uint8Array<ArrayBufferLike>[], SByteType>', gave the following error.
+    Type 'SConstant<Uint8Array<ArrayBufferLike>, SByteType>' is not assignable to type 'ByteInput'.
+  Overload 2 of 4, '(type: SConstructor<number[], SByteType>, elements: ByteInput[]): SConstant<Uint8Array<ArrayBufferLike>[], SByteType>', gave the following error.
+    Type 'SConstant<Uint8Array<ArrayBufferLike>, SByteType>' is not assignable to type 'ByteInput'. 
+        // R9: (Detalles del juego, Script del creador)
+        R9: SColl(SColl(SByte), [
+          SColl(SByte, stringToBytes("utf8", "{}")), 
+
+
+/home/jse/Escritorio/gop/tests/reclaim_after_grace.test.ts:105:32
+Error: Property 'key' does not exist on type 'NonKeyedMockChainParty'. 
+          hexToBytes(mode.token) ?? "",
+          SColl(SByte, creator.key.publicKey) // Script de gasto del creador (placeholder)
+        ]).toHex()
+
+
+/home/jse/Escritorio/gop/tests/reclaim_after_grace.test.ts:156:70
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(reclaimTx, { signers: [participant] });
+
+
+
+/home/jse/Escritorio/gop/tests/reclaim_after_grace.test.ts:181:70
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(reclaimTx, { signers: [participant], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/refund_after_cancel.test.ts:66:5
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+    // --- Definir Partidos de Contratos ---
+    participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
+    gameCancelledContract = mockChain.addParty(gameCancellationErgoTree.toHex(), "GameCancelledContract");
+
+
+/home/jse/Escritorio/gop/tests/refund_after_cancel.test.ts:67:5
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+    participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
+    gameCancelledContract = mockChain.addParty(gameCancellationErgoTree.toHex(), "GameCancelledContract");
+
+
+
+/home/jse/Escritorio/gop/tests/refund_after_cancel.test.ts:144:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [player] });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:85:5
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+    // --- Definir Partidos de Contratos --- 
+    gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
+    participationContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationContract");
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:86:5
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+    gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActiveContract");
+    participationContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationContract");
+    gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:87:5
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+    participationContract = mockChain.addParty(participationSubmittedErgoTree.toHex(), "ParticipationContract");
+    gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:222:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator] });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:257:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:295:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:328:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:383:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:439:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator] });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:476:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+/home/jse/Escritorio/gop/tests/resolve_game.test.ts:528:63
+Error: Type 'NonKeyedMockChainParty' is missing the following properties from type 'KeyedMockChainParty': _key, key 
+
+    const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
+
+
+
+====================================
+svelte-check found 291 errors and 29 warnings in 35 files

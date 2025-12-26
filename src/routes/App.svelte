@@ -26,7 +26,10 @@
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
     import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
-    import { Judge, total_burned } from "$lib/ergo/reputation/objects";
+    import {
+        type ReputationProof,
+        total_burned,
+    } from "$lib/ergo/reputation/objects";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
@@ -45,7 +48,8 @@
         web_explorer_uri_tkn,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
-    import { fetchProfile } from "source-application";
+    import { fetchAllProfiles } from "ergo-reputation-system";
+    import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -88,7 +92,7 @@
         }
 
         getCurrentHeight();
-        balanceUpdateInterval = setInterval(updateWalletInfo, 30000);
+        balanceUpdateInterval = window.setInterval(updateWalletInfo, 30000);
 
         scrollingTextElement?.addEventListener(
             "animationiteration",
@@ -188,10 +192,21 @@
             );
 
             if (proofs.size > 0) {
-                let proof = await fetchProfile(ergo);
-                if (proof) {
-                    const selectedProof: Judge = {...proof, reputation: 0}
-                    selectedProof.reputation = 0;
+                const types = await fetchTypeNfts();
+                const profiles = await fetchAllProfiles(
+                    get(explorer_uri),
+                    get(address),
+                    [],
+                    types,
+                );
+                if (profiles.length > 0) {
+                    const selectedProof: ReputationProof = {
+                        ...profiles[0],
+                        current_boxes: profiles[0].current_boxes.map((b) => ({
+                            ...b,
+                            type: types.get(b.type.tokenId) ?? b.type,
+                        })),
+                    };
                     reputation_proof.set(selectedProof);
                 }
             }
@@ -316,22 +331,40 @@
 {#if mobileMenuOpen}
     <div class="mobile-nav" transition:slide={{ duration: 200 }}>
         <ul class="mobile-nav-links">
-             <li class:active={activeTab === "participateGame"}>
-                <a href="#" on:click|preventDefault={() => changeTab("participateGame")}>Competitions</a>
+            <li class:active={activeTab === "participateGame"}>
+                <a
+                    href="#"
+                    on:click|preventDefault={() => changeTab("participateGame")}
+                    >Competitions</a
+                >
             </li>
             <li class:active={activeTab === "createGame"}>
-                <a href="#" on:click|preventDefault={() => changeTab("createGame")}>Create Competition</a>
+                <a
+                    href="#"
+                    on:click|preventDefault={() => changeTab("createGame")}
+                    >Create Competition</a
+                >
             </li>
             <li class:active={activeTab === "judges"}>
-                <a href="#" on:click|preventDefault={() => changeTab("judges")}>Judges</a>
+                <a href="#" on:click|preventDefault={() => changeTab("judges")}
+                    >Judges</a
+                >
             </li>
             {#if !$reputation_proof}
                 <li class:active={activeTab === "createJudge"}>
-                    <a href="#" on:click|preventDefault={() => changeTab("createJudge")}>Become a Judge</a>
+                    <a
+                        href="#"
+                        on:click|preventDefault={() => changeTab("createJudge")}
+                        >Become a Judge</a
+                    >
                 </li>
             {:else}
                 <li class:active={activeTab === "showJudge"}>
-                    <a href="#" on:click|preventDefault={() => changeTab("showJudge")}>My reputation</a>
+                    <a
+                        href="#"
+                        on:click|preventDefault={() => changeTab("showJudge")}
+                        >My reputation</a
+                    >
                 </li>
             {/if}
         </ul>
@@ -340,7 +373,9 @@
 
         <div class="mobile-user-controls">
             <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-medium text-muted-foreground">Theme & Settings</span>
+                <span class="text-sm font-medium text-muted-foreground"
+                    >Theme & Settings</span
+                >
                 <div class="flex gap-2">
                     <Theme />
                     <Button
@@ -355,7 +390,7 @@
                     </Button>
                 </div>
             </div>
-            
+
             <div class="w-full flex justify-center">
                 <WalletButton />
             </div>
@@ -435,7 +470,7 @@
 
     .navbar-content {
         @apply container flex h-16 items-center;
-        @apply justify-end md:justify-start; 
+        @apply justify-end md:justify-start;
     }
 
     .logo-container {
@@ -492,7 +527,7 @@
     .mobile-nav-links li a {
         @apply block text-base font-medium transition-colors hover:text-primary;
     }
-    
+
     .mobile-nav-links li.active a {
         @apply text-primary font-bold;
     }

@@ -78,7 +78,10 @@
         fetchJudges,
         fetchReputationProofByTokenId,
     } from "$lib/ergo/reputation/fetch";
-    import { type RPBox, type Judge } from "$lib/ergo/reputation/objects";
+    import {
+        type RPBox,
+        type ReputationProof,
+    } from "$lib/ergo/reputation/objects";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import { Forum } from "forum-application";
 
@@ -88,7 +91,10 @@
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
-    let participationVotes: Map<string, Map<string, Judge>> = new Map();
+    let participationVotes: Map<
+        string,
+        Map<string, ReputationProof>
+    > = new Map();
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
     let currentHeight: number = 0;
@@ -256,7 +262,7 @@
                 participations = await fetchParticipations(game);
                 participations.forEach(async (item) => {
                     const participation = item.commitmentC_Hex;
-                    const votes = new Map<string, Judge>(
+                    const votes = new Map<string, ReputationProof>(
                         Array.from(get(judges).data.entries()).filter(
                             ([key, judge]) => {
                                 return judge.current_boxes.some((box) => {
