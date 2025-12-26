@@ -66,7 +66,7 @@
     import { mode } from "mode-watcher";
 
     // SOURCE APPLICATION IMPORTS
-    import { FileSourceCard } from "source-application";
+    import { FileCard } from "source-application";
     import { fetchFileSourcesByHash } from "source-application";
 
     import {
@@ -177,12 +177,12 @@
             if (modalFileType === "image") {
                 imageSources = await fetchFileSourcesByHash(
                     modalFileHash,
-                    explorer_uri,
+                    get(explorer_uri),
                 );
             } else {
                 serviceSources = await fetchFileSourcesByHash(
                     modalFileHash,
-                    explorer_uri,
+                    get(explorer_uri),
                 );
             }
         }
@@ -235,13 +235,13 @@
             if (game.content.imageURL) {
                 imageSources = await fetchFileSourcesByHash(
                     game.content.imageURL,
-                    explorer_uri,
+                    get(explorer_uri),
                 );
             }
             if (game.content.serviceId) {
                 serviceSources = await fetchFileSourcesByHash(
                     game.content.serviceId,
-                    explorer_uri,
+                    get(explorer_uri),
                 );
             }
 
@@ -1259,9 +1259,8 @@
                                         >
                                         {#if creator}
                                             <a
-                                                href={get(
-                                                    web_explorer_uri_tkn,
-                                                ) + creator}
+                                                href={$web_explorer_uri_tkn +
+                                                    creator}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 class="info-value font-mono text-xs break-all hover:underline"
@@ -1282,7 +1281,7 @@
                                             >Competition ID (NFT)</span
                                         >
                                         <a
-                                            href={get(web_explorer_uri_tkn) +
+                                            href={$web_explorer_uri_tkn +
                                                 game.gameId}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -1407,13 +1406,13 @@
                                         <div
                                             class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
                                         >
-                                            <FileSourceCard
+                                            <FileCard
                                                 class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
                                                 profile={$reputation_proof}
                                                 fileHash={game.content.imageURL}
                                                 sources={imageSources}
-                                                explorerUri={explorer_uri}
-                                                webExplorerUriTkn={web_explorer_uri_tkn}
+                                                explorerUri={$explorer_uri}
+                                                webExplorerUriTkn={$web_explorer_uri_tkn}
                                             />
                                         </div>
 
@@ -1484,12 +1483,12 @@
                                             </p>
                                         {/if}
 
-                                        <FileSourceCard
+                                        <FileCard
                                             profile={$reputation_proof}
                                             fileHash={game.content.serviceId}
                                             sources={serviceSources}
-                                            explorerUri={explorer_uri}
-                                            webExplorerUriTkn={web_explorer_uri_tkn}
+                                            explorerUri={$explorer_uri}
+                                            webExplorerUriTkn={$web_explorer_uri_tkn}
                                         />
                                     </div>
                                 </details>
@@ -2688,9 +2687,7 @@
                                                     Player Address
                                                 </div>
                                                 <a
-                                                    href={get(
-                                                        web_explorer_uri_addr,
-                                                    ) +
+                                                    href={$web_explorer_uri_addr +
                                                         pkHexToBase58Address(
                                                             p.playerPK_Hex,
                                                         )}
@@ -2768,7 +2765,7 @@
                                                 >Transaction ID</span
                                             >
                                             <a
-                                                href={get(web_explorer_uri_tx) +
+                                                href={$web_explorer_uri_tx +
                                                     p.transactionId}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
@@ -2919,9 +2916,7 @@
                                                             Transaction ID:</strong
                                                         ><br />
                                                         <a
-                                                            href={get(
-                                                                web_explorer_uri_tx,
-                                                            ) +
+                                                            href={$web_explorer_uri_tx +
                                                                 reclaimGraceSuccessTxId[
                                                                     p.boxId
                                                                 ]}
@@ -3013,9 +3008,7 @@
                                                             Transaction ID:</strong
                                                         ><br />
                                                         <a
-                                                            href={get(
-                                                                web_explorer_uri_tx,
-                                                            ) +
+                                                            href={$web_explorer_uri_tx +
                                                                 claimRefundSuccessTxId[
                                                                     p.boxId
                                                                 ]}
@@ -3704,8 +3697,7 @@
                             >
                                 <strong>Success! Transaction ID:</strong><br
                                 /><a
-                                    href={get(web_explorer_uri_tx) +
-                                        transactionId}
+                                    href={$web_explorer_uri_tx + transactionId}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="underline break-all hover:text-slate-400"
@@ -3788,10 +3780,15 @@
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div on:click|stopPropagation>
-            <FileSourceCard
+            <FileCard
                 class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
                 profile={$reputation_proof}
                 fileHash={modalFileHash}
+                sources={modalFileType === "image"
+                    ? imageSources
+                    : serviceSources}
+                explorerUri={$explorer_uri}
+                webExplorerUriTkn={$web_explorer_uri_tkn}
             />
         </div>
     </div>
