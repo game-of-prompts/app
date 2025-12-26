@@ -3781,13 +3781,13 @@
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div on:click|stopPropagation>
             <FileSourceCreation
-                class="{$mode === 'dark'
-                    ? 'bg-slate-900'
-                    : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
                 profile={$reputation_proof}
                 explorerUri={$explorer_uri}
                 onSourceAdded={handleFileSourceAdded}
-                fileHash={modalFileHash}
+                hash={modalFileHash}
+                class="{$mode === 'dark'
+                    ? 'bg-slate-900'
+                    : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
             />
         </div>
     </div>
