@@ -66,7 +66,7 @@
     import { mode } from "mode-watcher";
 
     // SOURCE APPLICATION IMPORTS
-    import { FileCard } from "source-application";
+    import { FileCard, FileSourceCreation } from "source-application";
     import { fetchFileSourcesByHash } from "source-application";
 
     import {
@@ -3780,15 +3780,14 @@
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div on:click|stopPropagation>
-            <FileCard
-                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+            <FileSourceCreation
+                class="{$mode === 'dark'
+                    ? 'bg-slate-900'
+                    : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
                 profile={$reputation_proof}
-                fileHash={modalFileHash}
-                sources={modalFileType === "image"
-                    ? imageSources
-                    : serviceSources}
                 explorerUri={$explorer_uri}
-                webExplorerUriTkn={$web_explorer_uri_tkn}
+                onSourceAdded={handleFileSourceAdded}
+                fileHash={modalFileHash}
             />
         </div>
     </div>
