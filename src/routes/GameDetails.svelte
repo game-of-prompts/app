@@ -51,6 +51,9 @@
         Trash2,
         ChevronDown,
         X,
+        Cpu,
+        FileText,
+        Settings,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -1237,28 +1240,22 @@
                             <details
                                 class="group p-4 rounded-lg border {$mode ===
                                 'dark'
-                                    ? 'border-slate-700 bg-500/50'
+                                    ? 'border-slate-700 bg-slate-800/50'
                                     : 'border-gray-200 bg-gray-50'}"
                             >
                                 <summary
                                     class="flex justify-between items-center font-medium cursor-pointer list-none"
                                 >
-                                    <span>Technical Details</span>
+                                    <div class="flex items-center gap-2">
+                                        <Settings
+                                            class="w-5 h-5 text-gray-500"
+                                        />
+                                        <span>Technical Details</span>
+                                    </div>
                                     <span
                                         class="transition group-open:rotate-180"
                                     >
-                                        <svg
-                                            fill="none"
-                                            height="24"
-                                            shape-rendering="geometricPrecision"
-                                            stroke="currentColor"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="1.5"
-                                            viewBox="0 0 24 24"
-                                            width="24"
-                                            ><path d="M6 9l6 6 6-6"></path></svg
-                                        >
+                                        <ChevronDown class="w-5 h-5" />
                                     </span>
                                 </summary>
                                 <div
@@ -1447,11 +1444,19 @@
                             <div
                                 class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                             >
-                                <details class="group p-4 rounded-lg border">
+                                <details
+                                    class="group p-4 rounded-lg border {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700 bg-slate-800/50'
+                                        : 'border-gray-200 bg-gray-50'}"
+                                >
                                     <summary
                                         class="flex justify-between items-center font-medium cursor-pointer list-none"
                                     >
                                         <div class="flex items-center gap-2">
+                                            <Cpu
+                                                class="w-5 h-5 text-purple-500"
+                                            />
                                             <span>Game Service Sources</span>
                                         </div>
                                         <span
@@ -1514,11 +1519,19 @@
                             <div
                                 class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                             >
-                                <details class="group p-4 rounded-lg border">
+                                <details
+                                    class="group p-4 rounded-lg border {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700 bg-slate-800/50'
+                                        : 'border-gray-200 bg-gray-50'}"
+                                >
                                     <summary
                                         class="flex justify-between items-center font-medium cursor-pointer list-none"
                                     >
                                         <div class="flex items-center gap-2">
+                                            <FileText
+                                                class="w-5 h-5 text-amber-500"
+                                            />
                                             <span>Game Paper Sources</span>
                                         </div>
                                         <span
