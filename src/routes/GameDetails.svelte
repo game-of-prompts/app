@@ -25,7 +25,7 @@
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount } from "svelte";
-    import { get } from "svelte/store";
+    import { get, writable } from "svelte/store";
     import { fetchParticipations, fetch_token_details } from "$lib/ergo/fetch";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
@@ -3866,7 +3866,7 @@
                 profile={$reputation_proof}
                 explorerUri={$explorer_uri}
                 onSourceAdded={handleFileSourceAdded}
-                hash={Writable(modalFileHash)}
+                hash={writable(modalFileHash)}
                 class="{$mode === 'dark'
                     ? 'bg-slate-900'
                     : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-3xl mx-4 p-6"
