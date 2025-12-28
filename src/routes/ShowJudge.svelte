@@ -2,11 +2,8 @@
 	import { Button } from "$lib/components/ui/button";
 	import { reputation_proof, games } from "$lib/common/store";
 	import { get } from "svelte/store";
-	import {
-		total_burned_string,
-		type ReputationProof,
-		type RPBox,
-	} from "$lib/ergo/reputation/objects";
+	import { total_burned_string } from "$lib/ergo/reputation/utils";
+	import { type ReputationProof, type RPBox } from "ergo-reputation-system";
 	import { GAME, PARTICIPATION, JUDGE } from "$lib/ergo/reputation/types";
 	import { judge_detail } from "$lib/common/store";
 	import GameCard from "./GameCard.svelte";
@@ -337,7 +334,7 @@
 							<span
 								class="info-value font-mono text-xs break-all select-all"
 							>
-								{displayProof.owner_ergotree}
+								{displayProof.owner_serialized}
 							</span>
 						</div>
 					</div>

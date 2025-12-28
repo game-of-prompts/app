@@ -25,11 +25,12 @@
     import CreateJudge from "./CreateJudge.svelte";
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
-    import { fetchReputationProofs } from "$lib/ergo/reputation/fetch";
     import {
-        type ReputationProof,
-        total_burned,
-    } from "$lib/ergo/reputation/objects";
+        fetchReputationProofs,
+        fetchAllProfiles,
+    } from "$lib/ergo/reputation/fetch";
+    import { type ReputationProof } from "ergo-reputation-system";
+    import { total_burned } from "$lib/ergo/reputation/utils";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
@@ -48,7 +49,6 @@
         web_explorer_uri_tkn,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
-    import { fetchAllProfiles } from "ergo-reputation-system";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
 
     // Sync stores
@@ -200,14 +200,7 @@
                     types,
                 );
                 if (profiles.length > 0) {
-                    const selectedProof: ReputationProof = {
-                        ...profiles[0],
-                        current_boxes: profiles[0].current_boxes.map((b) => ({
-                            ...b,
-                            type: types.get(b.type.tokenId) ?? b.type,
-                        })),
-                    };
-                    reputation_proof.set(selectedProof);
+                    reputation_proof.set(profiles[0]);
                 }
             }
         } catch (error) {

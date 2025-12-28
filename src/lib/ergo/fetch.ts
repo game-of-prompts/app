@@ -36,7 +36,8 @@ import {
     getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
-import { type ReputationOpinion, type RPBox, calculate_reputation as calculate_reputation_proof } from "./reputation/objects";
+import { type RPBox } from "ergo-reputation-system";
+import { calculate_reputation as calculate_reputation_proof } from "./reputation/utils";
 import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
@@ -108,12 +109,11 @@ async function fetchReputationOpinionsForTarget(
     type: "game" | "participation",
     targetId: string,
     ergo: any = null
-): Promise<ReputationOpinion[]> {
+): Promise<RPBox[]> {
     try {
         // Fetch all reputation proofs that reference this target
         const reputationProofs = await fetchReputationProofs(ergo, true, type, targetId);
-        const opinions: ReputationOpinion[] = [];
-
+        const opinions: RPBox[] = [];
         for (const [tokenId, proof] of reputationProofs) {
             // Find boxes that reference our target
             const relevantBoxes = proof.current_boxes.filter((box: RPBox) =>
@@ -121,18 +121,7 @@ async function fetchReputationOpinionsForTarget(
             );
 
             for (const box of relevantBoxes) {
-                opinions.push({
-                    tokenId,
-                    boxId: box.box_id,
-                    type: {
-                        tokenId: box.type.tokenId,
-                        typeName: box.type.typeName,
-                        description: box.type.description
-                    },
-                    isPositive: !box.polarization, // Assuming false = positive, true = negative
-                    content: box.content,
-                    ownerAddress: proof.owner_ergotree
-                });
+                opinions.push(box);
             }
         }
 

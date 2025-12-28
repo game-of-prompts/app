@@ -1,28 +1,27 @@
-import { Network, type RPBox, type ReputationProof, type TypeNFT } from "$lib/ergo/reputation/objects";
 import { get } from "svelte/store";
 import { types, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import {
-    fetchAllProfiles,
+    fetchAllProfiles as libFetchAllProfiles,
     fetchTypeNfts as libFetchTypeNfts,
-    type ReputationProof as LibReputationProof,
-    type TypeNFT as LibTypeNFT,
-    type RPBox as LibRPBox
+    searchBoxes,
+    type ReputationProof,
+    type TypeNFT,
+    type RPBox
 } from "ergo-reputation-system";
 import { JUDGE } from "./types";
 
-function mapLibTypeToLocalType(t: LibTypeNFT): TypeNFT {
-    return {
-        ...t,
-        box: null
-    };
-}
-
-function mapLibBoxToLocalBox(b: LibRPBox): RPBox {
-    return {
-        ...b,
-        type: mapLibTypeToLocalType(b.type),
-    };
+export async function fetchAllProfiles(
+    explorerUri: string,
+    address: string | null = null,
+    excluded_token_ids: string[] = [],
+    types: Map<string, TypeNFT> = new Map()
+): Promise<ReputationProof[]> {
+    const profiles = await libFetchAllProfiles(explorerUri, null, excluded_token_ids, types);
+    if (address) {
+        return profiles.filter(p => p.owner_serialized === address);
+    }
+    return profiles;
 }
 
 export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {
@@ -31,12 +30,7 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
             return get(types).data;
         }
 
-        const libTypes = await libFetchTypeNfts(get(explorer_uri));
-
-        const typesMap = new Map<string, TypeNFT>();
-        for (const [key, value] of libTypes.entries()) {
-            typesMap.set(key, mapLibTypeToLocalType(value));
-        }
+        const typesMap = await libFetchTypeNfts(get(explorer_uri));
 
         types.set({ data: typesMap, last_fetch: Date.now() });
         return get(types).data;
@@ -48,16 +42,6 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
     }
 }
 
-function mapLibProofToLocalProof(proof: LibReputationProof): ReputationProof {
-    return {
-        ...proof,
-        type: proof.types.length > 0 ? mapLibTypeToLocalType(proof.types[0]) : { tokenId: "", boxId: '', typeName: "Unknown", description: "", schemaURI: "", isRepProof: false, box: null }, // Map first type to single type
-        current_boxes: proof.current_boxes.map(mapLibBoxToLocalBox),
-        owner_ergotree: proof.owner_serialized,
-        network: proof.network === "ergo" ? Network.ErgoMainnet : Network.ErgoTestnet
-    };
-}
-
 export async function fetchReputationProofByTokenId(
     tokenId: string,
     ergo: any, // kept for compatibility but unused if using library
@@ -66,15 +50,28 @@ export async function fetchReputationProofByTokenId(
     try {
         const availableTypes = await fetchTypeNfts();
 
-        // Fetch all profiles and find the one with the matching token ID
-        // This is inefficient but the library doesn't seem to support fetching a single profile by ID directly yet
-        const profiles = await fetchAllProfiles(get(explorer_uri), null, [], availableTypes);
+        // Use searchBoxes to find the main box of the profile
+        const boxGenerator = searchBoxes(
+            get(explorer_uri),
+            tokenId,
+            undefined,
+            tokenId, // object_pointer points to self for profile
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            1
+        );
 
-        const found = profiles.find(p => p.token_id === tokenId);
+        const { value: boxes } = await boxGenerator.next();
 
-        if (found) {
-            return mapLibProofToLocalProof(found);
+        if (boxes && boxes.length > 0) {
+            // Now we need to get the full ReputationProof. 
+            // fetchAllProfiles is still the easiest way to get the full proof object with all boxes
+            const profiles = await libFetchAllProfiles(get(explorer_uri), null, [], availableTypes);
+            return profiles.find(p => p.token_id === tokenId) || null;
         }
+
         return null;
     } catch (error) {
         console.error(`Error fetching reputation proof for token ${tokenId}:`, error);
@@ -89,11 +86,11 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
         }
 
         const availableTypes = await fetchTypeNfts();
-        const profiles = await fetchAllProfiles(get(explorer_uri), null, [JUDGE], availableTypes);
+        const profiles = await libFetchAllProfiles(get(explorer_uri), null, [JUDGE], availableTypes);
 
         const judgesMap = new Map<string, ReputationProof>();
         for (const profile of profiles) {
-            judgesMap.set(profile.token_id, mapLibProofToLocalProof(profile));
+            judgesMap.set(profile.token_id, profile);
         }
 
         judges.set({ data: judgesMap, last_fetch: Date.now() });
@@ -112,14 +109,10 @@ export async function fetchReputationProofs(
     type: "game" | "participation" | "judge",
     value: string | null
 ): Promise<Map<string, ReputationProof>> {
-    // This function was complex and used for searching. 
-    // If we only use it for judges, we can redirect to fetchJudges.
     if (type === "judge") {
         return fetchJudges();
     }
 
-    // For other types, we might need to implement using fetchAllProfiles with filters
-    // But for now, let's return empty or try to fetch all and filter
     console.warn("fetchReputationProofs called with type other than judge, which is not fully optimized yet.");
     return new Map();
 }

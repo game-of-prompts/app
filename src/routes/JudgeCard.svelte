@@ -1,10 +1,8 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
-  import {
-    total_burned_string,
-    type ReputationProof,
-  } from "$lib/ergo/reputation/objects";
+  import { total_burned_string } from "$lib/ergo/reputation/utils";
+  import { type ReputationProof } from "ergo-reputation-system";
   import { judge_detail } from "$lib/common/store";
 
   export let judge: ReputationProof;

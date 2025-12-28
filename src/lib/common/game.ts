@@ -1,12 +1,12 @@
 // src/lib/common/game.ts
 
 import { ErgoPlatform } from "$lib/ergo/platform";
-import { type ReputationOpinion } from "$lib/ergo/reputation/objects";
 import { SAFE_MIN_BOX_VALUE, type Amount, type Box, type TokenEIP4 } from "@fleet-sdk/core";
 import { type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
 import { fetch_token_details } from "$lib/ergo/fetch";
+import { type RPBox } from "ergo-reputation-system";
 
 /**
  * Defines the possible states a game can be in, according to the new contract logic.
@@ -74,7 +74,7 @@ export interface GameActive {
     perJudgeComissionPercentage: bigint;
     content: GameContent;
     value: bigint;
-    reputationOpinions: ReputationOpinion[];
+    reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
 }
@@ -104,7 +104,7 @@ export interface GameResolution {
     resolverCommission: number;
     content: GameContent;
     value: bigint;
-    reputationOpinions: ReputationOpinion[];
+    reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
 }
@@ -127,7 +127,7 @@ export interface GameCancellation {
     participationTokenId: string;
     value: bigint;
     deadlineBlock: number;
-    reputationOpinions: ReputationOpinion[];
+    reputationOpinions: RPBox[];
     judges: string[];
     reputation: number;
     constants: GameConstants;
@@ -147,7 +147,7 @@ export interface GameFinalized {
     value: bigint;
     participationFeeAmount: bigint;
     participationTokenId: string;
-    reputationOpinions: ReputationOpinion[];
+    reputationOpinions: RPBox[];
     judges: string[];
     deadlineBlock: number;
     judgeFinalizationBlock: number;
@@ -174,7 +174,7 @@ export interface ParticipationBase {
     solverId_String?: string;
     hashLogs_Hex: string;
     scoreList: bigint[];
-    reputationOpinions: ReputationOpinion[];
+    reputationOpinions: RPBox[];
 }
 
 /**
