@@ -1,5 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
+    import { writable } from "svelte/store";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
     import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
@@ -138,21 +139,21 @@
 
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
-    let modalFileHash = "";
+    let modalFileHash = writable("");
     let modalFileType: "image" | "service" | "paper" = "image";
 
     function openFileSourceModal(
         hash: string,
         type: "image" | "service" | "paper",
     ) {
-        modalFileHash = hash;
+        modalFileHash.set(hash);
         modalFileType = type;
         showFileSourceModal = true;
     }
 
     function closeFileSourceModal() {
         showFileSourceModal = false;
-        modalFileHash = "";
+        modalFileHash.set("");
     }
 
     function handleSourceAdded(txId: string) {
@@ -894,165 +895,145 @@
 
                         <div class="flex flex-col gap-6">
                             <!-- Image Download Sources -->
-                            {#if gameImageHash && gameImageHash.length === 64}
-                                <div
-                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            <div
+                                class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            >
+                                <Label
+                                    class="text-base font-bold mb-1 flex items-center gap-2"
                                 >
-                                    <Label
-                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    <div
+                                        class="w-2 h-2 rounded-full bg-blue-500"
+                                    ></div>
+                                    Image Source
+                                </Label>
+                                <p
+                                    class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                >
+                                    Provide download locations for the game's
+                                    cover image or assets.
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gameImageHash,
+                                            "image",
+                                        )}
+                                    class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                >
+                                    Add Image Source
+                                </Button>
+                                {#if imageSourceCount > 0}
+                                    <div
+                                        class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
                                     >
                                         <div
-                                            class="w-2 h-2 rounded-full bg-blue-500"
+                                            class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
                                         ></div>
-                                        Image Source
-                                    </Label>
-                                    <p
-                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
-                                    >
-                                        Provide download locations for the
-                                        game's cover image or assets.
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={() =>
-                                            openFileSourceModal(
-                                                gameImageHash,
-                                                "image",
-                                            )}
-                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                                    >
-                                        Add Image Source
-                                    </Button>
-                                    {#if imageSourceCount > 0}
-                                        <div
-                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        <span
+                                            class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                         >
-                                            <div
-                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-                                            ></div>
-                                            <span
-                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
-                                            >
-                                                {imageSourceCount} source(s) active
-                                            </span>
-                                        </div>
-                                    {/if}
-                                </div>
-                            {/if}
+                                            {imageSourceCount} source(s) active
+                                        </span>
+                                    </div>
+                                {/if}
+                            </div>
 
                             <!-- Game Service Download Sources -->
-                            {#if gameServiceId && gameServiceId.length === 64}
-                                <div
-                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            <div
+                                class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            >
+                                <Label
+                                    class="text-base font-bold mb-1 flex items-center gap-2"
                                 >
-                                    <Label
-                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    <div
+                                        class="w-2 h-2 rounded-full bg-purple-500"
+                                    ></div>
+                                    Service Source
+                                </Label>
+                                <p
+                                    class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                >
+                                    Provide download locations for the game
+                                    service executable or package.
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gameServiceId,
+                                            "service",
+                                        )}
+                                    class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                >
+                                    Add Service Source
+                                </Button>
+                                {#if serviceSourceCount > 0}
+                                    <div
+                                        class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
                                     >
                                         <div
-                                            class="w-2 h-2 rounded-full bg-purple-500"
+                                            class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
                                         ></div>
-                                        Service Source
-                                    </Label>
-                                    <p
-                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
-                                    >
-                                        Provide download locations for the game
-                                        service executable or package.
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={() =>
-                                            openFileSourceModal(
-                                                gameServiceId,
-                                                "service",
-                                            )}
-                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                                    >
-                                        Add Service Source
-                                    </Button>
-                                    {#if serviceSourceCount > 0}
-                                        <div
-                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        <span
+                                            class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                         >
-                                            <div
-                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-                                            ></div>
-                                            <span
-                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
-                                            >
-                                                {serviceSourceCount} source(s) active
-                                            </span>
-                                        </div>
-                                    {/if}
-                                </div>
-                            {/if}
+                                            {serviceSourceCount} source(s) active
+                                        </span>
+                                    </div>
+                                {/if}
+                            </div>
 
                             <!-- Game Paper Download Sources -->
-                            {#if gamePaperHash && gamePaperHash.length === 64}
-                                <div
-                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            <div
+                                class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            >
+                                <Label
+                                    class="text-base font-bold mb-1 flex items-center gap-2"
                                 >
-                                    <Label
-                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    <div
+                                        class="w-2 h-2 rounded-full bg-amber-500"
+                                    ></div>
+                                    Paper Source
+                                </Label>
+                                <p
+                                    class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                >
+                                    Provide download locations for the detailed
+                                    game documentation (markdown file).
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gamePaperHash,
+                                            "paper",
+                                        )}
+                                    class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                >
+                                    Add Paper Source
+                                </Button>
+                                {#if paperSourceCount > 0}
+                                    <div
+                                        class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
                                     >
                                         <div
-                                            class="w-2 h-2 rounded-full bg-amber-500"
+                                            class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
                                         ></div>
-                                        Paper Source
-                                    </Label>
-                                    <p
-                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
-                                    >
-                                        Provide download locations for the
-                                        detailed game documentation (markdown
-                                        file).
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={() =>
-                                            openFileSourceModal(
-                                                gamePaperHash,
-                                                "paper",
-                                            )}
-                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                                    >
-                                        Add Paper Source
-                                    </Button>
-                                    {#if paperSourceCount > 0}
-                                        <div
-                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        <span
+                                            class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                         >
-                                            <div
-                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-                                            ></div>
-                                            <span
-                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
-                                            >
-                                                {paperSourceCount} source(s) active
-                                            </span>
-                                        </div>
-                                    {/if}
-                                </div>
-                            {/if}
-
-                            {#if (!gameImageHash || gameImageHash.length !== 64) && (!gameServiceId || gameServiceId.length !== 64) && (!gamePaperHash || gamePaperHash.length !== 64)}
-                                <div
-                                    class="text-center py-12 px-6 rounded-xl border border-dashed border-slate-500/20 bg-slate-500/5 opacity-60"
-                                >
-                                    <p
-                                        class="text-sm font-medium text-muted-foreground"
-                                    >
-                                        Enter a valid 64-char hash in the form
-                                        to enable file sources.
-                                    </p>
-                                </div>
-                            {/if}
+                                            {paperSourceCount} source(s) active
+                                        </span>
+                                    </div>
+                                {/if}
+                            </div>
                         </div>
                     </section>
                 {/if}
@@ -1118,10 +1099,10 @@
                         <p
                             class="text-xs text-muted-foreground mt-1 font-mono opacity-70"
                         >
-                            Hash: {modalFileHash.substring(
+                            Hash: {$modalFileHash.substring(
                                 0,
                                 8,
-                            )}...{modalFileHash.substring(56)}
+                            )}...{$modalFileHash.substring(56)}
                         </p>
                     </div>
                     <Button
