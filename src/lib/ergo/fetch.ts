@@ -37,7 +37,7 @@ import {
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
 import { type RPBox } from "ergo-reputation-system";
-import { calculate_reputation as calculate_reputation_proof } from "./reputation/utils";
+import { calculate_reputation as calculate_reputation_proof } from "ergo-reputation-system";
 import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";
@@ -726,7 +726,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
 // =================================================================
 
 
-async function _parseParticipationBox(box: Box<Amount>, participationTokenId: string): Promise<ParticipationBase | null> {
+async function _parseParticipationBox(box: any, participationTokenId: string): Promise<ParticipationBase | null> {
     try {
         const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
         const commitmentC_Hex = box.additionalRegisters.R5?.renderedValue;
@@ -745,7 +745,7 @@ async function _parseParticipationBox(box: Box<Amount>, participationTokenId: st
             participationTokenId === ""
                 ? BigInt(box.value)
                 : BigInt(
-                    box.assets.find(a => a.tokenId === participationTokenId)?.amount ?? 0
+                    box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount ?? 0
                 );
 
         const participationBase: ParticipationBase = {
@@ -817,7 +817,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                 }
                 const p_base = await _parseParticipationBox(box, game.participationTokenId);
                 if (p_base) {
-                    const spent = !!box.spentTransactionId;
+                    const spent = !!(box as any).spentTransactionId;
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
 
@@ -848,7 +848,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                 if (game.status === GameState.Cancelled_Draining) return "cancelled";
 
                                 if (game.status === GameState.Finalized) {
-                                    const spentTx = await getTransactionInfo(box.spentTransactionId!);
+                                    const spentTx = await getTransactionInfo((box as any).spentTransactionId!);
                                     if (!spentTx) return "unknown";
 
                                     if (spentTx.inclusionHeight < (game as GameFinalized).judgeFinalizationBlock) return "invalidated";
@@ -1115,6 +1115,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 content: lastBox.content,
                 value: BigInt(lastBox.box.value),
                 participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0),
+                participationTokenId: lastBox.participationTokenId,
                 reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
                 judges,
                 judgeFinalizationBlock: judgeFinalizationBlock,

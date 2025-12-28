@@ -86,7 +86,7 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
         }
 
         const availableTypes = await fetchTypeNfts();
-        const profiles = await libFetchAllProfiles(get(explorer_uri), null, [JUDGE], availableTypes);
+        const profiles = await libFetchAllProfiles(get(explorer_uri), true, [JUDGE], availableTypes);
 
         const judgesMap = new Map<string, ReputationProof>();
         for (const profile of profiles) {

@@ -30,7 +30,7 @@
         fetchAllProfiles,
     } from "$lib/ergo/reputation/fetch";
     import { type ReputationProof } from "ergo-reputation-system";
-    import { total_burned } from "$lib/ergo/reputation/utils";
+    import { total_burned } from "ergo-reputation-system";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
