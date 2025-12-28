@@ -7,13 +7,13 @@
 	import { GAME, PARTICIPATION, JUDGE } from "$lib/ergo/reputation/types";
 	import { judge_detail } from "$lib/common/store";
 	import GameCard from "./GameCard.svelte";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy } from "svelte";
 	import { create_opinion, update_opinion } from "ergo-reputation-system";
 	import { explorer_uri } from "$lib/ergo/envs";
-	import { Flame, Droplets, Coins, ChevronDown } from "lucide-svelte";
+	import { Flame, ChevronDown } from "lucide-svelte";
 	import { fetch_token_details, type TokenEIP4 } from "$lib/ergo/fetch";
 	import { formatTokenBigInt } from "$lib/utils";
-	import { mode } from "mode-watcher";
+	import { fetchOpinionsAbout } from "$lib/ergo/reputation/fetch";
 
 	let proof: ReputationProof | undefined = undefined;
 
@@ -33,6 +33,7 @@
 
 	const OTHER = "other";
 	$: displayProof = proof ?? get(reputation_proof);
+	let activeMainTab: "received" | "issued" = "received";
 	let selectedType: string = GAME;
 
 	$: filteredBoxes =
@@ -109,6 +110,7 @@
 			}
 			newOpinion = "";
 			showOpinionForm = false;
+			await fetchReceivedOpinions(proof.token_id);
 		} catch (e: any) {
 			console.error("Error submitting opinion:", e);
 			alert("Failed to submit opinion: " + e.message);
@@ -152,6 +154,23 @@
 			const details = await fetch_token_details(token.tokenId);
 			burnedTokens[index].details = details;
 		});
+	}
+
+	let opinionsReceived: RPBox[] = [];
+	let isLoadingOpinions: boolean = false;
+
+	$: if (displayProof) {
+		fetchReceivedOpinions(displayProof.token_id);
+	}
+
+	async function fetchReceivedOpinions(tokenId: string) {
+		isLoadingOpinions = true;
+		opinionsReceived = await fetchOpinionsAbout(
+			get(explorer_uri),
+			tokenId,
+			JUDGE,
+		);
+		isLoadingOpinions = false;
 	}
 </script>
 
@@ -263,7 +282,7 @@
 										title={token.tokenId}
 									>
 										{token.details?.name ||
-											token.tokenId.slice(0, 8) + "..."}
+											token.tokenId?.slice(0, 8) + "..."}
 									</p>
 									<p
 										class="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight"
@@ -300,10 +319,10 @@
 					<div
 						class="font-mono text-xl md:text-2xl font-medium text-slate-800 dark:text-slate-200"
 					>
-						{displayProof.token_id.slice(
+						{displayProof.token_id?.slice(
 							0,
 							8,
-						)}...{displayProof.token_id.slice(-8)}
+						)}...{displayProof.token_id?.slice(-8)}
 					</div>
 				</div>
 
@@ -423,179 +442,256 @@
 				{/if}
 			{/if}
 
-			{#if displayProof.current_boxes && displayProof.current_boxes.length > 0}
-				<h3 class="section-title mt-8">Opinions Issued</h3>
-				<div class="filter-menu justify-center">
+			<div class="main-tabs-container mt-12 mb-8">
+				<div class="main-tabs flex justify-center gap-4">
 					<button
-						class="filter-badge"
-						class:active={selectedType === GAME}
-						on:click={() => (selectedType = GAME)}>Games</button
+						class="main-tab-btn"
+						class:active={activeMainTab === "received"}
+						on:click={() => (activeMainTab = "received")}
 					>
+						Opinions Received
+					</button>
 					<button
-						class="filter-badge"
-						class:active={selectedType === PARTICIPATION}
-						on:click={() => (selectedType = PARTICIPATION)}
-						>Participations</button
+						class="main-tab-btn"
+						class:active={activeMainTab === "issued"}
+						on:click={() => (activeMainTab = "issued")}
 					>
-					<button
-						class="filter-badge"
-						class:active={selectedType === JUDGE}
-						on:click={() => (selectedType = JUDGE)}>Judges</button
-					>
-					<button
-						class="filter-badge"
-						class:active={selectedType === OTHER}
-						on:click={() => (selectedType = OTHER)}>Other</button
-					>
+						Opinions Issued
+					</button>
 				</div>
-				{#if filteredBoxes.length > 0}
-					<div class="boxes-container">
-						{#each filteredBoxes as box (box.box_id)}
-							{#if selectedType === GAME}
-								{@const game = $games.data.get(
-									box.object_pointer,
-								)}
-								{#if game}
-									<div
-										class="box-item"
-										class:positive-opinion={box.polarization}
-										class:negative-opinion={!box.polarization}
-									>
-										<div class="box-content">
-											<GameCard
-												{game}
-												index={0}
-												opinionContent={JSON.stringify(
-													box.content,
-												) || "No content provided."}
-												isInvited={displayProof &&
-													game.judges.includes(
-														displayProof.token_id,
-													)}
-											/>
-										</div>
-									</div>
-								{/if}
-							{:else}
+			</div>
+
+			{#if activeMainTab === "received"}
+				<section class="opinions-received-section">
+					{#if isLoadingOpinions}
+						<p class="text-center py-4">Loading opinions...</p>
+					{:else if opinionsReceived.length > 0}
+						<div class="boxes-container">
+							{#each opinionsReceived as box (box.box_id)}
 								<div
 									class="box-item"
 									class:positive-opinion={box.polarization}
 									class:negative-opinion={!box.polarization}
 								>
 									<div class="box-content">
-										{#if selectedType === PARTICIPATION}
-											<div class="generic-info">
-												<span class="info-label"
-													>{pointerLabels[
-														selectedType
-													]}:</span
-												>
-												<!-- <a href={`/participation?id=${box.object_pointer}`} class="info-link">{box.object_pointer}</a> -->
-												<!-- svelte-ignore a11y-missing-attribute -->
-												<a>{box.object_pointer}</a>
-											</div>
-											<p class="box-content-text">
-												{box.content ||
-													"No content provided."}
-											</p>
-										{:else if selectedType === JUDGE}
-											<div class="generic-info">
-												<span class="info-label"
-													>{pointerLabels[
-														selectedType
-													]}: {box.object_pointer.slice(
-														0,
-														8,
-													)}</span
-												>
-											</div>
-											<p class="box-content-text">
-												{(typeof box.content == "string"
-													? box.content
-													: JSON.stringify(
-															box.content,
-														)) ||
-													"No content provided."}
-											</p>
-											<ul class="sub-details-list">
-												<li>
-													<strong
-														>Polarization:</strong
-													>
-													{box.polarization
-														? "Positive"
-														: "Negative"}
-												</li>
-											</ul>
-										{:else if selectedType === OTHER}
-											<div class="generic-info">
-												<span class="info-label"
-													>Raw Opinion Data</span
-												>
-											</div>
-											<ul
-												class="sub-details-list all-data"
+										<div class="generic-info">
+											<span class="info-label"
+												>From: {box.token_id?.slice(
+													0,
+													8,
+												) || "Unknown"}...</span
 											>
-												<li>
-													<strong
-														>{pointerLabels[
-															selectedType
-														]}:</strong
-													>
-													{box.object_pointer}
-												</li>
-												<li>
-													<strong
-														>Polarization:</strong
-													>
-													{box.polarization
-														? "Positive"
-														: "Negative"}
-												</li>
-												<li>
-													<strong>Is Locked:</strong>
-													{box.is_locked
-														? "Yes"
-														: "No"}
-												</li>
-												<li>
-													<strong>Type:</strong>
-													{box.type.typeName} ({box
-														.type.tokenId})
-												</li>
-												<li>
-													<strong>Token ID:</strong>
-													{box.token_id}
-												</li>
-												<li>
-													<strong
-														>Token Amount:</strong
-													>
-													{box.token_amount}
-												</li>
-												<li>
-													<strong>Content:</strong>
-													{box.content
-														? typeof box.content ===
-															"object"
-															? JSON.stringify(
-																	box.content,
-																)
-															: box.content
-														: "None"}
-												</li>
-											</ul>
-										{/if}
+										</div>
+										<p class="box-content-text">
+											{(typeof box.content == "string"
+												? box.content
+												: JSON.stringify(
+														box.content,
+													)) ||
+												"No content provided."}
+										</p>
+										<ul class="sub-details-list">
+											<li>
+												<strong>Polarization:</strong>
+												{box.polarization
+													? "Positive"
+													: "Negative"}
+											</li>
+										</ul>
 									</div>
 								</div>
-							{/if}
-						{/each}
+							{/each}
+						</div>
+					{:else}
+						<p class="text-muted-foreground mt-4 text-center">
+							No opinions received yet.
+						</p>
+					{/if}
+				</section>
+			{/if}
+
+			{#if activeMainTab === "issued"}
+				<section class="opinions-issued-section">
+					<h3 class="section-title">Opinions Issued</h3>
+					<div class="filter-menu justify-center">
+						<button
+							class="filter-badge"
+							class:active={selectedType === GAME}
+							on:click={() => (selectedType = GAME)}>Games</button
+						>
+						<button
+							class="filter-badge"
+							class:active={selectedType === PARTICIPATION}
+							on:click={() => (selectedType = PARTICIPATION)}
+							>Participations</button
+						>
+						<button
+							class="filter-badge"
+							class:active={selectedType === JUDGE}
+							on:click={() => (selectedType = JUDGE)}
+							>Judges</button
+						>
+						<button
+							class="filter-badge"
+							class:active={selectedType === OTHER}
+							on:click={() => (selectedType = OTHER)}
+							>Other</button
+						>
 					</div>
-				{:else}
-					<p class="text-muted-foreground mt-4 text-center">
-						No opinions of this type found.
-					</p>
-				{/if}
+					{#if filteredBoxes.length > 0}
+						<div class="boxes-container">
+							{#each filteredBoxes as box (box.box_id)}
+								{#if selectedType === GAME}
+									{@const game = $games.data.get(
+										box.object_pointer,
+									)}
+									{#if game}
+										<div
+											class="box-item"
+											class:positive-opinion={box.polarization}
+											class:negative-opinion={!box.polarization}
+										>
+											<div class="box-content">
+												<GameCard
+													{game}
+													index={0}
+													opinionContent={JSON.stringify(
+														box.content,
+													) || "No content provided."}
+													isInvited={displayProof &&
+														game.judges.includes(
+															displayProof.token_id,
+														)}
+												/>
+											</div>
+										</div>
+									{/if}
+								{:else}
+									<div
+										class="box-item"
+										class:positive-opinion={box.polarization}
+										class:negative-opinion={!box.polarization}
+									>
+										<div class="box-content">
+											{#if selectedType === PARTICIPATION}
+												<div class="generic-info">
+													<span class="info-label"
+														>{pointerLabels[
+															selectedType
+														]}:</span
+													>
+													<!-- <a href={`/participation?id=${box.object_pointer}`} class="info-link">{box.object_pointer}</a> -->
+													<!-- svelte-ignore a11y-missing-attribute -->
+													<a>{box.object_pointer}</a>
+												</div>
+												<p class="box-content-text">
+													{box.content ||
+														"No content provided."}
+												</p>
+											{:else if selectedType === JUDGE}
+												<div class="generic-info">
+													<span class="info-label"
+														>{pointerLabels[
+															selectedType
+														]}: {box.object_pointer?.slice(
+															0,
+															8,
+														) || "Unknown"}</span
+													>
+												</div>
+												<p class="box-content-text">
+													{(typeof box.content ==
+													"string"
+														? box.content
+														: JSON.stringify(
+																box.content,
+															)) ||
+														"No content provided."}
+												</p>
+												<ul class="sub-details-list">
+													<li>
+														<strong
+															>Polarization:</strong
+														>
+														{box.polarization
+															? "Positive"
+															: "Negative"}
+													</li>
+												</ul>
+											{:else if selectedType === OTHER}
+												<div class="generic-info">
+													<span class="info-label"
+														>Raw Opinion Data</span
+													>
+												</div>
+												<ul
+													class="sub-details-list all-data"
+												>
+													<li>
+														<strong
+															>{pointerLabels[
+																selectedType
+															]}:</strong
+														>
+														{box.object_pointer}
+													</li>
+													<li>
+														<strong
+															>Polarization:</strong
+														>
+														{box.polarization
+															? "Positive"
+															: "Negative"}
+													</li>
+													<li>
+														<strong
+															>Is Locked:</strong
+														>
+														{box.is_locked
+															? "Yes"
+															: "No"}
+													</li>
+													<li>
+														<strong>Type:</strong>
+														{box.type.typeName} ({box
+															.type.tokenId})
+													</li>
+													<li>
+														<strong
+															>Token ID:</strong
+														>
+														{box.token_id}
+													</li>
+													<li>
+														<strong
+															>Token Amount:</strong
+														>
+														{box.token_amount}
+													</li>
+													<li>
+														<strong>Content:</strong
+														>
+														{box.content
+															? typeof box.content ===
+																"object"
+																? JSON.stringify(
+																		box.content,
+																	)
+																: box.content
+															: "None"}
+													</li>
+												</ul>
+											{/if}
+										</div>
+									</div>
+								{/if}
+							{/each}
+						</div>
+					{:else}
+						<p class="text-muted-foreground mt-4 text-center">
+							No opinions of this type found.
+						</p>{/if}
+				</section>
 			{/if}
 		{:else}
 			<div class="no-proof text-center py-12">
@@ -614,6 +710,21 @@
 </div>
 
 <style lang="postcss">
+	/* --- Main Tabs --- */
+	.main-tab-btn {
+		@apply px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300;
+		@apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400;
+		@apply border border-transparent;
+	}
+
+	.main-tab-btn:hover {
+		@apply bg-slate-200 dark:bg-slate-700;
+	}
+
+	.main-tab-btn.active {
+		@apply bg-orange-500 text-white shadow-lg shadow-orange-500/20;
+		@apply border-orange-400;
+	}
 	/* --- Estilos base --- */
 	.show-judge-container {
 		max-width: 1400px;

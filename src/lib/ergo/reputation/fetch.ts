@@ -116,3 +116,28 @@ export async function fetchReputationProofs(
     console.warn("fetchReputationProofs called with type other than judge, which is not fully optimized yet.");
     return new Map();
 }
+export async function fetchOpinionsAbout(
+    explorerUri: string,
+    objectPointer: string,
+    typeNftId?: string
+): Promise<RPBox[]> {
+    try {
+        const boxGenerator = searchBoxes(
+            explorerUri,
+            undefined, // tokenId (issuer)
+            typeNftId,
+            objectPointer,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            100 // limit
+        );
+
+        const { value: boxes } = await boxGenerator.next();
+        return boxes || [];
+    } catch (e) {
+        console.error("Error fetching opinions about:", e);
+        return [];
+    }
+}
