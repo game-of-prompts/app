@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { writable } from "svelte/store";
+    import { writable, type Writable } from "svelte/store";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
     import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
@@ -39,13 +39,18 @@
     let platform = new ErgoPlatform();
 
     // --- State declarations
-    let gameServiceId: string = "";
+    let gameServiceIdStore = writable("");
+    let gameImageHashStore = writable("");
+    let gamePaperHashStore = writable("");
+
+    $: gameServiceId = $gameServiceIdStore;
+    $: gameImageHash = $gameImageHashStore;
+    $: gamePaperHash = $gamePaperHashStore;
+
     let gameSecret: string = "";
     let showGameSecret: boolean = false;
     let gameTitle: string = "";
     let gameDescription: string = "";
-    let gameImageHash: string = "";
-    let gamePaperHash: string = "";
     let gameWebLink: string = "";
     let indetermismIndex: number = 1;
     let deadlineValue: number;
@@ -140,21 +145,24 @@
 
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
-    let modalFileHash = writable("");
+    let activeHashStore: Writable<string> = gameServiceIdStore;
     let modalFileType: "image" | "service" | "paper" = "image";
 
     function openFileSourceModal(
         hash: string,
         type: "image" | "service" | "paper",
     ) {
-        modalFileHash.set(hash);
         modalFileType = type;
+        if (type === "service") activeHashStore = gameServiceIdStore;
+        else if (type === "image") activeHashStore = gameImageHashStore;
+        else if (type === "paper") activeHashStore = gamePaperHashStore;
+
+        activeHashStore.set(hash);
         showFileSourceModal = true;
     }
 
     function closeFileSourceModal() {
         showFileSourceModal = false;
-        modalFileHash.set("");
     }
 
     function handleSourceAdded(txId: string) {
@@ -475,7 +483,7 @@
                             <div class="flex gap-2">
                                 <Input
                                     id="gameServiceId"
-                                    bind:value={gameServiceId}
+                                    bind:value={$gameServiceIdStore}
                                     placeholder="64-character hexadecimal hash"
                                     required
                                     maxlength={64}
@@ -484,7 +492,7 @@
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    on:click={() => (gameServiceId = "")}
+                                    on:click={() => gameServiceIdStore.set("")}
                                     class="shrink-0"
                                     title="Clear hash"
                                 >
@@ -874,7 +882,7 @@
                             <div class="flex gap-2">
                                 <Input
                                     id="gameImageHash"
-                                    bind:value={gameImageHash}
+                                    bind:value={$gameImageHashStore}
                                     placeholder="Blake2b256 hash (64-character hex)"
                                     maxlength={64}
                                     pattern="[a-fA-F0-9]{64}"
@@ -882,7 +890,7 @@
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    on:click={() => (gameImageHash = "")}
+                                    on:click={() => gameImageHashStore.set("")}
                                     class="shrink-0"
                                     title="Clear hash"
                                 >
@@ -900,7 +908,7 @@
                             <div class="flex gap-2">
                                 <Input
                                     id="gamePaperHash"
-                                    bind:value={gamePaperHash}
+                                    bind:value={$gamePaperHashStore}
                                     placeholder="Blake2b256 hash (64-character hex)"
                                     maxlength={64}
                                     pattern="[a-fA-F0-9]{64}"
@@ -908,7 +916,7 @@
                                 <Button
                                     variant="outline"
                                     size="icon"
-                                    on:click={() => (gamePaperHash = "")}
+                                    on:click={() => gamePaperHashStore.set("")}
                                     class="shrink-0"
                                     title="Clear hash"
                                 >
@@ -1155,7 +1163,7 @@
                               : "Add Paper Source"}
                         profile={reputationProofAny}
                         explorerUri={$explorer_uri}
-                        hash={modalFileHash}
+                        hash={activeHashStore}
                         onSourceAdded={handleSourceAdded}
                         class="border-none shadow-none bg-transparent rounded-none"
                     />
