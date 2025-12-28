@@ -3866,10 +3866,10 @@
                 profile={$reputation_proof}
                 explorerUri={$explorer_uri}
                 onSourceAdded={handleFileSourceAdded}
-                hash={modalFileHash}
+                hash={Writable(modalFileHash)}
                 class="{$mode === 'dark'
                     ? 'bg-slate-900'
-                    : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                    : 'bg-white'} border border-border rounded-lg shadow-xl w-full max-w-3xl mx-4 p-6"
             />
         </div>
     </div>

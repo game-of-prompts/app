@@ -1151,7 +1151,7 @@
         >
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
-                class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden"
+                class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden"
                 on:click|stopPropagation
             >
                 <div class="p-0">
