@@ -24,6 +24,7 @@
         ChevronDown,
         ChevronUp,
         X,
+        Trash2,
     } from "lucide-svelte";
     import { fetch_token_details } from "$lib/ergo/fetch";
 
@@ -442,9 +443,9 @@
                         Essential information that defines your game.
                     </p>
                     <div
-                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
+                        class="form-grid grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-6"
                     >
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-3">
                             <Label for="gameTitle">Game Title</Label>
                             <Input
                                 id="gameTitle"
@@ -453,20 +454,45 @@
                                 required
                             />
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-1">
+                            <Label for="indetermismIndex"
+                                >Indetermism Index</Label
+                            >
+                            <Input
+                                id="indetermismIndex"
+                                type="number"
+                                bind:value={indetermismIndex}
+                                min="1"
+                                step="1"
+                                placeholder="Executions"
+                                required
+                            />
+                        </div>
+                        <div class="form-group lg:col-span-4">
                             <Label for="gameServiceId"
                                 >Game Service ID (64-char hash)</Label
                             >
-                            <Input
-                                id="gameServiceId"
-                                bind:value={gameServiceId}
-                                placeholder="64-character hexadecimal hash"
-                                required
-                                maxlength={64}
-                                pattern="[a-fA-F0-9]{64}"
-                            />
+                            <div class="flex gap-2">
+                                <Input
+                                    id="gameServiceId"
+                                    bind:value={gameServiceId}
+                                    placeholder="64-character hexadecimal hash"
+                                    required
+                                    maxlength={64}
+                                    pattern="[a-fA-F0-9]{64}"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    on:click={() => (gameServiceId = "")}
+                                    class="shrink-0"
+                                    title="Clear hash"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <div class="flex justify-between items-center">
                                 <Label for="gameSecret">Game Secret (S)</Label>
                                 <Button
@@ -479,49 +505,48 @@
                                     Generate
                                 </Button>
                             </div>
-                            <div class="relative">
-                                <Input
-                                    type={showGameSecret ? "text" : "password"}
-                                    id="gameSecret"
-                                    bind:value={gameSecret}
-                                    placeholder="Enter or generate a 64-char hex secret"
-                                    required
-                                    maxlength={64}
-                                    pattern="[a-fA-F0-9]{64}"
-                                />
-                                <button
-                                    type="button"
-                                    on:click={() =>
-                                        (showGameSecret = !showGameSecret)}
-                                    class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-200"
-                                    aria-label={showGameSecret
-                                        ? "Hide secret"
-                                        : "Show secret"}
+                            <div class="flex gap-2">
+                                <div class="relative flex-grow">
+                                    <Input
+                                        type={showGameSecret
+                                            ? "text"
+                                            : "password"}
+                                        id="gameSecret"
+                                        bind:value={gameSecret}
+                                        placeholder="Enter or generate a 64-char hex secret"
+                                        required
+                                        maxlength={64}
+                                        pattern="[a-fA-F0-9]{64}"
+                                    />
+                                    <button
+                                        type="button"
+                                        on:click={() =>
+                                            (showGameSecret = !showGameSecret)}
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-200"
+                                        aria-label={showGameSecret
+                                            ? "Hide secret"
+                                            : "Show secret"}
+                                    >
+                                        {#if showGameSecret}
+                                            <EyeOff class="h-5 w-5" />
+                                        {:else}
+                                            <Eye class="h-5 w-5" />
+                                        {/if}
+                                    </button>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    on:click={() => (gameSecret = "")}
+                                    class="shrink-0"
+                                    title="Clear secret"
                                 >
-                                    {#if showGameSecret}
-                                        <EyeOff class="h-5 w-5" />
-                                    {:else}
-                                        <Eye class="h-5 w-5" />
-                                    {/if}
-                                </button>
+                                    <Trash2 class="w-4 h-4" />
+                                </Button>
                             </div>
                             <p class="text-xs mt-1 text-muted-foreground">
                                 This will be hashed. Keep the original S safe.
                             </p>
-                        </div>
-                        <div class="form-group">
-                            <Label for="indetermismIndex"
-                                >Indetermism Index</Label
-                            >
-                            <Input
-                                id="indetermismIndex"
-                                type="number"
-                                bind:value={indetermismIndex}
-                                min="1"
-                                step="1"
-                                placeholder="Number of executions for reproducibility"
-                                required
-                            />
                         </div>
                     </div>
                 </section>
@@ -532,9 +557,9 @@
                         Parameters that will be enforced by the smart contract.
                     </p>
                     <div
-                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
+                        class="form-grid grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-6"
                     >
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-2">
                             <Label for="deadlineValue"
                                 >Participation Deadline</Label
                             >
@@ -561,7 +586,7 @@
                                 </p>
                             {/if}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-2">
                             <Label for="creatorStakeAmount"
                                 >Creator Stake ({participationTokenName})</Label
                             >
@@ -575,7 +600,7 @@
                                 required
                             />
                         </div>
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <Label for="participationFee"
                                 >Participation Fee ({participationTokenName})</Label
                             >
@@ -617,14 +642,26 @@
                                     >
                                         Custom Token ID
                                     </Label>
-                                    <Input
-                                        id="customTokenId"
-                                        bind:value={customTokenId}
-                                        placeholder="Enter the 64-character token ID"
-                                        class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
-                                        maxlength={64}
-                                        pattern="[a-fA-F0-9]{64}"
-                                    />
+                                    <div class="flex gap-2">
+                                        <Input
+                                            id="customTokenId"
+                                            bind:value={customTokenId}
+                                            placeholder="Enter the 64-character token ID"
+                                            class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
+                                            maxlength={64}
+                                            pattern="[a-fA-F0-9]{64}"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            on:click={() =>
+                                                (customTokenId = "")}
+                                            class="shrink-0 h-9 w-9"
+                                            title="Clear token ID"
+                                        >
+                                            <Trash2 class="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                     {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
                                         <p
                                             class="text-xs text-muted-foreground mt-1"
@@ -636,7 +673,7 @@
                                 </div>
                             {/if}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-2">
                             <Label for="commissionPercentage"
                                 >Creator Commission (%)</Label
                             >
@@ -651,7 +688,7 @@
                                 required
                             />
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-2">
                             <Label for="perJudgeComissionPercentage"
                                 >Judge Commission (%)</Label
                             >
@@ -666,7 +703,7 @@
                                 required
                             />
                         </div>
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <div class="repeater-container">
                                 <button
                                     type="button"
@@ -715,7 +752,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <Label>Prize Distribution Preview</Label>
                             <div class="distribution-bar">
                                 <div
@@ -793,9 +830,9 @@
                         Additional details to enrich your game's presentation.
                     </p>
                     <div
-                        class="form-grid grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6"
+                        class="form-grid grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-6"
                     >
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <Label for="gameDescription">Game Description</Label
                             >
                             <div class="relative">
@@ -823,7 +860,7 @@
                                 </p>
                             {/if}
                         </div>
-                        <div class="form-group lg:col-span-2">
+                        <div class="form-group lg:col-span-4">
                             <Label for="gameWebLink">Game Info Link</Label>
                             <Input
                                 id="gameWebLink"
@@ -832,30 +869,52 @@
                                 placeholder="https://example.com/my-game"
                             />
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-4">
                             <Label for="gameImageHash">Game Image Hash</Label>
-                            <Input
-                                id="gameImageHash"
-                                bind:value={gameImageHash}
-                                placeholder="Blake2b256 hash (64-character hex)"
-                                maxlength={64}
-                                pattern="[a-fA-F0-9]{64}"
-                            />
+                            <div class="flex gap-2">
+                                <Input
+                                    id="gameImageHash"
+                                    bind:value={gameImageHash}
+                                    placeholder="Blake2b256 hash (64-character hex)"
+                                    maxlength={64}
+                                    pattern="[a-fA-F0-9]{64}"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    on:click={() => (gameImageHash = "")}
+                                    class="shrink-0"
+                                    title="Clear hash"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                </Button>
+                            </div>
                             <p class="text-xs mt-1 text-muted-foreground">
                                 The Blake2b256 hash of the game's image file
                             </p>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group lg:col-span-4">
                             <Label for="gamePaperHash"
                                 >Game Paper Hash (Optional)</Label
                             >
-                            <Input
-                                id="gamePaperHash"
-                                bind:value={gamePaperHash}
-                                placeholder="Blake2b256 hash (64-character hex)"
-                                maxlength={64}
-                                pattern="[a-fA-F0-9]{64}"
-                            />
+                            <div class="flex gap-2">
+                                <Input
+                                    id="gamePaperHash"
+                                    bind:value={gamePaperHash}
+                                    placeholder="Blake2b256 hash (64-character hex)"
+                                    maxlength={64}
+                                    pattern="[a-fA-F0-9]{64}"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    on:click={() => (gamePaperHash = "")}
+                                    class="shrink-0"
+                                    title="Clear hash"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                </Button>
+                            </div>
                             <p class="text-xs mt-1 text-muted-foreground">
                                 The Blake2b256 hash of a markdown file with
                                 detailed game description
@@ -894,53 +953,6 @@
                         </p>
 
                         <div class="flex flex-col gap-6">
-                            <!-- Image Download Sources -->
-                            <div
-                                class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
-                            >
-                                <Label
-                                    class="text-base font-bold mb-1 flex items-center gap-2"
-                                >
-                                    <div
-                                        class="w-2 h-2 rounded-full bg-blue-500"
-                                    ></div>
-                                    Image Source
-                                </Label>
-                                <p
-                                    class="text-xs text-muted-foreground mb-4 leading-relaxed"
-                                >
-                                    Provide download locations for the game's
-                                    cover image or assets.
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    on:click={() =>
-                                        openFileSourceModal(
-                                            gameImageHash,
-                                            "image",
-                                        )}
-                                    class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                                >
-                                    Add Image Source
-                                </Button>
-                                {#if imageSourceCount > 0}
-                                    <div
-                                        class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
-                                    >
-                                        <div
-                                            class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-                                        ></div>
-                                        <span
-                                            class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
-                                        >
-                                            {imageSourceCount} source(s) active
-                                        </span>
-                                    </div>
-                                {/if}
-                            </div>
-
                             <!-- Game Service Download Sources -->
                             <div
                                 class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
@@ -983,6 +995,53 @@
                                             class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                         >
                                             {serviceSourceCount} source(s) active
+                                        </span>
+                                    </div>
+                                {/if}
+                            </div>
+
+                            <!-- Image Download Sources -->
+                            <div
+                                class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                            >
+                                <Label
+                                    class="text-base font-bold mb-1 flex items-center gap-2"
+                                >
+                                    <div
+                                        class="w-2 h-2 rounded-full bg-blue-500"
+                                    ></div>
+                                    Image Source
+                                </Label>
+                                <p
+                                    class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                >
+                                    Provide download locations for the game's
+                                    cover image or assets.
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    on:click={() =>
+                                        openFileSourceModal(
+                                            gameImageHash,
+                                            "image",
+                                        )}
+                                    class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                >
+                                    Add Image Source
+                                </Button>
+                                {#if imageSourceCount > 0}
+                                    <div
+                                        class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                    >
+                                        <div
+                                            class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                        ></div>
+                                        <span
+                                            class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                        >
+                                            {imageSourceCount} source(s) active
                                         </span>
                                     </div>
                                 {/if}
