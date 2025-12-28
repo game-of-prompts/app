@@ -1073,6 +1073,7 @@
 
     <!-- File Source Modal -->
     {#if showFileSourceModal}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md"
             on:click={closeFileSourceModal}
@@ -1081,6 +1082,7 @@
             tabindex="0"
             aria-label="Close modal"
         >
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
                 class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden"
                 on:click|stopPropagation
@@ -1117,6 +1119,11 @@
 
                 <div class="p-0">
                     <FileSourceCreation
+                        title={modalFileType === "image"
+                            ? "Add Image Source"
+                            : modalFileType === "service"
+                              ? "Add Game Service Source"
+                              : "Add Paper Source"}
                         profile={reputationProofAny}
                         explorerUri={$explorer_uri}
                         hash={modalFileHash}
