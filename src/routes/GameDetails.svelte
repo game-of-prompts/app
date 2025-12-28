@@ -1238,10 +1238,10 @@
                             class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                         >
                             <details
-                                class="group p-4 rounded-lg border {$mode ===
+                                class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
                                 'dark'
-                                    ? 'border-slate-700 bg-slate-800/50'
-                                    : 'border-gray-200 bg-gray-50'}"
+                                    ? 'border-slate-700'
+                                    : 'border-gray-200'}"
                             >
                                 <summary
                                     class="flex justify-between items-center font-medium cursor-pointer list-none"
@@ -1358,10 +1358,10 @@
                                 class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                             >
                                 <details
-                                    class="group p-4 rounded-lg border {$mode ===
+                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
                                     'dark'
-                                        ? 'border-slate-700 bg-slate-800/50'
-                                        : 'border-gray-200 bg-gray-50'}"
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
                                 >
                                     <summary
                                         class="flex justify-between items-center font-medium cursor-pointer list-none"
@@ -1445,10 +1445,10 @@
                                 class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                             >
                                 <details
-                                    class="group p-4 rounded-lg border {$mode ===
+                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
                                     'dark'
-                                        ? 'border-slate-700 bg-slate-800/50'
-                                        : 'border-gray-200 bg-gray-50'}"
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
                                 >
                                     <summary
                                         class="flex justify-between items-center font-medium cursor-pointer list-none"
@@ -1520,10 +1520,10 @@
                                 class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
                             >
                                 <details
-                                    class="group p-4 rounded-lg border {$mode ===
+                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
                                     'dark'
-                                        ? 'border-slate-700 bg-slate-800/50'
-                                        : 'border-gray-200 bg-gray-50'}"
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
                                 >
                                     <summary
                                         class="flex justify-between items-center font-medium cursor-pointer list-none"
@@ -1782,7 +1782,7 @@
                     </div>
 
                     <div
-                        class="status-description mb-8 rounded-xl border overflow-hidden {$mode ===
+                        class="status-description mb-8 rounded-xl border bg-card overflow-hidden {$mode ===
                         'dark'
                             ? 'border-slate-700'
                             : 'border-gray-200'} shadow-sm"
