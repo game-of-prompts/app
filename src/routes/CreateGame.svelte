@@ -1146,36 +1146,6 @@
                 class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden"
                 on:click|stopPropagation
             >
-                <div
-                    class="flex justify-between items-center p-6 border-b border-border bg-slate-500/5"
-                >
-                    <div>
-                        <h3 class="text-xl font-bold">
-                            Add {modalFileType === "image"
-                                ? "Image"
-                                : modalFileType === "service"
-                                  ? "Service"
-                                  : "Paper"} Source
-                        </h3>
-                        <p
-                            class="text-xs text-muted-foreground mt-1 font-mono opacity-70"
-                        >
-                            Hash: {$modalFileHash.substring(
-                                0,
-                                8,
-                            )}...{$modalFileHash.substring(56)}
-                        </p>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        on:click={closeFileSourceModal}
-                        class="rounded-full"
-                    >
-                        <X class="w-5 h-5" />
-                    </Button>
-                </div>
-
                 <div class="p-0">
                     <FileSourceCreation
                         title={modalFileType === "image"
