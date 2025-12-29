@@ -2,7 +2,6 @@ import { get } from "svelte/store";
 import { types, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import {
-    fetchAllUserProfiles as libFetchAllProfiles,
     fetchTypeNfts as libFetchTypeNfts,
     searchBoxes,
     type ReputationProof,
@@ -10,19 +9,6 @@ import {
     type RPBox
 } from "ergo-reputation-system";
 import { JUDGE } from "./types";
-
-export async function fetchAllUserProfiles(
-    explorerUri: string,
-    address: string | null = null,
-    types: string[] = [],
-    available_types: Map<string, TypeNFT> = new Map()
-): Promise<ReputationProof[]> {
-    const profiles = await libFetchAllProfiles(explorerUri, null, types, available_types);
-    if (address) {
-        return profiles.filter(p => p.owner_serialized === address);
-    }
-    return profiles;
-}
 
 export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {
     try {

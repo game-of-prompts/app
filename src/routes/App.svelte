@@ -25,12 +25,7 @@
     import CreateJudge from "./CreateJudge.svelte";
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
-    import {
-        fetchReputationProofs,
-        fetchAllUserProfiles,
-    } from "$lib/ergo/reputation/fetch";
-    import { type ReputationProof } from "ergo-reputation-system";
-    import { total_burned } from "ergo-reputation-system";
+    import { fetchAllUserProfiles } from "ergo-reputation-system";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
@@ -188,7 +183,7 @@
             const types = await fetchTypeNfts();
             const profiles = await fetchAllUserProfiles(
                 get(explorer_uri),
-                get(address),
+                true,
                 [JUDGE],
                 types,
             );
