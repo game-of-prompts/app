@@ -102,6 +102,7 @@
 
     // UI State
     let transactionId: string | null = null;
+    let modalTitle: string = "";
     let errorMessage: string | null = null;
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
@@ -828,6 +829,7 @@
     // --- UI Utility Functions ---
 
     function setupActionModal(type: typeof currentActionType) {
+        console.log("setupActionModal called with type:", type);
         currentActionType = type;
         const titles = {
             submit_score: `Submit Score`,

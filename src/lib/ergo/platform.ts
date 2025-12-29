@@ -56,7 +56,7 @@ async function createOrUpdateOpinion(
             content
         );
     } else {
-        const mainBox = proof.current_boxes[0];
+        const mainBox = proof.current_boxes.find(b => b.is_locked === false && b.object_pointer === b.token_id);
         if (!mainBox) throw new Error("No main box found");
 
         return await create_opinion(
@@ -66,7 +66,7 @@ async function createOrUpdateOpinion(
             object_pointer,
             polarization,
             content,
-            false,
+            true,
             mainBox as any
         );
     }
