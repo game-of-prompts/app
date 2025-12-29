@@ -300,19 +300,25 @@ export function parseGameContent(
 
 export function resolve_participation_commitment(p: AnyParticipation, secretHex: string, seed: string): bigint | null {
     // Early validation
-    if (!p.box?.additionalRegisters || !secretHex || !seed) return null;
+    if (!p.box?.additionalRegisters || !secretHex || !seed) {
+        console.log("Missing additional registers, secret, or seed");
+        return null;
+    }
     const R = p.box.additionalRegisters;
 
     // Parse registers safely
-    const ergoTree = hexToBytes(R.R4 || "");
-    const commitmentHex = parseCollByteToHex(R.R5);
-    const solverIdHex = parseCollByteToHex(R.R7);
-    const hashLogsHex = parseCollByteToHex(R.R8);
-    const scoreListRaw = R.R9;
+    const ergoTree = hexToBytes(R.R4.renderedValue || "");
+    const commitmentHex = parseCollByteToHex(R.R5.renderedValue);
+    const solverIdHex = parseCollByteToHex(R.R7.renderedValue);
+    const hashLogsHex = parseCollByteToHex(R.R8.renderedValue);
+    const scoreListRaw = R.R9.renderedValue;
     const seedBytes = hexToBytes(seed)!;
 
     // Check for required fields
-    if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) return null;
+    if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) {
+        console.log("Missing required register values");
+        return null;
+    }
 
     // Try parsing the score list (R9)
     let scoreList: bigint[] | null = null;
@@ -320,6 +326,7 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
         try {
             scoreList = parseLongColl(JSON.parse(scoreListRaw));
         } catch {
+            console.log("Error parsing score list from R9");
             return null;
         }
     } else if (Array.isArray(scoreListRaw)) {
@@ -332,7 +339,10 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     const hashLogsBytes = hexToBytes(hashLogsHex);
     const secretBytes = hexToBytes(secretHex);
 
-    if (!solverIdBytes || !hashLogsBytes || !secretBytes) return null;
+    if (!solverIdBytes || !hashLogsBytes || !secretBytes) {
+        console.log("Error converting hex values to bytes");
+        return null;
+    }
 
     // Look for the matching commitment
     for (const score of scoreList) {
@@ -352,6 +362,7 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
         }
     }
 
+    console.log("No matching commitment found");
     return null;
 }
 
