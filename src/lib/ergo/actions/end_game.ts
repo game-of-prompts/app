@@ -191,6 +191,7 @@ export async function end_game(
             const js = get(judges).data.get(tokenId);
             if (!js) throw new Error(`No judge info for ${tokenId}`);
             
+            console.log("Judge: ", js)
             outputs.push(buildOutput(finalPerJudge, js.owner_ergotree));
 
             if (js.current_boxes?.[0]) {

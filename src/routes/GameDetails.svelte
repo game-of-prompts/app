@@ -366,10 +366,7 @@
                           await Promise.all(
                               game.judges.map(async (judge) => {
                                   const judge_proof =
-                                      await fetchReputationProofByTokenId(
-                                          judge,
-                                          ergo,
-                                      );
+                                      await fetchReputationProofByTokenId(judge);
                                   if (!judge_proof) return null;
 
                                   const foundBox =

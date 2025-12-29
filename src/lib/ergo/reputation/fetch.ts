@@ -29,37 +29,11 @@ export async function fetchTypeNfts(force: boolean = false): Promise<Map<string,
     }
 }
 
-export async function fetchReputationProofByTokenId(
-    tokenId: string,
-    ergo: any, // kept for compatibility but unused if using library
-    options: { ignoreOwnerHashConflict?: boolean } = {}
-): Promise<ReputationProof | null> {
+export async function fetchReputationProofByTokenId(tokenId: string): Promise<ReputationProof | null> {
     try {
         const availableTypes = await fetchTypeNfts();
-
-        // Use searchBoxes to find the main box of the profile
-        const boxGenerator = searchBoxes(
-            get(explorer_uri),
-            tokenId,
-            undefined,
-            tokenId, // object_pointer points to self for profile
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            1
-        );
-
-        const { value: boxes } = await boxGenerator.next();
-
-        if (boxes && boxes.length > 0) {
-            // Now we need to get the full ReputationProof. 
-            // fetchAllUserProfiles is still the easiest way to get the full proof object with all boxes
-            const profiles = await fetchAllProfiles(get(explorer_uri), undefined, [JUDGE], availableTypes);
-            return profiles.find(p => p.token_id === tokenId) || null;
-        }
-
-        return null;
+        const profiles = await fetchAllProfiles(get(explorer_uri), true, [JUDGE], availableTypes);
+        return profiles.find(p => p.token_id === tokenId) || null;
     } catch (error) {
         console.error(`Error fetching reputation proof for token ${tokenId}:`, error);
         return null;
@@ -81,7 +55,7 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
             undefined,  // is_locked
             undefined,  // polarization
             undefined,  // content
-            undefined,  // owner_address
+            undefined,  // owner_ergotree
             undefined,  // limit
             undefined   // offset
         );
