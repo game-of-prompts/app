@@ -18,7 +18,7 @@ import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
 import { reclaim_after_grace } from './actions/reclaim_after_grace';
-import { create_opinion, update_opinion } from 'ergo-reputation-system';
+import { create_opinion, update_opinion } from 'reputation-system';
 import { GAME, PARTICIPATION } from '$lib/ergo/reputation/types';
 import { reputation_proof } from '$lib/common/store';
 import { get } from 'svelte/store';

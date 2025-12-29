@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
-    import { create_profile } from "ergo-reputation-system";
+    import { create_profile } from "reputation-system";
     import { JUDGE } from "$lib/ergo/reputation/types";
     import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
     import { get } from "svelte/store";

@@ -6,7 +6,7 @@ import { type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
 import { fetch_token_details } from "$lib/ergo/fetch";
-import { type RPBox } from "ergo-reputation-system";
+import { type RPBox } from "reputation-system";
 
 /**
  * Defines the possible states a game can be in, according to the new contract logic.

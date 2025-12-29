@@ -7,7 +7,7 @@ import {
     type ReputationProof,
     type TypeNFT,
     type RPBox
-} from "ergo-reputation-system";
+} from "reputation-system";
 import { JUDGE } from "./types";
 
 export async function fetchTypeNfts(force: boolean = false): Promise<Map<string, TypeNFT>> {

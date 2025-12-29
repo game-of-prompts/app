@@ -25,7 +25,7 @@
     import CreateJudge from "./CreateJudge.svelte";
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
-    import { fetchAllUserProfiles } from "ergo-reputation-system";
+    import { fetchAllUserProfiles } from "reputation-system";
     import JudgeList from "./JudgeList.svelte";
     import {
         WalletButton,
@@ -75,7 +75,7 @@
     }
 
     let current_height: number | null = null;
-    let balanceUpdateInterval: number;
+    // let balanceUpdateInterval: number;
 
     onMount(() => {
         if (!browser) return;
@@ -88,7 +88,7 @@
         }
 
         getCurrentHeight();
-        balanceUpdateInterval = window.setInterval(updateWalletInfo, 30000);
+        // balanceUpdateInterval = window.setInterval(updateWalletInfo, 30000);
 
         scrollingTextElement?.addEventListener(
             "animationiteration",
@@ -136,7 +136,7 @@
         );
 
         return () => {
-            if (balanceUpdateInterval) clearInterval(balanceUpdateInterval);
+            // if (balanceUpdateInterval) clearInterval(balanceUpdateInterval);
             scrollingTextElement?.removeEventListener(
                 "animationiteration",
                 handleAnimationIteration,

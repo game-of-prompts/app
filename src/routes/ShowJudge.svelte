@@ -5,10 +5,10 @@
 		connected,
 	} from "$lib/common/store";
 	import { get } from "svelte/store";
-	import { type ReputationProof, Profile } from "ergo-reputation-system";
+	import { type ReputationProof, Profile } from "reputation-system";
 	import { onDestroy } from "svelte";
 	import { explorer_uri } from "$lib/ergo/envs";
-    import { GAME, JUDGE, PARTICIPATION } from "$lib/ergo/reputation/types";
+	import { GAME, JUDGE, PARTICIPATION } from "$lib/ergo/reputation/types";
 
 	let proof: ReputationProof | undefined = undefined;
 

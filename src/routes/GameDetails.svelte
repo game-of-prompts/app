@@ -81,7 +81,7 @@
         fetchJudges,
         fetchReputationProofByTokenId,
     } from "$lib/ergo/reputation/fetch";
-    import { type RPBox, type ReputationProof } from "ergo-reputation-system";
+    import { type RPBox, type ReputationProof } from "reputation-system";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import { Forum } from "forum-application";
 

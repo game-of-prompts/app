@@ -36,8 +36,8 @@ import {
     getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchReputationProofs } from "./reputation/fetch";
-import { type RPBox } from "ergo-reputation-system";
-import { calculate_reputation as calculate_reputation_proof } from "ergo-reputation-system";
+import { type RPBox } from "reputation-system";
+import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
 import { DefaultGameConstants } from "$lib/common/constants";

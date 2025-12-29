@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import type { AnyGame as Game } from './game';
-import { type ReputationProof, type TypeNFT } from 'ergo-reputation-system';
+import { type ReputationProof, type TypeNFT } from 'reputation-system';
 
 export const address = writable<string | null>(null);
 export const network = writable<string | null>(null);
