@@ -101,6 +101,7 @@ De esta forma se permite gastar la caja de resolución tanto con participaciones
 Teoricamente se permite un numero ilimitado de participaciones.
 
 
+[] Sin ERG mode.
 
 
 ====
