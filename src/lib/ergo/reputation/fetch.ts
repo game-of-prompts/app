@@ -47,34 +47,19 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
         }
 
         const availableTypes = await fetchTypeNfts();
-        const boxGenerator = searchBoxes(
-            get(explorer_uri),
-            undefined,
-            JUDGE,
-            undefined,  // object_pointer
-            undefined,  // is_locked
-            undefined,  // polarization
-            undefined,  // content
-            undefined,  // owner_ergotree
-            undefined,  // limit
-            undefined   // offset
-        );
-
-        const judgesMap = new Map<string, ReputationProof>();
-        for await (const batch of boxGenerator) {
-            for (const box of batch) {
-                const tokenId = box.assets && box.assets.length > 0 ? box.assets[0].tokenId : null;
-                if (tokenId) {
-                    const profile = await fetchReputationProofByTokenId(tokenId, null);
-                    if (profile) {
-                        judgesMap.set(tokenId, profile);
-                    }
-                }
+        const fethed = await fetchAllProfiles(get(explorer_uri), true, [JUDGE], availableTypes);
+        if (fethed.length > 0) {
+            const judgesMap = new Map<string, ReputationProof>();
+            for (const profile of fethed) {
+                judgesMap.set(profile.token_id, profile);
             }
+            judges.set({ data: judgesMap, last_fetch: Date.now() });
+            return get(judges).data;
+        } 
+        else {
+            judges.set({ data: new Map(), last_fetch: Date.now() });
+            return get(judges).data;
         }
-
-        judges.set({ data: judgesMap, last_fetch: Date.now() });
-        return get(judges).data;
     } catch (e: any) {
         console.error("Failed to fetch and store judges:", e);
         judges.set({ data: new Map(), last_fetch: 0 });
