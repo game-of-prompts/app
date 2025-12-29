@@ -27,7 +27,7 @@
     import ShowJudge from "./ShowJudge.svelte";
     import {
         fetchReputationProofs,
-        fetchAllProfiles,
+        fetchAllUserProfiles,
     } from "$lib/ergo/reputation/fetch";
     import { type ReputationProof } from "ergo-reputation-system";
     import { total_burned } from "ergo-reputation-system";
@@ -50,6 +50,7 @@
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
+    import { JUDGE } from "$lib/ergo/reputation/types";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -184,24 +185,15 @@
             await walletManager.refreshBalance();
             current_height = await platform.get_current_height();
 
-            const proofs = await fetchReputationProofs(
-                (window as any).ergo,
-                false,
-                "judge",
-                null,
+            const types = await fetchTypeNfts();
+            const profiles = await fetchAllUserProfiles(
+                get(explorer_uri),
+                get(address),
+                [JUDGE],
+                types,
             );
-
-            if (proofs.size > 0) {
-                const types = await fetchTypeNfts();
-                const profiles = await fetchAllProfiles(
-                    get(explorer_uri),
-                    get(address),
-                    [],
-                    types,
-                );
-                if (profiles.length > 0) {
-                    reputation_proof.set(profiles[0]);
-                }
+            if (profiles.length > 0) {
+                reputation_proof.set(profiles[0]);
             }
         } catch (error) {
             console.error("Error updating wallet info:", error);

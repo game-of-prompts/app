@@ -2,7 +2,7 @@ import { get } from "svelte/store";
 import { types, judges } from "$lib/common/store";
 import { explorer_uri, CACHE_DURATION_MS } from "$lib/ergo/envs";
 import {
-    fetchAllProfiles as libFetchAllProfiles,
+    fetchAllUserProfiles as libFetchAllProfiles,
     fetchTypeNfts as libFetchTypeNfts,
     searchBoxes,
     type ReputationProof,
@@ -11,13 +11,13 @@ import {
 } from "ergo-reputation-system";
 import { JUDGE } from "./types";
 
-export async function fetchAllProfiles(
+export async function fetchAllUserProfiles(
     explorerUri: string,
     address: string | null = null,
-    excluded_token_ids: string[] = [],
-    types: Map<string, TypeNFT> = new Map()
+    types: string[] = [],
+    available_types: Map<string, TypeNFT> = new Map()
 ): Promise<ReputationProof[]> {
-    const profiles = await libFetchAllProfiles(explorerUri, null, excluded_token_ids, types);
+    const profiles = await libFetchAllProfiles(explorerUri, null, types, available_types);
     if (address) {
         return profiles.filter(p => p.owner_serialized === address);
     }
@@ -67,7 +67,7 @@ export async function fetchReputationProofByTokenId(
 
         if (boxes && boxes.length > 0) {
             // Now we need to get the full ReputationProof. 
-            // fetchAllProfiles is still the easiest way to get the full proof object with all boxes
+            // fetchAllUserProfiles is still the easiest way to get the full proof object with all boxes
             const profiles = await libFetchAllProfiles(get(explorer_uri), null, [], availableTypes);
             return profiles.find(p => p.token_id === tokenId) || null;
         }
@@ -86,11 +86,30 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
         }
 
         const availableTypes = await fetchTypeNfts();
-        const profiles = await libFetchAllProfiles(get(explorer_uri), true, [JUDGE], availableTypes);
+        const boxGenerator = searchBoxes(
+            get(explorer_uri),
+            undefined,
+            JUDGE,
+            undefined,  // object_pointer
+            undefined,  // is_locked
+            undefined,  // polarization
+            undefined,  // content
+            undefined,  // owner_address
+            undefined,  // limit
+            undefined   // offset
+        );
 
         const judgesMap = new Map<string, ReputationProof>();
-        for (const profile of profiles) {
-            judgesMap.set(profile.token_id, profile);
+        for await (const batch of boxGenerator) {
+            for (const box of batch) {
+                const tokenId = box.assets && box.assets.length > 0 ? box.assets[0].tokenId : null;
+                if (tokenId) {
+                    const profile = await fetchReputationProofByTokenId(tokenId, null);
+                    if (profile) {
+                        judgesMap.set(tokenId, profile);
+                    }
+                }
+            }
         }
 
         judges.set({ data: judgesMap, last_fetch: Date.now() });
