@@ -6,7 +6,8 @@ import {
     searchBoxes,
     type ReputationProof,
     type TypeNFT,
-    type RPBox
+    type RPBox,
+    fetchAllProfiles
 } from "reputation-system";
 import { JUDGE } from "./types";
 
@@ -54,7 +55,7 @@ export async function fetchReputationProofByTokenId(
         if (boxes && boxes.length > 0) {
             // Now we need to get the full ReputationProof. 
             // fetchAllUserProfiles is still the easiest way to get the full proof object with all boxes
-            const profiles = await libFetchAllProfiles(get(explorer_uri), null, [], availableTypes);
+            const profiles = await fetchAllProfiles(get(explorer_uri), undefined, [JUDGE], availableTypes);
             return profiles.find(p => p.token_id === tokenId) || null;
         }
 
