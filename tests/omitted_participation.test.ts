@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { MockChain } from "@fleet-sdk/mock-chain";
+import { MockChain, type KeyedMockChainParty } from "@fleet-sdk/mock-chain";
 import {
     Box,
     ErgoTree,
@@ -35,10 +35,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     let mockChain: MockChain;
 
     // --- Actors ---
-    let originalResolver: ReturnType<MockChain["newParty"]>;
-    let newResolver: ReturnType<MockChain["newParty"]>;
-    let currentWinnerPlayer: ReturnType<MockChain["newParty"]>;
-    let omittedPlayer: ReturnType<MockChain["newParty"]>;
+    let originalResolver: KeyedMockChainParty;
+    let newResolver: KeyedMockChainParty;
+    let currentWinnerPlayer: KeyedMockChainParty;
+    let omittedPlayer: KeyedMockChainParty;
 
     // --- Contracts & Parties ---
     let gameResolutionContract: ReturnType<MockChain["addParty"]>;
@@ -65,7 +65,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
     // Helper to create a commitment hash
     const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
-        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...hexToBytes(seed), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
+        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...(hexToBytes(seed) || new Uint8Array(0)), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
     };
 
     beforeEach(() => {
@@ -578,6 +578,52 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
         expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+    });
+
+    it("should include an omitted participant with LOWER raw score but HIGHER adjusted score due to early submission", () => {
+        // Winner: 1000, Height: 600,000. Adjusted: 1000 * (700700 - 600000) = 100,700,000
+        // Omitted: 600, Height: 500,000. Adjusted: 600 * (700700 - 500000) = 600 * 200700 = 120,420,000
+        // Omitted should win despite lower raw score.
+        const earlierCreationHeight = 500_000;
+        setupScenario(1000n, 600n, earlierCreationHeight);
+
+        const newNumericalParams: bigint[] = [
+            game_deadline,
+            2_000_000_000n,
+            1_000_000n,
+            1n,  // perJudgeCommissionPercent
+            20n, // creatorComissionPercentage
+            BigInt(resolutionDeadline)
+        ];
+
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...newResolver.utxos.toArray()])
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameResolutionErgoTree)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
+                        R6: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R7: SColl(SColl(SByte), []).toHex(),
+                        R8: SColl(SLong, newNumericalParams).toHex(),
+                        R9: SColl(SColl(SByte), [
+                            stringToBytes("utf8", "{}"), "",
+                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                        ]).toHex()
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        const result = mockChain.execute(tx, { signers: [newResolver] });
+        expect(result).to.be.true;
+
+        const newGameBox = gameResolutionContract.utxos.toArray()[0];
+        expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
     });
 
     it("should fail if an omitted participant has the same score as the current winner but was submitted later", () => {

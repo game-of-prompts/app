@@ -149,8 +149,12 @@
                 val validCurrentCandidate = currentCandidateScoreTuple._2 && currentScore != -1L
 
                 if (validCurrentCandidate) {
-                  // Se determina el nuevo ganador comparando puntajes y alturas de bloque
-                  if (newScore > currentScore || (newScore == currentScore && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
+                  // Se determina el nuevo ganador comparando puntajes AJUSTADOS y alturas de bloque
+                  // Formula: score = game_score * (DEADLINE - HEIGHT)
+                  val newScoreAdjusted = newScore * (deadline - omittedWinnerBox.creationInfo._1.toLong)
+                  val currentScoreAdjusted = currentScore * (deadline - currentCandidateBox.creationInfo._1.toLong)
+
+                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
                     omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
                   } else {
                     Coll[Byte]() // El actual sigue siendo el mejor

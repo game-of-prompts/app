@@ -13,6 +13,7 @@
         isGameEnded,
         isOpenCeremony,
         resolve_participation_commitment,
+        calculateEffectiveScore,
     } from "$lib/common/game";
     import { marked } from "marked";
     import {
@@ -679,8 +680,26 @@
 
             // Obtener la participación con el score más alto
             const omittedParticipation = submittedParticipations.reduce(
-                (best, current) =>
-                    current.score > best.score ? current : best,
+                (best, current) => {
+                    const bestEffective = calculateEffectiveScore(
+                        best.score,
+                        game.deadlineBlock,
+                        best.creationHeight,
+                    );
+                    const currentEffective = calculateEffectiveScore(
+                        current.score,
+                        game.deadlineBlock,
+                        current.creationHeight,
+                    );
+
+                    if (currentEffective > bestEffective) return current;
+                    if (
+                        currentEffective === bestEffective &&
+                        current.creationHeight < best.creationHeight
+                    )
+                        return current;
+                    return best;
+                },
             );
 
             // Buscar el ganador actual (puede no existir)
@@ -2687,6 +2706,14 @@
                                               game.seed,
                                           )
                                         : null}
+                                {@const effectiveScore =
+                                    actualScoreForThisParticipation !== null
+                                        ? calculateEffectiveScore(
+                                              actualScoreForThisParticipation,
+                                              game.deadlineBlock,
+                                              p.creationHeight,
+                                          )
+                                        : null}
 
                                 {@const isCurrentUserParticipant =
                                     $connected &&
@@ -2946,6 +2973,10 @@
                                                             real one)
                                                         {:else}
                                                             (Real Score: {actualScoreForThisParticipation})
+                                                            {#if effectiveScore !== null && effectiveScore !== actualScoreForThisParticipation}
+                                                                <br />(Effective
+                                                                Score: {effectiveScore})
+                                                            {/if}
                                                         {/if}
                                                     </span>
                                                 {/if}

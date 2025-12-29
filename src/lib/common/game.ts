@@ -1,12 +1,17 @@
-// src/lib/common/game.ts
-
 import { ErgoPlatform } from "$lib/ergo/platform";
-import { SAFE_MIN_BOX_VALUE, type Amount, type Box, type TokenEIP4 } from "@fleet-sdk/core";
+import { SAFE_MIN_BOX_VALUE, type Amount, type Box } from "@fleet-sdk/core";
 import { type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
 import { fetch_token_details } from "$lib/ergo/fetch";
 import { type RPBox } from "reputation-system";
+
+export interface TokenEIP4 {
+    name: string,
+    description: string,
+    decimals: number,
+    emissionAmount: number | null
+}
 
 /**
  * Defines the possible states a game can be in, according to the new contract logic.
@@ -20,6 +25,7 @@ export const GameState = {
     // Estados derivados (no representan un script, sino el final del ciclo de vida)
     Finalized: 'Finalized',             // Juego terminado y pagado (obtenido mediante token NFT)
 } as const;
+
 
 /**
  * A type representing the possible string values for a game's status.
@@ -298,11 +304,11 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     const R = p.box.additionalRegisters;
 
     // Parse registers safely
-    const ergoTree = hexToBytes(R.R4?.renderedValue || "");
-    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
-    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
-    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
-    const scoreListRaw = R.R9?.renderedValue;
+    const ergoTree = hexToBytes(R.R4 || "");
+    const commitmentHex = parseCollByteToHex(R.R5);
+    const solverIdHex = parseCollByteToHex(R.R7);
+    const hashLogsHex = parseCollByteToHex(R.R8);
+    const scoreListRaw = R.R9;
     const seedBytes = hexToBytes(seed)!;
 
     // Check for required fields
@@ -357,4 +363,20 @@ export async function getGameTokenSymbol(game: AnyGame): Promise<string> {
     else {
         return "ERG";
     }
+}
+
+/**
+ * Calculates the effective score based on the raw score and the submission height.
+ * Formula: score = game_score * (DEADLINE - HEIGHT)
+ */
+export function calculateEffectiveScore(
+    rawScore: bigint,
+    deadlineHeight: number,
+    submissionHeight: number
+): bigint {
+    const heightDiff = BigInt(deadlineHeight - submissionHeight);
+    if (heightDiff <= 0n) {
+        return 0n; // Should not happen if validated correctly, but safe fallback
+    }
+    return rawScore * heightDiff;
 }

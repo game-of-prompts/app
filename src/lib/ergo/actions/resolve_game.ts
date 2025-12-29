@@ -10,7 +10,7 @@ import {
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
-import { resolve_participation_commitment, type GameActive, type ValidParticipation } from '$lib/common/game';
+import { resolve_participation_commitment, calculateEffectiveScore, type GameActive, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameResolutionErgoTreeHex, getGopParticipationErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
@@ -18,6 +18,8 @@ import { GAME } from '../reputation/types';
 import { fetchJudges } from '../reputation/fetch';
 import { prependHexPrefix } from '$lib/utils';
 import { DefaultGameConstants } from '$lib/common/constants';
+
+declare const ergo: any;
 
 // Constante del contrato game_resolution.es
 const JUDGE_PERIOD = DefaultGameConstants.JUDGE_PERIOD + 10;
@@ -124,9 +126,27 @@ export async function resolve_game(
             continue;
         }
 
+        const pBoxCreationHeight = pBox.creationHeight;
+        const effectiveScore = calculateEffectiveScore(actualScore, game.deadlineBlock, pBoxCreationHeight);
+
         // Si la participación es válida, se considera para determinar al ganador.
-        if (actualScore > maxScore) {
-            maxScore = actualScore;
+        // Usamos effectiveScore para comparar.
+        // En caso de empate en effectiveScore, preferimos el que se envió antes (menor altura).
+        // Si tienen misma altura y mismo effectiveScore (mismo rawScore), es indiferente, nos quedamos con el primero o actualizamos.
+        // Aquí usamos > para actualizar solo si es estrictamente mejor.
+        // Pero espera, si effectiveScore es igual, y height es menor, effectiveScore debería ser mayor?
+        // No necesariamente. S1 * (D - H1) vs S2 * (D - H2).
+        // Si H1 < H2, entonces (D - H1) > (D - H2).
+        // Para que sean iguales, S1 debe ser menor que S2.
+        // Ejemplo: D=100.
+        // A: S=10, H=90. Eff = 10 * 10 = 100.
+        // B: S=20, H=95. Eff = 20 * 5 = 100.
+        // Empate en Eff. A se envió antes (H=90). Preferimos A?
+        // El contrato dice: if (new > current || (new == current && newHeight < currentHeight))
+        // Si implementamos la misma lógica:
+
+        if (effectiveScore > maxScore || (effectiveScore === maxScore && pBoxCreationHeight < (winnerCandidateBox ? parseBox(winnerCandidateBox).creationHeight : Infinity))) {
+            maxScore = effectiveScore;
             winnerCandidateCommitment = p.commitmentC_Hex;
             winnerCandidateBox = p.box;
         }
