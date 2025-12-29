@@ -82,7 +82,7 @@
 
 [x] authorizedToEnd game_resolution action 3.  Autorizar al siguiente a los 3 meses.
 
-[] Incentivo a participación temprana.
+[x] Incentivo a participación temprana.
 Un escenario que puede darse es que nadie agregue la primera participación, por dos motivos:
 - No hay vote, asi que no llama la atención.
 - Esperar al último momento permite probar durante mas tiempo.
@@ -94,6 +94,10 @@ Una posible idea para incentivar a participar de manera prematura (si es que lo 
 - HEIGHT: altura donde se agregó la participación.
 
 
+- Revisar contrato en resolution.es action 3.
+   Podemos ponder el ergotree de juez que qeramos!
+
+- Revisar end_game.ts l.197
 
 [] Lotes de participaciones 
 (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
