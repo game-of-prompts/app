@@ -464,26 +464,13 @@
             */
 
             // Ajustar las verificaciones de pago para usar los valores ajustados
-            val adjustedDevGetsPaid = if (adjustedDevPayout > 0L) {
-                val devInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                val devOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                val devAddedValue = devOutputValue - devInputValue
-                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
-                devAddedValue >= adjustedDevPayout - txFee
-            } else { true }
+            val adjustedDevGetsPaid = if (adjustedDevPayout == 0L) true else devGetsPaid
 
-            val adjustedJudgesGetsPaid = if (adjustedJudgesPayout > 0L) {
-                val judgesPaidBox = OUTPUTS.filter({(b:Box) => b.propositionBytes == JUDGES_PAID_ERGOTREE})
-                if (judgesPaidBox.size == 1) {
-                   val box = judgesPaidBox(0)
-                   val correctValue = box_value(box) >= adjustedJudgesPayout
-                   val correctR4 = box.R4[Coll[Coll[Byte]]].get == participatingJudges
-                   val correctR5 = box.R5[Coll[Byte]].get == participationTokenId
-                   correctValue && correctR4 && correctR5
-                } else {
-                   false
-                }
-            } else { true }
+            val adjustedJudgesGetsPaid = if (adjustedJudgesPayout == 0L) {
+                true
+            } else {
+                judgesGetsPaid
+            }
 
             // Verificación de la salida del ganador
             val winnerGetsPaid = {
