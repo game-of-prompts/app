@@ -2,8 +2,8 @@
  * Utilities for calculating and validating Ergo box sizes for Game of Prompts
  */
 
-import { SInt, SLong, SColl, SPair, SByte } from '@fleet-sdk/serializer';
-import { getGopGameActiveErgoTreeHex } from '../contract';
+import { SInt, SLong, SColl, SPair, SByte, serializeBox } from '@fleet-sdk/serializer';
+import { getGopGameActiveErgoTreeHex, getGopGameResolutionErgoTreeHex, getGopGameCancellationErgoTreeHex } from '../contract';
 
 /**
  * Calculate the UTF-8 byte length of a string
@@ -35,6 +35,35 @@ export interface GameDetails {
 }
 
 /**
+ * Input parameters for accurate box size calculation
+ * Uses the real data the user has chosen instead of dummy values
+ */
+export interface GameBoxInputs {
+    /** Seed bytes (8 bytes) */
+    seedBytes: Uint8Array;
+    /** Ceremony deadline block height */
+    ceremonyDeadlineBlock: number;
+    /** Hashed secret bytes (32 bytes) */
+    hashedSecretBytes: Uint8Array;
+    /** Array of judge token IDs as byte arrays */
+    judgesColl: number[][];
+    /** Game deadline block */
+    deadlineBlock: number;
+    /** Creator stake amount */
+    creatorStakeAmount: bigint;
+    /** Participation fee amount */
+    participationFeeAmount: bigint;
+    /** Per judge commission percentage */
+    perJudgeCommissionPercentage: number;
+    /** Commission percentage for creator */
+    commissionPercentage: number;
+    /** Game details JSON bytes */
+    gameDetailsBytes: Uint8Array;
+    /** Participation token ID bytes (empty if ERG mode) */
+    participationTokenIdBytes: Uint8Array;
+}
+
+/**
  * Calculate the size in bytes of the game details JSON (R9 register)
  */
 export function calculateGameDetailsBytes(details: GameDetails): number {
@@ -43,130 +72,258 @@ export function calculateGameDetailsBytes(details: GameDetails): number {
 }
 
 /**
- * Estimate the total size of all registers (R4-R9) in bytes
- */
-export interface RegisterSizes {
-    r4Bytes: number;  // Game state (SInt)
-    r5Bytes: number;  // Seed + CeremonyDeadline (SPair)
-    r6Bytes: number;  // HashedSecret (SColl<SByte>)
-    r7Bytes: number;  // Judges (SColl<SColl<SByte>>)
-    r8Bytes: number;  // Config (SColl<SLong>)
-    r9Bytes: number;  // GameDetails JSON (SColl<SByte>)
-}
-
-export function estimateRegisterSizes(
-    judgesCount: number,
-    gameDetails: GameDetails,
-    participationTokenId: string = ""
-): RegisterSizes {
-    const PER_REGISTER_OVERHEAD = 1; // Type byte/overhead for the register itself
-
-    // R4: SInt(0)
-    const r4Hex = SInt(0).toHex();
-
-    // R5: SPair(SColl(SByte, 8 bytes), SLong)
-    // Seed is 16 hex chars = 8 bytes
-    const dummySeed = new Uint8Array(8).fill(0);
-    const dummyDeadline = BigInt(1000000);
-    const r5Hex = SPair(SColl(SByte, dummySeed), SLong(dummyDeadline)).toHex();
-
-    // R6: SColl(SByte, 32 bytes) - Hashed Secret (Blake2b256)
-    const dummyHash = new Uint8Array(32).fill(0);
-    const r6Hex = SColl(SByte, dummyHash).toHex();
-
-    // R7: SColl(SColl(SByte), judges)
-    // Each judge is a token ID (32 bytes)
-    const dummyJudge = new Uint8Array(32).fill(0);
-    const judgesList = Array(judgesCount).fill(dummyJudge);
-    const r7Hex = SColl(SColl(SByte), judgesList).toHex();
-
-    // R8: SColl(SLong, [5 longs])
-    const dummyLongs = Array(5).fill(BigInt(0));
-    const r8Hex = SColl(SLong, dummyLongs).toHex();
-
-    // R9: SColl(SColl(SByte), [JSON, TokenID])
-    const jsonString = JSON.stringify(gameDetails);
-    const jsonBytes = new TextEncoder().encode(jsonString);
-
-    let tokenIdBytes = new Uint8Array(0);
-    if (participationTokenId) {
-        // If it's a token ID, it should be 32 bytes (hex string)
-        // We assume valid hex input or empty
-        const stripped = participationTokenId.startsWith('0x') ? participationTokenId.slice(2) : participationTokenId;
-        if (stripped.length > 0) {
-            // We just need the length for size estimation, so we can mock it if needed, 
-            // but let's try to be accurate if we can, or just use dummy 32 bytes if present
-            tokenIdBytes = new Uint8Array(32).fill(0);
-        }
-    }
-
-    // Add a buffer for the Creator PK (future use)
-    const CREATOR_PK_BUFFER_SIZE = 100;
-    const dummyCreatorPkBuffer = new Uint8Array(CREATOR_PK_BUFFER_SIZE).fill(0);
-
-    const r9Hex = SColl(SColl(SByte), [jsonBytes, tokenIdBytes, dummyCreatorPkBuffer]).toHex();
-
-    return {
-        r4Bytes: hexByteLength(r4Hex) + PER_REGISTER_OVERHEAD,
-        r5Bytes: hexByteLength(r5Hex) + PER_REGISTER_OVERHEAD,
-        r6Bytes: hexByteLength(r6Hex) + PER_REGISTER_OVERHEAD,
-        r7Bytes: hexByteLength(r7Hex) + PER_REGISTER_OVERHEAD,
-        r8Bytes: hexByteLength(r8Hex) + PER_REGISTER_OVERHEAD,
-        r9Bytes: hexByteLength(r9Hex) + PER_REGISTER_OVERHEAD,
-    };
-}
-
-/**
  * Maximum box size in Ergo blockchain
  */
 export const MAX_BOX_SIZE = 4096;
 
 /**
- * Estimate total box size including all components
+ * Estimate total box size using real game inputs.
+ * Calculates the maximum size across all three game states:
+ * - GameActive: Initial state when game is created
+ * - GameResolution: State when game is being resolved (adds resolverErgoTree ~100 bytes + winnerCandidate 32 bytes)
+ * - GameCancelled: State when game is cancelled (different register structure)
+ * 
+ * @returns Object with individual sizes and max size, or null if serialization fails
+ */
+export function estimateTotalBoxSizeFromInputs(
+    inputs: GameBoxInputs
+): { activeSize: number; resolutionSize: number; cancelledSize: number; maxSize: number } | null {
+    const {
+        seedBytes,
+        ceremonyDeadlineBlock,
+        hashedSecretBytes,
+        judgesColl,
+        deadlineBlock,
+        creatorStakeAmount,
+        participationFeeAmount,
+        perJudgeCommissionPercentage,
+        commissionPercentage,
+        gameDetailsBytes,
+        participationTokenIdBytes
+    } = inputs;
+
+    // Whether this is a token game or ERG game
+    const isTokenGame = participationTokenIdBytes.length > 0;
+
+    // Build registers for Active state
+    const r4Hex = SInt(0).toHex();
+    const r5Hex = SPair(
+        SColl(SByte, seedBytes),
+        SLong(BigInt(ceremonyDeadlineBlock))
+    ).toHex();
+    const r6Hex = SColl(SByte, hashedSecretBytes).toHex();
+    const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
+    const r8Hex = SColl(SLong, [
+        BigInt(deadlineBlock),
+        creatorStakeAmount,
+        participationFeeAmount,
+        BigInt(perJudgeCommissionPercentage),
+        BigInt(commissionPercentage)
+    ]).toHex();
+    const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
+
+    const activeRegisters = {
+        R4: r4Hex,
+        R5: r5Hex,
+        R6: r6Hex,
+        R7: r7Hex,
+        R8: r8Hex,
+        R9: r9Hex
+    };
+
+    // Assets for all states
+    const assets = [];
+    if (isTokenGame) {
+        assets.push({
+            tokenId: "00".repeat(32),
+            amount: creatorStakeAmount
+        });
+    }
+    // Minted token (NFT)
+    assets.push({
+        tokenId: "00".repeat(32),
+        amount: 1n
+    });
+
+    // --- 1. Estimate Active Game Box ---
+    let activeBoxSize = 0;
+    try {
+        const activeTreeHex = getGopGameActiveErgoTreeHex();
+        const activeBoxCandidate = {
+            transactionId: "00".repeat(32),
+            index: 0,
+            value: 1000000n,
+            ergoTree: activeTreeHex,
+            creationHeight: 100000,
+            assets: assets,
+            additionalRegisters: activeRegisters
+        };
+        activeBoxSize = serializeBox(activeBoxCandidate).length;
+    } catch (e) {
+        console.error("Error serializing Active box:", e);
+        return null;
+    }
+
+    // --- 2. Estimate Resolution Game Box ---
+    let resolutionBoxSize = 0;
+    try {
+        const resolutionTreeHex = getGopGameResolutionErgoTreeHex();
+
+        // Resolution R4: SInt(1) - state
+        const resR4 = SInt(1).toHex();
+
+        // Resolution R5: SColl(SByte, seed) - Seed only (no deadline)
+        const resR5 = SColl(SByte, seedBytes).toHex();
+
+        // Resolution R6: SPair(SColl(SByte, secret), SColl(SByte, winnerCommitment))
+        // Secret is 32 bytes, WinnerCommitment is 32 bytes
+        const dummySecret = new Uint8Array(32).fill(0);
+        const dummyWinner = new Uint8Array(32).fill(0);
+        const resR6 = SPair(SColl(SByte, dummySecret), SColl(SByte, dummyWinner)).toHex();
+
+        // Resolution R7: Judges (worst case: all judges participate)
+        const resR7 = r7Hex;
+
+        // Resolution R8: Config (6 elements in resolution vs 5 in active)
+        // [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+        const resR8 = SColl(SLong, [
+            BigInt(deadlineBlock),
+            creatorStakeAmount,
+            participationFeeAmount,
+            BigInt(perJudgeCommissionPercentage),
+            BigInt(commissionPercentage),
+            BigInt(deadlineBlock + 1000) // Dummy resolutionDeadline
+        ]).toHex();
+
+        // Resolution R9: [GameDetails, TokenId, ResolverErgoTree]
+        // ResolverErgoTree is approximately 100 bytes
+        const dummyResolverErgoTree = new Uint8Array(100).fill(0);
+        const resR9 = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes, dummyResolverErgoTree]).toHex();
+
+        const resolutionRegisters = {
+            R4: resR4,
+            R5: resR5,
+            R6: resR6,
+            R7: resR7,
+            R8: resR8,
+            R9: resR9
+        };
+
+        const resolutionBoxCandidate = {
+            transactionId: "00".repeat(32),
+            index: 0,
+            value: 1000000n,
+            ergoTree: resolutionTreeHex,
+            creationHeight: 100000,
+            assets: assets,
+            additionalRegisters: resolutionRegisters
+        };
+        resolutionBoxSize = serializeBox(resolutionBoxCandidate).length;
+    } catch (e) {
+        console.error("Error serializing Resolution box:", e);
+        return null;
+    }
+
+    // --- 3. Estimate Cancelled Game Box ---
+    let cancelledBoxSize = 0;
+    try {
+        const cancelledTreeHex = getGopGameCancellationErgoTreeHex();
+
+        // Cancelled R4: SInt(2) - state cancelled
+        const cancR4 = SInt(2).toHex();
+
+        // Cancelled R5: SLong(unlockHeight) - next unlock height
+        const cancR5 = SLong(BigInt(deadlineBlock + 1000)).toHex();
+
+        // Cancelled R6: SColl(SByte, revealedSecret) - revealed secret (32 bytes)
+        const dummyRevealedSecret = new Uint8Array(32).fill(0);
+        const cancR6 = SColl(SByte, dummyRevealedSecret).toHex();
+
+        // Cancelled R7: SLong(remainingStake) - remaining stake amount
+        const cancR7 = SLong(creatorStakeAmount).toHex();
+
+        // Cancelled R8: SLong(deadlineBlock) - original deadline
+        const cancR8 = SLong(BigInt(deadlineBlock)).toHex();
+
+        // Cancelled R9: [GameDetails, TokenId] - same as active
+        const cancR9 = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
+
+        const cancelledRegisters = {
+            R4: cancR4,
+            R5: cancR5,
+            R6: cancR6,
+            R7: cancR7,
+            R8: cancR8,
+            R9: cancR9
+        };
+
+        const cancelledBoxCandidate = {
+            transactionId: "00".repeat(32),
+            index: 0,
+            value: 1000000n,
+            ergoTree: cancelledTreeHex,
+            creationHeight: 100000,
+            assets: assets,
+            additionalRegisters: cancelledRegisters
+        };
+        cancelledBoxSize = serializeBox(cancelledBoxCandidate).length;
+    } catch (e) {
+        console.error("Error serializing Cancelled box:", e);
+        return null;
+    }
+
+    return {
+        activeSize: activeBoxSize,
+        resolutionSize: resolutionBoxSize,
+        cancelledSize: cancelledBoxSize,
+        maxSize: Math.max(activeBoxSize, resolutionBoxSize, cancelledBoxSize)
+    };
+}
+
+/**
+ * Legacy function: Estimate total box size with dummy data.
+ * For UI validation before user has entered all parameters.
+ * Uses dummy values for registers except gameDetails and judgesCount.
  */
 export function estimateTotalBoxSize(
     gameDetails: GameDetails,
     judgesCount: number,
     participationTokenId: string = ""
 ): number {
-    const BASE_BOX_OVERHEAD = 60; // Variable, but ~60 is a safe lower bound for non-complex boxes
-    const PER_TOKEN_BYTES = 0; // We are minting 1 token, but it's the box's own token (NFT/singleton), usually handled in base size or slight overhead.
-    // However, if we are minting a token, the box will contain the token ID and amount.
-    // Minted token: TokenID is the BoxID (derived), so it doesn't take extra space in the box bytes usually?
-    // Actually, for a box containing tokens, it adds to the size.
-    // If we mint a token, it is present in the box.
-    const MINTED_TOKEN_BYTES = 34; // TokenID (32) + Amount (VInt) ~ 2-9 bytes. Let's say 34-40.
+    // Construct dummy data
+    const dummySeed = new Uint8Array(8).fill(0);
+    const dummyHash = new Uint8Array(32).fill(0);
+    const dummyJudge = new Uint8Array(32).fill(0);
+    const judgesColl = Array(judgesCount).fill([...dummyJudge]);
 
-    const SIZE_MARGIN = 500; // Safety margin
+    const jsonString = JSON.stringify(gameDetails);
+    const jsonBytes = new TextEncoder().encode(jsonString);
 
-    // ErgoTree
-    // We use the actual ErgoTree from the contract
-    let ergoTreeSize = 0;
-    try {
-        const treeHex = getGopGameActiveErgoTreeHex();
-        ergoTreeSize = hexByteLength(treeHex);
-    } catch (e) {
-        console.warn("Could not get ErgoTree hex, using estimate");
-        ergoTreeSize = 400; // Estimate for GoP contract
+    let tokenIdBytes = new Uint8Array(0);
+    if (participationTokenId && participationTokenId.length > 0) {
+        tokenIdBytes = new Uint8Array(32).fill(0);
     }
 
-    const registerSizes = estimateRegisterSizes(judgesCount, gameDetails, participationTokenId);
+    const inputs: GameBoxInputs = {
+        seedBytes: dummySeed,
+        ceremonyDeadlineBlock: 1000000,
+        hashedSecretBytes: dummyHash,
+        judgesColl: judgesColl,
+        deadlineBlock: 1100000,
+        creatorStakeAmount: BigInt(1000000),
+        participationFeeAmount: BigInt(100000),
+        perJudgeCommissionPercentage: 5,
+        commissionPercentage: 10,
+        gameDetailsBytes: jsonBytes,
+        participationTokenIdBytes: tokenIdBytes
+    };
 
-    const totalRegistersBytes =
-        registerSizes.r4Bytes +
-        registerSizes.r5Bytes +
-        registerSizes.r6Bytes +
-        registerSizes.r7Bytes +
-        registerSizes.r8Bytes +
-        registerSizes.r9Bytes;
+    const result = estimateTotalBoxSizeFromInputs(inputs);
+    if (!result) {
+        return MAX_BOX_SIZE + 1;
+    }
 
-    return (
-        BASE_BOX_OVERHEAD +
-        ergoTreeSize +
-        MINTED_TOKEN_BYTES +
-        totalRegistersBytes +
-        SIZE_MARGIN
-    );
+    return result.maxSize;
 }
 
 /**

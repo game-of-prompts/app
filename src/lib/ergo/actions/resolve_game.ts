@@ -8,7 +8,7 @@ import {
     BOX_VALUE_PER_BYTE,
     SAFE_MIN_BOX_VALUE
 } from '@fleet-sdk/core';
-import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
+import { SColl, SByte, SPair, SLong, SInt, serializeBox } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, uint8ArrayToHex } from '$lib/ergo/utils';
 import { resolve_participation_commitment, calculateEffectiveScore, type GameActive, type ValidParticipation } from '$lib/common/game';
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
@@ -168,34 +168,17 @@ export async function resolve_game(
         resolutionDeadline
     ];
 
-    let winnerCommitmentBytes = null;
+    let winnerCommitmentBytes: Uint8Array;
     if (winnerCandidateCommitment) {
-        winnerCommitmentBytes = hexToBytes(winnerCandidateCommitment);
-        if (!winnerCommitmentBytes) throw new Error("Fallo al convertir commitmentC a bytes.");
+        const bytes = hexToBytes(winnerCandidateCommitment);
+        if (!bytes) throw new Error("Fallo al convertir commitmentC a bytes.");
+        winnerCommitmentBytes = bytes;
     }
     else {
         winnerCommitmentBytes = new Uint8Array();
     }
-
-    // Helpers
-    const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
-    const isHex = (s: string) => typeof s === 'string' && /^0x?[0-9a-fA-F]+$/.test(s);
-
-    // devuelve número de bytes representados por la cadena hex (sin prefijo)
-    const hexBytesLen = (hexStr: string): number => {
-        if (!hexStr) return 0;
-        const h = stripHexPrefix(hexStr);
-        return Math.ceil(h.length / 2);
-    };
-
     // max para BigInt
     const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
-
-    // CONSTANTES (ajustalas según tu entorno)
-    const BASE_BOX_OVERHEAD = 60;          // bytes aprox. (header, value, creationHeight, etc.)
-    const PER_TOKEN_BYTES = 40;            // aproximación por token: 32 (id) + 8 (amount)
-    const PER_REGISTER_OVERHEAD = 1;       // bytes por índice/encabezado de registro
-    const SIZE_MARGIN = 120;               // margen de seguridad en bytes
 
     const seedBytes = hexToBytes(game.seed);
     if (!seedBytes) throw new Error("No se pudo obtener el 'seed' del objeto game (game.seedHex).");
@@ -210,41 +193,38 @@ export async function resolve_game(
 
     const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, hexToBytes(game.participationTokenId) ?? "", prependHexPrefix(resolverPkBytes)]).toHex();
 
-    // Conteos y tamaños
-    const registersHex = [r4Hex, r5Hex, r6Hex, r7Hex, r8Hex, r9Hex];
+    const boxCandidate = {
+        transactionId: "00".repeat(32),
+        index: 0,
+        value: SAFE_MIN_BOX_VALUE,
+        ergoTree: resolutionErgoTree,
+        creationHeight: currentHeight,
+        assets: game.box.assets,
+        additionalRegisters: {
+            R4: r4Hex,
+            R5: r5Hex,
+            R6: r6Hex,
+            R7: r7Hex,
+            R8: r8Hex,
+            R9: r9Hex
+        }
+    };
 
-    // tamaño del ergoTree (puede ser hex o fuente legible); detectamos si es hex:
-    let ergoTreeBytes = 0;
-    if (typeof resolutionErgoTree === 'string' && isHex(resolutionErgoTree)) {
-        ergoTreeBytes = hexBytesLen(resolutionErgoTree);
-    } else {
-        // si no es hex, calculamos bytes de la cadena UTF-8
-        ergoTreeBytes = new TextEncoder().encode(String(resolutionErgoTree || '')).length;
+    let boxSize = 0;
+    try {
+        const serialized = serializeBox(boxCandidate);
+        boxSize = serialized.length;
+        console.log("REAL resolution box size:", boxSize);
+    } catch (e) {
+        console.error("Error serializing resolution box:", e);
+        throw new Error("Failed to serialize the resolution box. It might be too large or invalid.");
     }
 
-    // tamaño tokens
-    const tokens = Array.isArray(game.box.assets) ? game.box.assets : [];
-    const tokensCount = tokens.length;
-    const tokensBytes = 1 + tokensCount * PER_TOKEN_BYTES; // 1 byte para count + cada token
-
-    // tamaño registros (sumando overhead por registro)
-    let registersBytes = 0;
-    for (const h of registersHex) {
-        const len = hexBytesLen(h);
-        registersBytes += len + PER_REGISTER_OVERHEAD;
+    if (boxSize > 4096) {
+        throw new Error(`The resolution box size (${boxSize} bytes) exceeds the maximum allowed size of 4096 bytes.`);
     }
 
-    // tamaño total estimado
-    const totalEstimatedSize = BigInt(
-        BASE_BOX_OVERHEAD
-        + ergoTreeBytes
-        + tokensBytes
-        + registersBytes
-        + SIZE_MARGIN
-    );
-
-    // mínimo requerido en nanoErgs
-    const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;
+    const minRequiredValue = BigInt(boxSize) * BOX_VALUE_PER_BYTE;
 
     // valor actual de la caja (asegurate que sea BigInt)
     const originalValue = BigInt(game.box.value);

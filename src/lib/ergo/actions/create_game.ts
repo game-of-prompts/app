@@ -8,10 +8,12 @@ import {
     BOX_VALUE_PER_BYTE
 } from '@fleet-sdk/core';
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
+declare const ergo: any;
 import { hexToBytes } from '$lib/ergo/utils';
 import { getGopGameActiveErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 import { DefaultGameConstants } from '$lib/common/constants';
+import { estimateTotalBoxSizeFromInputs, MAX_BOX_SIZE, type GameBoxInputs } from '../utils/box-size-calculator';
 
 function randomSeed(): string {
     // 64 bits = 16 hex characters
@@ -105,7 +107,41 @@ export async function create_game(
     const participationTokenIdBytes = participationTokenId ? hexToBytes(participationTokenId)! : new Uint8Array(0);
     if (participationTokenId && !participationTokenIdBytes) throw new Error("Failed to convert participationTokenId to bytes.");
 
-    // Registers preparation
+    // --- Box Size Validation using centralized calculator ---
+    const boxSizeInputs: GameBoxInputs = {
+        seedBytes: seedBytes,
+        ceremonyDeadlineBlock: ceremonyDeadlineBlock,
+        hashedSecretBytes: hashedSecretBytes,
+        judgesColl: judgesColl,
+        deadlineBlock: deadlineBlock,
+        creatorStakeAmount: creatorStakeAmount,
+        participationFeeAmount: participationFeeAmount,
+        perJudgeCommissionPercentage: perJudgeComissionPercentage,
+        commissionPercentage: commissionPercentage,
+        gameDetailsBytes: gameDetailsBytes,
+        participationTokenIdBytes: participationTokenIdBytes
+    };
+
+    const sizeResult = estimateTotalBoxSizeFromInputs(boxSizeInputs);
+    if (!sizeResult) {
+        throw new Error("Failed to calculate box sizes. The box might be too large or contain invalid data.");
+    }
+
+    console.log("Box sizes calculated:", {
+        activeSize: sizeResult.activeSize,
+        resolutionSize: sizeResult.resolutionSize,
+        cancelledSize: sizeResult.cancelledSize,
+        maxSize: sizeResult.maxSize
+    });
+
+    if (sizeResult.maxSize > MAX_BOX_SIZE) {
+        throw new Error(
+            `The maximum box size (${sizeResult.maxSize} bytes) exceeds the limit of ${MAX_BOX_SIZE} bytes. ` +
+            `Active: ${sizeResult.activeSize}, Resolution: ${sizeResult.resolutionSize}, Cancelled: ${sizeResult.cancelledSize} bytes.`
+        );
+    }
+
+    // Registers preparation (using the same data as the calculator)
     const r4Hex = SInt(0).toHex();
     const r5Hex = SPair(
         SColl(SByte, seedBytes),
@@ -131,52 +167,15 @@ export async function create_game(
         R9: r9Hex
     };
 
-    // Size estimation
-    const stripHexPrefix = (h: string) => h?.startsWith('0x') ? h.slice(2) : h;
-    const isHex = (s: string) => typeof s === 'string' && /^0x?[0-9a-fA-F]+$/.test(s);
-    const hexBytesLen = (hexStr: string): number => {
-        if (!hexStr) return 0;
-        const h = stripHexPrefix(hexStr);
-        return Math.ceil(h.length / 2);
-    };
-
-    const BASE_BOX_OVERHEAD = 60;
-    const PER_TOKEN_BYTES = 40; // approx: 32 (id) + 8 (amount)
-    const PER_REGISTER_OVERHEAD = 1;
-    const SIZE_MARGIN = 500;
-
-    let ergoTreeBytes = 0;
-    if (typeof activeGameErgoTree === 'string' && isHex(activeGameErgoTree)) {
-        ergoTreeBytes = hexBytesLen(activeGameErgoTree);
-    } else {
-        ergoTreeBytes = new TextEncoder().encode(String(activeGameErgoTree || '')).length;
-    }
+    const creationHeight = await ergo.get_current_height();
 
     const gameTokens = participationTokenId == "" ? [] : [{
         tokenId: participationTokenId,
         amount: creatorStakeAmount
     }];
-    // We also mint a token, so +1 token count
-    const tokensCount = gameTokens.length + 1;
-    const tokensBytes = 1 + tokensCount * PER_TOKEN_BYTES;
 
-    let registersBytes = 0;
-    for (const h of Object.values(registers)) {
-        const len = hexBytesLen(h);
-        registersBytes += len + PER_REGISTER_OVERHEAD;
-    }
-
-    const CREATOR_PK_BUFFER = 100;  // Aprox.
-    const totalEstimatedSize = BigInt(
-        BASE_BOX_OVERHEAD
-        + ergoTreeBytes
-        + tokensBytes
-        + registersBytes
-        + SIZE_MARGIN
-        + CREATOR_PK_BUFFER
-    );
-
-    const minRequiredValue = BOX_VALUE_PER_BYTE * totalEstimatedSize;
+    // Use the maximum size to determine the safe minimum value
+    const minRequiredValue = BigInt(sizeResult.maxSize) * BOX_VALUE_PER_BYTE;
 
     let gameValue: bigint;
     if (participationTokenId == "") {
@@ -203,7 +202,6 @@ export async function create_game(
         .setAdditionalRegisters(registers);
 
     // --- 3. Transaction Construction and Submission ---
-    const creationHeight = await ergo.get_current_height();
     const unsignedTransaction = new TransactionBuilder(creationHeight)
         .from(inputs)
         .to(gameBoxOutput)
