@@ -61,7 +61,7 @@
     val allJudgesFound = judgeBoxes.size == judge_amount && uniqueTokensOk
 
     if (!uniqueTokensOk || !allJudgesFound) {
-      false
+      sigmaProp(false)
     } else {
       // 4) Para cada dirección distinta: cuántos judges apuntan a ella (occurrences)
       val uniqueAddrs = 
@@ -95,9 +95,9 @@
       // Nota: perJudgeComission * judge_amount puede ser <= total_funds debido al redondeo hacia abajo.
       // El remanente se lo puede quedar el que ejecuta la tx (minero/ejecutor) o quemarse.
       
-      addrChecks
+      sigmaProp(addrChecks)
     }
   } else {
-    true
+    sigmaProp(true)
   }
 }
