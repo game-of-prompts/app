@@ -243,9 +243,9 @@
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
 
-            if (game.content.imageURL) {
+            if (game.content.image) {
                 imageSources = await fetchFileSourcesByHash(
-                    game.content.imageURL,
+                    game.content.image,
                     get(explorer_uri),
                 );
             }
@@ -366,7 +366,9 @@
                           await Promise.all(
                               game.judges.map(async (judge) => {
                                   const judge_proof =
-                                      await fetchReputationProofByTokenId(judge);
+                                      await fetchReputationProofByTokenId(
+                                          judge,
+                                      );
                                   if (!judge_proof) return null;
 
                                   const foundBox =
@@ -934,19 +936,16 @@
     const overAllocated = totalPct > 100 ? (totalPct - 100).toFixed(2) : 0;
 
     // --- Image Resolution Logic ---
-    let resolvedImageSrc = "";
+    let resolvedImageSrc = game?.content?.imageURL ?? "";
     $: {
-        if (game?.content?.imageURL) {
-            // Prioritize sources that are NOT invalid and NOT unavailable
-            // For now, just pick the first one, or use the hash itself if it looks like a URL (backward compatibility?)
-            // But the requirement says imageURL IS a hash.
+        if (game?.content?.image) {
             if (imageSources.length > 0) {
                 resolvedImageSrc = imageSources[0].url;
             } else {
-                resolvedImageSrc = ""; // Or a placeholder?
+                resolvedImageSrc = game?.content.imageURL ?? "";
             }
         } else {
-            resolvedImageSrc = "";
+            resolvedImageSrc = game?.content.imageURL ?? "";
         }
     }
 </script>

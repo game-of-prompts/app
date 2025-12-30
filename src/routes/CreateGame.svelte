@@ -94,7 +94,7 @@
     $: gameDetailsObject = {
         title: gameTitle,
         description: gameDescription,
-        imageURL: gameImageHash,
+        image: gameImageHash,
         webLink: gameWebLink,
         serviceId: gameServiceId,
         paper: gamePaperHash,
@@ -105,7 +105,7 @@
         {
             title: "",
             description: "",
-            imageURL: "",
+            image: "",
             webLink: "",
             serviceId: "",
             paper: "",

@@ -47,6 +47,7 @@ export interface GameContent {
     title: string;
     description: string;
     serviceId: string;
+    image?: string;
     imageURL?: string;
     webLink?: string;
     paper?: string; // Blake2b256 hash of the detailed game description markdown file

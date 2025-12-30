@@ -27,7 +27,7 @@ export function hexByteLength(hexStr: string): number {
 export interface GameDetails {
     title: string;
     description: string;
-    imageURL: string;
+    image: string;
     webLink: string;
     serviceId: string;
     paper: string;
