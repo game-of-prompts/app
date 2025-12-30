@@ -111,6 +111,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Sin ERG mode.
 
+[] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
 
 ====
 
