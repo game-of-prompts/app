@@ -1009,11 +1009,11 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       const judgesTokenIdsBytes = judgesTokenIds.map(b => new Uint8Array(b));
 
       outputs.push(
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalJudgesPayout : RECOMMENDED_MIN_FEE_VALUE, devErgoTree)
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalJudgesPayout : RECOMMENDED_MIN_FEE_VALUE, judgesPaidContract.address)
           .addTokens(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalJudgesPayout }] : [])
           .setAdditionalRegisters({
-            // R4: SColl(SColl(SByte), judgesTokenIdsBytes).toHex(),
-            // R5: SColl(SByte, tokenBytes).toHex()
+            R4: SColl(SColl(SByte), judgesTokenIdsBytes).toHex(),
+            R5: SColl(SByte, tokenBytes).toHex()
           })
       );
     }
