@@ -399,31 +399,73 @@
           devAddedValue >= finalDevPayout
       } else { true }
       
-      // 4. Verificación de que los JUECES reciben su pago
+      // 4. Verificación de que los JUECES reciben su pago (manejo correcto de direcciones repetidas)
       val judgesGetsPaid = if (finalJudgesPayout > 0L) {
 
-          // Get some of the judge boxes, take into account that can be any of them.
-          val judgesScripts = CONTEXT.dataInputs
-            .filter({(box: Box) =>
-              blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && 
-              box.tokens.size > 0 &&
-              participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
+        // 1) Filtramos una sola vez los judge boxes relevantes
+        val judgeBoxes = CONTEXT.dataInputs.filter { (b: Box) =>
+          blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
+          b.tokens.size > 0 &&
+          participatingJudges.exists({ (tokenId: Coll[Byte]) => tokenId == b.tokens(0)._1 })
+        }
+
+        // 2) Extraemos pares (address, tokenId)
+        val judgeEntries = judgeBoxes.map { (b: Box) =>
+          (b.R7[Coll[Byte]].get, b.tokens(0)._1)
+        }
+
+        val judgeAddrs = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._1 }
+
+        val judgeTokenIds = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._2 }
+
+        // 3) Comprobaciones estructurales mínimas
+        val uniqueTokensOk =
+          judgeTokenIds.forall { (id: Coll[Byte]) =>
+            judgeTokenIds.filter({ (x: Coll[Byte]) => x == id }).size == 1
+          }
+
+        val allJudgesFound = judgeBoxes.size == judge_amount && uniqueTokensOk
+
+        if (!uniqueTokensOk || !allJudgesFound) {
+          false
+        } else {
+          // 4) Para cada dirección distinta: cuántos judges apuntan a ella (occurrences)
+          val uniqueAddrs = 
+            judgeAddrs.fold(Coll[Coll[Byte]](), { (acc: Coll[Coll[Byte]], addr: Coll[Byte]) =>
+              if (acc.exists({ (a: Coll[Byte]) => a == addr })) {
+                acc
+              } else {
+                acc ++ Coll(addr)
+              }
             })
-            .map({(box: Box) => box.R7[Coll[Byte]].get})
 
+          val addrChecks = uniqueAddrs.forall { (addr: Coll[Byte]) =>
+            // cuántos judges usan esta misma dirección
+            val occurrences = judgeAddrs.fold(0, { (acc: Int, a: Coll[Byte]) => if (a == addr) acc + 1 else acc })
 
-          // Comprobar que todos los jueces que participaron reciben su comisión
-          judgesScripts.forall({
-              (judgeAddress: Coll[Byte]) => 
-                val judgeInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                val judgeOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                val judgeAddedValue = judgeOutputValue - judgeInputValue
-                judgeAddedValue >= perJudgeComission
-            })
+            // valor total entrante y saliente para esa dirección
+            val inValue = INPUTS.filter({ (b: Box) => b.propositionBytes == addr })
+                                .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+            val outValue = OUTPUTS.filter({ (b: Box) => b.propositionBytes == addr })
+                                  .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+            val received = outValue - inValue
 
-          // No es necesario comprobar unicidad, ni en el conjunto de scripts, ni en los outputs, ya que se asegura de que todos reciben como minimo su parte y el monto total deberá cuadrar.
-      } else { true }
+            // recibir al menos perJudgeComission * occurrences
+            val amountOk = received >= (perJudgeComission * occurrences)
 
+            amountOk
+          }
+
+          // 5) comprobación total (opcional, por seguridad contable)
+          val totalReceived = uniqueAddrs.fold(0L, { (acc: Long, addr: Coll[Byte]) =>
+            val inV = INPUTS.filter({ (b: Box) => b.propositionBytes == addr }).fold(0L, { (a: Long, b: Box) => a + box_value(b) })
+            val outV = OUTPUTS.filter({ (b: Box) => b.propositionBytes == addr }).fold(0L, { (a: Long, b: Box) => a + box_value(b) })
+            acc + (outV - inV)
+          })
+
+          addrChecks && (totalReceived >= finalJudgesPayout)
+        }
+      } else true
 
       // --- Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitment != Coll[Byte]()) {
