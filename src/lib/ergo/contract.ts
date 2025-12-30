@@ -4,11 +4,12 @@ import { compile, type ErgoTree } from "@fleet-sdk/compiler";
 import { Network, type ErgoAddress as Address } from "@fleet-sdk/core";
 import { blake2b256, sha256 } from "@fleet-sdk/crypto";
 import { uint8ArrayToHex } from "./utils";
-import { network_id } from "./envs"; 
+import { network_id } from "./envs";
 
 // --- Importación de todos los fuentes de los contratos ---
 import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
 import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
+import JUDGES_PAID_SOURCE from '../../../contracts/judges_paid.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
@@ -22,6 +23,7 @@ const ergoTreeVersion = 1;
 // --- Variables para almacenar en caché los resultados de la compilación ---
 let _gameActive: { ergoTree?: ErgoTree, templateHash?: string } = {};
 let _gameResolution: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _judgesPaid: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
@@ -42,7 +44,7 @@ function ensureParticipationCompiled(): void {
 
 function ensureGameCancellationCompiled(): void {
     if (_gameCancellation.ergoTree) return;
-    
+
     let source = GAME_CANCELLATION_SOURCE
         .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
         .replace(/`\+STAKE_DENOMINATOR\+`/g, DefaultGameConstants.STAKE_DENOMINATOR.toString());
@@ -53,8 +55,10 @@ function ensureGameCancellationCompiled(): void {
 function ensureGameResolutionCompiled(): void {
     if (_gameResolution.ergoTree) return;
     ensureParticipationCompiled(); // Dependencia transitiva
+    ensureJudgesPaidCompiled(); // Dependencia directa
     const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
+    const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
 
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
@@ -65,7 +69,8 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, DefaultGameConstants.DEV_COMMISSION_PERCENTAGE.toString())
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, DefaultGameConstants.PARTICIPATION_TYPE_ID)
-        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString());
+        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+        .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
 
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
 }
@@ -95,8 +100,18 @@ function ensureGameActiveCompiled(): void {
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
         .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
         .replace(/`\+OPEN_CEREMONY_BLOCKS\+`/g, DefaultGameConstants.OPEN_CEREMONY_BLOCKS.toString());
-            
+
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
+}
+
+function ensureJudgesPaidCompiled(): void {
+    if (_judgesPaid.ergoTree) return;
+    const reputationHash = getReputationProofScriptHash();
+
+    let source = JUDGES_PAID_SOURCE
+        .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash);
+
+    _judgesPaid.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
 // =============================================================================
@@ -135,6 +150,13 @@ export const getGopGameResolutionScriptHash = () => getScriptHash(_gameResolutio
 export function getGopGameResolutionAddress(): Address { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toAddress(networkType); }
 export function getGopGameResolutionErgoTreeHex(): string { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!.toHex(); }
 export function getGopGameResolutionErgoTree(): ErgoTree { ensureGameResolutionCompiled(); return _gameResolution.ergoTree!; }
+
+// --- Judges Paid ---
+export const getGopJudgesPaidTemplateHash = () => getTemplateHash(_judgesPaid, ensureJudgesPaidCompiled);
+export const getGopJudgesPaidScriptHash = () => getScriptHash(_judgesPaid, ensureJudgesPaidCompiled);
+export function getGopJudgesPaidAddress(): Address { ensureJudgesPaidCompiled(); return _judgesPaid.ergoTree!.toAddress(networkType); }
+export function getGopJudgesPaidErgoTreeHex(): string { ensureJudgesPaidCompiled(); return _judgesPaid.ergoTree!.toHex(); }
+export function getGopJudgesPaidErgoTree(): ErgoTree { ensureJudgesPaidCompiled(); return _judgesPaid.ergoTree!; }
 
 // --- Game Cancellation ---
 export const getGopGameCancellationTemplateHash = () => getTemplateHash(_gameCancellation, ensureGameCancellationCompiled);

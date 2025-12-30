@@ -8,6 +8,7 @@
   val END_GAME_AUTH_GRACE_PERIOD = `+END_GAME_AUTH_GRACE_PERIOD+`L
   val DEV_SCRIPT = fromBase16("`+DEV_SCRIPT+`")
   val DEV_COMMISSION_PERCENTAGE = `+DEV_COMMISSION_PERCENTAGE+`L
+  val JUDGES_PAID_ERGOTREE = fromBase16("`+JUDGES_PAID_ERGOTREE+`")
 
   val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
   val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L
@@ -399,73 +400,19 @@
           devAddedValue >= finalDevPayout
       } else { true }
       
-      // 4. Verificación de que los JUECES reciben su pago (manejo correcto de direcciones repetidas)
+      // 4. Verificación de que los JUECES reciben su pago (enviando a judges_paid.es)
       val judgesGetsPaid = if (finalJudgesPayout > 0L) {
-
-        // 1) Filtramos una sola vez los judge boxes relevantes
-        val judgeBoxes = CONTEXT.dataInputs.filter { (b: Box) =>
-          blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
-          b.tokens.size > 0 &&
-          participatingJudges.exists({ (tokenId: Coll[Byte]) => tokenId == b.tokens(0)._1 })
-        }
-
-        // 2) Extraemos pares (address, tokenId)
-        val judgeEntries = judgeBoxes.map { (b: Box) =>
-          (b.R7[Coll[Byte]].get, b.tokens(0)._1)
-        }
-
-        val judgeAddrs = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._1 }
-
-        val judgeTokenIds = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._2 }
-
-        // 3) Comprobaciones estructurales mínimas
-        val uniqueTokensOk =
-          judgeTokenIds.forall { (id: Coll[Byte]) =>
-            judgeTokenIds.filter({ (x: Coll[Byte]) => x == id }).size == 1
+          val judgesPaidBox = OUTPUTS.filter({(b:Box) => b.propositionBytes == JUDGES_PAID_ERGOTREE})
+          if (judgesPaidBox.size == 1) {
+             val box = judgesPaidBox(0)
+             val correctValue = box_value(box) >= finalJudgesPayout
+             val correctR4 = box.R4[Coll[Coll[Byte]]].get == participatingJudges
+             val correctR5 = box.R5[Coll[Byte]].get == participationTokenId
+             correctValue && correctR4 && correctR5
+          } else {
+             false
           }
-
-        val allJudgesFound = judgeBoxes.size == judge_amount && uniqueTokensOk
-
-        if (!uniqueTokensOk || !allJudgesFound) {
-          false
-        } else {
-          // 4) Para cada dirección distinta: cuántos judges apuntan a ella (occurrences)
-          val uniqueAddrs = 
-            judgeAddrs.fold(Coll[Coll[Byte]](), { (acc: Coll[Coll[Byte]], addr: Coll[Byte]) =>
-              if (acc.exists({ (a: Coll[Byte]) => a == addr })) {
-                acc
-              } else {
-                acc ++ Coll(addr)
-              }
-            })
-
-          val addrChecks = uniqueAddrs.forall { (addr: Coll[Byte]) =>
-            // cuántos judges usan esta misma dirección
-            val occurrences = judgeAddrs.fold(0, { (acc: Int, a: Coll[Byte]) => if (a == addr) acc + 1 else acc })
-
-            // valor total entrante y saliente para esa dirección
-            val inValue = INPUTS.filter({ (b: Box) => b.propositionBytes == addr })
-                                .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-            val outValue = OUTPUTS.filter({ (b: Box) => b.propositionBytes == addr })
-                                  .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-            val received = outValue - inValue
-
-            // recibir al menos perJudgeComission * occurrences
-            val amountOk = received >= (perJudgeComission * occurrences)
-
-            amountOk
-          }
-
-          // 5) comprobación total (opcional, por seguridad contable)
-          val totalReceived = uniqueAddrs.fold(0L, { (acc: Long, addr: Coll[Byte]) =>
-            val inV = INPUTS.filter({ (b: Box) => b.propositionBytes == addr }).fold(0L, { (a: Long, b: Box) => a + box_value(b) })
-            val outV = OUTPUTS.filter({ (b: Box) => b.propositionBytes == addr }).fold(0L, { (a: Long, b: Box) => a + box_value(b) })
-            acc + (outV - inV)
-          })
-
-          addrChecks && (totalReceived >= finalJudgesPayout)
-        }
-      } else true
+      } else { true }
 
       // --- Manejar el caso CON y SIN ganador ---
       if (winnerCandidateCommitment != Coll[Byte]()) {
@@ -526,23 +473,16 @@
             } else { true }
 
             val adjustedJudgesGetsPaid = if (adjustedJudgesPayout > 0L) {
-                val judgesScripts = CONTEXT.dataInputs
-                  .filter({(box: Box) =>
-                    blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && 
-                    box.tokens.size > 0 &&
-                    participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
-                  })
-                  .map({(box: Box) => box.R7[Coll[Byte]].get})
-
-                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
-
-                judgesScripts.forall({
-                    (judgeAddress: Coll[Byte]) => 
-                      val judgeInputValue = INPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                      val judgeOutputValue = OUTPUTS.filter({(b:Box) => b.propositionBytes == judgeAddress}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-                      val judgeAddedValue = judgeOutputValue - judgeInputValue
-                      judgeAddedValue >= adjustedPerJudge - txFee
-                  })
+                val judgesPaidBox = OUTPUTS.filter({(b:Box) => b.propositionBytes == JUDGES_PAID_ERGOTREE})
+                if (judgesPaidBox.size == 1) {
+                   val box = judgesPaidBox(0)
+                   val correctValue = box_value(box) >= adjustedJudgesPayout
+                   val correctR4 = box.R4[Coll[Coll[Byte]]].get == participatingJudges
+                   val correctR5 = box.R5[Coll[Byte]].get == participationTokenId
+                   correctValue && correctR4 && correctR5
+                } else {
+                   false
+                }
             } else { true }
 
             // Verificación de la salida del ganador
