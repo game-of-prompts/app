@@ -93,17 +93,18 @@
     - DEADLINE: deadline de la competición.
     - HEIGHT: altura donde se agregó la participación.
 
-
-[] Revisar contrato en resolution.es action 3.
-   Podemos ponder el ergotree de juez que queramos!
+[x] Revisar contrato en resolution.es action 3.
+   Podíamos ponder el ergotree de juez que queramos!
 
 [] Revisar end_game.ts l.197
+
+[] JudgesInvalidate debe de otorgar la comisión del creador a los jueces.   
+    De esta forma el creador está incentivado a que el servicio juego no permita participaciones invalidas. Es una forma de decir "lo que no ha sabido controlar el creador lo han tenido que controlar los jueces, asi que su comisión es para ellos".    Igualmente, el creador no pierde su stake y puede seguir agregando la participación candidata a ganadora, ya que penalizarle con la perdida del stake tambien supondría un riesgo muy elevado para crear juegos.
 
 [] Lotes de participaciones 
 (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
 Teoricamente se permite un numero ilimitado de participaciones.
-
 
 [] Sin ERG mode.
 
@@ -139,3 +140,6 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 > Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
 
 ----
+
+
+[] ¿Ceremonia de secreto del servicio juego?
