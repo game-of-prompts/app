@@ -294,8 +294,8 @@
             recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
             recreatedGameBox.R8[Coll[Long]].get(1) == creatorStake &&
             recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
-            recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
-            recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
+            recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage + creatorComissionPercentage &&
+            recreatedGameBox.R8[Coll[Long]].get(4) == 0 &&
             recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
           }
           

@@ -50,16 +50,16 @@ export async function judges_invalidate(
         const reg = p.additionalRegisters;
 
         const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
-                      reg.R5.renderedValue === game.winnerCandidateCommitment &&
-                      reg.R6.renderedValue === "true" &&
-                      reg.R8.renderedValue === "false";
+            reg.R5.renderedValue === game.winnerCandidateCommitment &&
+            reg.R6.renderedValue === "true" &&
+            reg.R8.renderedValue === "false";
 
         if (!valid) {
             throw new Error("Invalid judge vote.")
         }
 
     }
-    
+
     const requiredVotes = Math.floor(game.judges.length / 2) + 1;
     if (judgeVoteDataInputs.length < requiredVotes) {
         throw new Error(`Required ${requiredVotes} judge votes, but only ${judgeVoteDataInputs.length} were provided.`);
@@ -94,8 +94,8 @@ export async function judges_invalidate(
         }
 
         // Verificación 3: Pago de la Tarifa de Participación (Check Tokens or ERG)
-        const feeCheck = game.participationTokenId === "" 
-            ? BigInt(pBox.value) 
+        const feeCheck = game.participationTokenId === ""
+            ? BigInt(pBox.value)
             : BigInt(pBox.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
 
         if (feeCheck < game.participationFeeAmount) {
@@ -144,16 +144,16 @@ export async function judges_invalidate(
     console.log(`Ganador candidato determinado con compromiso: ${nextWinnerCandidateCommitment} y puntuación: ${maxScore}`);
 
     // --- 3. Prepare data for the new resolution box ---
-    
+
     const dataInputs = [
-    ...judgeVoteDataInputs.map(e => parseBox(e)),
-    ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
+        ...judgeVoteDataInputs.map(e => parseBox(e)),
+        ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
     ];
 
     // Calculate new Value (ERG) and Tokens
     // We sum the raw box values (nanoErgs) to preserve safe mins.
     const newGameBoxValue = BigInt(game.box.value) + BigInt(invalidatedParticipation.box.value);
-    
+
     // Calculate new Token Balances if applicable
     const gameTokens = [game.box.assets[0]]; // NFT
     if (game.participationTokenId !== "") {
@@ -189,15 +189,15 @@ export async function judges_invalidate(
                 BigInt(game.deadlineBlock),
                 BigInt(game.creatorStakeAmount),
                 BigInt(game.participationFeeAmount),
-                BigInt(game.perJudgeComissionPercentage),
-                BigInt(game.resolverCommission),
+                BigInt(game.perJudgeComissionPercentage) + BigInt(game.resolverCommission),
+                0n,
                 BigInt(newDeadline)
             ]).toHex(),
 
             // R9: gameProvenance: Coll[Coll[Byte]] -> [ rawJsonBytes, participationTokenId, resolverScriptBytes ]
             R9: SColl(SColl(SByte), [stringToBytes('utf8', game.content.rawJsonString), hexToBytes(game.participationTokenId) ?? "", hexToBytes(game.resolverScript_Hex)!]).toHex(),
         });
-        
+
     // --- 5. Build and Submit the Transaction ---
     const userAddress = await ergo.get_change_address();
     const utxos: InputBox[] = await ergo.get_utxos();
@@ -226,8 +226,7 @@ export async function judges_invalidate(
 
         console.log(`Candidate invalidation transaction successfully submitted. ID: ${txId}`);
         return txId;
-    } catch (error)
-    {
+    } catch (error) {
         console.warn(error)
         throw error;
     }

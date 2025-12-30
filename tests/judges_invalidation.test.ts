@@ -239,8 +239,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             BigInt(numericalParams[0]), // deadline
             numericalParams[1],         // creatorStake
             numericalParams[2],         // participationFee
-            numericalParams[3],         // perJudgeCommissionPercent
-            10n,                         // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
+            0n,                         // creatorComissionPercentage
             extendedDeadline  // resolutionDeadline
         ];
 
@@ -448,8 +448,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             BigInt(numericalParams[0]), // deadline
             numericalParams[1],         // creatorStake
             numericalParams[2],         // participationFee
-            numericalParams[3],         // perJudgeCommissionPercent
-            10n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
+            0n,                 // creatorComissionPercentage
             extendedDeadline // resolutionDeadline
         ]
 
@@ -668,8 +668,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             BigInt(numericalParams[0]), // deadline
             numericalParams[1],         // creatorStake
             numericalParams[2],         // participationFee
-            numericalParams[3],         // perJudgeCommissionPercent
-            10n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
+            0n,                 // creatorComissionPercentage
             extendedDeadline  // resolutionDeadline
         ];
 
@@ -844,8 +844,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             BigInt(numericalParams[0]), // deadline
             numericalParams[1],         // creatorStake
             numericalParams[2],         // participationFee
-            numericalParams[3],         // perJudgeCommissionPercent
-            10n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
+            0n,                 // creatorComissionPercentage
             extendedDeadline  // resolutionDeadline
         ];
 
