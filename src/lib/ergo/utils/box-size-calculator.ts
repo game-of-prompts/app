@@ -272,6 +272,10 @@ export function estimateTotalBoxSizeFromInputs(
         return null;
     }
 
+    console.log("Active box size:", activeBoxSize);
+    console.log("Resolution box size:", resolutionBoxSize);
+    console.log("Cancelled box size:", cancelledBoxSize);
+
     return {
         activeSize: activeBoxSize,
         resolutionSize: resolutionBoxSize,
