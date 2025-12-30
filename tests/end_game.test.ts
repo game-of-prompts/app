@@ -21,7 +21,7 @@ import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { DefaultGameConstants } from "$lib/common/constants";
-import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree, getGopJudgesPaidErgoTree, getGopJudgesPaidErgoTreeHex } from "$lib/ergo/contract";
 
 // --- Suite de Pruebas ---
 
@@ -619,7 +619,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     let devCommission = (prizePool * 5n) / 100n;
     let winnerBasePrize = prizePool - resolverCommission - devCommission;
 
-    if (winnerBasePrize < participationFee) { 
+    if (winnerBasePrize < participationFee) {
       resolverCommission = 0n;
       devCommission = 0n;
       winnerBasePrize = prizePool;
@@ -838,6 +838,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     // Compilamos el ErgoTree de `reputation_proof` para poder añadirlo a la mockChain
     const reputationProofContract = mockChain.addParty(reputationProofErgoTree.toHex(), "ReputationProofContract");
+    const judgesPaidErgoTree = getGopJudgesPaidErgoTree();
+    const judgesPaidContract = mockChain.addParty(judgesPaidErgoTree.toHex(), "JudgesPaidContract");
 
     // 2. Crear tokens de reputación y hashes de scripts para los jueces.
     const judge1ReputationTokenId = Buffer.from(randomBytes(32)).toString("hex");
@@ -889,9 +891,9 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     const judgesTokenIds = [judge1ReputationTokenId, judge2ReputationTokenId].map(id => Buffer.from(id, "hex"));
 
-      const assets = mode.token === ERG_BASE_TOKEN
-        ? []
-        : [{ tokenId: mode.token, amount: creatorStake }];
+    const assets = mode.token === ERG_BASE_TOKEN
+      ? []
+      : [{ tokenId: mode.token, amount: creatorStake }];
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
@@ -1002,14 +1004,17 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     }
 
     if (finalJudgesPayout > 0n) {
-      // Assuming one judge for simplicity; loop over judgesTokenIds if multiple
+      // Create a single output for the judges_paid contract
+      const tokenBytes = mode.token ? hexToBytes(mode.token)! : new Uint8Array(0);
+      const judgesTokenIdsBytes = judgesTokenIds.map(b => new Uint8Array(b));
+
       outputs.push(
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? perJudgePayout : RECOMMENDED_MIN_FEE_VALUE, judge1.address)
-          .addTokens(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: perJudgePayout }] : [])
-      );
-      outputs.push(
-        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? perJudgePayout : RECOMMENDED_MIN_FEE_VALUE, judge2.address)
-          .addTokens(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: perJudgePayout }] : [])
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalJudgesPayout : RECOMMENDED_MIN_FEE_VALUE, devErgoTree)
+          .addTokens(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalJudgesPayout }] : [])
+          .setAdditionalRegisters({
+            // R4: SColl(SColl(SByte), judgesTokenIdsBytes).toHex(),
+            // R5: SColl(SByte, tokenBytes).toHex()
+          })
       );
     }
 
@@ -1044,6 +1049,18 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     expect(gameResolutionContract.utxos.length).to.equal(0);
     expect(participationContract.utxos.length).to.equal(0);
+
+    // Verify judges_paid contract received the funds
+    if (finalJudgesPayout > 0n) {
+      expect(judgesPaidContract.utxos.length).to.equal(1);
+      const judgesPaidBox = judgesPaidContract.utxos.toArray()[0];
+      if (mode.token === ERG_BASE_TOKEN) {
+        expect(judgesPaidBox.value).to.equal(finalJudgesPayout);
+      } else {
+        const tokenBalance = judgesPaidBox.assets.find(t => t.tokenId === mode.token)?.amount || 0n;
+        expect(tokenBalance).to.equal(finalJudgesPayout);
+      }
+    }
   });
 
 });

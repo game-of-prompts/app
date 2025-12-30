@@ -4,7 +4,9 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     SAFE_MIN_BOX_VALUE,
 } from '@fleet-sdk/core';
-import { parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
+import { SColl, SByte } from '@fleet-sdk/serializer';
+import { getGopJudgesPaidErgoTreeHex } from '../contract';
+import { parseBox, pkHexToBase58Address, hexToBytes } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
@@ -16,12 +18,12 @@ export async function end_game(
 
     console.log(`[end_game] Participations: ${participations.length}`)
     console.log(`[end_game] Starting game finalization: ${game.boxId}`);
-    
+
     const currentHeight = await ergo.get_current_height();
     const userAddress = await ergo.get_change_address();
-    
+
     // --- 1. Detectar tipo de juego ---
-    const isTokenGame = !!game.participationTokenId; 
+    const isTokenGame = !!game.participationTokenId;
 
     // --- 2. Validaciones Previas ---
     if (currentHeight < game.resolutionDeadline) {
@@ -43,7 +45,7 @@ export async function end_game(
             throw new Error(`Invalid signature. Winner (${requiredSignerAddress}) required.`);
         }
     }
-    
+
     // --- 4. Lógica de Cálculo de Pagos ---
 
     // A. Balance del Contrato (Token o ERG)
@@ -123,7 +125,7 @@ export async function end_game(
             console.warn("!!! WINNER PROTECTION TRIGGERED !!!");
             console.warn(`Reason: Tentative Prize (${tentativeWinnerPrize}) < Fee (${participationFee})`);
             console.warn("Action: Setting ALL commissions to 0. Winner gets full Prize Pool.");
-            
+
             adjustedWinnerPrize = prizePool;
             adjustedResolverComm = 0n;
             adjustedDevPayout = 0n;
@@ -177,7 +179,7 @@ export async function end_game(
 
     if (finalResolverPayout > 0n) {
         // Si no hay ganador, el resolver recupera el NFT
-        const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex , winnerParticipation === null ? [gameNft] : []);
+        const resolverOutput = buildOutput(finalResolverPayout, game.resolverScript_Hex, winnerParticipation === null ? [gameNft] : []);
         outputs.push(resolverOutput);
     }
 
@@ -186,18 +188,19 @@ export async function end_game(
     }
 
     const dataInputs: any[] = [];
-    if (finalPerJudge > dustLimit && (game.judges ?? []).length > 0) {
-        for (const tokenId of game.judges) {
-            const js = get(judges).data.get(tokenId);
-            if (!js) throw new Error(`No judge info for ${tokenId}`);
-            
-            console.log("Judge: ", js)
-            outputs.push(buildOutput(finalPerJudge, js.owner_ergotree));
+    if (finalJudgesPayout > 0n && (game.judges ?? []).length > 0) {
+        const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
 
-            if (js.current_boxes?.[0]) {
-                dataInputs.push(parseBox(js.current_boxes[0].box));
-            }
-        }
+        const judgesTokenIdsBytes = game.judges.map(hexToBytes).filter(b => b !== null) as Uint8Array[];
+        const tokenBytes = isTokenGame ? (hexToBytes(game.participationTokenId) || new Uint8Array(0)) : new Uint8Array(0);
+
+        const judgesPaidOutput = buildOutput(finalJudgesPayout, judgesPaidErgoTree)
+            .setAdditionalRegisters({
+                R4: SColl(SColl(SByte), judgesTokenIdsBytes).toHex(),
+                R5: SColl(SByte, tokenBytes).toHex()
+            });
+
+        outputs.push(judgesPaidOutput);
     }
 
     // --- 6. Transacción ---
@@ -208,7 +211,7 @@ export async function end_game(
         .from(inputs)
         .to(outputs)
         .withDataFrom(dataInputs)
-        .sendChangeTo(userAddress) 
+        .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()
         .toEIP12Object();
@@ -218,7 +221,7 @@ export async function end_game(
         const txId = await ergo.submit_tx(signedTransaction);
         console.log(`Success! Tx ID: ${txId}`);
         return txId;
-    } 
+    }
     catch (error) {
         console.error("Tx Error:", error);
         throw error;
