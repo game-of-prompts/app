@@ -351,7 +351,7 @@
                     <a
                         href="#"
                         on:click|preventDefault={() => changeTab("showJudge")}
-                        >My reputation</a
+                        >My Judge Profile</a
                     >
                 </li>
             {/if}
