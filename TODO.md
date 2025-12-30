@@ -98,8 +98,11 @@
 
 [] Revisar end_game.ts l.197
 
-[] JudgesInvalidate debe de otorgar la comisión del creador a los jueces.   
+[x] JudgesInvalidate debe de otorgar la comisión del creador a los jueces.   
     De esta forma el creador está incentivado a que el servicio juego no permita participaciones invalidas. Es una forma de decir "lo que no ha sabido controlar el creador lo han tenido que controlar los jueces, asi que su comisión es para ellos".    Igualmente, el creador no pierde su stake y puede seguir agregando la participación candidata a ganadora, ya que penalizarle con la perdida del stake tambien supondría un riesgo muy elevado para crear juegos.
+
+[x] ¿Si no hay ganador (pero si que hay fondos) no debería de ir los fondos hacia los jueces en lugar de hacia el creador?    Por que en este caso todas las participaciones son invalidas.
+La respuesta es que no, el creador todavía debe obtener la parte del ganador, pues aun siendo su culpa, el es quien debe de ejecutar la transacción de finalización (agrupar todas las participaciones). Los jueces recuperarán su comisión +  la del creador y el creador la del ganador + su stake.
 
 [] Lotes de participaciones 
 (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
