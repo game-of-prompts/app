@@ -829,7 +829,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
 
-                    const wrong_commitment = resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
+                    const wrong_commitment = (game.status == GameState.Resolution || game.status == GameState.Finalized) && resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
                     if (wrong_commitment) {
                         console.log("Wrong commitment");
                         console.log("Participation ", p_base);

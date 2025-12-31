@@ -346,7 +346,10 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     } else if (Array.isArray(scoreListRaw)) {
         scoreList = parseLongColl(scoreListRaw);
     }
-    if (!scoreList?.length) return null;
+    if (!scoreList?.length) {
+        console.log("Score list is empty");
+        return null;
+    }
 
     // Convert hex values to bytes
     const solverIdBytes = hexToBytes(solverIdHex);
@@ -372,6 +375,7 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
         const computedCommitment = uint8ArrayToHex(fleetBlake2b256(dataToHash));
 
         if (computedCommitment === commitmentHex) {
+            console.log("Matching commitment found");
             return score;
         }
     }
