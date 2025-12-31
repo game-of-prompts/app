@@ -96,7 +96,7 @@
 [x] Revisar contrato en resolution.es action 3.
    Podíamos ponder el ergotree de juez que queramos!
 
-[] Revisar end_game.ts l.197
+[x] Revisar end_game.ts l.197
 
 [x] JudgesInvalidate debe de otorgar la comisión del creador a los jueces.   
     De esta forma el creador está incentivado a que el servicio juego no permita participaciones invalidas. Es una forma de decir "lo que no ha sabido controlar el creador lo han tenido que controlar los jueces, asi que su comisión es para ellos".    Igualmente, el creador no pierde su stake y puede seguir agregando la participación candidata a ganadora, ya que penalizarle con la perdida del stake tambien supondría un riesgo muy elevado para crear juegos.
