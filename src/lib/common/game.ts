@@ -161,6 +161,14 @@ export interface GameFinalized {
     winnerFinalizationDeadline: number;
     reputation: number;
     constants: GameConstants;
+    seed: string;
+    revealedS_Hex: string;
+    winnerCandidateCommitment: string | null;
+    creatorStakeAmount: bigint;
+    perJudgeComissionPercentage: bigint;
+    resolverPK_Hex: string | null;
+    resolverScript_Hex: string;
+    resolverCommission: number;
 }
 
 /**
@@ -303,6 +311,9 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     // Early validation
     if (!p.box?.additionalRegisters || !secretHex || !seed) {
         console.log("Missing additional registers, secret, or seed");
+        console.log(`Box ID: ${p.boxId}`);
+        console.log("Secret hex: ", secretHex);
+        console.log("Seed: ", seed);
         return null;
     }
     const R = p.box.additionalRegisters;
@@ -314,6 +325,8 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
     const hashLogsHex = parseCollByteToHex(R.R8.renderedValue);
     const scoreListRaw = R.R9.renderedValue;
     const seedBytes = hexToBytes(seed)!;
+
+    console.log(`Participation Box ID: ${p.boxId}`);
 
     // Check for required fields
     if (!commitmentHex || !solverIdHex || !hashLogsHex || !ergoTree) {

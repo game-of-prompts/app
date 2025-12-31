@@ -694,22 +694,30 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         const winnerFinalizationGracePeriod = 64800; // 90 Days TODO take from script constants
 
         const finalized: GameFinalized = {
-            boxId: currentBox.boxId, // The *current* box ID
-            box: currentBox, // The *current* box
+            boxId: lastResolutionBox?.boxId || currentBox.boxId, // Use resolution box ID if available
+            box: lastResolutionBox?.box || currentBox, // Use resolution box if available
             platform: new ErgoPlatform(),
             status: GameState.Finalized,
-            deadlineBlock: lastBox.deadlineBlock, // From last contract box
+            deadlineBlock: lastBox.deadlineBlock,
             gameId,
-            content: lastBox.content, // From last contract box
-            value: lastBox.value, // Value from last contract box
+            content: lastBox.content,
+            value: lastBox.value,
             participationTokenId: lastBox.participationTokenId,
-            participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0), // From last contract box
+            participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
-            judges: lastBox.judges || [], // From last contract box
+            judges: lastBox.judges || [],
             judgeFinalizationBlock: judgeFinalizationBlock,
             winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
             constants: DefaultGameConstants,
-            reputation: 0
+            reputation: 0,
+            seed: lastResolutionBox?.seed || "",
+            revealedS_Hex: lastResolutionBox?.revealedS_Hex || "",
+            winnerCandidateCommitment: lastResolutionBox?.winnerCandidateCommitment || null,
+            creatorStakeAmount: lastResolutionBox?.creatorStakeAmount || BigInt(0),
+            perJudgeComissionPercentage: lastResolutionBox?.perJudgeComissionPercentage || BigInt(0),
+            resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
+            resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
+            resolverCommission: lastResolutionBox?.resolverCommission || 0
         };
 
         finalized.reputation = calculate_reputation(finalized);
@@ -821,7 +829,14 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
 
-                    const wrong_commitment = (game.status === "Resolution") && resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
+                    const wrong_commitment = resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
+                    if (wrong_commitment) {
+                        console.log("Wrong commitment");
+                        console.log("Participation ", p_base);
+                        console.log("Game ", game);
+                        console.log("Revealed S ", (game as GameResolution).revealedS_Hex);
+                        console.log("Seed ", (game as GameResolution).seed);
+                    }
 
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
                     if (malformed && !spent) {
@@ -1121,7 +1136,16 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judgeFinalizationBlock: judgeFinalizationBlock,
                 winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
                 constants: DefaultGameConstants,
-                reputation: 0
+                reputation: 0,
+                // New fields populated from lastResolutionBox
+                seed: lastResolutionBox?.seed || "",
+                revealedS_Hex: lastResolutionBox?.revealedS_Hex || "",
+                winnerCandidateCommitment: lastResolutionBox?.winnerCandidateCommitment || null,
+                creatorStakeAmount: lastResolutionBox?.creatorStakeAmount || BigInt(0),
+                perJudgeComissionPercentage: lastResolutionBox?.perJudgeComissionPercentage || BigInt(0),
+                resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
+                resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
+                resolverCommission: lastResolutionBox?.resolverCommission || 0
             };
 
             finalized.reputation = calculate_reputation(finalized);
@@ -1170,7 +1194,16 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judgeFinalizationBlock: 0,
                 winnerFinalizationDeadline: 0,
                 constants: DefaultGameConstants,
-                reputation: 0
+                reputation: 0,
+                // New fields with default values (no historical data)
+                seed: "",
+                revealedS_Hex: "",
+                winnerCandidateCommitment: null,
+                creatorStakeAmount: BigInt(0),
+                perJudgeComissionPercentage: BigInt(0),
+                resolverPK_Hex: null,
+                resolverScript_Hex: "",
+                resolverCommission: 0
             };
             minimal.reputation = calculate_reputation(minimal);
             return minimal;
