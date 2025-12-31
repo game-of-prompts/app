@@ -88,7 +88,7 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
         R5: SLong(BigInt(mockChain.height - 50)).toHex(), // unlockHeight en el pasado
         R6: SColl(SByte, secret).toHex(), // El secreto revelado
         R7: SLong(creatorInitialStake).toHex(), // Stake actual
-        R8: SColl(SByte, stringToBytes("utf8", `{"gameNftId":"${gameNftId}"}`)).toHex(),
+        R8: SLong(BigInt(mockChain.height)).toHex(), // originalDeadline (Long)
         R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex(),
       }
     });

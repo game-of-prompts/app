@@ -57,7 +57,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
         // Solo le damos al reclamante fondos suficientes para pagar la tarifa de minero (Fee).
         // 0.1 ERG es más que suficiente para fees (aprox 0.0011 ERG). 
         // Esto demuestra que NO está pagando el stake.
-        claimer.addBalance({ nanoergs: 100_000_000n }); 
+        claimer.addBalance({ nanoergs: 100_000_000n });
 
         gameCancellationErgoTree = getGopGameCancellationErgoTree();
         gameActiveErgoTree = getGopGameActiveErgoTree();
@@ -82,7 +82,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                 R8: SColl(SLong, [
                     BigInt(deadlineBlock),
                     creatorStake,
-                    1_000_000n, 
+                    1_000_000n,
                     500n,
                     1000n
                 ]).toHex(),
@@ -91,7 +91,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
         });
 
         gameBox = game.utxos.toArray()[0];
-    });
+    }, 15000);
 
     afterEach(() => {
         mockChain.reset({ clearParties: true });
@@ -108,8 +108,8 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
 
         // 2. Definir valores de las cajas de salida
         // CAJA 1: El juego cancelado (se queda con el 80%)
-        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN 
-            ? stakePortionForGame 
+        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN
+            ? stakePortionForGame
             : RECOMMENDED_MIN_FEE_VALUE;
 
         const cancellationAssets = [
@@ -119,8 +119,8 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
 
         // CAJA 2: La penalización para el reclamante (se lleva el 20%)
         // Nota: Si es ERG Mode, el valor es el stakePortion. Si es Token Mode, es el MinFee, pero lleva los tokens.
-        const penaltyBoxValue = mode.token === ERG_BASE_TOKEN 
-            ? stakePortionForClaimer 
+        const penaltyBoxValue = mode.token === ERG_BASE_TOKEN
+            ? stakePortionForClaimer
             : RECOMMENDED_MIN_FEE_VALUE;
 
         const penaltyAssets = mode.token !== ERG_BASE_TOKEN
@@ -142,7 +142,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
                         R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex(),
                     }),
-                
+
                 // Salida 1: Pago al Reclamante (20% del Stake)
                 new OutputBuilder(penaltyBoxValue, claimer.address)
                     .addTokens(penaltyAssets)
@@ -158,18 +158,18 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
 
         // Verificaciones opcionales para asegurar la lógica
         if (mode.token === ERG_BASE_TOKEN) {
-             // Verificar que la salida 1 (reclamante) tenga aprox 2 ERG
-             // (Nota: FleetSDK output value es exacto al definido en OutputBuilder)
-             expect(transaction.outputs[1].value).to.equal(stakePortionForClaimer);
+            // Verificar que la salida 1 (reclamante) tenga aprox 2 ERG
+            // (Nota: FleetSDK output value es exacto al definido en OutputBuilder)
+            expect(transaction.outputs[1].value).to.equal(stakePortionForClaimer);
         } else {
-             // Verificar tokens
-             expect(transaction.outputs[1].assets[0].amount).to.equal(stakePortionForClaimer);
+            // Verificar tokens
+            expect(transaction.outputs[1].assets[0].amount).to.equal(stakePortionForClaimer);
         }
     });
 
     it("should fail to cancel if the game deadline has passed", () => {
         mockChain.jumpTo(deadlineBlock + 1);
-        
+
         // Intentamos una transacción simple para ver si el contrato bloquea
         // (Simplificado para brevedad, usando la misma lógica de arriba fallaría igual)
         const transaction = new TransactionBuilder(mockChain.height)
@@ -186,7 +186,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
 
 describe("Game Cancellation (Low Stake) - (%s)", () => {
     const mode = { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME }
-    
+
     let mockChain: MockChain;
     let game: ReturnType<MockChain["newParty"]>;
     let creator: ReturnType<MockChain["newParty"]>;
@@ -209,7 +209,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
         creator = mockChain.newParty("GameCreator");
         claimer = mockChain.newParty("Claimer");
         // Fondos para pagar la tarifa de la transacción (Miner Fee)
-        claimer.addBalance({ nanoergs: 100_000_000n }); 
+        claimer.addBalance({ nanoergs: 100_000_000n });
 
         gameCancellationErgoTree = getGopGameCancellationErgoTree();
         gameActiveErgoTree = getGopGameActiveErgoTree();
@@ -233,7 +233,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
                 // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline)
                 // Se restaura el formato correcto del registro R5
                 R5: SPair(
-                    SColl(SByte, "ab".repeat(32)),           
+                    SColl(SByte, "ab".repeat(32)),
                     SLong(BigInt(ceremonyDeadline))
                 ).toHex(),
                 R6: SColl(SByte, hashedSecret).toHex(),
@@ -253,7 +253,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
             }
         });
         gameBox = game.utxos.toArray()[0];
-    });
+    }, 15000);
 
     afterEach(() => {
         mockChain.reset({ clearParties: true });
@@ -265,9 +265,9 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
         const stakePortionToClaim = creatorStake / 5n; // 240,000 nanoergs (20% de penalización)
         const newCreatorStake = creatorStake - stakePortionToClaim; // 960,000 nanoergs (80% restante)
         const newUnlockHeight = BigInt(mockChain.height + 40);
-        
+
         // Mínimo valor requerido por el protocolo de Ergo para cualquier caja de salida.
-        const MIN_BOX_VALUE = 1_000_000n; 
+        const MIN_BOX_VALUE = 1_000_000n;
 
         // Verificamos que el stake restante (960,000n) es menor que el valor mínimo (1,000,000n).
         expect(newCreatorStake).to.be.lessThan(MIN_BOX_VALUE);

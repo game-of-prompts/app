@@ -21,7 +21,7 @@ import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { DefaultGameConstants } from "$lib/common/constants";
-import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree, getGopJudgesPaidErgoTree, getGopJudgesPaidErgoTreeHex } from "$lib/ergo/contract";
+import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree, getGopJudgesPaidErgoTree, getGopJudgesPaidErgoTreeHex, getGopParticipationBatchErgoTree } from "$lib/ergo/contract";
 
 // --- Suite de Pruebas ---
 
@@ -41,6 +41,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
   const devErgoTree = DefaultGameConstants.DEV_SCRIPT;
   const gameResolutionErgoTree: ErgoTree = getGopGameResolutionErgoTree();
   const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
+  const participationBatchErgoTree: ErgoTree = getGopParticipationBatchErgoTree();
   const reputationProofErgoTree: ErgoTree = getReputationProofErgoTree();
 
 
@@ -67,6 +68,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
   let gameResolutionContract: NonKeyedMockChainParty;
   let participationContract: NonKeyedMockChainParty;
+  let participationBatchContract: NonKeyedMockChainParty;
 
 
   const createCommitment = (solverId: string, score: bigint, logs: Uint8Array, ergotree: Uint8Array, secret: Uint8Array): Uint8Array => {
@@ -118,6 +120,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     // --- Partes de Contrato en la MockChain ---
     gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolutionContract");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "ParticipationContract");
+    participationBatchContract = mockChain.addParty(participationBatchErgoTree.toHex(), "ParticipationBatchContract");
 
     // Asignar fondos a las partes para crear cajas y pagar tasas
     if (mode.token !== ERG_BASE_TOKEN) {
@@ -828,6 +831,168 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     expect(mockChain.execute(transaction, { signers: [facilitator], throw: false })).to.be.false;
   });
 
+  it("Should successfully finalize the game and distribute funds correctly including participation batches", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+
+    // Create batch boxes
+    const batchValue = mode.token === ERG_BASE_TOKEN ? participationFee * 2n : RECOMMENDED_MIN_FEE_VALUE;
+    const batchAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: participationFee * 2n }];
+
+    participationBatchContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: batchValue,
+      ergoTree: participationBatchErgoTree.toHex(),
+      assets: batchAssets,
+      additionalRegisters: {
+        R4: SColl(SByte, new Uint8Array(0)).toHex(),
+        R5: SColl(SByte, new Uint8Array(0)).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+      }
+    });
+
+    const batchBoxes = participationBatchContract.utxos;
+
+    // --- Act ---
+    const prizePool = [...participationBoxes.toArray(), ...batchBoxes.toArray()].reduce((acc, p) => {
+      if (mode.token === ERG_BASE_TOKEN) {
+        return acc + p.value;
+      } else {
+        return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
+      }
+    }, 0n);
+
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const winnerAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
+    ];
+
+    const resolverAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalResolverPayout }]
+      : [];
+
+    const devAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalDevPayout }]
+      : [];
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...batchBoxes.toArray(), ...winner.utxos.toArray()])
+      .to([
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : RECOMMENDED_MIN_FEE_VALUE, developer.address).addTokens(devAssets),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
+
+    // Assert winner balance
+    if (mode.token === ERG_BASE_TOKEN) {
+      expect(winner.balance.nanoergs).to.equal(finalWinnerPrize);
+      expect(developer.balance.nanoergs).to.equal(finalDevPayout);
+      expect(resolver.balance.nanoergs).to.equal(finalResolverPayout);
+    } else {
+      const winnerTokenBalance = winner.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(winnerTokenBalance).to.equal(finalWinnerPrize + 200_000_000n); // Initial balance + prize
+
+      const devTokenBalance = developer.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(devTokenBalance).to.equal(finalDevPayout);
+
+      const resolverTokenBalance = resolver.balance.tokens.find(t => t.tokenId === mode.token)?.amount || 0n;
+      expect(resolverTokenBalance).to.equal(finalResolverPayout);
+    }
+
+    expect(creator.balance.nanoergs).to.equal(mode.token === ERG_BASE_TOKEN ? RECOMMENDED_MIN_FEE_VALUE : RECOMMENDED_MIN_FEE_VALUE * 10n);
+    expect(winner.balance.tokens.find(t => t.tokenId === gameNftId)).toBeDefined();
+    expect(gameResolutionContract.utxos.length).to.equal(0);
+    expect(participationContract.utxos.length).to.equal(0);
+    expect(participationBatchContract.utxos.length).to.equal(0);
+  });
+
+  it("Should fail if batch values are not distributed correctly (trying to steal from batch)", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos;
+
+    // Create batch boxes
+    const batchValue = mode.token === ERG_BASE_TOKEN ? participationFee * 2n : RECOMMENDED_MIN_FEE_VALUE;
+    const batchAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: participationFee * 2n }];
+
+    participationBatchContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: batchValue,
+      ergoTree: participationBatchErgoTree.toHex(),
+      assets: batchAssets,
+      additionalRegisters: {
+        R4: SColl(SByte, new Uint8Array(0)).toHex(),
+        R5: SColl(SByte, new Uint8Array(0)).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+      }
+    });
+
+    const batchBoxes = participationBatchContract.utxos;
+
+    // --- Act ---
+    // We intentionally calculate prize pool WITHOUT the batch, but we try to spend the batch.
+
+    const prizePoolWithoutBatch = participationBoxes.reduce((acc, p) => {
+      if (mode.token === ERG_BASE_TOKEN) {
+        return acc + p.value;
+      } else {
+        return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
+      }
+    }, 0n);
+
+    const resolverCommission = (prizePoolWithoutBatch * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePoolWithoutBatch * 5n) / 100n;
+    const winnerBasePrize = prizePoolWithoutBatch - resolverCommission - devCommission;
+
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const winnerAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
+    ];
+
+    const resolverAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalResolverPayout }]
+      : [];
+
+    const devAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalDevPayout }]
+      : [];
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...participationBoxes.toArray(), ...batchBoxes.toArray(), ...winner.utxos.toArray()])
+      .to([
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : RECOMMENDED_MIN_FEE_VALUE, developer.address).addTokens(devAssets),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [winner], throw: false })).to.be.false;
+  });
+
   it("Should correctly distribute commissions to participating judges when finalizing the game", () => {
     // --- Arrange (Preparación del Escenario con Jueces) ---
 
@@ -1061,6 +1226,158 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         expect(tokenBalance).to.equal(finalJudgesPayout);
       }
     }
+  });
+
+  it("Should successfully spend both participations and batches in end game", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+
+    // 1. Create a Batch Box (simulating 2 aggregated participations)
+    const batchErgoTree = getGopParticipationBatchErgoTree();
+    const batchContract = mockChain.addParty(batchErgoTree.toHex(), "BatchContract");
+
+    const batchValue = mode.token === ERG_BASE_TOKEN ? participationFee * 2n : RECOMMENDED_MIN_FEE_VALUE;
+    const batchAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: participationFee * 2n }];
+
+    batchContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: batchValue,
+      ergoTree: batchErgoTree.toHex(),
+      assets: batchAssets,
+      additionalRegisters: {
+        R4: SColl(SByte, new Uint8Array(0)).toHex(), // Not used in end game
+        R5: SColl(SByte, new Uint8Array(0)).toHex(), // Not used in end game
+        R6: SColl(SByte, gameNftId).toHex(),
+      }
+    });
+
+    const batchBox = batchContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos.toArray(); // Existing participations
+
+    // --- Act ---
+    // Calculate total prize pool including the batch
+    const allInputs = [...participationBoxes, batchBox];
+
+    const prizePool = allInputs.reduce((acc, p) => {
+      if (mode.token === ERG_BASE_TOKEN) {
+        return acc + p.value;
+      } else {
+        return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
+      }
+    }, 0n);
+
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (prizePool * 5n) / 100n;
+    const winnerBasePrize = prizePool - resolverCommission - devCommission;
+
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const winnerAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
+    ];
+
+    const resolverAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalResolverPayout }]
+      : [];
+
+    const devAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalDevPayout }]
+      : [];
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...allInputs, ...winner.utxos.toArray()])
+      .to([
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : RECOMMENDED_MIN_FEE_VALUE, developer.address).addTokens(devAssets),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    expect(mockChain.execute(transaction, { signers: [winner] })).to.be.true;
+  });
+
+  it("Should fail to spend batches/participations if value is not distributed correctly", () => {
+    // --- Arrange ---
+    mockChain.jumpTo(resolutionDeadline);
+    const gameBox = gameResolutionContract.utxos.toArray()[0];
+
+    // 1. Create a Batch Box
+    const batchErgoTree = getGopParticipationBatchErgoTree();
+    const batchContract = mockChain.addParty(batchErgoTree.toHex(), "BatchContract");
+
+    const batchValue = mode.token === ERG_BASE_TOKEN ? participationFee * 2n : RECOMMENDED_MIN_FEE_VALUE;
+    const batchAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: participationFee * 2n }];
+
+    batchContract.addUTxOs({
+      creationHeight: mockChain.height,
+      value: batchValue,
+      ergoTree: batchErgoTree.toHex(),
+      assets: batchAssets,
+      additionalRegisters: {
+        R4: SColl(SByte, new Uint8Array(0)).toHex(),
+        R5: SColl(SByte, new Uint8Array(0)).toHex(),
+        R6: SColl(SByte, gameNftId).toHex(),
+      }
+    });
+
+    const batchBox = batchContract.utxos.toArray()[0];
+    const participationBoxes = participationContract.utxos.toArray();
+
+    // --- Act ---
+    const allInputs = [...participationBoxes, batchBox];
+
+    // INTENTIONALLY INCORRECT CALCULATION: Ignoring the batch value in the prize pool
+    // We only sum up individual participations
+    const partialPrizePool = participationBoxes.reduce((acc, p) => {
+      if (mode.token === ERG_BASE_TOKEN) {
+        return acc + p.value;
+      } else {
+        return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
+      }
+    }, 0n);
+
+    const resolverCommission = (partialPrizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const devCommission = (partialPrizePool * 5n) / 100n;
+    const winnerBasePrize = partialPrizePool - resolverCommission - devCommission;
+
+    const finalWinnerPrize = winnerBasePrize;
+    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalDevPayout = devCommission;
+
+    const winnerAssets = [
+      { tokenId: gameNftId, amount: 1n },
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
+    ];
+
+    const resolverAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalResolverPayout }]
+      : [];
+
+    const devAssets = mode.token !== ERG_BASE_TOKEN
+      ? [{ tokenId: mode.token, amount: finalDevPayout }]
+      : [];
+
+    const transaction = new TransactionBuilder(mockChain.height)
+      .from([gameBox, ...allInputs, ...winner.utxos.toArray()])
+      .to([
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
+        new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalDevPayout : RECOMMENDED_MIN_FEE_VALUE, developer.address).addTokens(devAssets),
+      ])
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .sendChangeTo(winner.address)
+      .build();
+
+    // --- Assert ---
+    // Should fail because the game_resolution contract expects the TOTAL value (including batch) to be distributed
+    expect(mockChain.execute(transaction, { signers: [winner], throw: false })).to.be.false;
   });
 
 });

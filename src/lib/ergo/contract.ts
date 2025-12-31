@@ -12,6 +12,7 @@ import GAME_RESOLUTION_SOURCE from '../../../contracts/game_resolution.es?raw';
 import JUDGES_PAID_SOURCE from '../../../contracts/judges_paid.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
+import PARTICIPATION_BATCH_SOURCE from '../../../contracts/participation_batch.es?raw';
 import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
 import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
 
@@ -26,6 +27,7 @@ let _gameResolution: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: 
 let _judgesPaid: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _participationBatch: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS
@@ -33,13 +35,24 @@ let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: s
 
 // Nota: El orden de compilación es importante debido a las dependencias entre scripts.
 
+function ensureParticipationBatchCompiled(): void {
+    if (_participationBatch.ergoTree) return;
+    ensureParticipationCompiled();
+
+    const participationHash = getGopParticipationScriptHash();
+    const finalBatchSource = PARTICIPATION_BATCH_SOURCE
+        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash);
+
+    _participationBatch.ergoTree = compile(finalBatchSource, { version: ergoTreeVersion });
+}
+
 function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
 
-    const source = PARTICIPATION_SOURCE
+    const finalSource = PARTICIPATION_SOURCE
         .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString());
 
-    _participation.ergoTree = compile(source, { version: ergoTreeVersion });
+    _participation.ergoTree = compile(finalSource, { version: ergoTreeVersion });
 }
 
 function ensureGameCancellationCompiled(): void {
@@ -59,9 +72,11 @@ function ensureGameResolutionCompiled(): void {
     const submittedHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
     const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
+    const batchHash = getGopParticipationBatchScriptHash();
 
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
+        .replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, batchHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
         .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
         .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
@@ -171,6 +186,13 @@ export const getGopParticipationScriptHash = () => getScriptHash(_participation,
 export function getGopParticipationAddress(): Address { ensureParticipationCompiled(); return _participation.ergoTree!.toAddress(networkType); }
 export function getGopParticipationErgoTreeHex(): string { ensureParticipationCompiled(); return _participation.ergoTree!.toHex(); }
 export function getGopParticipationErgoTree(): ErgoTree { ensureParticipationCompiled(); return _participation.ergoTree!; }
+
+// --- Participation Batch ---
+export const getGopParticipationBatchTemplateHash = () => getTemplateHash(_participationBatch, ensureParticipationBatchCompiled);
+export const getGopParticipationBatchScriptHash = () => getScriptHash(_participationBatch, ensureParticipationBatchCompiled);
+export function getGopParticipationBatchAddress(): Address { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!.toAddress(networkType); }
+export function getGopParticipationBatchErgoTreeHex(): string { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!.toHex(); }
+export function getGopParticipationBatchErgoTree(): ErgoTree { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!; }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

@@ -14,6 +14,7 @@
   val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L
 
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
+  val PARTICIPATION_BATCH_SCRIPT_HASH = fromBase16("`+PARTICIPATION_BATCH_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
@@ -364,7 +365,8 @@
       // --- Valores y cálculos comunes para AMBOS CASOS (con y sin ganador) ---
       val participations = INPUTS.filter({ 
               (box: Box) => 
-                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
+                (blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH || 
+                 blake2b256(box.propositionBytes) == PARTICIPATION_BATCH_SCRIPT_HASH) &&
                 box.R6[Coll[Byte]].get == gameNftId
             })
 
