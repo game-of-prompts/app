@@ -23,6 +23,7 @@ import { GAME, PARTICIPATION } from '$lib/ergo/reputation/types';
 import { reputation_proof } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
+import { batch_participations } from './actions/batch_participations';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -312,6 +313,24 @@ export class ErgoPlatform implements Platform {
             throw new Error("An unknown error occurred while contributing to the ceremony.");
         }
 
+    }
+
+    async batchParticipations(
+        game: GameResolution,
+        participations: ValidParticipation[],
+        batches: Box<Amount>[]
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        if (game.status !== 'Resolution') {
+            throw new Error("Game must be in Resolution state to batch participations.");
+        }
+        try {
+            return await batch_participations(game, participations, batches);
+        } catch (error) {
+            console.error("Error in platform method batchParticipations:", error);
+            if (error instanceof Error) throw new Error(`Failed to batch participations: ${error.message}`);
+            throw new Error("An unknown error occurred while batching participations.");
+        }
     }
 
 }

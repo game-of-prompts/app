@@ -1,6 +1,6 @@
 // src/common/platform.ts
 
-import type { 
+import type {
     GameActive,
     GameResolution,
     GameCancellation,
@@ -146,6 +146,15 @@ export interface Platform {
     /*
     *
     */
-   contribute_to_ceremony(game: GameActive): Promise<string | null>;
+    contribute_to_ceremony(game: GameActive): Promise<string | null>;
+
+    /**
+     * Batches multiple participations into a single box to optimize end_game transaction.
+     */
+    batchParticipations(
+        game: GameResolution,
+        participations: ValidParticipation[],
+        batches: Box<any>[]
+    ): Promise<string | null>;
 
 }

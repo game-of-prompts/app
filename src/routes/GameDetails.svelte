@@ -27,7 +27,11 @@
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount } from "svelte";
     import { get, writable } from "svelte/store";
-    import { fetchParticipations, fetch_token_details } from "$lib/ergo/fetch";
+    import {
+        fetchParticipations,
+        fetch_token_details,
+        fetchParticipationBatches,
+    } from "$lib/ergo/fetch";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
@@ -99,6 +103,7 @@
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
     let currentHeight: number = 0;
+    let participationBatches: Box<Amount>[] = [];
 
     // UI State
     let transactionId: string | null = null;
@@ -149,6 +154,7 @@
         | "include_omitted"
         | "accept_judge_nomination"
         | "open_ceremony"
+        | "batch_participations"
         | null = null;
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
@@ -277,6 +283,7 @@
                 participations = await fetchParticipations(game);
             } else if (game.status === "Resolution") {
                 participations = await fetchParticipations(game);
+                participationBatches = await fetchParticipationBatches(game);
                 participations.forEach(async (item) => {
                     const participation = item.commitmentC_Hex;
                     const votes = new Map<string, ReputationProof>(
@@ -606,6 +613,26 @@
         }
     }
 
+    async function handleBatchParticipations() {
+        if (game?.status !== "Resolution") return;
+        errorMessage = null;
+        isSubmitting = true;
+        try {
+            const valid_participations = participations.filter(
+                (p) => p.status === "Submitted",
+            ) as ValidParticipation[];
+            transactionId = await platform.batchParticipations(
+                game,
+                valid_participations,
+                participationBatches,
+            );
+        } catch (e: any) {
+            errorMessage = e.message;
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     async function handleJudgesInvalidate() {
         if (game?.status !== "Resolution") return;
         errorMessage = null;
@@ -840,6 +867,7 @@
             include_omitted: `Include Omitted Participation`,
             accept_judge_nomination: "Accept Judge Nomination",
             open_ceremony: "Add Seed Randomness",
+            batch_participations: "Batch Participations",
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -1429,6 +1457,56 @@
                                             </p>
                                         {/if}
 
+                                        <div class="flex flex-col gap-2">
+                                            {#if participations.filter((p) => p.status === "Submitted").length + participationBatches.length > 10}
+                                                <Button
+                                                    on:click={() =>
+                                                        setupActionModal(
+                                                            "batch_participations",
+                                                        )}
+                                                    variant="outline"
+                                                    class="w-full"
+                                                >
+                                                    Batch Participations ({participations.filter(
+                                                        (p) =>
+                                                            p.status ===
+                                                            "Submitted",
+                                                    ).length} pending, {participationBatches.length}
+                                                    batches)
+                                                </Button>
+                                            {:else}
+                                                <Button
+                                                    on:click={() =>
+                                                        setupActionModal(
+                                                            "end_game",
+                                                        )}
+                                                    variant="outline"
+                                                    class="w-full"
+                                                >
+                                                    Finalize Game
+                                                </Button>
+                                            {/if}
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "invalidate_winner",
+                                                    )}
+                                                variant="destructive"
+                                                class="w-full"
+                                            >
+                                                Invalidate Winner
+                                            </Button>
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "include_omitted",
+                                                    )}
+                                                variant="secondary"
+                                                class="w-full"
+                                            >
+                                                Include Omitted Participation
+                                            </Button>
+                                        </div>
                                         <div
                                             class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
                                         >
@@ -3655,6 +3733,32 @@
                                     {isSubmitting
                                         ? "Processing..."
                                         : "Confirm & Drain Stake"}
+                                </Button>
+                            </div>
+                        {:else if currentActionType === "batch_participations"}
+                            <p class="text-sm text-muted-foreground mb-4">
+                                There are too many participations to process in
+                                a single transaction. You need to batch them
+                                first.
+                            </p>
+                            <p class="text-sm text-muted-foreground mb-4">
+                                Pending Participations: {participations.filter(
+                                    (p) => p.status === "Submitted",
+                                ).length}
+                                <br />
+                                Existing Batches: {participationBatches.length}
+                            </p>
+                            <div class="flex justify-end gap-2">
+                                <Button variant="outline" on:click={closeModal}
+                                    >Cancel</Button
+                                >
+                                <Button
+                                    on:click={handleBatchParticipations}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting
+                                        ? "Processing..."
+                                        : "Process Batch"}
                                 </Button>
                             </div>
                         {:else if currentActionType === "end_game"}

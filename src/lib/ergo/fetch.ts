@@ -26,7 +26,8 @@ import {
     getGopGameResolutionErgoTreeHex,
     getGopGameCancellationErgoTreeHex,
     getGopParticipationErgoTreeHex,
-    getGopGameActiveTemplateHash
+    getGopGameActiveTemplateHash,
+    getGopParticipationBatchTemplateHash
 } from "./contract"; // Assumes this file exports functions to get script hashes
 import {
     hexToUtf8,
@@ -900,6 +901,56 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
     }
 
     return participations;
+}
+
+/**
+ * Searches for participation batches for a specific game.
+ * @param game The game object.
+ * @returns A `Promise` with an array of batch boxes.
+ */
+export async function fetchParticipationBatches(game: AnyGame): Promise<Box<Amount>[]> {
+    const gameNftId = game.gameId;
+    const batches: Box<Amount>[] = [];
+    const scriptHash = getGopParticipationBatchTemplateHash();
+
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    while (moreAvailable) {
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ergoTreeTemplateHash: scriptHash,
+                    registers: {
+                        R6: gameNftId
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error(`API response: ${response.status}`);
+
+            const data = await response.json();
+            const items: Box<Amount>[] = data.items || [];
+
+            // Filter by R6 just in case the API search didn't filter perfectly (though it should)
+            for (const box of items) {
+                if ((box as any).additionalRegisters?.R6?.renderedValue === gameNftId) {
+                    batches.push(box);
+                }
+            }
+
+            offset += items.length;
+            moreAvailable = items.length === limit;
+        } catch (error) {
+            console.error("Exception while fetching participation batches:", error);
+            moreAvailable = false;
+        }
+    }
+    return batches;
 }
 
 
