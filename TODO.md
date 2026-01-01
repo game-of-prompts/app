@@ -104,7 +104,7 @@
 [x] ¿Si no hay ganador (pero si que hay fondos) no debería de ir los fondos hacia los jueces en lugar de hacia el creador?    Por que en este caso todas las participaciones son invalidas.
 La respuesta es que no, el creador todavía debe obtener la parte del ganador, pues aun siendo su culpa, el es quien debe de ejecutar la transacción de finalización (agrupar todas las participaciones). Los jueces recuperarán su comisión +  la del creador y el creador la del ganador + su stake.
 
-[] Lotes de participaciones 
+[x] Lotes de participaciones 
 (Agregar acción en participacion y crear lotes con nueva accion y accion end_game de participation.es)
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
 Teoricamente se permite un numero ilimitado de participaciones.
@@ -112,6 +112,12 @@ Teoricamente se permite un numero ilimitado de participaciones.
 [] Sin ERG mode.
 
 [] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
+
+[] Intentar optimizar el tamaño de game_resolution.es o bien extraer la acción end game a un contrato end_game.es
+
+[] Terminar Demo y agregar puntos de información en GameDetails
+
+[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 ====
 
