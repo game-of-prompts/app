@@ -111,9 +111,11 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Sin ERG mode.
 
-[] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
-
 [] Intentar optimizar el tamaño de game_resolution.es o bien extraer la acción end game a un contrato end_game.es
+
+[] Token id del creador en lugar de web link
+
+[] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
 
 [] Terminar Demo y agregar puntos de información en GameDetails
 
