@@ -244,6 +244,8 @@ The Game of Prompts protocol is formally defined by the on-chain state and the s
 
 *   **Main Game Box**: Represents the canonical state of the game. It contains the game NFT (`gameNftId`), the global state (`R4`), critical deadlines, and cryptographic commitments. It publishes verifiable information that Participation Boxes use to self-validate.
 *   **Participation Box**: Represents a player's economic participation. It contains locked funds (stake/entry fee), the player's identity, the `gameNftId`, and a cryptographic commitment of the score (`R5`). Each box is autonomous and defines its own spending paths based on the Main Game Box state, time, and signer identity.
+*   **Participation Batch Box**: An optimization entity that aggregates multiple participations into a single box to improve scalability and reduce transaction load. It functions similarly to a Participation Box but holds the accumulated value of multiple participations.
+*   **Judges Payment Box**: A specialized box managed by the `judges_paid.es` contract that ensures fair distribution of commissions to the nominated judges.
 
 ### 6.2. Global Game States (`R4`)
 
@@ -259,16 +261,18 @@ The global state is encoded in register `R4` of the Main Game Box.
 
 The game is open. The secret `S` must remain private.
 *   **Phases (Off-chain/UI)**:
-    *   **Ceremony Phase** (First ~720 blocks / 24h): The seed is renewable. Intended for setup and initial testing.
+    *   **Ceremony Phase** (First ~720 blocks / 24h): The seed is renewable via `action3_add_randomness`. Intended for setup and initial testing.
     *   **Playing Phase**: The seed is immutable. Players compete.
 *   **Action: Stuck Game Rescue (Grace Period)**: If the game is abandoned (`HEIGHT > gameDeadline + GRACE_PERIOD`), players can spend their Participation Box to recover their funds entirely. `GRACE_PERIOD` is typically ~720 blocks (24h). This is the only legitimate exit from ACTIVE for a participation.
+*   **Action: Batching**: Participations can be merged into **Participation Batch Boxes** to optimize the number of inputs during resolution. This is handled by `participation_batch.es`.
 
 ### 6.4. State 1 — RESOLUTION
 
 The creator has revealed the secret `S`, moving the game to this state. Scores are now verifiable.
 *   **Action: Invalidation of Candidate Participation**: If a Participation Box has an invalid commitment (fraudulent score), it can be consumed by the protocol if a **majority of the nominated judges** vote to invalidate it. This removes the fraudulent participation from the prize pool.
 *   **Action: Include Omitted Participation**: If the creator failed to include a valid participation with a higher score in the resolution, any user can perform this action to force its inclusion and update the winner candidate, ensuring censorship resistance.
-*   **Action: Normal Game Finalization**: Once `HEIGHT >= resolutionDeadline`, the Main Game Box and valid Participation Boxes are spent together. Funds are distributed to the winner and the creator (commission).
+*   **Action: Normal Game Finalization**: Once `HEIGHT >= resolutionDeadline`, the Main Game Box and valid Participation Boxes are spent together. Funds are distributed to the winner, the creator (commission), the developer (commission), and the judges.
+    *   **Judges Payment**: A portion of the prize pool is sent to a contract (`judges_paid.es`) which ensures that each judge receives their fair share based on their reputation tokens.
 
 ### 6.5. State 2 — CANCELLED_DRAINING
 
