@@ -10,12 +10,14 @@
         network,
     } from "$lib/common/store";
     import CreateGame from "./CreateGame.svelte";
+    import Demo from "./Demo.svelte";
     import TokenAcquisition from "./TokenAcquisition.svelte";
     import GameDetails from "./GameDetails.svelte";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { loadGameById } from "$lib/common/load_by_id";
     import { browser } from "$app/environment";
     import { page } from "$app/stores";
+    import { goto } from "$app/navigation";
     import { type AnyGame as Game } from "$lib/common/game";
     import { network_id } from "$lib/ergo/envs";
     import Kya from "./kya.svelte";
@@ -153,6 +155,17 @@
     });
 
     function changeTab(tab: string) {
+        if (tab === "demo") {
+            goto("/demo");
+            return;
+        } else if ($page.url.pathname === "/demo") {
+            goto("/");
+            // The activeTab will be updated by the reactive statement below when URL changes
+            // But we might want to set it here to be responsive immediately if needed,
+            // though for route change it's better to wait or let the mount handle it.
+            // For now, let's just let the route change handle it.
+        }
+
         const timerValue = get(timer);
         if (timerValue.countdownInterval) {
             clearInterval(timerValue.countdownInterval);
@@ -162,6 +175,12 @@
         judge_detail.set(null);
         activeTab = tab;
         mobileMenuOpen = false;
+    }
+
+    $: if ($page.url.pathname === "/demo") {
+        activeTab = "demo";
+    } else if (activeTab === "demo" && $page.url.pathname !== "/demo") {
+        activeTab = "participateGame";
     }
 
     game_detail.subscribe((value) => {
@@ -406,6 +425,9 @@
         {#if activeTab === "pendingPayouts"}
             <PendingJudgePayments />
         {/if}
+        {#if activeTab === "demo"}
+            <Demo />
+        {/if}
     {:else if $game_detail !== null}
         <GameDetails />
     {:else}
@@ -414,7 +436,13 @@
 </main>
 
 {#if showSettings}
-    <SettingsModal on:close={() => (showSettings = false)} />
+    <SettingsModal
+        on:close={() => (showSettings = false)}
+        on:openDemo={() => {
+            showSettings = false;
+            changeTab("demo");
+        }}
+    />
 {/if}
 
 <footer class="page-footer">
@@ -471,7 +499,7 @@
     .logo-image {
         height: 2rem;
         width: auto;
-        margin-right: 5rem;
+        margin-right: 2rem;
     }
 
     .desktop-nav {
@@ -479,7 +507,7 @@
     }
 
     .nav-links {
-        @apply flex items-center gap-6 text-sm;
+        @apply flex items-center gap-4 text-sm;
     }
 
     .nav-links li a {
