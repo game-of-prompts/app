@@ -10,7 +10,7 @@ import { parseBox } from "../utils";
 
 declare const ergo: any;
 
-const MAX_INPUTS_PER_BATCH = 10;
+const MAX_INPUTS_PER_BATCH = 2;
 
 export async function batch_participations(
     game: GameResolution,
