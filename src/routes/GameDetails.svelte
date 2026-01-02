@@ -92,6 +92,8 @@
 
     const strictMode = true;
 
+    const PARTICIPATION_BATCH_THRESHOLD = 2;
+
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
     let platform = new ErgoPlatform();
@@ -1457,56 +1459,6 @@
                                             </p>
                                         {/if}
 
-                                        <div class="flex flex-col gap-2">
-                                            {#if participations.filter((p) => p.status === "Submitted").length + participationBatches.length > 10}
-                                                <Button
-                                                    on:click={() =>
-                                                        setupActionModal(
-                                                            "batch_participations",
-                                                        )}
-                                                    variant="outline"
-                                                    class="w-full"
-                                                >
-                                                    Batch Participations ({participations.filter(
-                                                        (p) =>
-                                                            p.status ===
-                                                            "Submitted",
-                                                    ).length} pending, {participationBatches.length}
-                                                    batches)
-                                                </Button>
-                                            {:else}
-                                                <Button
-                                                    on:click={() =>
-                                                        setupActionModal(
-                                                            "end_game",
-                                                        )}
-                                                    variant="outline"
-                                                    class="w-full"
-                                                >
-                                                    Finalize Game
-                                                </Button>
-                                            {/if}
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "invalidate_winner",
-                                                    )}
-                                                variant="destructive"
-                                                class="w-full"
-                                            >
-                                                Invalidate Winner
-                                            </Button>
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "include_omitted",
-                                                    )}
-                                                variant="secondary"
-                                                class="w-full"
-                                            >
-                                                Include Omitted Participation
-                                            </Button>
-                                        </div>
                                         <div
                                             class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
                                         >
@@ -2681,28 +2633,64 @@
                                         </div>
 
                                         <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "end_game",
-                                                    )}
-                                                disabled={isBeforeDeadline}
-                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                                            >
-                                                <Trophy class="mr-2 h-4 w-4" /> End
-                                                Competition & Distribute Prizes
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                The resolution period has ended.
-                                                Finalize the game to distribute
-                                                prizes.
-                                                {#if isBeforeDeadline}
-                                                    Disabled because judge
-                                                    period is still active.
-                                                {/if}
-                                            </p>
+                                            {#if participations.filter((p) => p.status === "Submitted").length + participationBatches.length > PARTICIPATION_BATCH_THRESHOLD}
+                                                <Button
+                                                    on:click={() =>
+                                                        setupActionModal(
+                                                            "batch_participations",
+                                                        )}
+                                                    disabled={isBeforeDeadline}
+                                                    variant="outline"
+                                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                                >
+                                                    <Trophy
+                                                        class="mr-2 h-4 w-4"
+                                                    />
+                                                    Batch Participations ({participations.filter(
+                                                        (p) =>
+                                                            p.status ===
+                                                            "Submitted",
+                                                    ).length} pending, {participationBatches.length}
+                                                    batches)
+                                                </Button>
+                                                <p
+                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    There are too many
+                                                    participations to finalize
+                                                    at once. Please batch them
+                                                    first.
+                                                    {#if isBeforeDeadline}
+                                                        Disabled because judge
+                                                        period is still active.
+                                                    {/if}
+                                                </p>
+                                            {:else}
+                                                <Button
+                                                    on:click={() =>
+                                                        setupActionModal(
+                                                            "end_game",
+                                                        )}
+                                                    disabled={isBeforeDeadline}
+                                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                                >
+                                                    <Trophy
+                                                        class="mr-2 h-4 w-4"
+                                                    /> End Competition & Distribute
+                                                    Prizes
+                                                </Button>
+                                                <p
+                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    The resolution period has
+                                                    ended. Finalize the game to
+                                                    distribute prizes.
+                                                    {#if isBeforeDeadline}
+                                                        Disabled because judge
+                                                        period is still active.
+                                                    {/if}
+                                                </p>
+                                            {/if}
                                         </div>
                                     {/if}
 
