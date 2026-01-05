@@ -8,7 +8,7 @@ import {
 } from "@fleet-sdk/core";
 import { type GameResolution, type ValidParticipation } from "$lib/common/game";
 import { getGopParticipationBatchErgoTreeHex } from "../contract";
-import { parseBox } from "../utils";
+import { hexToBytes, parseBox } from "../utils";
 
 declare const ergo: any;
 
@@ -65,9 +65,9 @@ export async function batch_participations(
         totalNanoErgs,
         batchScript
     ).setAdditionalRegisters({
-        R4: SColl(SByte, "").toHex(),
-        R5: SColl(SByte, "").toHex(),
-        R6: game.gameId // gameNftId
+        R4: SColl(SByte, hexToBytes("")!).toHex(),
+        R5: SColl(SByte, hexToBytes("")!).toHex(),
+        R6: SColl(SByte, hexToBytes(game.gameId)!).toHex()
     });
 
     if (participationTokenId && totalParticipationTokens > 0n) {
@@ -79,7 +79,7 @@ export async function batch_participations(
 
     // 4. Build transaction
     const unsignedTx = new TransactionBuilder(currentHeight)
-        .from(inputs.map(parseBox))
+        .from([...inputs.map(parseBox), ...await ergo.get_utxos()])
         .withDataFrom([parseBox(game.box)]) // Game box as data input
         .to(outputBuilder)
         .sendChangeTo(await ergo.get_change_address())
