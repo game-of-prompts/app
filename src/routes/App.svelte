@@ -29,7 +29,7 @@
     import ShowJudge from "./ShowJudge.svelte";
     import { fetchAllUserProfiles } from "reputation-system";
     import JudgeList from "./JudgeList.svelte";
-    import PendingJudgePayments from "./PendingJudgePayments.svelte";
+
     import {
         WalletButton,
         WalletAddressChangeHandler,
@@ -297,13 +297,7 @@
                         >
                     </li>
                 {/if}
-                <li class:active={activeTab === "pendingPayouts"}>
-                    <a
-                        href="#"
-                        on:click|preventDefault={() =>
-                            changeTab("pendingPayouts")}>Pending Payouts</a
-                    >
-                </li>
+
             </ul>
         </nav>
 
@@ -422,9 +416,7 @@
         {#if activeTab === "showJudge"}
             <ShowJudge />
         {/if}
-        {#if activeTab === "pendingPayouts"}
-            <PendingJudgePayments />
-        {/if}
+
         {#if activeTab === "demo"}
             <Demo />
         {/if}

@@ -1,14 +1,18 @@
 <script lang="ts">
     import JudgeCard from "./JudgeCard.svelte";
+    import PendingJudgePayments from "./PendingJudgePayments.svelte";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { type ReputationProof } from "reputation-system";
     import { judges } from "$lib/common/store";
     import * as Alert from "$lib/components/ui/alert";
-    import { Loader2, Search } from "lucide-svelte";
+    import { Button } from "$lib/components/ui/button";
+    import { Loader2, Search, Coins, Users } from "lucide-svelte";
     import { onMount, onDestroy } from "svelte";
     import { get } from "svelte/store";
     import { Input } from "$lib/components/ui/input";
     import { fetchJudges } from "$lib/ergo/reputation/fetch";
+
+    let showPendingPayouts = false;
 
     let platform = new ErgoPlatform();
     let allFetchedItems: Map<string, ReputationProof> = new Map();
@@ -88,63 +92,89 @@
         <h2
             class="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent inline-block"
         >
-            Explore Judges
+            {showPendingPayouts ? "Pending Payouts" : "Explore Judges"}
         </h2>
-        <p class="subtitle">Reputation proofs and voting history.</p>
-    </div>
-
-    <div class="search-container mb-12">
-        <div class="relative w-full max-w-md mx-auto">
-            <Search
-                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500/70 h-4 w-4"
-            />
-            <Input
-                type="text"
-                placeholder="Search judges..."
-                bind:value={searchQuery}
-                class="pl-10 w-full bg-background/80 backdrop-blur-lg border-slate-500/20 focus:border-slate-500/40 focus:ring-slate-500/20 focus:ring-1 rounded-lg transition-all duration-200"
-            />
-            {#if isFiltering}
-                <Loader2
-                    class="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-slate-500"
-                />
-            {/if}
-        </div>
-    </div>
-
-    {#if errorMessage}
-        <Alert.Root
-            class="my-4 border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
-        >
-            <Alert.Description class="text-center"
-                >{errorMessage}</Alert.Description
+        <p class="subtitle">
+            {showPendingPayouts
+                ? "Distribute pending judge payments."
+                : "Reputation proofs and voting history."}
+        </p>
+        <div class="flex justify-center gap-3 mt-6">
+            <Button
+                variant={!showPendingPayouts ? "default" : "outline"}
+                size="sm"
+                on:click={() => (showPendingPayouts = false)}
             >
-        </Alert.Root>
-    {/if}
+                <Users class="w-4 h-4 mr-2" />
+                Judges
+            </Button>
+            <Button
+                variant={showPendingPayouts ? "default" : "outline"}
+                size="sm"
+                on:click={() => (showPendingPayouts = true)}
+            >
+                <Coins class="w-4 h-4 mr-2" />
+                Pending Payouts
+            </Button>
+        </div>
+    </div>
 
-    {#if isLoadingApi}
-        <div class="judge-list-container">
-            {#each Array(3) as _, i}
-                <div class="skeleton-row" class:reverse={i % 2 !== 0}>
-                    <div class="skeleton-content">
-                        <div class="skeleton-line title"></div>
-                        <div class="skeleton-line text"></div>
-                        <div class="skeleton-line text short"></div>
-                        <div class="skeleton-button"></div>
-                    </div>
-                </div>
-            {/each}
-        </div>
-    {:else if listedItems && Array.from(listedItems).length > 0}
-        <div class="judge-list-container">
-            {#each Array.from(listedItems) as [itemId, itemData], i (itemId)}
-                <JudgeCard judge={itemData} index={i} />
-            {/each}
-        </div>
+    {#if showPendingPayouts}
+        <PendingJudgePayments />
     {:else}
-        <div class="no-items-container">
-            <p class="no-items-text">No judges found.</p>
+        <div class="search-container mb-12">
+            <div class="relative w-full max-w-md mx-auto">
+                <Search
+                    class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500/70 h-4 w-4"
+                />
+                <Input
+                    type="text"
+                    placeholder="Search judges..."
+                    bind:value={searchQuery}
+                    class="pl-10 w-full bg-background/80 backdrop-blur-lg border-slate-500/20 focus:border-slate-500/40 focus:ring-slate-500/20 focus:ring-1 rounded-lg transition-all duration-200"
+                />
+                {#if isFiltering}
+                    <Loader2
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-slate-500"
+                    />
+                {/if}
+            </div>
         </div>
+
+        {#if errorMessage}
+            <Alert.Root
+                class="my-4 border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+            >
+                <Alert.Description class="text-center"
+                    >{errorMessage}</Alert.Description
+                >
+            </Alert.Root>
+        {/if}
+
+        {#if isLoadingApi}
+            <div class="judge-list-container">
+                {#each Array(3) as _, i}
+                    <div class="skeleton-row" class:reverse={i % 2 !== 0}>
+                        <div class="skeleton-content">
+                            <div class="skeleton-line title"></div>
+                            <div class="skeleton-line text"></div>
+                            <div class="skeleton-line text short"></div>
+                            <div class="skeleton-button"></div>
+                        </div>
+                    </div>
+                {/each}
+            </div>
+        {:else if listedItems && Array.from(listedItems).length > 0}
+            <div class="judge-list-container">
+                {#each Array.from(listedItems) as [itemId, itemData], i (itemId)}
+                    <JudgeCard judge={itemData} index={i} />
+                {/each}
+            </div>
+        {:else}
+            <div class="no-items-container">
+                <p class="no-items-text">No judges found.</p>
+            </div>
+        {/if}
     {/if}
 </div>
 
