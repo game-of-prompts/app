@@ -859,7 +859,20 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
 
                                 if (game.status === GameState.Active) return "byparticipant";
 
-                                if (game.status === GameState.Resolution) return "invalidated";
+                                if (game.status === GameState.Resolution) {
+                                    // Check if a majority of nominated judges have invalidated this participation
+                                    const nominatedJudges = (game as GameResolution).judges;
+                                    const invalidationVotes = p_base.reputationOpinions.filter(
+                                        (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.polarization === false
+                                    );
+                                    const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
+                                    if (invalidated) {
+                                        return "invalidated";
+                                    }
+                                    else {
+                                        return "batched";
+                                    }
+                                }
 
                                 if (game.status === GameState.Cancelled_Draining) return "cancelled";
 
