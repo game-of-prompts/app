@@ -104,7 +104,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         winnerCommitment = createCommitment("solver-winner", winnerScore, winnerLogsHash, winnerErgotree, secret);
         omittedCommitment = createCommitment("solver-omitted", omittedScore, omittedLogsHash, omittedErgotree, secret);
 
-        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
 
         const gameBoxValue = RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
@@ -194,7 +194,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Must maintain the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
@@ -241,7 +241,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Fails if not maintains the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -283,7 +283,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
@@ -310,7 +310,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
             ])
@@ -325,7 +325,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
-        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
     });
 
     it("should fail with an omitted participant who is not the new winner", () => {
@@ -337,7 +337,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            20n,                        // creatorComissionPercentage (nuevo)
+            200000n,                        // creatorComissionPercentage (nuevo)
             BigInt(updatedNumericalParams[4])  // resolutionDeadline
         ];
 
@@ -358,7 +358,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
             ])
@@ -381,7 +381,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            20n,                        // creatorComissionPercentage (nuevo)
+            200000n,                        // creatorComissionPercentage (nuevo)
             BigInt(updatedNumericalParams[4])  // resolutionDeadline
         ];
 
@@ -402,7 +402,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
             ])
@@ -417,14 +417,17 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
     it("should set the omitted participant as the winner when there is no current winner", () => {
         const omittedErgotree = omittedPlayer.address.getPublicKeys()[0];
-        omittedCommitment = createCommitment("solver-omitted", 1000n, "logs-omitted", omittedErgotree, secret);
+        const logsHash = blake2b256(stringToBytes("utf8", "logs-omitted"));
+        console.log("logsHash:", uint8ArrayToHex(logsHash));
+        omittedCommitment = createCommitment("solver-omitted", 1000n, logsHash, omittedErgotree, secret);
+        console.log("omittedCommitment:", uint8ArrayToHex(omittedCommitment));
 
         const updatedNumericalParams: bigint[] = [
             BigInt(game_deadline), // deadline
             2_000_000_000n,         // creatorStake
             1_000_000n,         // participationFee
-            1n,         // perJudgeCommissionPercent
-            20n,                        // creatorComissionPercentage
+            10000n,         // perJudgeCommissionPercent
+            200000n,                        // creatorComissionPercentage
             BigInt(resolutionDeadline)  // resolutionDeadline
         ]
 
@@ -471,7 +474,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 R5: SColl(SByte, omittedCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
+                R8: SColl(SByte, logsHash).toHex(),
                 R9: SColl(SLong, [1000n]).toHex(),
             }
         });
@@ -508,7 +511,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             R9: SColl(SColl(SByte), [
                                 stringToBytes("utf8", "{}"),
                                 hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                                prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
+                                prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                             ]).toHex()
                         })
             ])
@@ -523,7 +526,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, updatedNumericalParams).toHex());
-        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
     });
 
     it("should include an omitted participant that has the same score as the current winner (but was submitted earlier)", () => {
@@ -535,8 +538,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -554,7 +557,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -569,8 +572,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
-        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
-        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
     });
 
     it("should include an omitted participant with LOWER raw score but HIGHER adjusted score due to early submission", () => {
@@ -584,8 +587,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -603,7 +606,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -628,8 +631,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -648,7 +651,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -667,19 +670,21 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
         const ommitedErgotree = omittedPlayer.address.getPublicKeys()[0];
 
-        const fakeCommitment = createCommitment("solver-omitted", 1200n, "logs-omitted", ommitedErgotree, fakeSecret);
+        const logsHash = blake2b256(stringToBytes("utf8", "logs-omitted"));
+        const fakeCommitment = createCommitment("solver-omitted", 1200n, logsHash, ommitedErgotree, fakeSecret);
 
         const currentWinnerErgotree = currentWinnerPlayer.address.getPublicKeys()[0];
 
         // Setup the current winner normally
-        winnerCommitment = createCommitment("solver-winner", 1000n, "logs-winner", currentWinnerErgotree, secret);
+        const winnerLogsHash = blake2b256(stringToBytes("utf8", "logs-winner"));
+        winnerCommitment = createCommitment("solver-winner", 1000n, winnerLogsHash, currentWinnerErgotree, secret);
 
         const newNumericalParams: bigint[] = [
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -713,7 +718,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 R5: SColl(SByte, winnerCommitment).toHex(),
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-winner")).toHex(),
+                R8: SColl(SByte, winnerLogsHash).toHex(),
                 R9: SColl(SLong, [1000n]).toHex(),
             }
         });
@@ -730,7 +735,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 R5: SColl(SByte, fakeCommitment).toHex(), // Using fake commitment here
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
+                R8: SColl(SByte, logsHash).toHex(),
                 R9: SColl(SLong, [1200n]).toHex(),
             }
         });
@@ -753,7 +758,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -776,8 +781,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -796,7 +801,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -835,8 +840,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -855,7 +860,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -874,7 +879,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const ommitedErgotree = omittedPlayer.address.getPublicKeys()[0];
 
         // Create a commitment that doesn't match the stored data
-        const inconsistentCommitment = createCommitment("different-solver", 1200n, "logs-omitted", ommitedErgotree, secret);
+        const logsHash = blake2b256(stringToBytes("utf8", "logs-omitted"));
+        const inconsistentCommitment = createCommitment("different-solver", 1200n, logsHash, ommitedErgotree, secret);
 
         // Create omitted participant with inconsistent data
         participationContract.addUTxOs({
@@ -887,7 +893,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 R5: SColl(SByte, inconsistentCommitment).toHex(), // Doesn't match the solver name below
                 R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(), // Different from commitment
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
+                R8: SColl(SByte, logsHash).toHex(),
                 R9: SColl(SLong, [1200n]).toHex(),
             }
         });
@@ -897,8 +903,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -916,7 +922,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -934,14 +940,14 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
         // Move chain past the resolution deadline
         // setupScenario is at 800_000 + 10 = 800_010. Deadline is 800_030.
-        mockChain.newBlocks(30); // Now at 800_040, past the deadline of 800_030.
+        mockChain.newBlocks(100); // Now at 800_110, past the deadline of 800_100.
 
         const newNumericalParams: bigint[] = [
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -959,7 +965,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -979,8 +985,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -998,7 +1004,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -1019,8 +1025,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -1039,7 +1045,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             hexToBytes(mode.token) ?? new Uint8Array(0),
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])
@@ -1054,7 +1060,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const newGameBox = gameResolutionContract.utxos.toArray()[0];
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex());
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
-        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(newResolver.key.publicKey).toString("hex"));
+        expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.key.publicKey).toString("hex"));
     });
 
     it("should fail if the omitted participant has more than 10 scores", () => {
@@ -1064,8 +1070,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             game_deadline,
             2_000_000_000n,
             1_000_000n,
-            1n,  // perJudgeCommissionPercent
-            20n, // creatorComissionPercentage
+            10000n,  // perJudgeCommissionPercent
+            200000n, // creatorComissionPercentage
             BigInt(resolutionDeadline)
         ];
 
@@ -1083,7 +1089,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(newResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
             ])

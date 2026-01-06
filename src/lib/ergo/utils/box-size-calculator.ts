@@ -28,7 +28,7 @@ export interface GameDetails {
     title: string;
     description: string;
     image: string;
-    webLink: string;
+    creatorTokenId: string;
     serviceId: string;
     paper: string;
     indetermismIndex: number;

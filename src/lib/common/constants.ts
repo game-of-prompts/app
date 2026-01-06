@@ -14,6 +14,7 @@ export interface GameConstants {
     PARTICIPATION_TYPE_ID: string;
     ACCEPT_GAME_INVITATION_TYPE_ID: string;
     DEV_SCRIPT: string;
+    COMMISSION_DENOMINATOR: number;
 }
 
 const DevelopmentMode: GameConstants = {
@@ -30,6 +31,7 @@ const DevelopmentMode: GameConstants = {
     PARTICIPATION_TYPE_ID: PARTICIPATION,
     ACCEPT_GAME_INVITATION_TYPE_ID: GAME,
     DEV_SCRIPT: "0008cd025ac8ab183ffde36068603120b00acdf141b91fe4e0c0c6d562b5f24e1e2cc2d1",
+    COMMISSION_DENOMINATOR: 1000000,  // Hardcoded conversion.
 };
 
 const ProductionMode: GameConstants = {
@@ -45,7 +47,8 @@ const ProductionMode: GameConstants = {
 
     PARTICIPATION_TYPE_ID: PARTICIPATION,
     ACCEPT_GAME_INVITATION_TYPE_ID: GAME,
-    DEV_SCRIPT: "0008cd025ac8ab183ffde36068603120b00acdf141b91fe4e0c0c6d562b5f24e1e2cc2d1"
+    DEV_SCRIPT: "0008cd025ac8ab183ffde36068603120b00acdf141b91fe4e0c0c6d562b5f24e1e2cc2d1",
+    COMMISSION_DENOMINATOR: 1000000,  // Hardcoded conversion.
 }
 
 export const DefaultGameConstants: GameConstants = DevelopmentMode;

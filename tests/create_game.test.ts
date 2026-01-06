@@ -121,8 +121,8 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
       BigInt(deadlineBlock),
       creatorStake,
       participationFee,
-      500n,
-      1000n
+      50000n,
+      100000n
     ]).toHex();
     const r9Hex = SColl(SByte, stringToBytes("utf8", gameDetailsJson)).toHex();
 

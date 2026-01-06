@@ -51,7 +51,7 @@
     let showGameSecret: boolean = false;
     let gameTitle: string = "";
     let gameDescription: string = "";
-    let gameWebLink: string = "";
+    let creatorTokenId: string = "";
     let indetermismIndex: number = 1;
     let deadlineValue: number;
     let deadlineUnit: "days" | "minutes" = "days";
@@ -95,7 +95,7 @@
         title: gameTitle,
         description: gameDescription,
         image: gameImageHash,
-        webLink: gameWebLink,
+        creatorTokenId: creatorTokenId,
         serviceId: gameServiceId,
         paper: gamePaperHash,
         indetermismIndex: indetermismIndex,
@@ -106,7 +106,7 @@
             title: "",
             description: "",
             image: "",
-            webLink: "",
+            creatorTokenId: "",
             serviceId: "",
             paper: "",
             indetermismIndex: 1,
@@ -385,7 +385,7 @@
             title: gameTitle,
             description: gameDescription,
             imageURL: gameImageHash,
-            webLink: gameWebLink,
+            creatorTokenId: creatorTokenId,
             serviceId: gameServiceId,
             paper: gamePaperHash,
             indetermismIndex: indetermismIndex,
@@ -404,12 +404,10 @@
                     participationTokenId === ""
                         ? undefined
                         : participationTokenId,
-                commissionPercentage: Math.round(commissionPercentage),
+                commissionPercentage: commissionPercentage,
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
-                perJudgeComissionPercentage: Math.round(
-                    perJudgeComissionPercentage,
-                ),
+                perJudgeComissionPercentage: perJudgeComissionPercentage,
             });
             transactionId = result;
         } catch (error: any) {
@@ -691,7 +689,7 @@
                                 type="number"
                                 min="0"
                                 max="100"
-                                step="0.1"
+                                step="0.0001"
                                 placeholder="e.g., 20 for 20%"
                                 required
                             />
@@ -706,7 +704,7 @@
                                 type="number"
                                 min="0"
                                 max="100"
-                                step="0.1"
+                                step="0.0001"
                                 placeholder="e.g., 1 for 1%"
                                 required
                             />
@@ -869,12 +867,13 @@
                             {/if}
                         </div>
                         <div class="form-group lg:col-span-4">
-                            <Label for="gameWebLink">Game Info Link</Label>
+                            <Label for="creatorTokenId"
+                                >Creator Reputation Proof ID (Optional)</Label
+                            >
                             <Input
-                                id="gameWebLink"
-                                type="url"
-                                bind:value={gameWebLink}
-                                placeholder="https://example.com/my-game"
+                                id="creatorTokenId"
+                                bind:value={creatorTokenId}
+                                placeholder="Enter a token ID to link to the creator"
                             />
                         </div>
                         <div class="form-group lg:col-span-4">

@@ -941,18 +941,20 @@
 
     if (game) {
         if (game.status === "Active") {
-            creatorPct = Number(game.commissionPercentage ?? 0);
+            creatorPct = Number(game.commissionPercentage ?? 0) / 10000;
             judgesTotalPct =
-                Number(game.perJudgeComissionPercentage ?? 0n) *
-                game.judges.length;
+                (Number(game.perJudgeComissionPercentage ?? 0n) *
+                    game.judges.length) /
+                10000;
             developersPct = Number(
                 game.constants.DEV_COMMISSION_PERCENTAGE ?? 0,
             );
         } else if (game.status === "Resolution") {
-            creatorPct = Number(game.resolverCommission ?? 0);
+            creatorPct = Number(game.resolverCommission ?? 0) / 10000;
             judgesTotalPct =
-                Number(game.perJudgeComissionPercentage ?? 0n) *
-                game.judges.length;
+                (Number(game.perJudgeComissionPercentage ?? 0n) *
+                    game.judges.length) /
+                10000;
             developersPct = Number(
                 game.constants.DEV_COMMISSION_PERCENTAGE ?? 0,
             );
@@ -1076,9 +1078,13 @@
                                 <CheckSquare class="stat-icon" />
                                 <span
                                     >{game.status == "Active"
-                                        ? game.commissionPercentage
+                                        ? (
+                                              game.commissionPercentage / 10000
+                                          ).toFixed(4)
                                         : game.status == "Resolution"
-                                          ? game.resolverCommission
+                                          ? (
+                                                game.resolverCommission / 10000
+                                            ).toFixed(4)
                                           : "N/A"}%</span
                                 >
                                 <span class="stat-label"

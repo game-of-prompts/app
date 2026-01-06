@@ -49,7 +49,7 @@ export interface GameContent {
     serviceId: string;
     image?: string;
     imageURL?: string;
-    webLink?: string;
+    creatorTokenId?: string;
     paper?: string; // Blake2b256 hash of the detailed game description markdown file
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
     creatorReputationProof?: string;
@@ -297,7 +297,7 @@ export function parseGameContent(
                 description: parsed.description || defaultDescription,
                 serviceId: parsed.serviceId || "",
                 imageURL: parsed.imageURL || parsed.image || undefined,
-                webLink: parsed.webLink || parsed.link || undefined,
+                creatorTokenId: parsed.creatorTokenId || parsed.webLink || parsed.link || undefined,
                 paper: parsed.paper || undefined,
             };
         } catch (error) {
@@ -317,14 +317,14 @@ export function resolve_participation_commitment(p: AnyParticipation, secretHex:
         console.log("Seed: ", seed);
         return null;
     }
-    const R = p.box.additionalRegisters;
+    const R = p.box.additionalRegisters as any;
 
     // Parse registers safely
-    const ergoTree = hexToBytes(R.R4.renderedValue || "");
-    const commitmentHex = parseCollByteToHex(R.R5.renderedValue);
-    const solverIdHex = parseCollByteToHex(R.R7.renderedValue);
-    const hashLogsHex = parseCollByteToHex(R.R8.renderedValue);
-    const scoreListRaw = R.R9.renderedValue;
+    const ergoTree = hexToBytes(R.R4?.renderedValue || "");
+    const commitmentHex = parseCollByteToHex(R.R5?.renderedValue);
+    const solverIdHex = parseCollByteToHex(R.R7?.renderedValue);
+    const hashLogsHex = parseCollByteToHex(R.R8?.renderedValue);
+    const scoreListRaw = R.R9?.renderedValue;
     const seedBytes = hexToBytes(seed)!;
 
     console.log(`Participation Box ID: ${p.boxId}`);

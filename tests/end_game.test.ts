@@ -55,7 +55,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
   const resolutionDeadline = mockChain.height + 100;
   const creatorStake = 2_000_000n;
   const participationFee = 100_000_000n;
-  const resolverCommissionPercent = 10;
+  const resolverCommissionPercent = 100000;
   const seed = "a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712";
 
 
@@ -249,7 +249,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -448,7 +448,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -617,7 +617,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     }, 0n);
 
 
-    let resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    let resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     let devCommission = (prizePool * 5n) / 100n;
     let winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -792,7 +792,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -863,7 +863,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -956,7 +956,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePoolWithoutBatch * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePoolWithoutBatch * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePoolWithoutBatch * 5n) / 100n;
     const winnerBasePrize = prizePoolWithoutBatch - resolverCommission - devCommission;
 
@@ -1051,7 +1051,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     // 4. Configurar la caja del juego para incluir a los jueces.
     gameResolutionContract.utxos.clear();
-    const perJudgeCommissionPercent = 5n;
+    const perJudgeCommissionPercent = 50000n;
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
     const judgesTokenIds = [judge1ReputationTokenId, judge2ReputationTokenId].map(id => Buffer.from(id, "hex"));
 
@@ -1112,7 +1112,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         return acc + (p.assets.find(a => a.tokenId === mode.token)?.amount || 0n);
       }
     }, 0n);
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const judgeCount = BigInt(judgesTokenIds.length);
 
@@ -1125,7 +1125,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission - devForfeits;
 
     // Fix: perJudgeCommissionPercent is PER JUDGE.
-    const totalJudgeCommission = (prizePool * perJudgeCommissionPercent * BigInt(judgeCount)) / 100n;
+    const totalJudgeCommission = (prizePool * perJudgeCommissionPercent * BigInt(judgeCount)) / 1000000n;
     const perJudgeCommission = totalJudgeCommission / judgeCount;
 
     // Judges forfeits (forfeit ALL if per-judge is dust)
@@ -1266,7 +1266,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (prizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (prizePool * 5n) / 100n;
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
@@ -1342,7 +1342,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       }
     }, 0n);
 
-    const resolverCommission = (partialPrizePool * BigInt(resolverCommissionPercent)) / 100n;
+    const resolverCommission = (partialPrizePool * BigInt(resolverCommissionPercent)) / 1000000n;
     const devCommission = (partialPrizePool * 5n) / 100n;
     const winnerBasePrize = partialPrizePool - resolverCommission - devCommission;
 

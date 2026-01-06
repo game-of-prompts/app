@@ -81,7 +81,7 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
         .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
         .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
-        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, DefaultGameConstants.DEV_COMMISSION_PERCENTAGE.toString())
+        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (DefaultGameConstants.DEV_COMMISSION_PERCENTAGE / 100 * DefaultGameConstants.COMMISSION_DENOMINATOR).toString())
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, DefaultGameConstants.PARTICIPATION_TYPE_ID)
         .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())

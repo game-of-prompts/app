@@ -373,10 +373,10 @@
       // Esta lógica ahora se aplica tanto si hay ganador como si no.
       
       // 1. Calcular payout para DEV
-      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 1000000L
       
       // 2. Calcular payout para los JUECES
-      val perJudgeComission = prizePool * perJudgeComissionPercentage / 100L
+      val perJudgeComission = prizePool * perJudgeComissionPercentage / 1000000L
       val totalJudgeComission = perJudgeComission * judge_amount
       
       // 3. Verificación de que el DEV recibe su pago
@@ -421,7 +421,7 @@
 
           if (validWinner) {
             val winnerPK = winnerBox.R4[Coll[Byte]].get
-            val resolverCommission = prizePool * creatorComissionPercentage / 100L
+            val resolverCommission = prizePool * creatorComissionPercentage / 1000000L
             
             // El premio se calcula restando los payouts finales (que ya consideran el polvo)
             val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission

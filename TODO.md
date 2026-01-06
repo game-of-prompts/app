@@ -111,15 +111,19 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Sin ERG mode.
 
-[] Token id del creador en lugar de web link
+[x] Token id del creador en lugar de web link
 
-[] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
+[x] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
 
 [] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
 
 [] Terminar Demo y agregar puntos de información en GameDetails
 
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
+
+[] Quitar contratos de reputacion y mejorar diseño de vista de juez.
+
+[] After create the game, the creator must verify it's game submitting a positive opinion about it (add an issue to submit it on the same tx or chained tx.)
 
 ====
 

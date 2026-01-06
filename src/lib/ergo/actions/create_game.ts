@@ -117,8 +117,8 @@ export async function create_game(
         deadlineBlock: deadlineBlock,
         creatorStakeAmount: creatorStakeAmount,
         participationFeeAmount: participationFeeAmount,
-        perJudgeCommissionPercentage: perJudgeComissionPercentage,
-        commissionPercentage: commissionPercentage,
+        perJudgeCommissionPercentage: Math.round(perJudgeComissionPercentage * 10000),
+        commissionPercentage: Math.round(commissionPercentage * 10000),
         gameDetailsBytes: gameDetailsBytes,
         participationTokenIdBytes: participationTokenIdBytes
     };
@@ -154,8 +154,8 @@ export async function create_game(
         BigInt(deadlineBlock),
         creatorStakeAmount,
         participationFeeAmount,
-        BigInt(perJudgeComissionPercentage),
-        BigInt(commissionPercentage)
+        BigInt(Math.round(perJudgeComissionPercentage * 10000)),
+        BigInt(Math.round(commissionPercentage * 10000))
     ]).toHex();
     const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
 
