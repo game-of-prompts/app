@@ -840,66 +840,64 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     }
 
                     const malformed = expired || wrong_commitment || max_scores_exceeded;
-                    if (malformed && !spent) {
-                        const reason = await (async (): Promise<MalformedParticipationReason> => {
-                            if (expired) return "expired";
-                            if (wrong_commitment) return "wrongcommitment";
-                            if (max_scores_exceeded) return "maxscores";
-                            return "unknown";
-                        })();
+                    const malformedReason: MalformedParticipationReason | undefined = malformed
+                        ? (expired ? "expired" : wrong_commitment ? "wrongcommitment" : max_scores_exceeded ? "maxscores" : "unknown")
+                        : undefined;
+
+                    if (malformed) {
+                        // Malformed participations are tracked regardless of spent status
                         participations.push({
                             ...p_base,
                             status: 'Malformed',
                             spent,
+                            reason: malformedReason!
+                        });
+                    } else if (spent) {
+                        // Valid participation that was spent
+                        const reason = await (async (): Promise<ParticipationConsumedReason> => {
+                            if (game.status === GameState.Active) return "byparticipant";
+
+                            if (game.status === GameState.Resolution) {
+                                // Check if a majority of nominated judges have invalidated this participation
+                                const nominatedJudges = (game as GameResolution).judges;
+                                const invalidationVotes = p_base.reputationOpinions.filter(
+                                    (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.polarization === false
+                                );
+                                const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
+                                if (invalidated) {
+                                    return "invalidated";
+                                }
+                                else {
+                                    return "batched";
+                                }
+                            }
+
+                            if (game.status === GameState.Cancelled_Draining) return "cancelled";
+
+                            if (game.status === GameState.Finalized) {
+                                const spentTx = await getTransactionInfo((box as any).spentTransactionId!);
+                                if (!spentTx) return "unknown";
+
+                                if (spentTx.inclusionHeight < (game as GameFinalized).judgeFinalizationBlock) return "invalidated";
+                                if (spentTx.inclusionHeight < (game as GameFinalized).winnerFinalizationDeadline) return "bywinner";
+                                return "abandoned";  // In case the winner doesn't take it.
+                            }
+
+                            return "unknown";
+                        })();
+                        participations.push({
+                            ...p_base,
+                            status: 'Consumed',
+                            spent,
                             reason
                         });
                     } else {
-                        if (spent) {
-                            const reason = await (async (): Promise<ParticipationConsumedReason> => {
-
-                                if (game.status === GameState.Active) return "byparticipant";
-
-                                if (game.status === GameState.Resolution) {
-                                    // Check if a majority of nominated judges have invalidated this participation
-                                    const nominatedJudges = (game as GameResolution).judges;
-                                    const invalidationVotes = p_base.reputationOpinions.filter(
-                                        (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.polarization === false
-                                    );
-                                    const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
-                                    if (invalidated) {
-                                        return "invalidated";
-                                    }
-                                    else {
-                                        return "batched";
-                                    }
-                                }
-
-                                if (game.status === GameState.Cancelled_Draining) return "cancelled";
-
-                                if (game.status === GameState.Finalized) {
-                                    const spentTx = await getTransactionInfo((box as any).spentTransactionId!);
-                                    if (!spentTx) return "unknown";
-
-                                    if (spentTx.inclusionHeight < (game as GameFinalized).judgeFinalizationBlock) return "invalidated";
-                                    if (spentTx.inclusionHeight < (game as GameFinalized).winnerFinalizationDeadline) return "bywinner";
-                                    return "abandoned";  // In case the winner doesn't take it.
-                                }
-
-                                return "unknown";
-                            })();
-                            participations.push({
-                                ...p_base,
-                                status: 'Consumed',
-                                spent,
-                                reason
-                            });
-                        } else {
-                            participations.push({
-                                ...p_base,
-                                status: 'Submitted',
-                                spent
-                            });
-                        }
+                        // Valid, unspent participation
+                        participations.push({
+                            ...p_base,
+                            status: 'Submitted',
+                            spent
+                        });
                     }
                 }
             }

@@ -204,7 +204,7 @@ export interface ValidParticipation extends ParticipationBase {
 export type MalformedParticipationReason = "expired" | "wrongcommitment" | "maxscores" | "unknown";
 export interface MalformedParticipation extends ParticipationBase {
     status: 'Malformed';
-    spent: false;
+    spent: boolean;
     reason: MalformedParticipationReason;
 }
 
@@ -212,7 +212,8 @@ export type ParticipationConsumedReason = "cancelled" | "invalidated" | "bywinne
 export interface ParticipationConsumed extends ParticipationBase {
     status: 'Consumed';
     spent: true;
-    reason: ParticipationConsumedReason
+    reason: ParticipationConsumedReason;
+    malformedReason?: MalformedParticipationReason;
 }
 
 // =================================================================
