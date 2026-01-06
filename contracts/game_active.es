@@ -74,11 +74,7 @@
   val isBeforeDeadline = HEIGHT < deadline
 
   val box_value = { (box: Box) =>
-    if (participationTokenId == Coll[Byte]()) {
-      box.value
-    } else {
-      box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
-    }
+    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
   }
 
   // =================================================================
@@ -203,17 +199,7 @@
 
       // Calcular los valores iniciales.
       val initialStakePortionToClaim = creatorStake / STAKE_DENOMINATOR
-      val initialRemainingStake = creatorStake - initialStakePortionToClaim
-
-      val remainingStake = if (participationTokenId == Coll[Byte]()) {
-        if (initialRemainingStake < MIN_BOX_VALUE) {
-          MIN_BOX_VALUE
-        } else {
-          initialRemainingStake
-        }
-      } else {
-        initialRemainingStake
-      }
+      val remainingStake = creatorStake - initialStakePortionToClaim
 
       // --- Validar la caja de cancelación (OUTPUTS(0)) ---
       val cancellationBoxIsValid = {

@@ -18,11 +18,7 @@
   // =================================================================
 
   val box_value = { (box: Box) =>
-    if (participationTokenId == Coll[Byte]()) {
-      box.value
-    } else {
-      box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
-    }
+    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
   }
 
   // =================================================================
@@ -90,7 +86,7 @@
         amountOk
       }
 
-      // 5) comprobación total (opcional, por seguridad contable)
+      // 5) comprobación total (opcional, por seguridad contable) 
       // En este contrato, SELF se consume, por lo que el total recibido por los jueces debe ser al menos el valor de SELF (menos posibles restos de división si no es exacta, pero aquí dividimos enteros)
       // Nota: perJudgeComission * judge_amount puede ser <= total_funds debido al redondeo hacia abajo.
       // El remanente se lo puede quedar el que ejecuta la tx (minero/ejecutor) o quemarse.

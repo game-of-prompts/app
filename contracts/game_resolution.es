@@ -63,18 +63,10 @@
   val isAfterResolutionDeadline = HEIGHT >= resolutionDeadline
   val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline
 
-  val min_value = if (participationTokenId == Coll[Byte]()) {
-    MIN_ERG_BOX
-  } else {
-    0L
-  }
+  val min_value = 0L
 
   val box_value = { (box: Box) =>
-    if (participationTokenId == Coll[Byte]()) {
-      box.value
-    } else {
-      box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
-    }
+    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
   }
 
   val getScoreFromBox = { (box: Box) =>
@@ -379,32 +371,28 @@
 
       // --- LÓGICA DE PAGO A JUECES Y DEV ---
       // Esta lógica ahora se aplica tanto si hay ganador como si no.
-      val perJudgeComission = prizePool * perJudgeComissionPercentage / 100L
-      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
-
-      // 1. Calcular payout final para el DEV (manejando polvo)
-      val devForfeits = if (devCommission < min_value && devCommission > 0L) { devCommission } else { 0L }
-      val finalDevPayout = devCommission - devForfeits
       
-      // 2. Calcular payout final para los JUECES (manejando polvo)
+      // 1. Calcular payout para DEV
+      val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 100L
+      
+      // 2. Calcular payout para los JUECES
+      val perJudgeComission = prizePool * perJudgeComissionPercentage / 100L
       val totalJudgeComission = perJudgeComission * judge_amount
-      val judgesForfeits = if (perJudgeComission < min_value && perJudgeComission > 0L) { totalJudgeComission } else { 0L } // Si el pago por juez es polvo, se pierde TODA la comisión.
-      val finalJudgesPayout = totalJudgeComission - judgesForfeits
       
       // 3. Verificación de que el DEV recibe su pago
-      val devGetsPaid = if (finalDevPayout > 0L) {
+      val devGetsPaid = if (devCommission > 0L) {
           val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
           val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == DEV_SCRIPT}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
           val addedValue = outputVal - inputVal
-          addedValue >= finalDevPayout
+          addedValue >= devCommission
       } else { true }
       
       // 4. Verificación de que los JUECES reciben su pago (enviando a judges_paid.es)
-      val judgesGetsPaid = if (finalJudgesPayout > 0L) {
+      val judgesGetsPaid = if (totalJudgeComission > 0L) {
           val judgesPaidBox = OUTPUTS.filter({(b:Box) => b.propositionBytes == JUDGES_PAID_ERGOTREE})
           if (judgesPaidBox.size == 1) {
              val box = judgesPaidBox(0)
-             val correctValue = box_value(box) >= finalJudgesPayout
+             val correctValue = box_value(box) >= totalJudgeComission
              val correctR4 = box.R4[Coll[Coll[Byte]]].get == participatingJudges
              val correctR5 = box.R5[Coll[Byte]].get == participationTokenId
              correctValue && correctR4 && correctR5
@@ -436,14 +424,14 @@
             val resolverCommission = prizePool * creatorComissionPercentage / 100L
             
             // El premio se calcula restando los payouts finales (que ya consideran el polvo)
-            val tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayout - finalDevPayout
+            val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission
 
             // Lógica para asegurar que el ganador no reciba menos que la tarifa de participación (evitar pérdida neta)
             // Si el premio tentativo es menor, eliminamos todas las comisiones (dev, jueces, resolver) y el ganador recibe el prizePool completo
             val adjustedWinnerPrize = if (tentativeWinnerPrize < participationFee) prizePool else tentativeWinnerPrize
             val adjustedResolverCommission = if (tentativeWinnerPrize < participationFee) 0L else resolverCommission
-            val adjustedDevPayout = if (tentativeWinnerPrize < participationFee) 0L else finalDevPayout
-            val adjustedJudgesPayout = if (tentativeWinnerPrize < participationFee) 0L else finalJudgesPayout
+            val adjustedDevPayout = if (tentativeWinnerPrize < participationFee) 0L else devCommission
+            val adjustedJudgesPayout = if (tentativeWinnerPrize < participationFee) 0L else totalJudgeComission
             val adjustedPerJudge = if (tentativeWinnerPrize < participationFee) 0L else perJudgeComission
 
             /*
@@ -463,7 +451,7 @@
 
             // Verificación de la salida del ganador
             val winnerGetsPaid = {
-                val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+                val txFee = 0L
                 val amount = adjustedWinnerPrize - txFee
                 val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
                 val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
@@ -500,10 +488,10 @@
         
         // Las comisiones de dev y jueces ya se han calculado y validado fuera.
         // El resolutor se lleva todo lo demás.
-        val finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout
+        val finalResolverPayout = totalValue - devCommission - totalJudgeComission
 
         val resolverGetsPaid = {
-            val txFee = if (participationTokenId == Coll[Byte]()) { 10000000L } else { 0L }
+            val txFee = 0L
             val amount = finalResolverPayout - txFee
             val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
             val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })

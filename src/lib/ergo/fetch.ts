@@ -224,7 +224,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             participationFeeAmount, // From R8
             participationTokenId: participationTokenId || "", // From R9
             content, // From R9
-            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
+            value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
             reputation: 0,
@@ -364,7 +364,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             resolverPK_Hex,
             resolverScript_Hex,
             content,
-            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
+            value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
             resolverCommission: Number(creatorComissionPercentage), // Added from R8
@@ -500,7 +500,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             content,
             participationFeeAmount,
             participationTokenId: participationTokenId ?? "",
-            value: BigInt((participationTokenId && box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount) || box.value),
+            value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
             deadlineBlock: originalDeadline,
@@ -750,12 +750,9 @@ async function _parseParticipationBox(box: any, participationTokenId: string): P
 
         const playerPK_Hex = playerScript_Hex.slice(0, 6) == "0008cd" ? playerScript_Hex.slice(6, playerScript_Hex.length) : null
 
-        const participation_value =
-            participationTokenId === ""
-                ? BigInt(box.value)
-                : BigInt(
-                    box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount ?? 0
-                );
+        const participation_value = BigInt(
+            box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount ?? 0
+        );
 
         const participationBase: ParticipationBase = {
             boxId: box.boxId,

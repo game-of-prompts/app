@@ -157,9 +157,7 @@
                         if (r6Opt.isDefined) r6Opt.get == gameNftIdInSelf else false
                     } else { false }
                 }).fold(0L, { (acc: Long, box: Box) =>
-                    val boxValue = if (participationTokenId == Coll[Byte]()) {
-                        box.value
-                    } else {
+                    val boxValue = {
                         val t = box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }
                         if (t.size > 0) t(0)._2 else 0L
                     }
@@ -167,9 +165,7 @@
                 })
                 
                 val targetBox = targetBoxes(0)
-                val outputValue = if (participationTokenId == Coll[Byte]()) {
-                    targetBox.value
-                } else {
+                val outputValue = {
                     val t = targetBox.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }
                     if (t.size > 0) t(0)._2 else 0L
                 }

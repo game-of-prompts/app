@@ -22,10 +22,9 @@ const ERG_BASE_TOKEN_NAME = "ERG";
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
 
-const SAFE_BOX_VALUE = 2_000_000n; 
+const SAFE_BOX_VALUE = 2_000_000n;
 
 const baseModes = [
-    { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
     { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
 ];
 
@@ -54,7 +53,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
         const unlockHeight = mockChain.height - 1;
 
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? initialCancelledStake : SAFE_BOX_VALUE;
-        
+
         const gameAssets = [
             { tokenId: gameNftId, amount: 1n },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: initialCancelledStake }] : [])
@@ -131,7 +130,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
         expect(newCancellationBoxes).to.have.length(1);
 
         const newCancellationBox = newCancellationBoxes[0];
-        
+
         if (mode.token === ERG_BASE_TOKEN) {
             expect(newCancellationBox.value).to.equal(remainingStake);
         } else {
@@ -139,7 +138,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
             expect(newCancellationBox.assets[1].tokenId).to.equal(mode.token);
             expect(newCancellationBox.assets[1].amount).to.equal(remainingStake);
         }
-        
+
         expect(newCancellationBox.assets[0].tokenId).to.equal(gameNftId);
         expect(newCancellationBox.additionalRegisters.R5).to.equal(SLong(newUnlockHeight).toHex());
         expect(newCancellationBox.additionalRegisters.R7).to.equal(SLong(remainingStake).toHex());
@@ -157,7 +156,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
         // --- Arrange ---
         const futureUnlockHeight = mockChain.height + 10;
         gameCancellationContract.utxos.clear();
-        
+
         const futureGameBoxValue = mode.token === ERG_BASE_TOKEN ? initialCancelledStake : SAFE_BOX_VALUE;
         const futureGameAssets = [
             { tokenId: gameNftId, amount: 1n },
@@ -187,7 +186,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
             .from([futureLockedBox, ...claimer.utxos.toArray()])
             // FIX: Reducir la cantidad de salida para tener suficiente para la fee.
             // Tenías 1_000_000_000n (Todo el balance) + Fee > Balance.
-            .to([new OutputBuilder(100_000_000n, claimer.address)]) 
+            .to([new OutputBuilder(100_000_000n, claimer.address)])
             .sendChangeTo(claimer.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();

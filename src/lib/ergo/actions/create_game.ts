@@ -4,8 +4,9 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder,
     ErgoAddress,
-    type InputBox,
-    BOX_VALUE_PER_BYTE
+    BOX_VALUE_PER_BYTE,
+    type Box,
+    type Amount
 } from '@fleet-sdk/core';
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
 declare const ergo: any;
@@ -50,7 +51,7 @@ export async function create_game(
     judges: string[],
     gameDetailsJson: string,
     perJudgeComissionPercentage: number,
-    participationTokenId: string = ""
+    participationTokenId: string
 ): Promise<string | null> {
 
     const seedHex = randomSeed();
@@ -75,7 +76,7 @@ export async function create_game(
         throw new Error(`Could not extract the public key from the address ${creatorAddressString}.`);
     }
 
-    const inputs: InputBox[] = await ergo.get_utxos();
+    const inputs: Box<Amount>[] = await ergo.get_utxos();
     if (!inputs || inputs.length === 0) {
         throw new Error("No UTXOs found in the wallet to create the game.");
     }
@@ -169,7 +170,7 @@ export async function create_game(
 
     const creationHeight = await ergo.get_current_height();
 
-    const gameTokens = participationTokenId == "" ? [] : [{
+    const gameTokens = [{
         tokenId: participationTokenId,
         amount: creatorStakeAmount
     }];
@@ -177,18 +178,9 @@ export async function create_game(
     // Use the maximum size to determine the safe minimum value
     const minRequiredValue = BigInt(sizeResult.maxSize) * BOX_VALUE_PER_BYTE;
 
-    let gameValue: bigint;
-    if (participationTokenId == "") {
-        // ERG Mode
-        if (creatorStakeAmount < minRequiredValue) {
-            throw new Error(`The creator's stake (${creatorStakeAmount}) is less than the minimum required for box size (${minRequiredValue}).`);
-        }
-        gameValue = creatorStakeAmount;
-    } else {
-        // Token Mode
-        const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
-        gameValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
-    }
+    // Token Mode
+    const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
+    const gameValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
 
     const gameBoxOutput = new OutputBuilder(
         gameValue,

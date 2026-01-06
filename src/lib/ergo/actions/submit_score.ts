@@ -4,7 +4,8 @@ import {
     RECOMMENDED_MIN_FEE_VALUE,
     TransactionBuilder,
     ErgoAddress,
-    type InputBox
+    type Box,
+    type Amount
 } from '@fleet-sdk/core';
 import { SColl, SLong, SByte, SGroupElement } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils';
@@ -46,17 +47,11 @@ export async function submit_score(
         hashLogsHex
     });
 
-    if (participationTokenId == "" && participationFeeForBox < SAFE_MIN_BOX_VALUE) {
-        throw new Error(
-            `La tarifa de participación (${participationFeeForBox / 1000000000n} ERG) es menor que el valor mínimo requerido para una caja.`
-        );
-    }
-
-    const gameValue = participationTokenId == "" ? participationFeeForBox : SAFE_MIN_BOX_VALUE;
-    const gameTokens = participationTokenId == "" ? [] : [{
+    const gameValue = SAFE_MIN_BOX_VALUE;
+    const gameTokens = [{
         tokenId: participationTokenId,
         amount: participationFeeForBox
-    }];  
+    }];
 
     // 1. Obtener la clave pública del jugador desde la billetera
     const playerAddressString = await ergo.get_change_address();
@@ -70,7 +65,7 @@ export async function submit_score(
     }
 
     // 2. Obtener UTXOs del jugador para cubrir la tarifa
-    const inputs: InputBox[] = await ergo.get_utxos();
+    const inputs: Box<Amount>[] = await ergo.get_utxos();
     if (!inputs || inputs.length === 0) {
         throw new Error("No se encontraron UTXOs en la billetera. Asegúrate de tener fondos.");
     }
@@ -87,24 +82,24 @@ export async function submit_score(
 
     const gameNftId_bytes = hexToBytes(gameNftIdHex);
     if (!gameNftId_bytes) throw new Error("Fallo al convertir gameNftId a bytes.");
-    
+
     const hashLogs_bytes = hexToBytes(hashLogsHex);
     if (!hashLogs_bytes) throw new Error("Fallo al convertir hashLogs a bytes.");
 
     // 5. Construir la caja de salida (ParticipationBox)
     const participationBoxOutput = new OutputBuilder(
-        gameValue,
-        participationContractErgoTree
-    )
-    .addTokens(gameTokens)
-    .setAdditionalRegisters({
-        R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
-        R5: SColl(SByte, commitmentC_bytes).toHex(),
-        R6: SColl(SByte, gameNftId_bytes).toHex(),
-        R7: SColl(SByte, hexToBytes(solverIdString)!).toHex(),
-        R8: SColl(SByte, hashLogs_bytes).toHex(),
-        R9: SColl(SLong, scoreList).toHex()
-    });
+            gameValue,
+            participationContractErgoTree
+        )
+        .addTokens(gameTokens)
+        .setAdditionalRegisters({
+            R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
+            R5: SColl(SByte, commitmentC_bytes).toHex(),
+            R6: SColl(SByte, gameNftId_bytes).toHex(),
+            R7: SColl(SByte, hexToBytes(solverIdString)!).toHex(),
+            R8: SColl(SByte, hashLogs_bytes).toHex(),
+            R9: SColl(SLong, scoreList).toHex()
+        });
 
     // 6. Construir y firmar la transacción
     const creationHeight = await ergo.get_current_height();
@@ -114,7 +109,7 @@ export async function submit_score(
         .sendChangeTo(playerAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build();
-    
+
     const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     if (!signedTransaction) {
         throw new Error("El usuario canceló o falló la firma de la transacción.");

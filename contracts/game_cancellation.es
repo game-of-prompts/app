@@ -56,9 +56,7 @@
 
     val cooldownIsOver = HEIGHT >= unlockHeight
 
-    val recreatedValue = if(participationTokenId.size == 0) {
-      recreatedCancellationBox.value
-    } else {
+    val recreatedValue = {
       val matchingTokens = recreatedCancellationBox.tokens.filter { (token: (Coll[Byte], Long)) => 
         token._1 == participationTokenId
       }

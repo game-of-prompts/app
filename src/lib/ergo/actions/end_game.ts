@@ -10,6 +10,7 @@ import { parseBox, pkHexToBase58Address, hexToBytes } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
+declare const ergo: any;
 
 export async function end_game(
     game: GameResolution,
@@ -23,7 +24,7 @@ export async function end_game(
     const userAddress = await ergo.get_change_address();
 
     // --- 1. Detectar tipo de juego ---
-    const isTokenGame = !!game.participationTokenId;
+    const isTokenGame = true;
 
     // --- 2. Validaciones Previas ---
     if (currentHeight < game.resolutionDeadline) {
@@ -35,12 +36,12 @@ export async function end_game(
     let requiredSignerAddress: string;
 
     if (winnerParticipation === null) {
-        requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex);
+        requiredSignerAddress = pkHexToBase58Address(game.resolverPK_Hex || undefined);
         if (userAddress !== requiredSignerAddress) {
             throw new Error(`Invalid signature. Resolver (${requiredSignerAddress}) required.`);
         }
     } else {
-        requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex);
+        requiredSignerAddress = pkHexToBase58Address(winnerParticipation.playerPK_Hex || undefined);
         if (userAddress !== requiredSignerAddress) {
             throw new Error(`Invalid signature. Winner (${requiredSignerAddress}) required.`);
         }
@@ -49,11 +50,8 @@ export async function end_game(
     // --- 4. Lógica de Cálculo de Pagos ---
 
     // A. Balance del Contrato (Token o ERG)
-    let contractBalance = BigInt(game.box.value); // Valor base en ERG
-    if (isTokenGame) {
-        const asset = game.box.assets.find(a => a.tokenId == game.participationTokenId);
-        contractBalance = asset ? BigInt(asset.amount) : 0n;
-    }
+    const asset = game.box.assets.find(a => a.tokenId == game.participationTokenId);
+    const contractBalance = asset ? BigInt(asset.amount) : 0n;
 
     // B. Cálculo del Prize Pool
     const totalParticipations = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
@@ -73,16 +71,9 @@ export async function end_game(
 
     const perJudgeCommission = (prizePool * perJudgePct) / 100n;
     const totalJudgeCommission = perJudgeCommission * judge_count;
-    const dustLimit = isTokenGame ? 0n : SAFE_MIN_BOX_VALUE;
-
-    // Comisiones Jueces
-    const judgesForfeits = (perJudgeCommission > 0n && perJudgeCommission < dustLimit) ? totalJudgeCommission : 0n;
-    const finalJudgesPayoutTent = totalJudgeCommission - judgesForfeits;
 
     // Comisiones Dev
     const devCommission = (prizePool * BigInt(game.constants.DEV_COMMISSION_PERCENTAGE)) / 100n;
-    const devForfeits = (devCommission > 0n && devCommission < dustLimit) ? devCommission : 0n;
-    const finalDevPayoutTent = devCommission - devForfeits;
 
     let finalWinnerPrize = 0n;
     let finalResolverPayout = 0n;
@@ -94,8 +85,8 @@ export async function end_game(
         // --- CASO: NO HAY GANADOR ---
         const totalValue = prizePool + game.creatorStakeAmount;
 
-        finalDevPayout = finalDevPayoutTent;
-        finalJudgesPayout = finalJudgesPayoutTent;
+        finalDevPayout = devCommission;
+        finalJudgesPayout = totalJudgeCommission;
         finalPerJudge = perJudgeCommission;
         finalResolverPayout = totalValue - finalDevPayout - finalJudgesPayout;
 
@@ -105,14 +96,14 @@ export async function end_game(
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
 
         // Premio tentativo restando comisiones
-        const tentativeWinnerPrize = prizePool - resolverCommission - finalJudgesPayoutTent - finalDevPayoutTent;
+        const tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeCommission - devCommission;
         const participationFee = game.participationFeeAmount;
 
         console.log("--- WINNER SCENARIO DEBUG ---");
         console.log(`Participation Fee (Entry Cost): ${participationFee}`);
         console.log(`Tentative Winner Prize (After Comms): ${tentativeWinnerPrize}`);
         console.log(`Resolver Commission Tentative: ${resolverCommission}`);
-        console.log(`Dev Commission Tentative: ${finalDevPayoutTent}`);
+        console.log(`Dev Commission Tentative: ${devCommission}`);
 
         let adjustedWinnerPrize: bigint;
         let adjustedResolverComm: bigint;
@@ -135,8 +126,8 @@ export async function end_game(
             console.log("Normal payout: Prize covers fee.");
             adjustedWinnerPrize = tentativeWinnerPrize;
             adjustedResolverComm = resolverCommission;
-            adjustedDevPayout = finalDevPayoutTent;
-            adjustedJudgesPayout = finalJudgesPayoutTent;
+            adjustedDevPayout = devCommission;
+            adjustedJudgesPayout = totalJudgeCommission;
             adjustedPerJudge = perJudgeCommission;
         }
 
@@ -161,15 +152,9 @@ export async function end_game(
 
     // Helper para construir cajas (Maneja Token vs ERG)
     const buildOutput = (amount: bigint, script: string, other_tokens: any[] = []) => {
-        if (isTokenGame) {
-            // Token Game: Min ERG + Tokens
-            return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
-                .addTokens([...other_tokens, { tokenId: game.participationTokenId!, amount: amount }]);
-        } else {
-            // ERG Game: Amount en ERG
-            return new OutputBuilder(amount, script)
-                .addTokens(other_tokens);
-        }
+        // Token Game: Min ERG + Tokens
+        return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
+            .addTokens([...other_tokens, { tokenId: game.participationTokenId!, amount: amount }]);
     };
 
     if (winnerParticipation !== null && finalWinnerPrize > 0n) {
@@ -192,7 +177,7 @@ export async function end_game(
         const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
 
         const judgesTokenIdsBytes = game.judges.map(hexToBytes).filter(b => b !== null) as Uint8Array[];
-        const tokenBytes = isTokenGame ? (hexToBytes(game.participationTokenId) || new Uint8Array(0)) : new Uint8Array(0);
+        const tokenBytes = hexToBytes(game.participationTokenId) || new Uint8Array(0);
 
         const judgesPaidOutput = buildOutput(finalJudgesPayout, judgesPaidErgoTree)
             .setAdditionalRegisters({

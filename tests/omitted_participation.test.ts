@@ -19,15 +19,11 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
-import { DefaultGameConstants } from "$lib/common/constants";
 
-const ERG_BASE_TOKEN = "";
-const ERG_BASE_TOKEN_NAME = "ERG";
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
 
 const baseModes = [
-    { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
     { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
 ];
 
@@ -49,7 +45,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
 
     // --- Game State Variables ---
-    const resolutionDeadline = 800_000 + DefaultGameConstants.JUDGE_PERIOD;  // initial height + JUDGE_PERIOD
+    const resolutionDeadline = 800_000 + 100;  // initial height + 100 blocks
     const gameNftId = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22";
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
     const game_deadline = 700_700n;
@@ -64,8 +60,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     let omittedCommitment: Uint8Array;
 
     // Helper to create a commitment hash
-    const createCommitment = (solverId: string, score: bigint, logs: string, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
-        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...(hexToBytes(seed) || new Uint8Array(0)), ...bigintToLongByteArray(score), ...stringToBytes("utf8", logs), ...ergoTree, ...secret]));
+    const createCommitment = (solverId: string, score: bigint, logsHash: Uint8Array, ergoTree: Uint8Array, secret: Uint8Array): Uint8Array => {
+        return blake2b256(new Uint8Array([...stringToBytes("utf8", solverId), ...(hexToBytes(seed) || new Uint8Array(0)), ...bigintToLongByteArray(score), ...logsHash, ...ergoTree, ...secret]));
     };
 
     beforeEach(() => {
@@ -76,14 +72,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         currentWinnerPlayer = mockChain.newParty("CurrentWinner");
         omittedPlayer = mockChain.newParty("OmittedPlayer");
 
-        if (mode.token !== ERG_BASE_TOKEN) {
-            newResolver.addBalance({
-                tokens: [{ tokenId: mode.token, amount: 2_000_000_000n * 2n }],
-                nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
-            });
-        } else {
-            newResolver.addBalance({ nanoergs: RECOMMENDED_MIN_FEE_VALUE * 3n });
-        }
+        newResolver.addBalance({
+            tokens: [{ tokenId: mode.token, amount: 2_000_000_000n * 2n }],
+            nanoergs: 10_000_000_000n
+        });
 
         gameResolutionContract = mockChain.addParty(gameResolutionErgoTree.toHex(), "GameResolution");
         participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
@@ -106,15 +98,18 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const winnerErgotree = prependHexPrefix(currentWinnerPlayer.address.getPublicKeys()[0]);
         const omittedErgotree = prependHexPrefix(omittedPlayer.address.getPublicKeys()[0]);
 
-        winnerCommitment = createCommitment("solver-winner", winnerScore, "logs-winner", winnerErgotree, secret);
-        omittedCommitment = createCommitment("solver-omitted", omittedScore, "logs-omitted", omittedErgotree, secret);
+        const winnerLogsHash = blake2b256(stringToBytes("utf8", "logs-winner"));
+        const omittedLogsHash = blake2b256(stringToBytes("utf8", "logs-omitted"));
 
-        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+        winnerCommitment = createCommitment("solver-winner", winnerScore, winnerLogsHash, winnerErgotree, secret);
+        omittedCommitment = createCommitment("solver-omitted", omittedScore, omittedLogsHash, omittedErgotree, secret);
 
-        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? 2_000_000_000n : RECOMMENDED_MIN_FEE_VALUE;
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
+
+        const gameBoxValue = RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
             { tokenId: gameNftId, amount: 1n },
-            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: 2_000_000_000n }] : [])
+            { tokenId: mode.token, amount: 2_000_000_000n }
         ];
 
         gameResolutionContract.addUTxOs({
@@ -143,14 +138,14 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                     numericalParams[1],         // creatorStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    20n,                        // creatorComissionPercentage
-                    BigInt(numericalParams[4])  // resolutionDeadline
+                    numericalParams[4],         // creatorComissionPercentage
+                    BigInt(numericalParams[5])  // resolutionDeadline
                 ]).toHex(),
 
                 // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                    // script del creador original
+                    stringToBytes("utf8", "{}"),
+                    hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                     prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                 ]).toHex()
             }
@@ -158,10 +153,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
         gameResolutionBox = gameResolutionContract.utxos.toArray()[0];
 
-        const participationValue = mode.token === ERG_BASE_TOKEN ? 1_000_000n : RECOMMENDED_MIN_FEE_VALUE;
-        const participationAssets = mode.token === ERG_BASE_TOKEN
-            ? []
-            : [{ tokenId: mode.token, amount: 1_000_000n }];
+        const participationValue = RECOMMENDED_MIN_FEE_VALUE;
+        const participationAssets = [{ tokenId: mode.token, amount: 1_000_000n }];
 
         participationContract.addUTxOs({
             ergoTree: participationErgoTree.toHex(),
@@ -171,9 +164,9 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             additionalRegisters: {
                 R4: SColl(SByte, winnerErgotree).toHex(),
                 R5: SColl(SByte, winnerCommitment).toHex(),
-                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
+                R6: SColl(SByte, hexToBytes(gameNftId) ?? new Uint8Array(0)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-winner")).toHex(),
+                R8: SColl(SByte, winnerLogsHash).toHex(),
                 R9: SColl(SLong, [winnerScore]).toHex(),
             }
         });
@@ -187,9 +180,9 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             additionalRegisters: {
                 R4: SColl(SByte, omittedErgotree).toHex(),
                 R5: SColl(SByte, omittedCommitment).toHex(),
-                R6: SColl(SByte, stringToBytes("hex", gameNftId)).toHex(),
+                R6: SColl(SByte, hexToBytes(gameNftId) ?? new Uint8Array(0)).toHex(),
                 R7: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex(),
-                R8: SColl(SByte, stringToBytes("utf8", "logs-omitted")).toHex(),
+                R8: SColl(SByte, omittedLogsHash).toHex(),
                 R9: SColl(SLong, [omittedScore, ...omittedScores]).toHex(),
             }
         });
@@ -201,14 +194,14 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Must maintain the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            20n,                               // creatorComissionPercentage
-            BigInt(updatedNumericalParams[4])  // resolutionDeadline
+            updatedNumericalParams[4],         // creatorComissionPercentage
+            BigInt(updatedNumericalParams[5])  // resolutionDeadline
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -226,8 +219,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                            // script del creador original
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
@@ -248,7 +241,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Fails if not maintains the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -268,12 +261,12 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             updatedNumericalParams[1],         // creatorStake
                             updatedNumericalParams[2],         // participationFee
                             updatedNumericalParams[3],         // perJudgeCommissionPercent
-                            20n,                        // creatorComissionPercentage (nuevo)
-                            BigInt(updatedNumericalParams[4])  // resolutionDeadline
+                            updatedNumericalParams[4],         // creatorComissionPercentage
+                            BigInt(updatedNumericalParams[5])  // resolutionDeadline
                         ]).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                            // script del creador original
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
@@ -290,14 +283,14 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, 20n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            20n,                        // creatorComissionPercentage (nuevo)
-            BigInt(updatedNumericalParams[4])  // resolutionDeadline
+            updatedNumericalParams[4],         // creatorComissionPercentage
+            BigInt(updatedNumericalParams[5])  // resolutionDeadline
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -315,8 +308,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                            // script del creador original
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
@@ -363,8 +356,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                            // script del creador original
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
@@ -407,8 +400,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                            // script del creador original
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
@@ -459,10 +452,9 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
                 R8: SColl(SLong, updatedNumericalParams).toHex(),
 
-                // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                 R9: SColl(SColl(SByte), [
-                    stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                    // script del creador original
+                    stringToBytes("utf8", "{}"),
+                    hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                     prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                 ]).toHex()
             }
@@ -514,8 +506,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
                             // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
                             R9: SColl(SColl(SByte), [
-                                stringToBytes("utf8", "{}"), "",                               // detalles del juego (JSON/Hex)
-                                // script del creador original
+                                stringToBytes("utf8", "{}"),
+                                hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                                 prependHexPrefix(newResolver.key.publicKey, "0008cd")  // script del resolvedor
                             ]).toHex()
                         })
@@ -560,8 +552,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",
-
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -609,7 +601,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -653,6 +646,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
@@ -757,6 +751,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
@@ -799,6 +794,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
@@ -857,6 +853,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
 
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
@@ -918,7 +915,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
-
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -961,7 +958,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
-
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -1000,7 +997,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
-
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -1039,8 +1036,9 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
-                            stringToBytes("utf8", "{}"), "",
-
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
+                            hexToBytes(mode.token) ?? new Uint8Array(0),
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })
@@ -1084,7 +1082,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
-
+                            hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
                             prependHexPrefix(newResolver.key.publicKey, "0008cd")
                         ]).toHex()
                     })

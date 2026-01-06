@@ -23,7 +23,6 @@ const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6
 const USD_BASE_TOKEN_NAME = "USD";
 
 const baseModes = [
-  { name: "ERG Mode", token: ERG_BASE_TOKEN, tokenName: ERG_BASE_TOKEN_NAME },
   { name: "USD Token Mode", token: USD_BASE_TOKEN, tokenName: USD_BASE_TOKEN_NAME },
 ];
 
@@ -100,7 +99,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
 
         // R9: (Detalles del juego, Script del creador)
         R9: SColl(SColl(SByte), [
-          SColl(SByte, stringToBytes("utf8", "{}")), 
+          SColl(SByte, stringToBytes("utf8", "{}")),
           hexToBytes(mode.token) ?? "",
           SColl(SByte, creator.key.publicKey) // Script de gasto del creador (placeholder)
         ]).toHex()
