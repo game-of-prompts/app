@@ -109,13 +109,13 @@ La respuesta es que no, el creador todavía debe obtener la parte del ganador, p
 De esta forma se permite gastar la caja de resolución tanto con participaciones como con lotes de participaciones.
 Teoricamente se permite un numero ilimitado de participaciones.
 
-[] Sin ERG mode.
-
-[] Intentar optimizar el tamaño de game_resolution.es o bien extraer la acción end game a un contrato end_game.es
+[x] Sin ERG mode.
 
 [] Token id del creador en lugar de web link
 
 [] Permitir comisiones menores al 1%.  El Long puede representar porcentaje en base a 1000000 en lugar de 100.
+
+[] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
 
 [] Terminar Demo y agregar puntos de información en GameDetails
 
