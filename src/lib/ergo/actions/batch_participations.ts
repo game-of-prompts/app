@@ -2,10 +2,9 @@ import {
     OutputBuilder,
     TransactionBuilder,
     type Box,
-    type Amount,
-    SColl,
-    SByte
+    type Amount
 } from "@fleet-sdk/core";
+import { SColl, SByte } from '@fleet-sdk/serializer';
 import { type GameResolution, type ValidParticipation } from "$lib/common/game";
 import { getGopParticipationBatchErgoTreeHex } from "../contract";
 import { hexToBytes, parseBox } from "../utils";
@@ -65,8 +64,8 @@ export async function batch_participations(
         totalNanoErgs,
         batchScript
     ).setAdditionalRegisters({
-        R4: SColl(SByte, hexToBytes("")!).toHex(),
-        R5: SColl(SByte, hexToBytes("")!).toHex(),
+        R4: SColl(SByte, hexToBytes("00")!).toHex(),
+        R5: SColl(SByte, hexToBytes("00")!).toHex(),
         R6: SColl(SByte, hexToBytes(game.gameId)!).toHex()
     });
 
