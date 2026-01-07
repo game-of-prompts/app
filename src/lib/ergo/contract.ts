@@ -13,6 +13,7 @@ import JUDGES_PAID_SOURCE from '../../../contracts/judges_paid.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import PARTICIPATION_BATCH_SOURCE from '../../../contracts/participation_batch.es?raw';
+import END_GAME_SOURCE from '../../../contracts/end_game.es?raw';
 import { reputation_proof_contract as REPUTATION_PROOF_SOURCE } from "reputation-system";
 import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-system";
 
@@ -28,6 +29,7 @@ let _judgesPaid: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: stri
 let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participationBatch: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _endGame: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS
@@ -44,6 +46,28 @@ function ensureParticipationBatchCompiled(): void {
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash);
 
     _participationBatch.ergoTree = compile(finalBatchSource, { version: ergoTreeVersion });
+}
+
+function ensureEndGameCompiled(): void {
+    if (_endGame.ergoTree) return;
+    ensureParticipationCompiled();
+    ensureParticipationBatchCompiled();
+    ensureJudgesPaidCompiled();
+
+    const participationHash = getGopParticipationScriptHash();
+    const participationBatchHash = getGopParticipationBatchScriptHash();
+    const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
+
+    let source = END_GAME_SOURCE
+        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
+        .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
+        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (DefaultGameConstants.DEV_COMMISSION_PERCENTAGE / 100 * DefaultGameConstants.COMMISSION_DENOMINATOR).toString())
+        .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree)
+        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+        .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash)
+        .replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, participationBatchHash);
+
+    _endGame.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
 function ensureParticipationCompiled(): void {
@@ -73,10 +97,12 @@ function ensureGameResolutionCompiled(): void {
     const reputationHash = getReputationProofScriptHash();
     const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
     const batchHash = getGopParticipationBatchScriptHash();
+    const endGameHash = getGopEndGameScriptHash();
 
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, batchHash)
+        .replace(/`\+END_GAME_SCRIPT_HASH\+`/g, endGameHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
         .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
         .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
@@ -193,6 +219,13 @@ export const getGopParticipationBatchScriptHash = () => getScriptHash(_participa
 export function getGopParticipationBatchAddress(): Address { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!.toAddress(networkType); }
 export function getGopParticipationBatchErgoTreeHex(): string { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!.toHex(); }
 export function getGopParticipationBatchErgoTree(): ErgoTree { ensureParticipationBatchCompiled(); return _participationBatch.ergoTree!; }
+
+// --- End Game ---
+export const getGopEndGameTemplateHash = () => getTemplateHash(_endGame, ensureEndGameCompiled);
+export const getGopEndGameScriptHash = () => getScriptHash(_endGame, ensureEndGameCompiled);
+export function getGopEndGameAddress(): Address { ensureEndGameCompiled(); return _endGame.ergoTree!.toAddress(networkType); }
+export function getGopEndGameErgoTreeHex(): string { ensureEndGameCompiled(); return _endGame.ergoTree!.toHex(); }
+export function getGopEndGameErgoTree(): ErgoTree { ensureEndGameCompiled(); return _endGame.ergoTree!; }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

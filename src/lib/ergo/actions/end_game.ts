@@ -7,13 +7,13 @@ import {
 import { SColl, SByte } from '@fleet-sdk/serializer';
 import { getGopJudgesPaidErgoTreeHex } from '../contract';
 import { parseBox, pkHexToBase58Address, hexToBytes } from '$lib/ergo/utils';
-import { type GameResolution, type ValidParticipation } from '$lib/common/game';
+import { type GameEndGame, type ValidParticipation } from '$lib/common/game';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
 declare const ergo: any;
 
 export async function end_game(
-    game: GameResolution,
+    game: GameEndGame,
     participations: ValidParticipation[]
 ): Promise<string> {
 
@@ -27,9 +27,18 @@ export async function end_game(
     const isTokenGame = true;
 
     // --- 2. Validaciones Previas ---
-    if (currentHeight < game.resolutionDeadline) {
-        throw new Error("The resolution period has not yet ended.");
-    }
+    // --- 2. Validaciones Previas ---
+    // En EndGame, ya estamos después del resolutionDeadline (o en él), pero el script end_game.es
+    // tiene un periodo de gracia para la autorización (END_GAME_AUTH_GRACE_PERIOD).
+    // Sin embargo, la lógica de "resolution period has not yet ended" ya no aplica igual
+    // porque ya estamos en el script de fin de juego.
+    // El script end_game.es permite gastar inmediatamente si se cumplen las condiciones de firma.
+
+    // if (currentHeight < game.resolutionDeadline) {
+    //    throw new Error("The resolution period has not yet ended.");
+    // }
+    // Comentamos esto porque al estar en EndGame, ya pasamos la deadline de resolución (implícitamente,
+    // porque game_resolution.es solo permite pasar a EndGame después de resolutionDeadline).
     const winnerParticipation = participations.find(p => p.commitmentC_Hex === game.winnerCandidateCommitment) ?? null;
 
     // --- 3. Verificación de firma ---
