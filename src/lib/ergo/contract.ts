@@ -13,8 +13,8 @@ import JUDGES_PAID_SOURCE from '../../../contracts/judges_paid.es?raw';
 import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?raw';
 import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import PARTICIPATION_BATCH_SOURCE from '../../../contracts/participation_batch.es?raw';
-import REPUTATION_PROOF_SOURCE from '../../../contracts/reputation_system/reputation_proof.es?raw';
-import DIGITAL_PUBLIC_GOOD_SCRIPT from '../../../contracts/reputation_system/digital_public_good.es?raw';
+import { reputation_proof_contract as REPUTATION_PROOF_SOURCE } from "reputation-system";
+import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-system";
 
 import { DefaultGameConstants } from "$lib/common/constants";
 
