@@ -52,7 +52,6 @@ export interface GameContent {
     creatorTokenId?: string;
     paper?: string; // Blake2b256 hash of the detailed game description markdown file
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
-    creatorReputationProof?: string;
 }
 
 // =================================================================
@@ -269,43 +268,6 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
     const remainingStake = game.participationTokenId !== "" || (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
 
     return unlocked && remainingStake;
-}
-
-/**
- * Parsea los detalles del contenido de un juego a partir de un string JSON.
- */
-export function parseGameContent(
-    rawJsonDetails: string | undefined | null,
-    gameBoxId: string,
-    nft?: TokenEIP4
-): GameContent {
-    const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
-    const defaultDescription = nft?.description || "No description provided.";
-    let content: GameContent = {
-        rawJsonString: rawJsonDetails || "{}",
-        title: defaultTitle,
-        description: defaultDescription,
-        serviceId: ""
-    };
-
-    if (rawJsonDetails) {
-        try {
-            const parsed = JSON.parse(rawJsonDetails);
-            content = {
-                ...content,
-                title: parsed.title || defaultTitle,
-                description: parsed.description || defaultDescription,
-                serviceId: parsed.serviceId || "",
-                imageURL: parsed.imageURL || parsed.image || undefined,
-                creatorTokenId: parsed.creatorTokenId || parsed.webLink || parsed.link || undefined,
-                paper: parsed.paper || undefined,
-            };
-        } catch (error) {
-            console.warn(`Error al parsear rawJsonDetails para el juego ${gameBoxId}. Usando valores por defecto. Error: ${error}`);
-        }
-    }
-
-    return content;
 }
 
 export function resolve_participation_commitment(p: AnyParticipation, secretHex: string, seed: string): bigint | null {

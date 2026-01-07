@@ -177,7 +177,7 @@ export function parseBox(e: Box<Amount>): InputBox {
  * @returns El objeto GameContent parseado.
  */
 export function parseGameContent(
-    rawJsonDetails: string | undefined | null,
+    rawJsonDetails: string | null,
     gameBoxId: string,
     nft?: TokenEIP4
 ): GameContent {
@@ -186,7 +186,7 @@ export function parseGameContent(
         `${base}/img1.png`,
         `${base}/img2.png`,
         `${base}/img3.png`,
-    ][rawJsonDetails?.length % 3];
+    ][(rawJsonDetails?.length ?? 0) % 3];
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
     let content: GameContent = {
@@ -206,7 +206,7 @@ export function parseGameContent(
                 serviceId: parsed.serviceId || "",
                 image: parsed.image || undefined,
                 imageURL: defaultImageUrl,
-                webLink: parsed.webLink || parsed.link || undefined,
+                creatorTokenId: parsed.creatorTokenId || undefined,
                 paper: parsed.paper || undefined,
                 indetermismIndex: parsed.indetermismIndex || undefined,
             };
