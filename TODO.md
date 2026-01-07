@@ -127,6 +127,8 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Quitar contratos de reputacion y mejorar diseño de vista de juez.
 
+[] 
+
 ====
 
 
