@@ -1233,6 +1233,28 @@
                                 game.content.description ||
                                     "No description available.",
                             )}
+
+                            {#if paperContent}
+                                <div
+                                    class="mt-6 p-6 rounded-lg bg-background border border-border"
+                                >
+                                    <h3
+                                        class="text-lg font-semibold mb-4 flex items-center gap-2"
+                                    >
+                                        <FileText
+                                            class="w-5 h-5 text-amber-500"
+                                        />
+                                        Paper Content
+                                    </h3>
+                                    <div
+                                        class="prose prose-sm {$mode === 'dark'
+                                            ? 'prose-invert'
+                                            : ''} max-w-none"
+                                    >
+                                        {@html marked.parse(paperContent)}
+                                    </div>
+                                </div>
+                            {/if}
                         </div>
 
                         <div class="form-group lg:col-span-2">
@@ -1661,31 +1683,6 @@
                                             explorerUri={$explorer_uri}
                                             webExplorerUriTkn={$web_explorer_uri_tkn}
                                         />
-
-                                        {#if paperContent}
-                                            <div
-                                                class="mt-6 p-6 rounded-lg bg-background border border-border"
-                                            >
-                                                <h3
-                                                    class="text-lg font-semibold mb-4 flex items-center gap-2"
-                                                >
-                                                    <FileText
-                                                        class="w-5 h-5 text-amber-500"
-                                                    />
-                                                    Paper Content
-                                                </h3>
-                                                <div
-                                                    class="prose prose-sm {$mode ===
-                                                    'dark'
-                                                        ? 'prose-invert'
-                                                        : ''} max-w-none"
-                                                >
-                                                    {@html marked.parse(
-                                                        paperContent,
-                                                    )}
-                                                </div>
-                                            </div>
-                                        {/if}
                                     </div>
                                 </details>
                             </div>
