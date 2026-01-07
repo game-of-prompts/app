@@ -272,7 +272,7 @@
                 );
                 if (paperSources.length > 0) {
                     try {
-                        const response = await fetch(paperSources[0].url);
+                        const response = await fetch(paperSources[0].sourceUrl);
                         if (response.ok) {
                             paperContent = await response.text();
                         }
