@@ -7,7 +7,9 @@ import {
     type ReputationProof,
     type TypeNFT,
     type RPBox,
-    fetchAllProfiles
+    fetchAllProfiles,
+    convertToRPBox,
+    type ApiBox
 } from "reputation-system";
 import { JUDGE } from "./types";
 
@@ -55,7 +57,7 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
             }
             judges.set({ data: judgesMap, last_fetch: Date.now() });
             return get(judges).data;
-        } 
+        }
         else {
             judges.set({ data: new Map(), last_fetch: Date.now() });
             return get(judges).data;
@@ -67,28 +69,13 @@ export async function fetchJudges(force: boolean = false): Promise<Map<string, R
     }
 }
 
-// Kept for compatibility if needed, but fetchJudges should be preferred
-export async function fetchReputationProofs(
-    ergo: any,
-    all: boolean,
-    type: "game" | "participation" | "judge",
-    value: string | null
-): Promise<Map<string, ReputationProof>> {
-    if (type === "judge") {
-        return fetchJudges();
-    }
-
-    console.warn("fetchReputationProofs called with type other than judge, which is not fully optimized yet.");
-    return new Map();
-}
 export async function fetchOpinionsAbout(
-    explorerUri: string,
     objectPointer: string,
     typeNftId?: string
 ): Promise<RPBox[]> {
     try {
         const boxGenerator = searchBoxes(
-            explorerUri,
+            get(explorer_uri),
             undefined, // tokenId (issuer)
             typeNftId,
             objectPointer,
@@ -100,7 +87,8 @@ export async function fetchOpinionsAbout(
         );
 
         const { value: boxes } = await boxGenerator.next();
-        return boxes || [];
+        const types = await fetchTypeNfts();
+        return boxes.map((b: ApiBox) => convertToRPBox(b, b.assets[0].tokenId, types)) || [];
     } catch (e) {
         console.error("Error fetching opinions about:", e);
         return [];

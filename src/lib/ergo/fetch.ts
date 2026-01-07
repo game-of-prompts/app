@@ -36,7 +36,8 @@ import {
     parseGameContent,
     getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
-import { fetchReputationProofs } from "./reputation/fetch";
+import { fetchOpinionsAbout } from "./reputation/fetch";
+import { GAME as GAME_TYPE_NFT, PARTICIPATION as PARTICIPATION_TYPE_NFT } from "./reputation/types";
 import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
@@ -102,31 +103,20 @@ function calculate_reputation(game: AnyGame): number {
 
 /**
  * Fetches reputation opinions for a specific target (game or participation)
+ * @param type The type of target ("game" or "participation")
  * @param targetId The ID of the target (gameId or participationBoxId)
- * @param ergo Ergo wallet instance (optional)
  * @returns Array of reputation opinions
  */
 async function fetchReputationOpinionsForTarget(
     type: "game" | "participation",
-    targetId: string,
-    ergo: any = null
+    targetId: string
 ): Promise<RPBox[]> {
     try {
-        // Fetch all reputation proofs that reference this target
-        const reputationProofs = await fetchReputationProofs(ergo, true, type, targetId);
-        const opinions: RPBox[] = [];
-        for (const [tokenId, proof] of reputationProofs) {
-            // Find boxes that reference our target
-            const relevantBoxes = proof.current_boxes.filter((box: RPBox) =>
-                box.object_pointer === targetId
-            );
+        // Determine the correct type NFT ID based on the target type
+        const typeNftId = type === "game" ? GAME_TYPE_NFT : PARTICIPATION_TYPE_NFT;
 
-            for (const box of relevantBoxes) {
-                opinions.push(box);
-            }
-        }
-
-        return opinions;
+        // Use fetchOpinionsAbout which correctly searches by objectPointer and typeNftId
+        return await fetchOpinionsAbout(targetId, typeNftId);
     } catch (error) {
         console.error(`Error fetching reputation opinions for target ${targetId}:`, error);
         return [];
@@ -232,6 +222,9 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             seed: seed,
             ceremonyDeadline: ceremonyDeadline,
         };
+
+        console.log("REPUTATION OPINIONS")
+        console.log(gameActive.reputationOpinions)
 
         gameActive.reputation = calculate_reputation(gameActive);
 
