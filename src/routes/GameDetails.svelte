@@ -157,6 +157,7 @@
         | "accept_judge_nomination"
         | "open_ceremony"
         | "batch_participations"
+        | "submit_creator_opinion"
         | null = null;
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
@@ -789,6 +790,19 @@
         }
     }
 
+    async function handleSubmitCreatorOpinion() {
+        if (!game) return;
+        errorMessage = null;
+        isSubmitting = true;
+        try {
+            transactionId = await platform.submitCreatorOpinion(game);
+        } catch (e: any) {
+            errorMessage = e.message || "Error submitting opinion.";
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     async function handleJsonFileUpload(event: Event) {
         const target = event.target as HTMLInputElement;
         jsonUploadError = null;
@@ -870,6 +884,7 @@
             accept_judge_nomination: "Accept Judge Nomination",
             open_ceremony: "Add Seed Randomness",
             batch_participations: "Batch Participations",
+            submit_creator_opinion: "Verify Game (Creator Opinion)",
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -2421,6 +2436,35 @@
                                 </p>
                             </div>
                         {/if}
+                        {#if game.content.creatorTokenId && $reputation_proof && game.content.creatorTokenId === $reputation_proof.token_id}
+                            <div
+                                class="info-block mt-4 pt-4 border-t {$mode ===
+                                'dark'
+                                    ? 'border-slate-700'
+                                    : 'border-gray-200'}"
+                            >
+                                <p class="text-sm font-medium mb-2">
+                                    Creator Verification
+                                </p>
+                                <Button
+                                    on:click={() =>
+                                        setupActionModal(
+                                            "submit_creator_opinion",
+                                        )}
+                                    variant="outline"
+                                    class="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                                >
+                                    <ShieldCheck class="mr-2 h-4 w-4" />
+                                    Verify as Creator
+                                </Button>
+                                <p
+                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                >
+                                    Submit a positive opinion to verify this
+                                    game as the creator.
+                                </p>
+                            </div>
+                        {/if}
                     </div>
                 </div>
 
@@ -3838,6 +3882,33 @@
                                     {isSubmitting
                                         ? "Processing..."
                                         : "Confirm Inclusion"}
+                                </Button>
+                            </div>
+                        {:else if currentActionType === "submit_creator_opinion"}
+                            <div class="space-y-4">
+                                <p
+                                    class="text-sm p-3 rounded-md {$mode ===
+                                    'dark'
+                                        ? 'bg-green-600/20 text-green-300 border border-green-500/30'
+                                        : 'bg-green-100 text-green-700 border border-green-200'}"
+                                >
+                                    <strong>Action: Verify Game</strong><br />
+                                    As the creator of this game (holding the creator
+                                    token), you can submit a positive opinion to
+                                    verify its authenticity. This helps build trust
+                                    with participants.
+                                </p>
+                                <Button
+                                    on:click={handleSubmitCreatorOpinion}
+                                    disabled={isSubmitting}
+                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    'dark'
+                                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                                        : 'bg-green-500 hover:bg-green-600 text-white'} font-semibold"
+                                >
+                                    {isSubmitting
+                                        ? "Processing..."
+                                        : "Confirm Verification"}
                                 </Button>
                             </div>
                         {:else if currentActionType === "accept_judge_nomination"}

@@ -3,7 +3,8 @@ import {
     type GameActive,
     type GameResolution,
     type GameCancellation,
-    type ValidParticipation
+    type ValidParticipation,
+    type AnyGame
 } from '../common/game';
 import { create_game } from './actions/create_game';
 import { explorer_uri } from './envs';
@@ -330,6 +331,22 @@ export class ErgoPlatform implements Platform {
             console.error("Error in platform method batchParticipations:", error);
             if (error instanceof Error) throw new Error(`Failed to batch participations: ${error.message}`);
             throw new Error("An unknown error occurred while batching participations.");
+        }
+    }
+
+    /**
+     * Allows the creator (holding the creator token) to submit a positive opinion about the game.
+     * @param game The Game object.
+     * @returns A promise that resolves to the transaction ID.
+     */
+    async submitCreatorOpinion(game: AnyGame): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        try {
+            return await createOrUpdateOpinion(GAME, game.gameId, true, null);
+        } catch (error) {
+            console.error("Error in platform method submitCreatorOpinion:", error);
+            if (error instanceof Error) throw new Error(`Failed to submit creator opinion: ${error.message}`);
+            throw new Error("An unknown error occurred while submitting creator opinion.");
         }
     }
 
