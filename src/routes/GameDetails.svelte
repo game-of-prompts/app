@@ -1099,10 +1099,10 @@
             : 'bg-gray-50 text-gray-800'}"
     >
         <div
-            class="game-container max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8"
+            class="game-container w-full md:max-w-[95%] mx-auto px-0 md:px-4 lg:px-8 py-0 md:py-8"
         >
             <section
-                class="hero-section relative rounded-xl shadow-2xl overflow-hidden mb-12"
+                class="hero-section relative md:rounded-xl md:shadow-2xl overflow-hidden mb-6 md:mb-12"
             >
                 <div class="hero-bg-image">
                     {#if resolvedImageSrc}
@@ -1117,7 +1117,7 @@
                     ></div>
                 </div>
                 <div
-                    class="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white"
+                    class="relative z-10 p-4 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white"
                 >
                     {#if resolvedImageSrc}
                         <div class="md:w-1/3 flex-shrink-0">
@@ -1298,10 +1298,10 @@
         </div>
 
         <div
-            class="game-container max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8"
+            class="game-container w-full md:max-w-[95%] mx-auto px-0 md:px-4 lg:px-8 py-0 md:py-8"
         >
             <section
-                class="game-info-section mb-12 p-6 rounded-xl shadow-lg bg-card border border-border/50"
+                class="game-info-section mb-6 md:mb-12 p-4 md:p-6 md:rounded-xl md:shadow-lg bg-card border-y md:border border-border/50"
             >
                 {#if game}
                     {@const creator = game.content.creatorReputationProof}
