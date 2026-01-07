@@ -2469,34 +2469,73 @@
                                 </p>
                             </div>
                         {/if}
-                        {#if game.content.creatorTokenId && $reputation_proof && game.content.creatorTokenId === $reputation_proof.token_id}
-                            <div
-                                class="info-block mt-4 pt-4 border-t {$mode ===
-                                'dark'
-                                    ? 'border-slate-700'
-                                    : 'border-gray-200'}"
-                            >
-                                <p class="text-sm font-medium mb-2">
-                                    Creator Verification
-                                </p>
-                                <Button
-                                    on:click={() =>
-                                        setupActionModal(
-                                            "submit_creator_opinion",
-                                        )}
-                                    variant="outline"
-                                    class="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                        {#if true}
+                            {@const creatorPositiveOpinion = game.content
+                                .creatorTokenId
+                                ? game.reputationOpinions.find(
+                                      (op) =>
+                                          op.token_id ===
+                                              game.content.creatorTokenId &&
+                                          op.polarization === true,
+                                  )
+                                : null}
+                            {#if creatorPositiveOpinion}
+                                <div
+                                    class="info-block mt-4 pt-4 border-t {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
                                 >
-                                    <ShieldCheck class="mr-2 h-4 w-4" />
-                                    Verify as Creator
-                                </Button>
-                                <p
-                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                    <p class="text-sm font-medium mb-2">
+                                        Creator Verification
+                                    </p>
+                                    <div
+                                        class="flex items-center gap-2 p-3 rounded bg-green-500/10 border border-green-500/20"
+                                    >
+                                        <ShieldCheck
+                                            class="h-5 w-5 text-green-500"
+                                        />
+                                        <span
+                                            class="text-sm font-bold text-green-500"
+                                            >Verified by Creator</span
+                                        >
+                                    </div>
+                                    <p
+                                        class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                    >
+                                        The creator has submitted a positive
+                                        opinion verifying this game.
+                                    </p>
+                                </div>
+                            {:else if game.content.creatorTokenId && $reputation_proof && game.content.creatorTokenId === $reputation_proof.token_id}
+                                <div
+                                    class="info-block mt-4 pt-4 border-t {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
                                 >
-                                    Submit a positive opinion to verify this
-                                    game as the creator.
-                                </p>
-                            </div>
+                                    <p class="text-sm font-medium mb-2">
+                                        Creator Verification
+                                    </p>
+                                    <Button
+                                        on:click={() =>
+                                            setupActionModal(
+                                                "submit_creator_opinion",
+                                            )}
+                                        variant="outline"
+                                        class="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                                    >
+                                        <ShieldCheck class="mr-2 h-4 w-4" />
+                                        Verify as Creator
+                                    </Button>
+                                    <p
+                                        class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                                    >
+                                        Submit a positive opinion to verify this
+                                        game as the creator.
+                                    </p>
+                                </div>
+                            {/if}
                         {/if}
                     </div>
                 </div>
