@@ -59,6 +59,7 @@
         Cpu,
         FileText,
         Settings,
+        ArrowUp,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -170,6 +171,8 @@
     let serviceSources: any[] = [];
     let paperSources: any[] = [];
     let paperContent: string | null = null;
+    let isPaperExpanded = false;
+    let paperToc: { level: number; text: string; id: string }[] = [];
 
     function openFileSourceModal(
         hash: string,
@@ -275,6 +278,7 @@
                         const response = await fetch(paperSources[0].sourceUrl);
                         if (response.ok) {
                             paperContent = await response.text();
+                            extractToc(paperContent);
                         }
                     } catch (e) {
                         console.error("Error fetching paper content:", e);
@@ -1006,6 +1010,86 @@
             resolvedImageSrc = game?.content.imageURL ?? "";
         }
     }
+
+    // --- Paper Content Logic ---
+    const paperRenderer = new marked.Renderer();
+    paperRenderer.heading = function ({
+        text,
+        depth,
+    }: {
+        text: string;
+        depth: number;
+    }) {
+        const id = text
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-");
+        // Add scroll-mt-24 to ensure header is not hidden behind fixed elements when scrolling
+        return `<h${depth} id="${id}" class="scroll-mt-24">${text}</h${depth}>`;
+    };
+
+    function extractToc(markdown: string) {
+        const lines = markdown.split("\n");
+        const toc: { level: number; text: string; id: string }[] = [];
+        // Regex to match headers: # Header, ## Header, etc.
+        const headerRegex = /^(#{1,6})\s+(.*)$/;
+
+        lines.forEach((line) => {
+            const match = line.match(headerRegex);
+            if (match) {
+                const level = match[1].length;
+                const text = match[2].trim();
+                // Create a simple ID from text
+                const id = text
+                    .toLowerCase()
+                    .replace(/[^\w\s-]/g, "")
+                    .replace(/\s+/g, "-");
+                toc.push({ level, text, id });
+            }
+        });
+        paperToc = toc;
+    }
+
+    function togglePaper() {
+        isPaperExpanded = !isPaperExpanded;
+        if (!isPaperExpanded) {
+            const element = document.getElementById("paper-content-start");
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth" });
+            }
+        }
+    }
+
+    function scrollToToc() {
+        const element = document.getElementById("paper-toc");
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth" });
+        } else {
+            // Fallback if TOC is not rendered or part of start
+            const startElement = document.getElementById("paper-content-start");
+            if (startElement) {
+                startElement.scrollIntoView({ behavior: "smooth" });
+            }
+        }
+    }
+
+    function scrollToSection(id: string) {
+        // We need to wait for the DOM to update if we are expanding
+        if (!isPaperExpanded) {
+            isPaperExpanded = true;
+            setTimeout(() => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: "smooth" });
+                }
+            }, 100);
+        } else {
+            const element = document.getElementById(id);
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth" });
+            }
+        }
+    }
 </script>
 
 {#if game}
@@ -1236,23 +1320,106 @@
 
                             {#if paperContent}
                                 <div
-                                    class="mt-6 p-6 rounded-lg bg-background border border-border"
+                                    class="mt-8 border-t border-border pt-8"
+                                    id="paper-content-start"
                                 >
-                                    <h3
-                                        class="text-lg font-semibold mb-4 flex items-center gap-2"
-                                    >
+                                    <div class="flex items-center gap-2 mb-4">
                                         <FileText
                                             class="w-5 h-5 text-amber-500"
                                         />
-                                        Paper Content
-                                    </h3>
-                                    <div
-                                        class="prose prose-sm {$mode === 'dark'
-                                            ? 'prose-invert'
-                                            : ''} max-w-none"
-                                    >
-                                        {@html marked.parse(paperContent)}
+                                        <h3 class="text-lg font-semibold">
+                                            Paper Content
+                                        </h3>
                                     </div>
+
+                                    <div class="relative">
+                                        <div
+                                            class="prose prose-sm {$mode ===
+                                            'dark'
+                                                ? 'prose-invert'
+                                                : ''} max-w-none transition-all duration-500 ease-in-out {isPaperExpanded
+                                                ? ''
+                                                : 'max-h-96 overflow-hidden'}"
+                                        >
+                                            <!-- TOC -->
+                                            {#if isPaperExpanded && paperToc.length > 0}
+                                                <div
+                                                    class="mb-6 p-4 bg-muted/50 rounded-lg"
+                                                    id="paper-toc"
+                                                >
+                                                    <h4
+                                                        class="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground"
+                                                    >
+                                                        Table of Contents
+                                                    </h4>
+                                                    <nav
+                                                        class="flex flex-col gap-1"
+                                                    >
+                                                        {#each paperToc as item}
+                                                            <button
+                                                                class="text-left text-sm hover:text-primary transition-colors truncate w-full"
+                                                                style="padding-left: {(item.level -
+                                                                    1) *
+                                                                    12}px"
+                                                                on:click={() =>
+                                                                    scrollToSection(
+                                                                        item.id,
+                                                                    )}
+                                                            >
+                                                                {item.text}
+                                                            </button>
+                                                        {/each}
+                                                    </nav>
+                                                </div>
+                                            {/if}
+
+                                            {@html marked.parse(paperContent, {
+                                                renderer: paperRenderer,
+                                            })}
+                                        </div>
+
+                                        {#if !isPaperExpanded}
+                                            <div
+                                                class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent flex items-end justify-center pb-4"
+                                            >
+                                                <Button
+                                                    variant="secondary"
+                                                    on:click={togglePaper}
+                                                    class="shadow-lg"
+                                                >
+                                                    Read Full Paper
+                                                    <ChevronDown
+                                                        class="ml-2 w-4 h-4"
+                                                    />
+                                                </Button>
+                                            </div>
+                                        {/if}
+                                    </div>
+
+                                    {#if isPaperExpanded}
+                                        <div
+                                            class="sticky bottom-20 flex justify-center mt-8 pointer-events-none gap-4 z-10"
+                                        >
+                                            <Button
+                                                variant="secondary"
+                                                on:click={scrollToToc}
+                                                class="shadow-lg pointer-events-auto opacity-90 hover:opacity-100"
+                                                title="Back to Table of Contents"
+                                            >
+                                                <ArrowUp class="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="secondary"
+                                                on:click={togglePaper}
+                                                class="shadow-lg pointer-events-auto opacity-90 hover:opacity-100"
+                                            >
+                                                Collapse Paper
+                                                <ChevronDown
+                                                    class="ml-2 w-4 h-4 rotate-180"
+                                                />
+                                            </Button>
+                                        </div>
+                                    {/if}
                                 </div>
                             {/if}
                         </div>
