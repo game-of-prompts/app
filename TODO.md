@@ -117,7 +117,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] After create the game, in case it has a creator token id (creator's reputation proof), the creator must verify it's game submitting a positive opinion about it (add an issue to submit it (the same R4 than the nominated judges uses to approve the game) on the same tx or chained tx.)
 
-[] Agregar visualización de Paper en Game Details
+[x] Agregar visualización de Paper en Game Details
 
 [] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
 

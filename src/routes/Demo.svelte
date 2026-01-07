@@ -686,9 +686,10 @@
 
                 <!-- Prize Distribution -->
                 <div class="form-group lg:col-span-2">
-                    <span class="mb-3 block font-semibold"
-                        >Prize Distribution</span
-                    >
+                    <div class="flex items-center gap-2 mb-3">
+                        <Trophy class="w-5 h-5 text-amber-500" />
+                        <span class="font-semibold">Prize Distribution</span>
+                    </div>
                     <div
                         class="w-full h-4 bg-gray-200 rounded-full overflow-hidden flex"
                     >

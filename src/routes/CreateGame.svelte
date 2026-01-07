@@ -18,6 +18,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import {
+        Trophy,
         Eye,
         EyeOff,
         Wand2,
@@ -759,7 +760,12 @@
                         </div>
 
                         <div class="form-group lg:col-span-4">
-                            <Label>Prize Distribution Preview</Label>
+                            <div class="flex items-center gap-2 mb-3">
+                                <Trophy class="w-5 h-5 text-amber-500" />
+                                <Label class="mb-0"
+                                    >Prize Distribution Preview</Label
+                                >
+                            </div>
                             <div class="distribution-bar">
                                 <div
                                     class="bar-segment winner"
