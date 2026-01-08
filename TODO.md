@@ -119,17 +119,17 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Agregar visualización de Paper en Game Details
 
+[x] Quitar contratos de reputacion y mejorar diseño de vista de juez.
+
 [] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
-
-[] Terminar Demo y agregar puntos de información en GameDetails
-
-[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
-
-[] Quitar contratos de reputacion y mejorar diseño de vista de juez.
 
 [] Mejorar formula de Efficient-score
     - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
     - Agregar parámetro variable N.
+
+[] Terminar Demo y agregar puntos de información en GameDetails
+
+[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 ====
 
