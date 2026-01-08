@@ -313,8 +313,8 @@
           recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
         }
 
-        gameBoxIsRecreatedCorrectly && box_value(recreatedGameBox) >= box_value(SELF)
-      } else { false }
+        sigmaProp(gameBoxIsRecreatedCorrectly && box_value(recreatedGameBox) >= box_value(SELF))
+      } else { sigmaProp(false) }
     } else {
       sigmaProp(false)
     }
