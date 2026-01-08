@@ -956,15 +956,16 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     });
 
     it("should pass if the omitted participant has 10 scores", () => {
-        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]);
+        setupScenario(1000n, 1200n, 600_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n]);  // the function adds another score to make it 10
 
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
-            game_deadline,
-            2_000_000_000n,
-            1_000_000n,
-            10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(updatedNumericalParams[0]), // deadline
+            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[2],         // participationFee
+            updatedNumericalParams[3],         // perJudgeCommissionPercent
+            updatedNumericalParams[4],         // creatorComissionPercentage
+            BigInt(updatedNumericalParams[5])  // resolutionDeadline
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -975,14 +976,16 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                     .setAdditionalRegisters({
                         R4: gameResolutionBox.additionalRegisters.R4,
                         R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
-                        R6: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: SPair(
+                            SColl(SByte, secret),
+                            SColl(SByte, omittedCommitment)
+                        ).toHex(),
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            hexToBytes(mode.token) ?? new Uint8Array(0),
-                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
             ])
@@ -1001,15 +1004,16 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     });
 
     it("should fail if the omitted participant has more than 10 scores", () => {
-        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n]);
+        setupScenario(1000n, 1200n, 600_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]);  // the function adds another score to make it 11
 
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
-            game_deadline,
-            2_000_000_000n,
-            1_000_000n,
-            10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(updatedNumericalParams[0]), // deadline
+            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[2],         // participationFee
+            updatedNumericalParams[3],         // perJudgeCommissionPercent
+            updatedNumericalParams[4],         // creatorComissionPercentage
+            BigInt(updatedNumericalParams[5])  // resolutionDeadline
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -1020,13 +1024,16 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                     .setAdditionalRegisters({
                         R4: gameResolutionBox.additionalRegisters.R4,
                         R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
-                        R6: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R6: SPair(
+                            SColl(SByte, secret),
+                            SColl(SByte, omittedCommitment)
+                        ).toHex(),
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, newNumericalParams).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
                             hexToBytes(mode.token) ?? new Uint8Array(0), // participationTokenId
-                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")
+                            prependHexPrefix(originalResolver.key.publicKey, "0008cd")  // script del resolvedor
                         ]).toHex()
                     })
             ])
