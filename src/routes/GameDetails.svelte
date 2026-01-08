@@ -613,6 +613,7 @@
     }
 
     async function handleEndGame() {
+        // TODO In case status is EndGame, then execute endGame().   In case is resolution, then execute toEndGame()
         if (game?.status !== "Resolution") return;
         errorMessage = null;
         isSubmitting = true;

@@ -121,11 +121,15 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Quitar contratos de reputacion y mejorar diseño de vista de juez.
 
-[] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
+[x] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
+
+[] Implementar end game UI
 
 [] Mejorar formula de Efficient-score
     - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
     - Agregar parámetro variable N.
+
+[] Implementar EIP-004
 
 [] Terminar Demo y agregar puntos de información en GameDetails
 
@@ -163,5 +167,8 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 
 ----
 
+[] Obtener datos de mem-pool [implementar como libreria ¿?]
+
+[] Chained tx.
 
 [] ¿Ceremonia de secreto del servicio juego?
