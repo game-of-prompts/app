@@ -954,7 +954,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     });
 
     it("should pass if the omitted participant has 10 scores", () => {
-        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n]);
+        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]);
 
         const newNumericalParams: bigint[] = [
             game_deadline,
@@ -999,7 +999,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     });
 
     it("should fail if the omitted participant has more than 10 scores", () => {
-        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]);
+        setupScenario(1000n, 1200n, 590_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n]);
 
         const newNumericalParams: bigint[] = [
             game_deadline,
