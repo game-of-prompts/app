@@ -10,6 +10,7 @@ import { parseBox, pkHexToBase58Address, hexToBytes } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { judges } from '$lib/common/store';
 import { get } from 'svelte/store';
+import { DefaultGameConstants } from '$lib/common/constants';
 declare const ergo: any;
 
 export async function end_game(
@@ -69,7 +70,7 @@ export async function end_game(
     const perJudgePct = BigInt(perJudgePctNumber);
     const judge_count = BigInt((game.judges ?? []).length);
 
-    const perJudgeCommission = (prizePool * perJudgePct) / 100n;
+    const perJudgeCommission = (prizePool * perJudgePct) / BigInt(game.constants.COMMISSION_DENOMINATOR);
     const totalJudgeCommission = perJudgeCommission * judge_count;
 
     // Comisiones Dev
@@ -93,7 +94,7 @@ export async function end_game(
     } else {
         // --- CASO: HAY GANADOR ---
         const creatorStake = game.creatorStakeAmount;
-        const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / 100n;
+        const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / BigInt(game.constants.COMMISSION_DENOMINATOR);
 
         // Premio tentativo restando comisiones
         const tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeCommission - devCommission;
@@ -101,8 +102,10 @@ export async function end_game(
 
         console.log("--- WINNER SCENARIO DEBUG ---");
         console.log(`Participation Fee (Entry Cost): ${participationFee}`);
+        console.log(`Prize Pool: ${prizePool}`);
         console.log(`Tentative Winner Prize (After Comms): ${tentativeWinnerPrize}`);
         console.log(`Resolver Commission Tentative: ${resolverCommission}`);
+        console.log(`Total Judge Commission Tentative: ${totalJudgeCommission}`);
         console.log(`Dev Commission Tentative: ${devCommission}`);
 
         let adjustedWinnerPrize: bigint;
