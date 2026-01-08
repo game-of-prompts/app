@@ -19,6 +19,7 @@ import { stringToBytes } from "@scure/base";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
 const USD_BASE_TOKEN_NAME = "USD";
@@ -45,7 +46,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     const participationErgoTree: ErgoTree = getGopParticipationErgoTree();
 
     // --- Game State Variables ---
-    const resolutionDeadline = 800_000 + 100;  // initial height + 100 blocks
+    const initial_height = 800_000;
+    const resolutionDeadline = initial_height + DefaultGameConstants.JUDGE_PERIOD;  // initial height + 100 blocks
     const gameNftId = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22";
     const secret = stringToBytes("utf8", "shared-secret-for-omitted-test");
     const game_deadline = 700_700n;
@@ -65,7 +67,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     };
 
     beforeEach(() => {
-        mockChain = new MockChain({ height: 800_000 });
+        mockChain = new MockChain({ height: initial_height });
 
         originalResolver = mockChain.newParty("OriginalResolver");
         newResolver = mockChain.newParty("NewResolver");
@@ -871,7 +873,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     });
 
     it("should fail if trying to include omitted participant after resolution deadline", () => {
-        setupScenario(1000n, 1200n);
+        setupScenario(1000n, 1200n, Number(game_deadline) + 1);
 
         // Move chain past the resolution deadline
         // setupScenario is at 800_000 + 10 = 800_010. Deadline is 800_030.
