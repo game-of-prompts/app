@@ -51,4 +51,4 @@ const ProductionMode: GameConstants = {
     COMMISSION_DENOMINATOR: 1000000,  // Hardcoded conversion.
 }
 
-export const DefaultGameConstants: GameConstants = DevelopmentMode;
+export const DefaultGameConstants: GameConstants = ProductionMode;
