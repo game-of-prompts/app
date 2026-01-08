@@ -127,7 +127,9 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Quitar contratos de reputacion y mejorar diseño de vista de juez.
 
-[] 
+[] Mejorar formula de Efficient-score
+    - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
+    - Agregar parámetro variable N.
 
 ====
 
