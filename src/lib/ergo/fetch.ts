@@ -6,6 +6,7 @@ import {
     GameState,
     type GameActive,
     type GameResolution,
+    type GameEndGame,
     type GameCancellation,
     type ParticipationBase,
     type GameFinalized,
@@ -24,9 +25,11 @@ import {
     getGopGameCancellationTemplateHash,
     getGopGameActiveErgoTreeHex,
     getGopGameResolutionErgoTreeHex,
+    getGopEndGameErgoTreeHex,
     getGopGameCancellationErgoTreeHex,
     getGopParticipationErgoTreeHex,
     getGopGameActiveTemplateHash,
+    getGopEndGameTemplateHash,
     getGopParticipationBatchTemplateHash
 } from "./contract"; // Assumes this file exports functions to get script hashes
 import {
@@ -424,8 +427,148 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
 }
 
 // =================================================================
-// === STATE: GAME CANCELLATION
+// === STATE: GAME END GAME
 // =================================================================
+
+/**
+ * Parses a blockchain Box into a `GameEndGame` object.
+ * Identical to GameResolution in parsing logic but for the EndGame script.
+ * @param box The raw box obtained from the explorer.
+ * @returns A `GameEndGame` object or `null` if the box does not match the expected format.
+ */
+export async function parseGameEndGameBox(box: any): Promise<GameEndGame | null> {
+    try {
+        if (box.ergoTree !== getGopEndGameErgoTreeHex()) {
+            console.warn('parseGameEndGameBox: invalid constants');
+            return null;
+        }
+
+        if (!box.assets || box.assets.length === 0) {
+            console.warn(`parseGameEndGameBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
+            return null;
+        }
+        const gameId = box.assets[0].tokenId;
+
+        // R4 is game state.
+        const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
+        if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
+
+        // R5: Coll[Byte] -> Seed
+        const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
+        if (!seed) throw new Error("Could not parse R5 (Seed).");
+
+        // R6: (Coll[Byte], Coll[Byte]) -> revealedS_Hex, winnerCandidateCommitment
+        const r6Value = getArrayFromValue(box.additionalRegisters.R6?.renderedValue);
+        if (!r6Value || r6Value.length < 2) throw new Error("R6 is not a valid tuple.");
+        const revealedS_Hex = parseCollByteToHex(r6Value[0]);
+        const winnerCandidateCommitment = parseCollByteToHex(r6Value[1]);
+        if (!revealedS_Hex) throw new Error("Could not parse R6.");
+
+        // R7: Coll[Coll[Byte]] -> judges
+        const judges = (getArrayFromValue(box.additionalRegisters.R7?.renderedValue) || [])
+            .map(parseCollByteToHex)
+            .filter((judge): judge is string => judge !== null && judge !== undefined);
+
+        // R8: Coll[Long] -> [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+        const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
+        const numericalParams = parseLongColl(r8Array);
+        if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
+        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
+
+        // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
+        const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
+        if (!r9Value || r9Value.length !== 3) throw new Error("R9 is not a valid tuple (expected 3 items).");
+
+        const gameDetailsHex = r9Value[0];
+        const participationTokenId = parseCollByteToHex(r9Value[1]);
+        const resolverScript_Hex = parseCollByteToHex(r9Value[2]);
+
+        if (!gameDetailsHex || !resolverScript_Hex) throw new Error("Could not parse R9.");
+
+        const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
+
+        const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null
+
+        const gameEndGame: GameEndGame = {
+            platform: new ErgoPlatform(),
+            boxId: box.boxId,
+            box,
+            status: GameState.EndGame,
+            gameId,
+            resolutionDeadline: Number(resolutionDeadline),
+            revealedS_Hex,
+            winnerCandidateCommitment: winnerCandidateCommitment || null,
+            judges,
+            deadlineBlock: Number(deadlineBlock),
+            creatorStakeAmount,
+            participationFeeAmount,
+            participationTokenId: participationTokenId ?? "",
+            resolverPK_Hex,
+            resolverScript_Hex,
+            content,
+            value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
+            reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
+            perJudgeComissionPercentage: perJudgeComissionPercentage,
+            resolverCommission: Number(creatorComissionPercentage),
+            constants: DefaultGameConstants,
+            seed: seed,
+            reputation: 0
+        };
+
+        gameEndGame.reputation = calculate_reputation(gameEndGame);
+
+        return gameEndGame;
+
+    } catch (e) {
+        console.error(`Error parsing end game box ${box.boxId}:`, e);
+        return null;
+    }
+}
+
+/**
+ * Searches for and retrieves all games currently in the "EndGame" state.
+ * @returns A `Promise` that resolves to a `Map` of games in end game, using the game ID as the key.
+ */
+export async function fetchEndGameGames(): Promise<Map<string, GameEndGame>> {
+    const games = new Map<string, GameEndGame>();
+    const scriptHash = getGopEndGameTemplateHash();
+
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+
+    while (moreAvailable) {
+        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
+        try {
+            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API response was not OK: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                const game = await parseGameEndGameBox(box);
+                if (game) games.set(game.gameId, game);
+            }
+
+            offset += items.length;
+            moreAvailable = items.length === limit;
+
+        } catch (error) {
+            console.error("An exception occurred while fetching end game games:", error);
+            moreAvailable = false;
+        }
+    }
+
+    return games;
+}
 
 /**
  * Parses a Box into a `GameCancellation` object, adapted for the new register structure.
@@ -571,6 +714,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
     const templateHashes = [
         getGopGameActiveTemplateHash(),
         getGopGameResolutionTemplateHash(),
+        getGopEndGameTemplateHash(),
         getGopGameCancellationTemplateHash()
     ];
 
@@ -601,6 +745,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
                         game = await parseGameActiveBox(box);
                     } else if (templateHash === getGopGameResolutionTemplateHash()) {
                         game = await parseGameResolutionBox(box);
+                    } else if (templateHash === getGopEndGameTemplateHash()) {
+                        game = await parseGameEndGameBox(box);
                     } else if (templateHash === getGopGameCancellationTemplateHash()) {
                         game = await parseGameCancellationBox(box);
                     }
@@ -625,11 +771,12 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
     // Fetch current unspent boxes to filter out active/resolution/cancellation games
     const activeGames = await fetchActiveGames();
     const resolutionGames = await fetchResolutionGames();
+    const endGameGames = await fetchEndGameGames();
     const cancellationGames = await fetchCancellationGames();
 
     for (const gameId of allGameIds) {
         // If the game is in a current unspent state, it's not finalized.
-        if (activeGames.has(gameId) || resolutionGames.has(gameId) || cancellationGames.has(gameId)) {
+        if (activeGames.has(gameId) || resolutionGames.has(gameId) || endGameGames.has(gameId) || cancellationGames.has(gameId)) {
             continue;
         }
 
@@ -654,6 +801,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         const contractTrees = [
             getGopGameActiveErgoTreeHex(),
             getGopGameResolutionErgoTreeHex(),
+            getGopEndGameErgoTreeHex(),
             getGopGameCancellationErgoTreeHex()
         ];
         if (contractTrees.includes(currentBox.ergoTree)) continue; // It's still in a contract state, skip.
