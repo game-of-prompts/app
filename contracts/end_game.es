@@ -56,7 +56,11 @@
   val gameNftId = gameNft._1
 
   val box_value = { (box: Box) =>
-    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+    if (participationTokenId.size == 0) {
+      box.value
+    } else {
+      box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+    }
   }
 
   val getScoreFromBox = { (box: Box) =>
@@ -88,15 +92,19 @@
     val authorizedToEnd: SigmaProp = {
 
     val resolverAuth: SigmaProp = {
-        val prefix = resolverPK.slice(0, 3)
-        val addr_content = resolverPK.slice(3, resolverPK.size)
+        val isP2PK = if (resolverPK.size >= 3) {
+            val prefix = resolverPK.slice(0, 3)
+            prefix == P2PK_ERGOTREE_PREFIX
+        } else {
+            false
+        }
 
-        val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
         if (isP2PK) {
-        proveDlog(decodePoint(addr_content))
+            val addr_content = resolverPK.slice(3, resolverPK.size)
+            proveDlog(decodePoint(addr_content))
         }
         else {
-        sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
+            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))
         }
     }
     
@@ -107,11 +115,16 @@
         })
         if (winnerBoxes.size > 0) {
         val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get
-        val prefix = winnerPK.slice(0, 3)
-        val addr_content = winnerPK.slice(3, winnerPK.size)
+        
+        val isP2PK = if (winnerPK.size >= 3) {
+            val prefix = winnerPK.slice(0, 3)
+            prefix == P2PK_ERGOTREE_PREFIX
+        } else {
+            false
+        }
 
-        val isP2PK = prefix == P2PK_ERGOTREE_PREFIX
         if (isP2PK) {
+            val addr_content = winnerPK.slice(3, winnerPK.size)
             proveDlog(decodePoint(addr_content))
         }
         else {
