@@ -123,7 +123,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Extraer la acción 3 de game_resolution.es (end game) a un contrato end_game.es
 
-[] Implementar end game UI
+[x] Implementar end game UI
 
 [] Mejorar formula de Efficient-score
     - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
