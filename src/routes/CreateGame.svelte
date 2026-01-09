@@ -1,6 +1,7 @@
 <script lang="ts">
     // CORE IMPORTS
     import { writable, type Writable } from "svelte/store";
+    import { onMount } from "svelte";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
     import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
@@ -70,26 +71,117 @@
     let participationTokenDecimals: number = 9;
     let participationTokenName: string = "ERG";
 
-    let selectedTokenOption: string = "ERG";
+    let selectedTokenOption: string = "";
     let customTokenId: string = "";
     let isCustomToken: boolean = false;
 
-    const DEFAULT_TOKENS = [
+    let availableTokens: {
+        tokenId: string;
+        title: string;
+        balance: number;
+        decimals: number;
+        isHardcoded: boolean;
+    }[] = [];
+    let isLoadingTokens = false;
+
+    const HARDCODED_TOKENS = [
         {
             tokenId:
                 "03faf2cb329f2e90d6d23b58d91bbb6c046aa143261cc21f52fbe2824bfcbf04",
             title: "SigUSD",
-            balance: 0,
             decimals: 2,
         },
         {
             tokenId:
                 "886b7721bef42f60c6317d37d8752da8aca01898cae7dae61808c4a14225edc8",
             title: "GluonW GAU",
-            balance: 0,
             decimals: 9,
         },
     ];
+
+    async function loadUserTokens() {
+        if (typeof ergo === "undefined") {
+            console.warn("Ergo wallet not found");
+            return;
+        }
+        isLoadingTokens = true;
+        try {
+            const utxos = await ergo.get_utxos();
+            const tokenMap = new Map<string, number>();
+
+            if (utxos) {
+                for (const box of utxos) {
+                    if (box.assets) {
+                        for (const asset of box.assets) {
+                            const current = tokenMap.get(asset.tokenId) || 0;
+                            tokenMap.set(
+                                asset.tokenId,
+                                current + Number(asset.amount),
+                            );
+                        }
+                    }
+                }
+            }
+
+            const tokensWithDetails = [];
+            for (const [tokenId, amount] of tokenMap.entries()) {
+                const hardcoded = HARDCODED_TOKENS.find(
+                    (t) => t.tokenId === tokenId,
+                );
+                if (hardcoded) {
+                    tokensWithDetails.push({
+                        tokenId,
+                        title: hardcoded.title,
+                        decimals: hardcoded.decimals,
+                        balance: amount,
+                        isHardcoded: true,
+                    });
+                } else {
+                    try {
+                        const details = await fetch_token_details(tokenId);
+                        // Filter out tokens without a name (where name is just the first 6 chars of ID)
+                        if (details.name !== tokenId.slice(0, 6)) {
+                            tokensWithDetails.push({
+                                tokenId,
+                                title: details.name,
+                                decimals: details.decimals,
+                                balance: amount,
+                                isHardcoded: false,
+                            });
+                        }
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
+            }
+
+            tokensWithDetails.sort((a, b) => {
+                if (a.isHardcoded && !b.isHardcoded) return -1;
+                if (!a.isHardcoded && b.isHardcoded) return 1;
+                return a.title.localeCompare(b.title);
+            });
+
+            availableTokens = tokensWithDetails;
+
+            // Set default if not set
+            if (selectedTokenOption === "ERG" || selectedTokenOption === "") {
+                if (availableTokens.length > 0) {
+                    selectedTokenOption = availableTokens[0].tokenId;
+                } else {
+                    selectedTokenOption = "custom";
+                }
+            }
+        } catch (e) {
+            console.error("Error loading user tokens", e);
+        } finally {
+            isLoadingTokens = false;
+        }
+    }
+
+    onMount(() => {
+        loadUserTokens();
+        setTimeout(loadUserTokens, 1000);
+    });
 
     // --- Box Size Validation ---
     $: gameDetailsObject = {
@@ -302,18 +394,29 @@
                 participationTokenDecimals = 0;
             }
         } else if (selectedTokenOption && selectedTokenOption !== "ERG") {
-            const token = DEFAULT_TOKENS.find(
+            const token = availableTokens.find(
                 (t) => t.tokenId === selectedTokenOption,
             );
 
-            participationTokenId = token?.tokenId || "";
-            participationTokenDecimals = token?.decimals || 0;
-            participationTokenName = token?.title || "Unknown";
+            if (token) {
+                participationTokenId = token.tokenId;
+                participationTokenDecimals = token.decimals;
+                participationTokenName = token.title;
+            } else {
+                // Should not happen if selected from dropdown, unless list changed.
+                // Fallback to custom or keep existing if valid
+                if (!isCustomToken) {
+                    // Maybe it's a token that was available but now isn't?
+                    // Or we are initializing.
+                }
+            }
         } else {
-            selectedTokenOption = "ERG";
-            participationTokenId = "";
-            participationTokenDecimals = 9;
-            participationTokenName = "ERG";
+            // If ERG is selected (shouldn't be possible via UI) or empty
+            if (availableTokens.length > 0) {
+                selectedTokenOption = availableTokens[0].tokenId;
+            } else {
+                selectedTokenOption = "custom";
+            }
         }
     }
 
@@ -627,9 +730,7 @@
                                     bind:value={selectedTokenOption}
                                     class="p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
                                 >
-                                    <option value="ERG">ERG (Ergo)</option>
-
-                                    {#each DEFAULT_TOKENS as token (token.tokenId)}
+                                    {#each availableTokens as token (token.tokenId)}
                                         <option value={token.tokenId}>
                                             {token.title}
                                         </option>
