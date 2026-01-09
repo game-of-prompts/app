@@ -14,3 +14,4 @@ export const web_explorer_uri_addr = writable<string>(default_web_explorer_uri_a
 export const web_explorer_uri_tkn = writable<string>(default_web_explorer_uri_tkn);
 export const REPUTATION_PROOF_TOTAL_SUPPLY = 100_000_000;
 export const CACHE_DURATION_MS = 10000; // 10 seconds
+export const isDevMode = writable<boolean>(false);

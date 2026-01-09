@@ -45,7 +45,7 @@ import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
 import { games, judges as judgesStore } from "../common/store";
-import { DefaultGameConstants } from "$lib/common/constants";
+import { getGameConstants } from "$lib/common/constants";
 
 export interface TokenEIP4 {
     name: string,
@@ -221,7 +221,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
             reputation: 0,
-            constants: DefaultGameConstants,
+            constants: getGameConstants(),
             seed: seed,
             ceremonyDeadline: ceremonyDeadline,
         };
@@ -364,7 +364,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
             resolverCommission: Number(creatorComissionPercentage), // Added from R8
-            constants: DefaultGameConstants,
+            constants: getGameConstants(),
             seed: seed, // Added from R5
             reputation: 0
         };
@@ -510,7 +510,7 @@ export async function parseGameEndGameBox(box: any): Promise<GameEndGame | null>
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
             resolverCommission: Number(creatorComissionPercentage),
-            constants: DefaultGameConstants,
+            constants: getGameConstants(),
             seed: seed,
             reputation: 0
         };
@@ -640,7 +640,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
             deadlineBlock: originalDeadline,
-            constants: DefaultGameConstants,
+            constants: getGameConstants(),
             reputation: 0
         };
 
@@ -850,7 +850,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             judges: lastBox.judges || [],
             judgeFinalizationBlock: judgeFinalizationBlock,
             winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-            constants: DefaultGameConstants,
+            constants: getGameConstants(),
             reputation: 0,
             seed: lastResolutionBox?.seed || "",
             revealedS_Hex: lastResolutionBox?.revealedS_Hex || "",
@@ -1335,7 +1335,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judges,
                 judgeFinalizationBlock: judgeFinalizationBlock,
                 winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-                constants: DefaultGameConstants,
+                constants: getGameConstants(),
                 reputation: 0,
                 // New fields populated from lastResolutionBox
                 seed: lastResolutionBox?.seed || "",
@@ -1393,7 +1393,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judges: [],
                 judgeFinalizationBlock: 0,
                 winnerFinalizationDeadline: 0,
-                constants: DefaultGameConstants,
+                constants: getGameConstants(),
                 reputation: 0,
                 // New fields with default values (no historical data)
                 seed: "",

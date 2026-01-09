@@ -4,7 +4,7 @@ import { compile, type ErgoTree } from "@fleet-sdk/compiler";
 import { Network, type ErgoAddress as Address } from "@fleet-sdk/core";
 import { blake2b256, sha256 } from "@fleet-sdk/crypto";
 import { uint8ArrayToHex } from "./utils";
-import { network_id } from "./envs";
+import { network_id, isDevMode } from "./envs";
 
 // --- Importación de todos los fuentes de los contratos ---
 import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
@@ -17,7 +17,7 @@ import END_GAME_SOURCE from '../../../contracts/end_game.es?raw';
 import { reputation_proof_contract as REPUTATION_PROOF_SOURCE } from "reputation-system";
 import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-system";
 
-import { DefaultGameConstants } from "$lib/common/constants";
+import { getGameConstants } from "$lib/common/constants";
 
 const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
 const ergoTreeVersion = 1;
@@ -30,6 +30,17 @@ let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participationBatch: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _endGame: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+
+// Subscribe to mode changes to invalidate cache
+isDevMode.subscribe(() => {
+    _gameActive = {};
+    _gameResolution = {};
+    _judgesPaid = {};
+    _gameCancellation = {};
+    _participation = {};
+    _participationBatch = {};
+    _endGame = {};
+});
 
 // =============================================================================
 // === LÓGICA DE COMPILACIÓN CON INYECCIÓN DE DEPENDENCIAS
@@ -57,13 +68,14 @@ function ensureEndGameCompiled(): void {
     const participationHash = getGopParticipationScriptHash();
     const participationBatchHash = getGopParticipationBatchScriptHash();
     const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
+    const constants = getGameConstants();
 
     let source = END_GAME_SOURCE
-        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
-        .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
-        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (DefaultGameConstants.DEV_COMMISSION_PERCENTAGE / 100 * DefaultGameConstants.COMMISSION_DENOMINATOR).toString())
+        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, constants.END_GAME_AUTH_GRACE_PERIOD.toString())
+        .replace(/`\+DEV_SCRIPT\+`/g, constants.DEV_SCRIPT)
+        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (constants.DEV_COMMISSION_PERCENTAGE / 100 * constants.COMMISSION_DENOMINATOR).toString())
         .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree)
-        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+        .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash)
         .replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, participationBatchHash);
 
@@ -72,19 +84,21 @@ function ensureEndGameCompiled(): void {
 
 function ensureParticipationCompiled(): void {
     if (_participation.ergoTree) return;
+    const constants = getGameConstants();
 
     const finalSource = PARTICIPATION_SOURCE
-        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString());
+        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString());
 
     _participation.ergoTree = compile(finalSource, { version: ergoTreeVersion });
 }
 
 function ensureGameCancellationCompiled(): void {
     if (_gameCancellation.ergoTree) return;
+    const constants = getGameConstants();
 
     let source = GAME_CANCELLATION_SOURCE
-        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
-        .replace(/`\+STAKE_DENOMINATOR\+`/g, DefaultGameConstants.STAKE_DENOMINATOR.toString());
+        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, constants.COOLDOWN_IN_BLOCKS.toString())
+        .replace(/`\+STAKE_DENOMINATOR\+`/g, constants.STAKE_DENOMINATOR.toString());
 
     _gameCancellation.ergoTree = compile(source, { version: ergoTreeVersion });
 }
@@ -98,19 +112,20 @@ function ensureGameResolutionCompiled(): void {
     const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
     const batchHash = getGopParticipationBatchScriptHash();
     const endGameHash = getGopEndGameScriptHash();
+    const constants = getGameConstants();
 
     let source = GAME_RESOLUTION_SOURCE
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash)
         .replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, batchHash)
         .replace(/`\+END_GAME_SCRIPT_HASH\+`/g, endGameHash)
-        .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
-        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, DefaultGameConstants.END_GAME_AUTH_GRACE_PERIOD.toString())
-        .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, DefaultGameConstants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
-        .replace(/`\+DEV_SCRIPT\+`/g, DefaultGameConstants.DEV_SCRIPT)
-        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (DefaultGameConstants.DEV_COMMISSION_PERCENTAGE / 100 * DefaultGameConstants.COMMISSION_DENOMINATOR).toString())
+        .replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString())
+        .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, constants.END_GAME_AUTH_GRACE_PERIOD.toString())
+        .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, constants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
+        .replace(/`\+DEV_SCRIPT\+`/g, constants.DEV_SCRIPT)
+        .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (constants.DEV_COMMISSION_PERCENTAGE / 100 * constants.COMMISSION_DENOMINATOR).toString())
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
-        .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, DefaultGameConstants.PARTICIPATION_TYPE_ID)
-        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
+        .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, constants.PARTICIPATION_TYPE_ID)
+        .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
         .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
 
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
@@ -126,6 +141,7 @@ function ensureGameActiveCompiled(): void {
     const cancellationHash = getGopGameCancellationScriptHash();
     const participationHash = getGopParticipationScriptHash();
     const reputationHash = getReputationProofScriptHash();
+    const constants = getGameConstants();
 
     let source = GAME_ACTIVE_SOURCE
         // Hashes de scripts
@@ -133,14 +149,14 @@ function ensureGameActiveCompiled(): void {
         .replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash)
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash)
-        .replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, DefaultGameConstants.ACCEPT_GAME_INVITATION_TYPE_ID)
+        .replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, constants.ACCEPT_GAME_INVITATION_TYPE_ID)
 
         // Constantes numéricas del contrato
-        .replace(/`\+STAKE_DENOMINATOR\+`/g, DefaultGameConstants.STAKE_DENOMINATOR.toString())
-        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, DefaultGameConstants.COOLDOWN_IN_BLOCKS.toString())
-        .replace(/`\+JUDGE_PERIOD\+`/g, DefaultGameConstants.JUDGE_PERIOD.toString())
-        .replace(/`\+MAX_SCORE_LIST\+`/g, DefaultGameConstants.MAX_SCORE_LIST.toString())
-        .replace(/`\+OPEN_CEREMONY_BLOCKS\+`/g, DefaultGameConstants.OPEN_CEREMONY_BLOCKS.toString());
+        .replace(/`\+STAKE_DENOMINATOR\+`/g, constants.STAKE_DENOMINATOR.toString())
+        .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, constants.COOLDOWN_IN_BLOCKS.toString())
+        .replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString())
+        .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
+        .replace(/`\+OPEN_CEREMONY_BLOCKS\+`/g, constants.OPEN_CEREMONY_BLOCKS.toString());
 
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }

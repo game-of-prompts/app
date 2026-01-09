@@ -17,12 +17,12 @@ import { stringToBytes } from '@scure/base';
 import { GAME } from '../reputation/types';
 import { fetchJudges } from '../reputation/fetch';
 import { prependHexPrefix } from '$lib/utils';
-import { DefaultGameConstants } from '$lib/common/constants';
+import { getGameConstants } from '$lib/common/constants';
 
 declare const ergo: any;
 
 // Constante del contrato game_resolution.es
-const JUDGE_PERIOD = DefaultGameConstants.JUDGE_PERIOD + 10;
+// Moved inside function to be dynamic
 
 /**
  * Inicia la transición de un juego del estado Activo al de Resolución.
@@ -40,6 +40,8 @@ export async function resolve_game(
     secretS_hex: string,
     judgeProofs: string[]
 ): Promise<string | null> {
+
+    const JUDGE_PERIOD = getGameConstants().JUDGE_PERIOD + 10;
 
     console.log(`Iniciando transición a resolución para el juego: ${game.boxId}`);
 

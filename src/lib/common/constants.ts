@@ -51,4 +51,11 @@ const ProductionMode: GameConstants = {
     COMMISSION_DENOMINATOR: 1000000,  // Hardcoded conversion.
 }
 
-export const DefaultGameConstants: GameConstants = ProductionMode;
+
+
+import { get } from "svelte/store";
+import { isDevMode } from "$lib/ergo/envs";
+
+export const getGameConstants = (): GameConstants => {
+    return get(isDevMode) ? DevelopmentMode : ProductionMode;
+};

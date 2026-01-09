@@ -13,7 +13,7 @@ declare const ergo: any;
 import { hexToBytes } from '$lib/ergo/utils';
 import { getGopGameActiveErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
-import { DefaultGameConstants } from '$lib/common/constants';
+import { getGameConstants } from '$lib/common/constants';
 import { estimateTotalBoxSizeFromInputs, MAX_BOX_SIZE, type GameBoxInputs } from '../utils/box-size-calculator';
 
 function randomSeed(): string {
@@ -90,7 +90,7 @@ export async function create_game(
     const seedBytes = hexToBytes(seedHex);
     if (!seedBytes) throw new Error("Failed to convert the seedHex to bytes.");
 
-    const ceremonyDeadlineBlock = (await ergo.get_current_height()) + DefaultGameConstants.OPEN_CEREMONY_BLOCKS;
+    const ceremonyDeadlineBlock = (await ergo.get_current_height()) + getGameConstants().OPEN_CEREMONY_BLOCKS;
 
     if (ceremonyDeadlineBlock >= deadlineBlock) {
         throw new Error("Deadline can't be before ceremony deadline. You are trying to create a fast-game. Select Fast Game Mode constants instead.")

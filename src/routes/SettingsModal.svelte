@@ -11,7 +11,9 @@
         default_web_explorer_uri_tx,
         default_web_explorer_uri_addr,
         default_web_explorer_uri_tkn,
+        isDevMode,
     } from "$lib/ergo/envs";
+    import { Checkbox } from "$lib/components/ui/checkbox";
     import { X, RotateCcw } from "lucide-svelte";
     import { createEventDispatcher } from "svelte";
 
@@ -89,6 +91,19 @@
                         bind:value={$web_explorer_uri_tkn}
                         placeholder="https://sigmaspace.io/en/token/"
                     />
+                </div>
+
+                <div
+                    class="flex items-center space-x-2 pt-4 border-t border-border"
+                >
+                    <Checkbox id="dev-mode" bind:checked={$isDevMode} />
+                    <Label for="dev-mode" class="cursor-pointer">
+                        <span class="font-medium">Development Mode</span>
+                        <span class="block text-xs text-muted-foreground">
+                            Use shorter periods for testing (requires app reload
+                            to take full effect on contracts)
+                        </span>
+                    </Label>
                 </div>
             </div>
 

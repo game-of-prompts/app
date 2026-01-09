@@ -9,7 +9,7 @@ import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox } from '$lib/ergo/utils';
 import { type GameResolution } from '$lib/common/game';
 import { getGopEndGameErgoTreeHex } from '../contract';
-import { DefaultGameConstants } from '$lib/common/constants';
+
 
 declare const ergo: any;
 
