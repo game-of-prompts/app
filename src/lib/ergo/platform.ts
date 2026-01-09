@@ -2,6 +2,7 @@
 import {
     type GameActive,
     type GameResolution,
+    type GameEndGame,
     type GameCancellation,
     type ValidParticipation,
     type AnyGame
@@ -14,6 +15,7 @@ import { type Platform } from '$lib/common/platform';
 import { cancel_game } from './actions/cancel_game';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 import { end_game } from './actions/end_game';
+import { to_end_game } from './actions/to_end_game';
 import { judges_invalidate } from './actions/judges_invalidate';
 import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
@@ -185,11 +187,21 @@ export class ErgoPlatform implements Platform {
      * Solo puede ser llamado por el 'resolver' actual después de que el período de jueces haya terminado.
      */
     async endGame(
-        game: GameResolution,
+        game: GameEndGame,
         participations: ValidParticipation[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         return await end_game(game, participations);
+    }
+
+    /**
+     * Mueve el contrato de game_resolution.es a end_game.es
+     */
+    async toEndGame(
+        game: GameResolution
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+        return await to_end_game(game);
     }
 
     /**

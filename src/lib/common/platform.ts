@@ -3,6 +3,7 @@
 import type {
     GameActive,
     GameResolution,
+    GameEndGame,
     GameCancellation,
     ValidParticipation,
     AnyGame
@@ -93,8 +94,12 @@ export interface Platform {
     ): Promise<string | null>;
 
     endGame(
-        game: GameResolution,
+        game: GameEndGame,
         participations: ValidParticipation[]
+    ): Promise<string | null>;
+
+    toEndGame(
+        game: GameResolution
     ): Promise<string | null>;
 
     /**

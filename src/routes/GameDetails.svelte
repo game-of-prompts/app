@@ -613,18 +613,24 @@
     }
 
     async function handleEndGame() {
-        // TODO In case status is EndGame, then execute endGame().   In case is resolution, then execute toEndGame()
-        if (game?.status !== "Resolution") return;
+        if (!game) return;
         errorMessage = null;
         isSubmitting = true;
+
         try {
-            const valid_participations = participations.filter(
-                (p) => p.status === "Submitted",
-            );
-            transactionId = await platform.endGame(
-                game,
-                valid_participations as ValidParticipation[],
-            );
+            if (game.status === "Resolution") {
+                // Move to EndGame contract
+                transactionId = await platform.toEndGame(game);
+            } else if (game.status === "EndGame") {
+                // Finalize the game
+                const valid_participations = participations.filter(
+                    (p) => p.status === "Submitted",
+                );
+                transactionId = await platform.endGame(
+                    game,
+                    valid_participations as ValidParticipation[],
+                );
+            }
         } catch (e: any) {
             errorMessage = e.message;
         } finally {
