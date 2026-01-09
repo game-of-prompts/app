@@ -88,7 +88,10 @@ export async function fetchOpinionsAbout(
 
         const { value: boxes } = await boxGenerator.next();
         const types = await fetchTypeNfts();
-        return boxes.map((b: ApiBox) => convertToRPBox(b, b.assets[0].tokenId, types)) || [];
+        if (!boxes || boxes.length === 0) {
+            return [];
+        }
+        return boxes.map((b: ApiBox) => convertToRPBox(b, b.assets[0].tokenId, types));
     } catch (e) {
         console.error("Error fetching opinions about:", e);
         return [];
