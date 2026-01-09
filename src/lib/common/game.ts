@@ -19,8 +19,7 @@ export interface TokenEIP4 {
 export const GameState = {
     Unknown: 'Unknown',
     Active: 'Active',                   // Corresponde a game_active.es
-    Resolution: 'Resolution',           // Corresponde a game_resolution.es
-    EndGame: 'EndGame',                 // Corresponde a end_game.es
+    Resolution: 'Resolution',           // Corresponde a game_resolution.es y end_game.es
     Cancelled_Draining: 'Cancelled_Draining', // Corresponde a game_cancellation.es
 
     // Estados derivados (no representan un script, sino el final del ciclo de vida)
@@ -114,16 +113,10 @@ export interface GameResolution {
     reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
+    isEndGame: boolean;
 }
 
-/**
- * Representa la estructura de datos de una caja de juego en estado "EndGame".
- * Corresponde al script `end_game.es`.
- * Es idéntica a GameResolution en registros, pero con diferente script y status.
- */
-export interface GameEndGame extends Omit<GameResolution, 'status'> {
-    status: 'EndGame';
-}
+
 
 /**
  * Representa la estructura de datos de una caja de juego en estado "Cancelación".
@@ -230,7 +223,7 @@ export interface ParticipationConsumed extends ParticipationBase {
 // =================================================================
 
 /** Un tipo de unión que puede representar un juego en cualquier estado de contrato. */
-export type AnyGame = GameActive | GameResolution | GameEndGame | GameCancellation | GameFinalized;
+export type AnyGame = GameActive | GameResolution | GameCancellation | GameFinalized;
 
 /** Un tipo de unión que puede representar una participación en cualquier estado. */
 export type AnyParticipation = ValidParticipation | MalformedParticipation | ParticipationConsumed;

@@ -619,17 +619,19 @@
 
         try {
             if (game.status === "Resolution") {
-                // Move to EndGame contract
-                transactionId = await platform.toEndGame(game);
-            } else if (game.status === "EndGame") {
-                // Finalize the game
-                const valid_participations = participations.filter(
-                    (p) => p.status === "Submitted",
-                );
-                transactionId = await platform.endGame(
-                    game,
-                    valid_participations as ValidParticipation[],
-                );
+                if (!game.isEndGame) {
+                    // Move to EndGame contract
+                    transactionId = await platform.toEndGame(game);
+                } else {
+                    // Finalize the game
+                    const valid_participations = participations.filter(
+                        (p) => p.status === "Submitted",
+                    );
+                    transactionId = await platform.endGame(
+                        game,
+                        valid_participations as ValidParticipation[],
+                    );
+                }
             }
         } catch (e: any) {
             errorMessage = e.message;
@@ -1198,7 +1200,8 @@
                                         ? (
                                               game.commissionPercentage / 10000
                                           ).toFixed(4)
-                                        : game.status == "Resolution"
+                                        : game.status == "Resolution" ||
+                                            game.status == "EndGame"
                                           ? (
                                                 game.resolverCommission / 10000
                                             ).toFixed(4)
@@ -1216,7 +1219,8 @@
                             <a
                                 >b.{game.status == "Active"
                                     ? game.deadlineBlock
-                                    : game.status == "Resolution"
+                                    : game.status == "Resolution" ||
+                                        game.status == "EndGame"
                                       ? game.resolutionDeadline
                                       : game.status == "Cancelled_Draining"
                                         ? game.unlockHeight
@@ -1478,7 +1482,8 @@
                                 <div class="legend-item">
                                     <div class="legend-color creator"></div>
                                     <span
-                                        >{game.status === "Resolution"
+                                        >{game.status === "Resolution" ||
+                                        game.status === "EndGame"
                                             ? "Resolver"
                                             : "Creator"} ({creatorPct.toFixed(
                                             2,
@@ -2588,7 +2593,7 @@
                                         Advanced: You can verify judges' past
                                         performance using external scripts.
                                     </p>
-                                {:else if game.status === "Resolution"}
+                                {:else if game.status === "Resolution" || game.status === "EndGame"}
                                     {#if new Date().getTime() < targetDate}
                                         <p class="text-sm font-medium mt-2">
                                             The candidate can be invalidated if
@@ -3061,11 +3066,13 @@
                             {#each participations as p (p.boxId)}
                                 {@const isCurrentParticipationWinner =
                                     (game.status === "Resolution" ||
+                                        game.status === "EndGame" ||
                                         game.status === "Finalized") &&
                                     game.winnerCandidateCommitment ===
                                         p.commitmentC_Hex}
                                 {@const actualScoreForThisParticipation =
                                     game.status === "Resolution" ||
+                                    game.status === "EndGame" ||
                                     game.status === "Finalized"
                                         ? resolve_participation_commitment(
                                               p,
