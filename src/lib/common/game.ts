@@ -371,12 +371,18 @@ export function calculateEffectiveScore(
     rawScore: bigint,
     deadlineHeight: number,
     submissionHeight: number,
-    timeWeight: bigint
+    timeWeight: number
 ): bigint {
-    const heightDiff = BigInt(deadlineHeight - submissionHeight);
-    const timeFactor = timeWeight + heightDiff;
-    if (timeFactor <= 0n) {
-        return 0n; // Should not happen if validated correctly, but safe fallback
+    try {
+        const heightDiff = BigInt(deadlineHeight - submissionHeight);
+        const timeFactor = BigInt(timeWeight) + heightDiff;
+        if (timeFactor <= 0n) {
+            return 0n; // Should not happen if validated correctly, but safe fallback
+        }
+        return rawScore * timeFactor;
     }
-    return rawScore * timeFactor;
+    catch (error) {
+        console.error("Error calculating effective score:", error);
+        return 0n;
+    }
 }
