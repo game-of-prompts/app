@@ -3350,23 +3350,84 @@
                                                             (Real Score: {actualScoreForThisParticipation})
                                                             {#if effectiveScore !== null && effectiveScore !== actualScoreForThisParticipation}
                                                                 <br />
-                                                                <div class="flex items-center gap-1">
-                                                                    (Effective Score: {effectiveScore})
-                                                                    <div class="group relative inline-block">
-                                                                        <Info class="w-3 h-3 cursor-help text-gray-400" />
+                                                                <div
+                                                                    class="flex items-center gap-1"
+                                                                >
+                                                                    (Effective
+                                                                    Score: {effectiveScore})
+                                                                    <div
+                                                                        class="group relative inline-block"
+                                                                    >
+                                                                        <Info
+                                                                            class="w-3 h-3 cursor-help text-gray-400"
+                                                                        />
                                                                         <div
-                                                                            class="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-xl"
+                                                                            class="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-xl text-left"
                                                                         >
-                                                                            <div class="font-semibold mb-1">
-                                                                                Effective Score Calculation
+                                                                            <div
+                                                                                class="font-semibold mb-2 border-b border-gray-700 pb-1"
+                                                                            >
+                                                                                Effective
+                                                                                Score
+                                                                                Calculation
                                                                             </div>
-                                                                            <div class="font-mono text-[10px] opacity-90">
-                                                                                {actualScoreForThisParticipation} * ({Number(
-                                                                                    game.timeWeight,
-                                                                                )} + {game.deadlineBlock} - {p.creationHeight})
+                                                                            <div
+                                                                                class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mb-2"
+                                                                            >
+                                                                                <span
+                                                                                    class="text-gray-400"
+                                                                                    >Base
+                                                                                    Score:</span
+                                                                                >
+                                                                                <span
+                                                                                    class="font-mono text-right"
+                                                                                    >{actualScoreForThisParticipation}</span
+                                                                                >
+
+                                                                                <span
+                                                                                    class="text-gray-400"
+                                                                                    >Time
+                                                                                    Factor:</span
+                                                                                >
+                                                                                <span
+                                                                                    class="font-mono text-right"
+                                                                                    >{Number(
+                                                                                        game.timeWeight,
+                                                                                    )}</span
+                                                                                >
+
+                                                                                <span
+                                                                                    class="text-gray-400"
+                                                                                    >Deadline
+                                                                                    Block:</span
+                                                                                >
+                                                                                <span
+                                                                                    class="font-mono text-right"
+                                                                                    >{game.deadlineBlock}</span
+                                                                                >
+
+                                                                                <span
+                                                                                    class="text-gray-400"
+                                                                                    >Submission
+                                                                                    Block:</span
+                                                                                >
+                                                                                <span
+                                                                                    class="font-mono text-right"
+                                                                                    >{p.creationHeight}</span
+                                                                                >
                                                                             </div>
-                                                                            <div class="mt-1 text-[10px] text-gray-300">
-                                                                                Score * (TimeFactor + Deadline - Height)
+
+                                                                            <div
+                                                                                class="text-[10px] text-gray-400 italic border-t border-gray-700 pt-1 mt-1"
+                                                                            >
+                                                                                Formula:
+                                                                                Score
+                                                                                *
+                                                                                (TimeFactor
+                                                                                +
+                                                                                Deadline
+                                                                                -
+                                                                                Submission)
                                                                             </div>
                                                                             <!-- Arrow -->
                                                                             <div
