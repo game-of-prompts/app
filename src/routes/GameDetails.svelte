@@ -3086,6 +3086,7 @@
                                               actualScoreForThisParticipation,
                                               game.deadlineBlock,
                                               p.creationHeight,
+                                              Number(game.timeWeight),
                                           )
                                         : null}
 
@@ -3348,8 +3349,32 @@
                                                         {:else}
                                                             (Real Score: {actualScoreForThisParticipation})
                                                             {#if effectiveScore !== null && effectiveScore !== actualScoreForThisParticipation}
-                                                                <br />(Effective
-                                                                Score: {effectiveScore})
+                                                                <br />
+                                                                <div class="flex items-center gap-1">
+                                                                    (Effective Score: {effectiveScore})
+                                                                    <div class="group relative inline-block">
+                                                                        <Info class="w-3 h-3 cursor-help text-gray-400" />
+                                                                        <div
+                                                                            class="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-xl"
+                                                                        >
+                                                                            <div class="font-semibold mb-1">
+                                                                                Effective Score Calculation
+                                                                            </div>
+                                                                            <div class="font-mono text-[10px] opacity-90">
+                                                                                {actualScoreForThisParticipation} * ({Number(
+                                                                                    game.timeWeight,
+                                                                                )} + {game.deadlineBlock} - {p.creationHeight})
+                                                                            </div>
+                                                                            <div class="mt-1 text-[10px] text-gray-300">
+                                                                                Score * (TimeFactor + Deadline - Height)
+                                                                            </div>
+                                                                            <!-- Arrow -->
+                                                                            <div
+                                                                                class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"
+                                                                            ></div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             {/if}
                                                         {/if}
                                                     </span>
