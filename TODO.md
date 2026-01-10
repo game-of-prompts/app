@@ -125,7 +125,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Implementar end game UI
 
-[] Mejorar formula de Efficient-score
+[x] Mejorar formula de Efficient-score
     - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
     - Agregar parámetro variable N.
 
