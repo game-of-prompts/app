@@ -46,6 +46,7 @@
   val perJudgeComissionPercentage = numericalParams(3)
   val creatorComissionPercentage = numericalParams(4)
   val resolutionDeadline = numericalParams(5)
+  val timeWeight = numericalParams(6)
 
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
   // gameProvenance(0) = gameDetailsJsonHex

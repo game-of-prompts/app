@@ -44,6 +44,7 @@
   val perJudgeComissionPercentage = numericalParams(3)
   val creatorComissionPercentage = numericalParams(4)
   val resolutionDeadline = numericalParams(5)
+  val timeWeight = numericalParams(6)
 
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
   // gameProvenance(0) = gameDetailsJsonHex
@@ -144,9 +145,9 @@
 
                 if (validCurrentCandidate) {
                   // Se determina el nuevo ganador comparando puntajes AJUSTADOS y alturas de bloque
-                  // Formula: score = game_score * (DEADLINE - HEIGHT)
-                  val newScoreAdjusted = newScore * (deadline - omittedWinnerBox.creationInfo._1.toLong)
-                  val currentScoreAdjusted = currentScore * (deadline - currentCandidateBox.creationInfo._1.toLong)
+                  // Formula: score = game_score * (TIME_WEIGHT + DEADLINE - HEIGHT)
+                  val newScoreAdjusted = newScore * (timeWeight + deadline - omittedWinnerBox.creationInfo._1.toLong)
+                  val currentScoreAdjusted = currentScore * (timeWeight + deadline - currentCandidateBox.creationInfo._1.toLong)
 
                   if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
                     omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
@@ -180,6 +181,7 @@
                 recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
                 recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
                 recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
+                recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
                 (
@@ -280,6 +282,8 @@
             recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
             recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage + creatorComissionPercentage &&
             recreatedGameBox.R8[Coll[Long]].get(4) == 0 &&
+            recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
+            recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
             recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
           }
           
@@ -310,6 +314,7 @@
           recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
           recreatedGameBox.R8[Coll[Long]].get(4) == creatorComissionPercentage &&
           recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
+          recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
           recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
         }
 

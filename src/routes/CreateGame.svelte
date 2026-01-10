@@ -67,6 +67,9 @@
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
 
+    // Time Factor (timeWeight) - affects how much early participation matters
+    let timeFactorOption: "low" | "balanced" | "high" | "extreme" = "balanced";
+
     let participationTokenId: string = ""; // "" para ERG
     let participationTokenDecimals: number = 9;
     let participationTokenName: string = "ERG";
@@ -365,6 +368,36 @@
         return BigInt(Math.round(value * multiplier));
     }
 
+    /**
+     * Calculates the timeWeight based on the selected time factor option and game duration.
+     * - Low: 10x duration (first participant gains ~10% over last)
+     * - Balanced (Recommended): 1x duration (first gains 2x over last)
+     * - High: 0.5x duration (first gains 3x over last)
+     * - Extreme: 0 (current formula, time is critical)
+     */
+    function calculateTimeWeight(): bigint {
+        if (!deadlineBlock) return 0n;
+        const currentHeight = platform.get_current_height();
+        // Use estimated current height for calculation (will be async in actual call)
+        // For simplicity, we assume duration is deadlineBlock - estimated current
+        // A more accurate version would use an async pattern
+        const gameDuration = BigInt(
+            deadlineValue * (deadlineUnit === "days" ? 720 : 1),
+        ); // Approx blocks
+
+        switch (timeFactorOption) {
+            case "low":
+                return gameDuration * 10n;
+            case "balanced":
+                return gameDuration;
+            case "high":
+                return gameDuration / 2n;
+            case "extreme":
+            default:
+                return 0n;
+        }
+    }
+
     // --- Token Reactive Logic ---
     let customTokenDebounceTimer: any;
     $: {
@@ -512,6 +545,7 @@
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
                 perJudgeComissionPercentage: perJudgeComissionPercentage,
+                timeWeight: calculateTimeWeight(),
             });
             transactionId = result;
         } catch (error: any) {
@@ -810,6 +844,35 @@
                                 placeholder="e.g., 1 for 1%"
                                 required
                             />
+                        </div>
+                        <div class="form-group lg:col-span-4">
+                            <Label for="timeFactorOption"
+                                >Time Factor (Early Participation Incentive)</Label
+                            >
+                            <select
+                                id="timeFactorOption"
+                                bind:value={timeFactorOption}
+                                class="w-full p-2 border border-slate-500/20 rounded-md bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-slate-500/20"
+                            >
+                                <option value="low"
+                                    >Low (Time barely matters, ~10% advantage
+                                    for first)</option
+                                >
+                                <option value="balanced"
+                                    >Balanced (Recommended, 2x advantage for
+                                    first)</option
+                                >
+                                <option value="high"
+                                    >High (3x advantage for first)</option
+                                >
+                                <option value="extreme"
+                                    >Extreme (Time is critical)</option
+                                >
+                            </select>
+                            <p class="text-xs mt-1 text-muted-foreground">
+                                Controls how much earlier submissions are
+                                rewarded over later ones.
+                            </p>
                         </div>
                         <div class="form-group lg:col-span-4">
                             <div class="repeater-container">

@@ -51,7 +51,8 @@ export async function create_game(
     judges: string[],
     gameDetailsJson: string,
     perJudgeComissionPercentage: number,
-    participationTokenId: string
+    participationTokenId: string,
+    timeWeight: bigint
 ): Promise<string | null> {
 
     const seedHex = randomSeed();
@@ -155,7 +156,8 @@ export async function create_game(
         creatorStakeAmount,
         participationFeeAmount,
         BigInt(Math.round(perJudgeComissionPercentage * 10000)),
-        BigInt(Math.round(commissionPercentage * 10000))
+        BigInt(Math.round(commissionPercentage * 10000)),
+        timeWeight
     ]).toHex();
     const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
 

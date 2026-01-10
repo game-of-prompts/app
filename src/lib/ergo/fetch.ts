@@ -188,9 +188,9 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
-        // structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
-        if (!numericalParams || numericalParams.length < 5) throw new Error("R8 does not contain the 5 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage] = numericalParams;
+        // structure: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, timeWeight]
+        if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
+        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage, timeWeight] = numericalParams;
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
@@ -219,6 +219,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage, // From R8
+            timeWeight: timeWeight, // From R8
             reputation: 0,
             constants: getGameConstants(),
             seed: seed,
@@ -326,8 +327,8 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
         // R8: Coll[Long] -> [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
         const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         const numericalParams = parseLongColl(r8Array);
-        if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
-        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline] = numericalParams;
+        if (!numericalParams || numericalParams.length < 7) throw new Error("R8 does not contain the 7 expected numerical parameters.");
+        const [deadlineBlock, creatorStakeAmount, participationFeeAmount, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline, timeWeight] = numericalParams;
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
@@ -363,6 +364,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             value: BigInt(box.assets.find((a: any) => a.tokenId === participationTokenId)?.amount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeComissionPercentage: perJudgeComissionPercentage,
+            timeWeight: timeWeight, // From R8
             resolverCommission: Number(creatorComissionPercentage), // Added from R8
             constants: getGameConstants(),
             seed: seed, // Added from R5
@@ -720,6 +722,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             winnerCandidateCommitment: lastResolutionBox?.winnerCandidateCommitment || null,
             creatorStakeAmount: lastResolutionBox?.creatorStakeAmount || BigInt(0),
             perJudgeComissionPercentage: lastResolutionBox?.perJudgeComissionPercentage || BigInt(0),
+            timeWeight: lastResolutionBox?.timeWeight || BigInt(0),
             resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
             resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
             resolverCommission: lastResolutionBox?.resolverCommission || 0
@@ -1206,6 +1209,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 winnerCandidateCommitment: lastResolutionBox?.winnerCandidateCommitment || null,
                 creatorStakeAmount: lastResolutionBox?.creatorStakeAmount || BigInt(0),
                 perJudgeComissionPercentage: lastResolutionBox?.perJudgeComissionPercentage || BigInt(0),
+                timeWeight: lastResolutionBox?.timeWeight || BigInt(0),
                 resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
                 resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
                 resolverCommission: lastResolutionBox?.resolverCommission || 0
@@ -1264,6 +1268,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 winnerCandidateCommitment: null,
                 creatorStakeAmount: BigInt(0),
                 perJudgeComissionPercentage: BigInt(0),
+                timeWeight: BigInt(0),
                 resolverPK_Hex: null,
                 resolverScript_Hex: "",
                 resolverCommission: 0

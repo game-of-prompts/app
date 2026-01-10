@@ -78,6 +78,7 @@ export interface GameActive {
     participationFeeAmount: bigint;
     participationTokenId: string;
     perJudgeComissionPercentage: bigint;
+    timeWeight: bigint;
     content: GameContent;
     value: bigint;
     reputationOpinions: RPBox[];
@@ -105,6 +106,7 @@ export interface GameResolution {
     participationFeeAmount: bigint;
     participationTokenId: string;
     perJudgeComissionPercentage: bigint;
+    timeWeight: bigint;
     resolverPK_Hex: string | null;
     resolverScript_Hex: string
     resolverCommission: number;
@@ -168,6 +170,7 @@ export interface GameFinalized {
     winnerCandidateCommitment: string | null;
     creatorStakeAmount: bigint;
     perJudgeComissionPercentage: bigint;
+    timeWeight: bigint;
     resolverPK_Hex: string | null;
     resolverScript_Hex: string;
     resolverCommission: number;
@@ -362,16 +365,18 @@ export async function getGameTokenSymbol(game: AnyGame): Promise<string> {
 
 /**
  * Calculates the effective score based on the raw score and the submission height.
- * Formula: score = game_score * (DEADLINE - HEIGHT)
+ * Formula: score = game_score * (TIME_WEIGHT + DEADLINE - HEIGHT)
  */
 export function calculateEffectiveScore(
     rawScore: bigint,
     deadlineHeight: number,
-    submissionHeight: number
+    submissionHeight: number,
+    timeWeight: bigint
 ): bigint {
     const heightDiff = BigInt(deadlineHeight - submissionHeight);
-    if (heightDiff <= 0n) {
+    const timeFactor = timeWeight + heightDiff;
+    if (timeFactor <= 0n) {
         return 0n; // Should not happen if validated correctly, but safe fallback
     }
-    return rawScore * heightDiff;
+    return rawScore * timeFactor;
 }

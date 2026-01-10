@@ -61,6 +61,7 @@
   val participationFee = numericalParams(2)
   val perJudgeComissionPercentage = numericalParams(3)
   val creatorComissionPercentage = numericalParams(4)
+  val timeWeight = numericalParams(5)
 
   // R9: [gameDetailsJsonHex, ParticipationTokenID]
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
