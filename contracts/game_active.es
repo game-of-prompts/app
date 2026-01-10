@@ -31,7 +31,7 @@
   // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage].
+  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, timeWeight].
   // R9: Coll[Coll[Byte]]   - gameDetailsJsonHex, ParticipationTokenID
 
 
