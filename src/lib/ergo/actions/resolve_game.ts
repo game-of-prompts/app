@@ -129,7 +129,7 @@ export async function resolve_game(
         }
 
         const pBoxCreationHeight = pBox.creationHeight;
-        const effectiveScore = calculateEffectiveScore(actualScore, game.deadlineBlock, pBoxCreationHeight);
+        const effectiveScore = calculateEffectiveScore(actualScore, game.deadlineBlock, pBoxCreationHeight, Number(game.timeWeight));
 
         // Si la participación es válida, se considera para determinar al ganador.
         // Usamos effectiveScore para comparar.
@@ -167,7 +167,8 @@ export async function resolve_game(
         game.participationFeeAmount,
         game.perJudgeComissionPercentage,
         BigInt(game.commissionPercentage),
-        resolutionDeadline
+        resolutionDeadline,
+        game.timeWeight
     ];
 
     let winnerCommitmentBytes: Uint8Array;
