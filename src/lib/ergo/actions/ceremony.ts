@@ -29,7 +29,7 @@ export async function contribute_to_ceremony(
     console.log(`Iniciando contribución a ceremonia para el juego: ${game.boxId}`);
 
     const currentHeight = await ergo.get_current_height();
-    
+
     // 1. --- Validación (Pre-checks) ---
     if (currentHeight >= game.ceremonyDeadline) {
         throw new Error("La ceremonia de apertura ha finalizado. No se puede agregar más entropía.");
@@ -41,7 +41,7 @@ export async function contribute_to_ceremony(
     }
 
     // 2. --- Calcular el nuevo estado ---
-    
+
     const oldSeedBytes = hexToBytes(game.seed);
     if (!oldSeedBytes) throw new Error("Seed (R5._1) del juego inválido.");
 
@@ -63,7 +63,7 @@ export async function contribute_to_ceremony(
     // Todos los registros deben ser idénticos, excepto R5._1
 
     // R4: Sigue en estado 0 (Activo)
-    const r4Hex = SInt(0).toHex(); 
+    const r4Hex = SInt(0).toHex();
 
     // R5: (updated_seed, ceremonyDeadline)
     const r5Hex = SPair(
@@ -76,7 +76,7 @@ export async function contribute_to_ceremony(
 
     // R7: invitedJudges (se mantiene)
     const r7Hex = SColl(
-        SColl(SByte), 
+        SColl(SByte),
         game.judges.map(tokenId => hexToBytes(tokenId)!)
     ).toHex();
 
@@ -86,7 +86,8 @@ export async function contribute_to_ceremony(
         game.creatorStakeAmount,
         game.participationFeeAmount,
         game.perJudgeComissionPercentage,
-        BigInt(game.commissionPercentage) 
+        BigInt(game.commissionPercentage),
+        BigInt(game.timeWeight)
     ];
     const r8Hex = SColl(SLong, numericalParams).toHex();
 
@@ -100,20 +101,20 @@ export async function contribute_to_ceremony(
 
     const ceremonyOutputBox = new OutputBuilder(
         BigInt(gameBoxToSpend.value),
-        gameActiveErgoTree 
+        gameActiveErgoTree
     )
-    .addTokens(gameBoxToSpend.assets)
-    .setAdditionalRegisters({
-        R4: r4Hex,
-        R5: r5Hex,
-        R6: r6Hex,
-        R7: r7Hex,
-        R8: r8Hex,
-        R9: r9Hex
-    });
+        .addTokens(gameBoxToSpend.assets)
+        .setAdditionalRegisters({
+            R4: r4Hex,
+            R5: r5Hex,
+            R6: r6Hex,
+            R7: r7Hex,
+            R8: r8Hex,
+            R9: r9Hex
+        });
 
     // 5. --- Construir y Enviar la Transacción ---
-    
+
     const changeAddress = await ergo.get_change_address();
 
     try {
@@ -129,7 +130,7 @@ export async function contribute_to_ceremony(
 
         console.log(`Contribución a ceremonia enviada con éxito. ID de la transacción: ${txId}`);
         return txId;
-        
+
     } catch (error) {
         console.error("Error al construir o enviar la transacción de ceremonia:", error);
         throw error;
