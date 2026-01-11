@@ -135,6 +135,12 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
+---
+
+[] Obtener datos de mem-pool [implementar como libreria ¿?]
+
+[] Chained tx.
+
 ====
 
 
@@ -166,9 +172,5 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 > Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
 
 ----
-
-[] Obtener datos de mem-pool [implementar como libreria ¿?]
-
-[] Chained tx.
 
 [] ¿Ceremonia de secreto del servicio juego?
