@@ -113,13 +113,14 @@ export interface Platform {
     /**
      * Permite a un juez votar para invalidar al candidato a ganador actual.
      * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
+     * Cuando el voto actual alcanza el umbral, retorna array con IDs de transacciones encadenadas.
      */
     judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
         participations: ValidParticipation[],
         judgeVoteDataInputs: Box<bigint>[]
-    ): Promise<string | null>
+    ): Promise<string[] | null>
 
     /**
      * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.

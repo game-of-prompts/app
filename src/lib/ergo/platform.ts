@@ -18,6 +18,7 @@ import { end_game } from './actions/end_game';
 import { to_end_game } from './actions/to_end_game';
 import { end_game_chained } from './actions/end_game_chained';
 import { judges_invalidate } from './actions/judges_invalidate';
+import { judges_invalidation_chained } from './actions/judges_invalidation_chained';
 import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
 import { claim_after_cancellation } from './actions/claim_after_cancellation';
@@ -225,20 +226,30 @@ export class ErgoPlatform implements Platform {
     /**
      * Permite a un juez votar para invalidar al candidato a ganador actual.
      * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
+     * Cuando el voto actual alcanza el umbral, se usa una transacción encadenada.
      */
     async judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
         participations: ValidParticipation[],
         judgeVoteDataInputs: Box<Amount>[]
-    ): Promise<string | null> {
+    ): Promise<string[] | null> {
         if (!ergo) throw new Error("Wallet not connected");
 
-        if (judgeVoteDataInputs.length > (game.judges.length / 2)) {
-            return await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
-        }
-        else {
-            return await createOrUpdateOpinion(PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null);
+        const requiredVotes = Math.floor(game.judges.length / 2) + 1;
+
+        // Current judge's vote will reach threshold - use chained transaction
+        // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
+        if (judgeVoteDataInputs.length + 1 >= requiredVotes) {
+            return await judges_invalidation_chained(
+                game, invalidatedParticipation, participations, judgeVoteDataInputs
+            );
+        } else {
+            // Not enough votes yet - just create the opinion
+            const txId = await createOrUpdateOpinion(
+                PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null
+            );
+            return txId ? [txId] : null;
         }
     }
 
