@@ -246,7 +246,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
  */
 export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
     const games = new Map<string, GameActive>();
-    const scriptHash = getGopGameActiveScriptHash();
+    const scriptHash = getGopGameActiveTemplateHash();
 
     let offset = 0;
     const limit = 100;
@@ -264,6 +264,7 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
 
             const data = await response.json();
             const items: Box[] = data.items || [];
+
             for (const box of items) {
                 const game = await parseGameActiveBox(box);
                 if (game) games.set(game.gameId, game);
@@ -1066,6 +1067,7 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
  * Returns null if the game cannot be found or parsed.
  */
 export async function fetchGame(id: string): Promise<AnyGame | null> {
+    console.log("FETCH GAME FOR ID: ", id);
     // 1) try store first
     try {
         const current = get(games);
@@ -1099,9 +1101,11 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     }
 
     // 3) If there is a current box and it matches a contract ErgoTree -> parse and return
+    console.log("CURRENT BOX: ", currentBox);
     try {
         if (currentBox) {
             if (currentBox.ergoTree === getGopGameActiveErgoTreeHex()) {
+
                 const parsed = await parseGameActiveBox(currentBox);
                 if (parsed) return parsed;
             } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex()) {
