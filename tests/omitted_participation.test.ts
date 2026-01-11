@@ -107,7 +107,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         winnerCommitment = createCommitment("solver-winner", winnerScore, winnerLogsHash, winnerErgotree, secret);
         omittedCommitment = createCommitment("solver-omitted", omittedScore, omittedLogsHash, omittedErgotree, secret);
 
-        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
 
         const gameBoxValue = RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
@@ -135,14 +135,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 // participatingJudges (en este caso vacío)
                 R7: SColl(SColl(SByte), []).toHex(),
 
-                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline, timeWeight]
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
                     numericalParams[1],         // creatorStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
 
                 // gameProvenance: Coll[Coll[Byte]] con los tres elementos planos
@@ -197,14 +198,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Must maintain the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
             updatedNumericalParams[4],         // creatorComissionPercentage
-            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -244,7 +246,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("Fails if not maintains the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1, false);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, ...newResolver.utxos.toArray()])
@@ -265,7 +267,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             updatedNumericalParams[2],         // participationFee
                             updatedNumericalParams[3],         // perJudgeCommissionPercent
                             updatedNumericalParams[4],         // creatorComissionPercentage
-                            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+                            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
                         ]).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
@@ -286,14 +289,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should include an omitted participant who becomes the new winner", () => {
         setupScenario(1000n, 1200n);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
             updatedNumericalParams[4],         // creatorComissionPercentage
-            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -421,14 +425,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should set the omitted participant as the winner when there is no current winner", () => {
         setupScenario(1000n, 1200n, 600_000, [], 10, true);
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
             updatedNumericalParams[4],         // creatorComissionPercentage
-            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -477,7 +482,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -526,7 +532,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -570,7 +577,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -622,7 +630,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         gameResolutionContract.addUTxOs({
@@ -720,7 +729,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -779,7 +789,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -842,7 +853,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -885,7 +897,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -924,7 +937,8 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
             200000n, // creatorComissionPercentage
-            BigInt(resolutionDeadline)
+            BigInt(resolutionDeadline),
+            0n  // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -958,14 +972,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should pass if the omitted participant has 10 scores", () => {
         setupScenario(1000n, 1200n, 600_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n]);  // the function adds another score to make it 10
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
             updatedNumericalParams[4],         // creatorComissionPercentage
-            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -1006,14 +1021,15 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
     it("should fail if the omitted participant has more than 10 scores", () => {
         setupScenario(1000n, 1200n, 600_000, [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n]);  // the function adds another score to make it 11
 
-        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline)];
+        const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
             updatedNumericalParams[1],         // creatorStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
             updatedNumericalParams[4],         // creatorComissionPercentage
-            BigInt(updatedNumericalParams[5])  // resolutionDeadline
+            BigInt(updatedNumericalParams[5]), // resolutionDeadline
+            0n                              // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)

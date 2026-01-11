@@ -16,6 +16,7 @@ import { cancel_game } from './actions/cancel_game';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 import { end_game } from './actions/end_game';
 import { to_end_game } from './actions/to_end_game';
+import { end_game_chained } from './actions/end_game_chained';
 import { judges_invalidate } from './actions/judges_invalidate';
 import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
@@ -199,11 +200,26 @@ export class ErgoPlatform implements Platform {
     /**
      * Mueve el contrato de game_resolution.es a end_game.es
      */
+    /**
+     * Mueve el contrato de game_resolution.es a end_game.es
+     */
     async toEndGame(
         game: GameResolution
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
         return await to_end_game(game);
+    }
+
+    /**
+     * Realiza la transición a end_game y finaliza el juego en una sola operación encadenada.
+     * Retorna los IDs de las transacciones [txA, txB].
+     */
+    async toEndGameChained(
+        game: GameResolution,
+        participations: ValidParticipation[]
+    ): Promise<string[] | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+        return await end_game_chained(game, participations);
     }
 
     /**

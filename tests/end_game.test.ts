@@ -223,7 +223,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           participationFee,
           0n,                                       // perJudgeComissionPercentage
           BigInt(resolverCommissionPercent),        // creatorComissionPercentage
-          BigInt(resolutionDeadline)
+          BigInt(resolutionDeadline),
+          1000n                                     // timeWeight
         ]).toHex(),
 
         // gameProvenance: [Detalles del juego, TokenId (si aplica), Script del resolvedor]
@@ -445,7 +446,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           participationFee,
           0n,        // perJudgeComissionPercentage
           BigInt(resolverCommissionPercent), // creatorComissionPercentage
-          BigInt(resolutionDeadline)
+          BigInt(resolutionDeadline),
+          1000n                                     // timeWeight
         ]).toHex(),
 
         // gameProvenance:
@@ -631,7 +633,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           participationFee,
           0n,        // perJudgeComissionPercentage
           BigInt(resolverCommissionPercent), // creatorComissionPercentage
-          BigInt(resolutionDeadline)
+          BigInt(resolutionDeadline),
+          1000n                                     // timeWeight
         ]).toHex(),
 
         // gameProvenance:
@@ -823,7 +826,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           participationFee,
           0n,        // perJudgeComissionPercentage
           BigInt(resolverCommissionPercent),        // creatorComissionPercentage
-          BigInt(resolutionDeadline)
+          BigInt(resolutionDeadline),
+          1000n                                     // timeWeight
         ]).toHex(),
 
         R9: SColl(SColl(SByte), [
@@ -1195,7 +1199,8 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
           participationFee,              // participation fee
           perJudgeCommissionPercent,     // per-judge commission
           BigInt(resolverCommissionPercent),                            // creatorComissionPercentage
-          BigInt(resolutionDeadline)     // resolution deadline
+          BigInt(resolutionDeadline),    // resolution deadline
+          1000n                           // timeWeight
         ]).toHex(),
 
         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos

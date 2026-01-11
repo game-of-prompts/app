@@ -619,17 +619,19 @@
 
         try {
             if (game.status === "Resolution") {
+                const valid_participations = participations.filter(
+                    (p) => p.status === "Submitted",
+                ) as ValidParticipation[];
+
                 if (!game.isEndGame) {
-                    // Move to EndGame contract
-                    transactionId = await platform.toEndGame(game);
+                    // Use chained transaction: Resolution -> EndGame -> Finalize
+                    const txIds = await platform.toEndGameChained(game, valid_participations);
+                    transactionId = txIds ? txIds.join(", ") : null;
                 } else {
-                    // Finalize the game
-                    const valid_participations = participations.filter(
-                        (p) => p.status === "Submitted",
-                    );
+                    // Game is already in EndGame state, just finalize
                     transactionId = await platform.endGame(
                         game,
-                        valid_participations as ValidParticipation[],
+                        valid_participations,
                     );
                 }
             }

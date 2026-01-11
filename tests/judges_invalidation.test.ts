@@ -117,7 +117,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -151,7 +151,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
 
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -246,7 +247,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             numericalParams[2],         // participationFee
             numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
             0n,                         // creatorComissionPercentage
-            extendedDeadline  // resolutionDeadline
+            extendedDeadline, // resolutionDeadline
+            0n                // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -337,7 +339,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -371,7 +373,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
 
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -462,7 +465,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             numericalParams[2],         // participationFee
             numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
             0n,                 // creatorComissionPercentage
-            extendedDeadline // resolutionDeadline
+            extendedDeadline, // resolutionDeadline
+            0n               // timeWeight
         ]
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -558,7 +562,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -583,7 +587,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -690,7 +695,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             numericalParams[2],         // participationFee
             numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
             0n,                 // creatorComissionPercentage
-            extendedDeadline  // resolutionDeadline
+            extendedDeadline, // resolutionDeadline
+            0n                // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -771,7 +777,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -796,7 +802,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -871,7 +878,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             numericalParams[2],         // participationFee
             numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
             0n,                 // creatorComissionPercentage
-            extendedDeadline  // resolutionDeadline
+            extendedDeadline, // resolutionDeadline
+            0n                // timeWeight
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -958,7 +966,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -979,7 +987,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1063,7 +1072,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         const currentHeight = mockChain.height;
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(currentHeight)
             .from([gameResolutionBox, invalidatedWinnerBox, nextWinnerBox, ...resolver.utxos.toArray()])
@@ -1115,7 +1124,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1139,7 +1148,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1227,7 +1237,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1279,7 +1289,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1303,7 +1313,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1389,7 +1400,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         mockChain.newBlocks(41); // Advance beyond the judge period
 
@@ -1442,7 +1453,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1466,7 +1477,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1552,7 +1564,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1603,7 +1615,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1627,7 +1639,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1713,7 +1726,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1765,7 +1778,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // 3. Crear la caja `game_resolution`
         const participationFee = 5_000_000n;
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, participationFee, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, participationFee, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1789,7 +1802,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -1875,7 +1889,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])
@@ -1926,7 +1940,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`;
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
+        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -1950,7 +1964,8 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
                     numericalParams[4],         // creatorComissionPercentage
-                    BigInt(numericalParams[5])  // resolutionDeadline
+                    BigInt(numericalParams[5]), // resolutionDeadline
+                    numericalParams[6]          // timeWeight
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -2036,7 +2051,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
-        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 1n, extendedDeadline];
+        const newNumericalParams = [700_000n, 2_000_000_000n, 1_000_000n, 11n, 0n, extendedDeadline, 0n];
 
         const tx = new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, invalidatedWinnerBox, ...resolver.utxos.toArray()])

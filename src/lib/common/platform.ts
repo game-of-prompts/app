@@ -102,6 +102,15 @@ export interface Platform {
     ): Promise<string | null>;
 
     /**
+     * Executes chained transaction: Resolution -> EndGame -> Finalize in a single operation.
+     * Returns array of transaction IDs [txA, txB].
+     */
+    toEndGameChained(
+        game: GameResolution,
+        participations: ValidParticipation[]
+    ): Promise<string[] | null>;
+
+    /**
      * Permite a un juez votar para invalidar al candidato a ganador actual.
      * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
      */
