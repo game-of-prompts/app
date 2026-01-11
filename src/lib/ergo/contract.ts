@@ -14,6 +14,7 @@ import GAME_CANCELLATION_SOURCE from '../../../contracts/game_cancellation.es?ra
 import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import PARTICIPATION_BATCH_SOURCE from '../../../contracts/participation_batch.es?raw';
 import END_GAME_SOURCE from '../../../contracts/end_game.es?raw';
+import MINT_IDT_SOURCE from '../../../contracts/mint_idt.es?raw';
 import { reputation_proof_contract as REPUTATION_PROOF_SOURCE } from "reputation-system";
 import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-system";
 
@@ -30,6 +31,7 @@ let _gameCancellation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?
 let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _participationBatch: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _endGame: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _mintIdt: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 // Subscribe to mode changes to invalidate cache
 isDevMode.subscribe(() => {
@@ -40,6 +42,7 @@ isDevMode.subscribe(() => {
     _participation = {};
     _participationBatch = {};
     _endGame = {};
+    _mintIdt = {};
 });
 
 // =============================================================================
@@ -171,6 +174,18 @@ function ensureJudgesPaidCompiled(): void {
     _judgesPaid.ergoTree = compile(source, { version: ergoTreeVersion });
 }
 
+function ensureMintIdtCompiled(): void {
+    if (_mintIdt.ergoTree) return;
+    ensureGameActiveCompiled();
+
+    const gameActiveHash = getGopGameActiveScriptHash();
+
+    let source = MINT_IDT_SOURCE
+        .replace(/`\+contract_bytes_hash\+`/g, gameActiveHash);
+
+    _mintIdt.ergoTree = compile(source, { version: ergoTreeVersion });
+}
+
 // =============================================================================
 // === FUNCIONES PÚBLICAS PARA OBTENER HASHES, DIRECCIONES Y ERGOTREES
 // =============================================================================
@@ -196,7 +211,7 @@ function getScriptHash(stateObject: { ergoTree?: ErgoTree, scriptHash?: string }
 
 // --- Game Active ---
 export const getGopGameActiveTemplateHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
-export const getGopGameActiveScriptHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
+export const getGopGameActiveScriptHash = () => getScriptHash(_gameActive, ensureGameActiveCompiled);
 export function getGopGameActiveAddress(): Address { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toAddress(networkType); }
 export function getGopGameActiveErgoTreeHex(): string { ensureGameActiveCompiled(); return _gameActive.ergoTree!.toHex(); }
 export function getGopGameActiveErgoTree(): ErgoTree { ensureGameActiveCompiled(); return _gameActive.ergoTree!; }
@@ -242,6 +257,13 @@ export const getGopEndGameScriptHash = () => getScriptHash(_endGame, ensureEndGa
 export function getGopEndGameAddress(): Address { ensureEndGameCompiled(); return _endGame.ergoTree!.toAddress(networkType); }
 export function getGopEndGameErgoTreeHex(): string { ensureEndGameCompiled(); return _endGame.ergoTree!.toHex(); }
 export function getGopEndGameErgoTree(): ErgoTree { ensureEndGameCompiled(); return _endGame.ergoTree!; }
+
+// --- Mint IDT ---
+export const getGopMintIdtTemplateHash = () => getTemplateHash(_mintIdt, ensureMintIdtCompiled);
+export const getGopMintIdtScriptHash = () => getScriptHash(_mintIdt, ensureMintIdtCompiled);
+export function getGopMintIdtAddress(): Address { ensureMintIdtCompiled(); return _mintIdt.ergoTree!.toAddress(networkType); }
+export function getGopMintIdtErgoTreeHex(): string { ensureMintIdtCompiled(); return _mintIdt.ergoTree!.toHex(); }
+export function getGopMintIdtErgoTree(): ErgoTree { ensureMintIdtCompiled(); return _mintIdt.ergoTree!; }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

@@ -11,7 +11,7 @@ import {
 import { SColl, SLong, SInt, SByte, SPair } from '@fleet-sdk/serializer';
 declare const ergo: any;
 import { hexToBytes } from '$lib/ergo/utils';
-import { getGopGameActiveErgoTreeHex } from '../contract';
+import { getGopGameActiveErgoTreeHex, getGopMintIdtAddress } from '../contract';
 import { stringToBytes } from '@scure/base';
 import { getGameConstants } from '$lib/common/constants';
 import { estimateTotalBoxSizeFromInputs, MAX_BOX_SIZE, type GameBoxInputs } from '../utils/box-size-calculator';
@@ -53,9 +53,20 @@ export async function create_game(
     perJudgeComissionPercentage: number,
     participationTokenId: string,
     timeWeight: bigint
-): Promise<string | null> {
+): Promise<string[] | null> {
 
     const seedHex = randomSeed();
+
+    // Parse game details for NFT metadata
+    let gameTitle = "Game of Prompts";
+    let gameDescription = "A Game of Prompts competition";
+    try {
+        const details = JSON.parse(gameDetailsJson);
+        if (details.title) gameTitle = details.title;
+        if (details.description) gameDescription = details.description;
+    } catch (e) {
+        console.warn("Failed to parse game details JSON", e);
+    }
 
     console.log("Attempting to create a game:", {
         hashedSecret: hashedSecret.substring(0, 10) + "...",
@@ -81,6 +92,11 @@ export async function create_game(
     if (!inputs || inputs.length === 0) {
         throw new Error("No UTXOs found in the wallet to create the game.");
     }
+
+    // Ensure deterministic token ID by using the first input
+    const issuanceBox = inputs[0];
+    const mintInputs = [issuanceBox, ...inputs.filter((b: any) => b.boxId !== issuanceBox.boxId)];
+    const gameTokenId = issuanceBox.boxId;
 
     // --- 2. Game Box Construction ---
 
@@ -184,28 +200,68 @@ export async function create_game(
     const maxBigInt = (...vals: bigint[]) => vals.reduce((a, b) => a > b ? a : b, vals[0]);
     const gameValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
 
+    // --- Tx A Output: Mint Box locked by mint_idt.es ---
+    const mintIdtAddress = getGopMintIdtAddress();
+
+    const mintOutput = new OutputBuilder(
+        SAFE_MIN_BOX_VALUE,
+        mintIdtAddress
+    )
+        .mintToken({
+            amount: 1n,
+            name: gameTitle,
+            decimals: 0,
+            description: gameDescription
+        });
+
+    // --- Tx B Output: Game Box ---
     const gameBoxOutput = new OutputBuilder(
         gameValue,
         activeGameErgoTree
     )
-        .mintToken({
-            amount: 1n,
-            decimals: 0
-        })
-        .addTokens(gameTokens)
+        .addTokens([
+            { tokenId: gameTokenId, amount: 1n }, // The minted NFT
+            ...gameTokens // Participation tokens
+        ])
         .setAdditionalRegisters(registers);
 
     // --- 3. Transaction Construction and Submission ---
-    const unsignedTransaction = new TransactionBuilder(creationHeight)
-        .from(inputs)
-        .to(gameBoxOutput)
+    // Build a chained bundle (Tx A -> Tx B). Wallet signs once.
+    const unsignedTransactions = await new TransactionBuilder(creationHeight)
+        // CRITICAL: force issuanceBox to be INPUTS(0) so minted token id is deterministic.
+        .from(mintInputs)
+        .to(mintOutput)
         .sendChangeTo(creatorAddressString)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
-        .build();
+        .build()
+        .chain(function (builder, parent) {
 
-    const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
-    const transactionId = await ergo.submit_tx(signedTransaction);
+            console.log("Chaining game creation transaction...")
+            console.log("Parent ", parent)
 
-    console.log(`Game creation transaction submitted successfully. ID: ${transactionId}`);
-    return transactionId;
+            return builder
+                .from(parent.outputs[0]) // Spend the mint output
+                // CRITICAL: `mint_idt.es` requires the game box to be OUTPUTS(0) of Tx B.
+                .to(gameBoxOutput)
+                .payFee(RECOMMENDED_MIN_FEE_VALUE)
+                .sendChangeTo(creatorAddressString)
+                .build()
+        }
+        )
+        .toEIP12Object();
+
+    console.log("Unsigned chained transactions: ", unsignedTransactions);
+
+    const transactionIds: string[] = [];
+
+    // Sign and submit sequentially
+    for (const tx of unsignedTransactions) {
+        const signed = await ergo.sign_tx(tx);
+        const txId = await ergo.submit_tx(signed);
+        transactionIds.push(txId);
+        console.log("Submitted transaction id -> ", txId);
+    }
+
+    console.log(`Game creation transactions submitted successfully. IDs: ${transactionIds.join(", ")}`);
+    return transactionIds;
 }

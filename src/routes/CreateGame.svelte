@@ -63,7 +63,7 @@
     let participationFeeAmount: number | undefined;
     let commissionPercentage: number | undefined;
     let perJudgeComissionPercentage: number | undefined;
-    let transactionId: string | null = null;
+    let transactionId: string | string[] | null = null;
     let errorMessage: string | null = null;
     let isSubmitting: boolean = false;
 
@@ -1286,16 +1286,29 @@
             <p class="text-sm text-muted-foreground mb-4">
                 It may take a few moments to confirm.
             </p>
-            <p
-                class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
-            >
-                Transaction ID: <a
-                    href={$web_explorer_uri_tx + transactionId}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-blue-500 hover:underline">{transactionId}</a
-                >
-            </p>
+            {#if Array.isArray(transactionId)}
+                <div class="space-y-2">
+                    {#each transactionId as txId, i}
+                        <p class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all">
+                            Transaction #{i + 1}: <a
+                                href={$web_explorer_uri_tx + txId}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-blue-500 hover:underline">{txId}</a
+                            >
+                        </p>
+                    {/each}
+                </div>
+            {:else}
+                <p class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all">
+                    Transaction ID: <a
+                        href={$web_explorer_uri_tx + transactionId}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-blue-500 hover:underline">{transactionId}</a
+                    >
+                </p>
+            {/if}
         </div>
     {/if}
 

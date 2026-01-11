@@ -129,7 +129,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
     - Multiplicar score por slot, donde slot es diferencia_bloque/ceremony_blocks
     - Agregar parámetro variable N.
 
-[] Implementar EIP-004
+[x] Implementar EIP-004, para ello primero el token del juego debe mintarse con mint_idt.es
 
 [] Terminar Demo y agregar puntos de información en GameDetails
 

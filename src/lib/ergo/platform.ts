@@ -2,11 +2,11 @@
 import {
     type GameActive,
     type GameResolution,
-    type GameEndGame,
     type GameCancellation,
     type ValidParticipation,
     type AnyGame
 } from '../common/game';
+declare const ergo: any;
 import { create_game } from './actions/create_game';
 import { explorer_uri } from './envs';
 import { submit_score } from './actions/submit_score';
@@ -110,7 +110,7 @@ export class ErgoPlatform implements Platform {
         return new Map();
     }
 
-    public async createGoPGame(params: CreateGoPGamePlatformParams): Promise<string | null> {
+    public async createGoPGame(params: CreateGoPGamePlatformParams): Promise<string[] | null> {
         if (!ergo) throw new Error("Wallet not connected");
 
         try {
@@ -118,8 +118,8 @@ export class ErgoPlatform implements Platform {
                 params.gameServiceId,
                 params.hashedSecret,
                 params.deadlineBlock,
-                params.creatorStakeAmount,
-                params.participationFeeAmount,
+                params.creatorStakeAmount as bigint,
+                params.participationFeeAmount as bigint,
                 params.commissionPercentage,
                 params.judges,
                 params.gameDetailsJson,
@@ -189,7 +189,7 @@ export class ErgoPlatform implements Platform {
      * Solo puede ser llamado por el 'resolver' actual después de que el período de jueces haya terminado.
      */
     async endGame(
-        game: GameEndGame,
+        game: GameResolution,
         participations: ValidParticipation[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");

@@ -3,7 +3,6 @@
 import type {
     GameActive,
     GameResolution,
-    GameEndGame,
     GameCancellation,
     ValidParticipation,
     AnyGame
@@ -36,7 +35,7 @@ export interface Platform {
      * @param params Objeto con todos los parámetros necesarios.
      * @returns Una promesa que se resuelve con el ID de la transacción.
      */
-    createGoPGame(params: CreateGoPGamePlatformParams): Promise<string | null>;
+    createGoPGame(params: CreateGoPGamePlatformParams): Promise<string[] | null>;
 
     /**
      * Envía la puntuación de un jugador a un juego.
@@ -94,7 +93,7 @@ export interface Platform {
     ): Promise<string | null>;
 
     endGame(
-        game: GameEndGame,
+        game: GameResolution,
         participations: ValidParticipation[]
     ): Promise<string | null>;
 
