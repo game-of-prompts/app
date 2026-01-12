@@ -252,10 +252,21 @@ export async function judges_invalidation_chained(
     console.log("[judges_invalidation_chained] Unsigned chained transactions:", unsignedTransactions);
 
     // --- 6. Sign and Submit Sequentially ---
-    const transactionIds: string[] = [];
+    const signedTransactions: any[] = [];
 
     for (const tx of unsignedTransactions) {
-        const signed = await ergo.sign_tx(tx);
+        try {
+            const signed = await ergo.sign_tx(tx);
+            signedTransactions.push(signed);
+            console.log("[judges_invalidation_chained] Signed transaction index ->", signedTransactions.length - 1);
+        } catch (error) {
+            console.error("[judges_invalidation_chained] Error signing transaction:", error);
+            throw error;
+        }
+    }
+
+    const transactionIds: string[] = [];
+    for (const signed of signedTransactions) {
         const txId = await ergo.submit_tx(signed);
         transactionIds.push(txId);
         console.log("[judges_invalidation_chained] Submitted transaction id ->", txId);

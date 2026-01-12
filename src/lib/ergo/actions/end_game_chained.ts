@@ -136,14 +136,25 @@ export async function end_game_chained(
 
     console.log("Unsigned chained transactions: ", unsignedTransactions);
 
-    const transactionIds: string[] = [];
+    // --- 6. Sign and Submit Sequentially ---
+    const signedTransactions: any[] = [];
 
-    // Sign and submit sequentially
     for (const tx of unsignedTransactions) {
-        const signed = await ergo.sign_tx(tx);
+        try {
+            const signed = await ergo.sign_tx(tx);
+            signedTransactions.push(signed);
+            console.log("[end_game_chained] Signed transaction index ->", signedTransactions.length - 1);
+        } catch (error) {
+            console.error("[end_game_chained] Error signing transaction:", error);
+            throw error;
+        }
+    }
+
+    const transactionIds: string[] = [];
+    for (const signed of signedTransactions) {
         const txId = await ergo.submit_tx(signed);
         transactionIds.push(txId);
-        console.log("Submitted transaction id -> ", txId);
+        console.log("[end_game_chained] Submitted transaction id ->", txId);
     }
 
     console.log(`End game transactions submitted successfully. IDs: ${transactionIds.join(", ")}`);
