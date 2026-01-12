@@ -124,12 +124,21 @@ export async function end_game_chained(
             }
 
             // Build Tx B:
-            // - parent.outputs[0] is the EndGame box from Tx A
-            // - parent.outputs[1] (if exists) is the change from Tx A, can be used for fees
+            // - parent.outputs[0] is the EndGame box from Tx A (SELF in the contract)
             // - participationBoxes are the participation inputs to be spent
+            // - parent.outputs[1] (if exists) is the change from Tx A (user's remaining funds)
+
+            const txBInputs = [
+                parent.outputs[0],
+                ...participationBoxes,
+                ...(parent.outputs.length > 1 ? [parent.outputs[1]] : [])
+            ];
+
             return builder
-                .from([parent.outputs[0], ...participationBoxes])  // EndGame box from Tx A (CRITICAL: must be INPUTS(0)), Participation boxes
+                .from(txBInputs)
                 .to(outputs)
+                .sendChangeTo(userAddress)
+                .payFee(RECOMMENDED_MIN_FEE_VALUE)
                 .build();
         })
         .toEIP12Object();

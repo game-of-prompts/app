@@ -75,7 +75,6 @@ export async function end_game(
         outputs.push(buildOutput(finalDevPayout, game.constants.DEV_SCRIPT));
     }
 
-    const dataInputs: any[] = [];
     if (finalJudgesPayout > 0n && (game.judges ?? []).length > 0) {
         const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
 
@@ -98,7 +97,6 @@ export async function end_game(
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)
         .to(outputs)
-        .withDataFrom(dataInputs)
         .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()
