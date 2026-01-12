@@ -130,8 +130,6 @@ export async function end_game_chained(
             return builder
                 .from([parent.outputs[0], ...participationBoxes])  // EndGame box from Tx A (CRITICAL: must be INPUTS(0)), Participation boxes
                 .to(outputs)
-                .payFee(RECOMMENDED_MIN_FEE_VALUE)
-                .sendChangeTo(userAddress)
                 .build();
         })
         .toEIP12Object();
