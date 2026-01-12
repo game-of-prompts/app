@@ -624,9 +624,16 @@
                 ) as ValidParticipation[];
 
                 if (!game.isEndGame) {
-                    // Use chained transaction: Resolution -> EndGame -> Finalize
-                    const txIds = await platform.toEndGameChained(game, valid_participations);
-                    transactionId = txIds ? txIds.join(", ") : null;
+                    const chained = false;
+                    if (chained) {
+                        // Use chained transaction: Resolution -> EndGame -> Finalize
+                        const txIds = await platform.toEndGameChained(game, valid_participations);
+                        transactionId = txIds ? txIds.join(", ") : null;
+                    }
+                    else {
+                        // First, transition to EndGame
+                        transactionId = await platform.toEndGame(game);
+                    }
                 } else {
                     // Game is already in EndGame state, just finalize
                     transactionId = await platform.endGame(

@@ -18,7 +18,6 @@ import {
 } from "../common/game";
 import { CACHE_DURATION_MS, explorer_uri } from "./envs";
 import {
-    getGopGameActiveScriptHash,
     getGopGameResolutionTemplateHash,
     getGopParticipationTemplateHash,
     getGopGameCancellationTemplateHash,
@@ -1081,6 +1080,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     // helper constants
     const activeTemplate = getGopGameActiveTemplateHash();
     const resolutionTemplate = getGopGameResolutionTemplateHash();
+    const endGameTemplate = getGopEndGameTemplateHash();
     const cancellationTemplate = getGopGameCancellationTemplateHash();
 
     // 2) try to fetch current unspent box for the token (if any)
@@ -1101,14 +1101,13 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     }
 
     // 3) If there is a current box and it matches a contract ErgoTree -> parse and return
-    console.log("CURRENT BOX: ", currentBox);
     try {
         if (currentBox) {
             if (currentBox.ergoTree === getGopGameActiveErgoTreeHex()) {
 
                 const parsed = await parseGameActiveBox(currentBox);
                 if (parsed) return parsed;
-            } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex()) {
+            } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex() || currentBox.ergoTree === getGopEndGameErgoTreeHex()) {
                 const parsed = await parseGameResolutionBox(currentBox);
                 if (parsed) return parsed;
             } else if (currentBox.ergoTree === getGopGameCancellationErgoTreeHex()) {
@@ -1152,7 +1151,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                         let parsed: AnyGame | null = null;
                         if (templateHash === activeTemplate) {
                             parsed = await parseGameActiveBox(box);
-                        } else if (templateHash === resolutionTemplate) {
+                        } else if (templateHash === resolutionTemplate || templateHash === endGameTemplate) {
                             parsed = await parseGameResolutionBox(box);
                         } else if (templateHash === cancellationTemplate) {
                             parsed = await parseGameCancellationBox(box);
