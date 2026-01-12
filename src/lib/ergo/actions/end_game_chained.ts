@@ -128,9 +128,7 @@ export async function end_game_chained(
             // - parent.outputs[1] (if exists) is the change from Tx A, can be used for fees
             // - participationBoxes are the participation inputs to be spent
             return builder
-                .from(parent.outputs[0])  // EndGame box from Tx A (CRITICAL: must be INPUTS(0))
-                .from(participationBoxes) // Participation boxes
-                .from(parent.outputs.slice(1)) // Change from Tx A for fee payment
+                .from([parent.outputs[0], ...participationBoxes])  // EndGame box from Tx A (CRITICAL: must be INPUTS(0)), Participation boxes
                 .to(outputs)
                 .payFee(RECOMMENDED_MIN_FEE_VALUE)
                 .sendChangeTo(userAddress)
