@@ -624,7 +624,7 @@
                 ) as ValidParticipation[];
 
                 if (!game.isEndGame) {
-                    const chained = false;
+                    const chained = true;
                     if (chained) {
                         // Use chained transaction: Resolution -> EndGame -> Finalize
                         const txIds = await platform.toEndGameChained(game, valid_participations);
