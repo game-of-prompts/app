@@ -2445,6 +2445,14 @@
                                                     class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
                                                 >
                                                     <span class="font-medium"
+                                                        >Submit participation:</span
+                                                    >
+                                                    Participation period has ended.
+                                                </li>
+                                                <li
+                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                >
+                                                    <span class="font-medium"
                                                         >Finalize Game:</span
                                                     >
                                                     Wait for judge period to end.
@@ -2990,12 +2998,13 @@
                                                 <p
                                                     class="text-xs mt-1 text-gray-500 dark:text-gray-400"
                                                 >
-                                                    The resolution period has
-                                                    ended. Finalize the game to
-                                                    distribute prizes.
                                                     {#if isBeforeDeadline}
                                                         Disabled because judge
                                                         period is still active.
+                                                    {:else}
+                                                        The resolution period has
+                                                        ended. Finalize the game to
+                                                        distribute prizes.
                                                     {/if}
                                                 </p>
                                             {/if}
