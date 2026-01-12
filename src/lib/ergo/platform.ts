@@ -238,9 +238,14 @@ export class ErgoPlatform implements Platform {
 
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
 
+        // In case don't need more votes to reach the threshold, use a single transaction
+        if (judgeVoteDataInputs.length >= requiredVotes) {
+            const tx_id = await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
+            return [tx_id];
+        }
         // Current judge's vote will reach threshold - use chained transaction
         // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
-        if (judgeVoteDataInputs.length + 1 >= requiredVotes) {
+        else if (judgeVoteDataInputs.length + 1 >= requiredVotes) {
             return await judges_invalidation_chained(
                 game, invalidatedParticipation, participations, judgeVoteDataInputs
             );

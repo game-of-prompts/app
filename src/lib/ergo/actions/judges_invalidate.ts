@@ -55,7 +55,11 @@ export async function judges_invalidate(
             reg.R8.renderedValue === "false";
 
         if (!valid) {
-            throw new Error("Invalid judge vote.")
+            console.log(reg.R4.renderedValue)
+            console.log(reg.R5.renderedValue)
+            console.log(reg.R6.renderedValue)
+            console.log(reg.R8.renderedValue)
+            throw new Error("Invalid judge vote [basic].")
         }
 
     }

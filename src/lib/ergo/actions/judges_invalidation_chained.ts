@@ -66,7 +66,7 @@ export async function judges_invalidation_chained(
             reg.R8.renderedValue === "false";
 
         if (!valid) {
-            throw new Error("Invalid judge vote.")
+            throw new Error("Invalid judge vote [chained].")
         }
     }
 
