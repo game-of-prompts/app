@@ -139,7 +139,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Obtener datos de mem-pool [implementar como libreria ¿?]
 
-[] Chained tx.
+[x] Chained tx.
 
 ====
 
