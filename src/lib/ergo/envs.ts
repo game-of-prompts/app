@@ -18,7 +18,7 @@ export const isDevMode = writable<boolean>(false);
 
 /**
  * Controls whether chained transactions are used.
- * Currently disabled due to: https://github.com/game-of-prompts/app/issues/1
+ * Currently disabled due to: https://github.com/game-of-prompts/app/issues/2
  * Affects:
  * - end_game_chained.ts (handleEndGame)
  * - judges_invalidation_chained.ts (judgesInvalidate)

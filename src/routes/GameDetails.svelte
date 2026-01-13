@@ -645,7 +645,7 @@
                         // Show warning about intermediate state
                         if (transactionId) {
                             errorMessage =
-                                "⚠️ Due to a known issue (github.com/game-of-prompts/app/issues/1), the game has transitioned to an intermediate state. You will need to execute this action again to finalize the game definitively.";
+                                "⚠️ Due to a known issue (github.com/game-of-prompts/app/issues/2), the game has transitioned to an intermediate state. You will need to execute this action again to finalize the game definitively.";
                         }
                     }
                 } else {
