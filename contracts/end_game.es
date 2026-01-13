@@ -159,9 +159,9 @@
         })
 
     val prizePool = {
-    val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + box_value(pBox) })
-    val contractPrize = box_value(SELF) - creatorStake
-    participationsAmount + contractPrize
+        val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + box_value(pBox) })
+        val contractPrize = box_value(SELF) - creatorStake
+        participationsAmount + contractPrize
     }
     val judge_amount = participatingJudges.size
 

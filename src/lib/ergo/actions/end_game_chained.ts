@@ -83,6 +83,8 @@ export async function end_game_chained(
     // We need to explicitly select parent.outputs[0] (the EndGame box) and add participation boxes.
     // For fees in Tx B, we need to ensure there's enough ERG from participation boxes or use change from Tx A.
 
+    // TODO BUG: seems that there are not participation boxes included in the chained tx B inputs?
+
     const unsignedTransactions = await new TransactionBuilder(currentHeight)
         .from([parsedInputBox, ...utxos])
         .to(endGameBoxOutput)
@@ -130,15 +132,12 @@ export async function end_game_chained(
 
             const txBInputs = [
                 parent.outputs[0],
-                ...participationBoxes,
-                ...(parent.outputs.length > 1 ? [parent.outputs[1]] : [])
+                ...participationBoxes
             ];
 
             return builder
                 .from(txBInputs)
                 .to(outputs)
-                .sendChangeTo(userAddress)
-                .payFee(RECOMMENDED_MIN_FEE_VALUE)
                 .build();
         })
         .toEIP12Object();
