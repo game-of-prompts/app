@@ -199,109 +199,107 @@
 
     // --- Manejar el caso CON y SIN ganador ---
     if (winnerCandidateCommitment != Coll[Byte]()) {
-    // --- CASO 1: HAY UN GANADOR DECLARADO ---
-    val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
+        // --- CASO 1: HAY UN GANADOR DECLARADO ---
+        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })
 
-    if (winnerBoxes.size == 1) {
-        val winnerBox = winnerBoxes(0)
-        val pBoxScoreList = winnerBox.R9[Coll[Long]].get
+        if (winnerBoxes.size == 1) {
+            val winnerBox = winnerBoxes(0)
+            val pBoxScoreList = winnerBox.R9[Coll[Long]].get
 
-        val validWinner = {
-        val validScoreExists = getScoreFromBox(winnerBox)._2
+            val validWinner = {
+            val validScoreExists = getScoreFromBox(winnerBox)._2
 
-        val correctParticipationFee = box_value(winnerBox) >= participationFee
-        val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline
+            val correctParticipationFee = box_value(winnerBox) >= participationFee
+            val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline
 
-        validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
-        }
+            validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
+            }
 
-        if (validWinner) {
-        val winnerPK = winnerBox.R4[Coll[Byte]].get
-        val resolverCommission = prizePool * creatorComissionPercentage / 1000000L
-        
-        // El premio se calcula restando los payouts finales (que ya consideran el polvo)
-        val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission
+            if (validWinner) {
+            val winnerPK = winnerBox.R4[Coll[Byte]].get
+            val resolverCommission = prizePool * creatorComissionPercentage / 1000000L
+            
+            // El premio se calcula restando los payouts finales (que ya consideran el polvo)
+            val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission
 
-        // Lógica para asegurar que el ganador no reciba menos que la tarifa de participación (evitar pérdida neta)
-        // Si el premio tentativo es menor, eliminamos todas las comisiones (dev, jueces, resolver) y el ganador recibe el prizePool completo
-        val adjustedWinnerPrize = if (tentativeWinnerPrize < participationFee) prizePool else tentativeWinnerPrize
-        val adjustedResolverCommission = if (tentativeWinnerPrize < participationFee) 0L else resolverCommission
-        val adjustedDevPayout = if (tentativeWinnerPrize < participationFee) 0L else devCommission
-        val adjustedJudgesPayout = if (tentativeWinnerPrize < participationFee) 0L else totalJudgeComission
-        val adjustedPerJudge = if (tentativeWinnerPrize < participationFee) 0L else perJudgeComission
+            // Lógica para asegurar que el ganador no reciba menos que la tarifa de participación (evitar pérdida neta)
+            // Si el premio tentativo es menor, eliminamos todas las comisiones (dev, jueces, resolver) y el ganador recibe el prizePool completo
+            val adjustedWinnerPrize = if (tentativeWinnerPrize < participationFee) prizePool else tentativeWinnerPrize
+            val adjustedResolverCommission = if (tentativeWinnerPrize < participationFee) 0L else resolverCommission
+            val adjustedDevPayout = if (tentativeWinnerPrize < participationFee) 0L else devCommission
+            val adjustedJudgesPayout = if (tentativeWinnerPrize < participationFee) 0L else totalJudgeComission
+            val adjustedPerJudge = if (tentativeWinnerPrize < participationFee) 0L else perJudgeComission
 
-        /*
-        * If the tentative winner prize is less than the participation fee, all commissions (resolver, dev, judges) are set to zero,
-        * and the winner receives the entire prize pool. This ensures the winner never loses money (i.e., receives at least their participation fee back)
-        * but may result in the winner receiving more than their intended percentage in low-participation or high-commission scenarios.
-        */
+            /*
+            * If the tentative winner prize is less than the participation fee, all commissions (resolver, dev, judges) are set to zero,
+            * and the winner receives the entire prize pool. This ensures the winner never loses money (i.e., receives at least their participation fee back)
+            * but may result in the winner receiving more than their intended percentage in low-participation or high-commission scenarios.
+            */
 
-        // Ajustar las verificaciones de pago para usar los valores ajustados
-        val adjustedDevGetsPaid = if (adjustedDevPayout == 0L) true else devGetsPaid
+            // Ajustar las verificaciones de pago para usar los valores ajustados
+            val adjustedDevGetsPaid = if (adjustedDevPayout == 0L) true else devGetsPaid
 
-        val adjustedJudgesGetsPaid = if (adjustedJudgesPayout == 0L) {
-            true
+            val adjustedJudgesGetsPaid = if (adjustedJudgesPayout == 0L) {
+                true
+            } else {
+                judgesGetsPaid
+            }
+
+            // Verificación de la salida del ganador
+            val winnerGetsPaid = {
+                val txFee = 0L
+                val amount = adjustedWinnerPrize - txFee
+                val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val addedValue = outputVal - inputVal
+                val hasNFT = OUTPUTS.exists({ (b: Box) =>
+                    b.propositionBytes == winnerPK &&
+                    b.tokens.size > 0 &&
+                    b.tokens(0)._1 == gameNftId
+                })
+                addedValue >= amount && hasNFT
+            }
+
+            val finalResolverPayout = creatorStake + adjustedResolverCommission
+            val resolverGetsPaid = {
+                val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
+                val addedValue = outputVal - inputVal
+                addedValue >= finalResolverPayout
+            }
+            
+            authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && adjustedDevGetsPaid && adjustedJudgesGetsPaid)
+            } else {
+            sigmaProp(false)
+            }
+            
         } else {
-            judgesGetsPaid
+            sigmaProp(false)
         }
+    } else {
+        // --- CASO 2: NO HAY GANADOR DECLARADO ---
 
-        // Verificación de la salida del ganador
-        val winnerGetsPaid = {
-            val txFee = 0L
-            val amount = adjustedWinnerPrize - txFee
-            val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-            val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-            val addedValue = outputVal - inputVal
-            val hasNFT = OUTPUTS.exists({ (b: Box) =>
-                b.propositionBytes == winnerPK &&
-                b.tokens.size > 0 &&
-                b.tokens(0)._1 == gameNftId
-            })
-            addedValue >= amount && hasNFT
-        }
+        // El resolutor reclama el stake del creador y el pozo de premios.
+        val totalValue = prizePool + creatorStake
+        
+        // Las comisiones de dev y jueces ya se han calculado y validado fuera.
+        // El resolutor se lleva todo lo demás.
+        val finalResolverPayout = totalValue - devCommission - totalJudgeComission
 
-        val finalResolverPayout = creatorStake + adjustedResolverCommission
         val resolverGetsPaid = {
             val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
             val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
             val addedValue = outputVal - inputVal
-            addedValue >= finalResolverPayout
+            val hasNFT = OUTPUTS.exists({ (b: Box) =>
+                b.propositionBytes == resolverPK &&
+                b.tokens.size > 0 &&
+                b.tokens(0)._1 == gameNftId
+            })
+            addedValue >= finalResolverPayout && hasNFT
         }
         
-        authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && adjustedDevGetsPaid && adjustedJudgesGetsPaid)
-        } else {
-        sigmaProp(false)
-        }
-        
-    } else {
-        sigmaProp(false)
-    }
-    } else {
-    // --- CASO 2: NO HAY GANADOR DECLARADO ---
-
-    // El resolutor reclama el stake del creador y el pozo de premios.
-    val totalValue = prizePool + creatorStake
-    
-    // Las comisiones de dev y jueces ya se han calculado y validado fuera.
-    // El resolutor se lleva todo lo demás.
-    val finalResolverPayout = totalValue - devCommission - totalJudgeComission
-
-    val resolverGetsPaid = {
-        val txFee = 0L
-        val amount = finalResolverPayout - txFee
-        val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-        val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
-        val addedValue = outputVal - inputVal
-        val hasNFT = OUTPUTS.exists({ (b: Box) =>
-            b.propositionBytes == resolverPK &&
-            b.tokens.size > 0 &&
-            b.tokens(0)._1 == gameNftId
-        })
-        addedValue >= amount && hasNFT
-    }
-    
-    // La condición final ya incluye las validaciones movidas fuera.
-    authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
+        // La condición final ya incluye las validaciones movidas fuera.
+        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)
     }
 
   }
