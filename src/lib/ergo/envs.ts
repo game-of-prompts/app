@@ -15,3 +15,12 @@ export const web_explorer_uri_tkn = writable<string>(default_web_explorer_uri_tk
 export const REPUTATION_PROOF_TOTAL_SUPPLY = 100_000_000;
 export const CACHE_DURATION_MS = 10000; // 10 seconds
 export const isDevMode = writable<boolean>(false);
+
+/**
+ * Controls whether chained transactions are used.
+ * Currently disabled due to: https://github.com/game-of-prompts/app/issues/1
+ * Affects:
+ * - end_game_chained.ts (handleEndGame)
+ * - judges_invalidation_chained.ts (judgesInvalidate)
+ */
+export const USE_CHAINED_TRANSACTIONS = false;

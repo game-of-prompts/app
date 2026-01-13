@@ -8,7 +8,7 @@ import {
 } from '../common/game';
 declare const ergo: any;
 import { create_game } from './actions/create_game';
-import { explorer_uri } from './envs';
+import { explorer_uri, USE_CHAINED_TRANSACTIONS } from './envs';
 import { submit_score } from './actions/submit_score';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
@@ -245,7 +245,7 @@ export class ErgoPlatform implements Platform {
         }
         // Current judge's vote will reach threshold - use chained transaction
         // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
-        else if (judgeVoteDataInputs.length + 1 >= requiredVotes) {
+        else if (judgeVoteDataInputs.length + 1 >= requiredVotes && USE_CHAINED_TRANSACTIONS) {
             return await judges_invalidation_chained(
                 game, invalidatedParticipation, participations, judgeVoteDataInputs
             );

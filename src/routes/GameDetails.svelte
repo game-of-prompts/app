@@ -69,6 +69,7 @@
         web_explorer_uri_tx,
         web_explorer_uri_addr,
         explorer_uri,
+        USE_CHAINED_TRANSACTIONS,
     } from "$lib/ergo/envs";
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
     import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
@@ -624,15 +625,21 @@
                 ) as ValidParticipation[];
 
                 if (!game.isEndGame) {
-                    const chained = true;
-                    if (chained) {
+                    if (USE_CHAINED_TRANSACTIONS) {
                         // Use chained transaction: Resolution -> EndGame -> Finalize
-                        const txIds = await platform.toEndGameChained(game, valid_participations);
+                        const txIds = await platform.toEndGameChained(
+                            game,
+                            valid_participations,
+                        );
                         transactionId = txIds ? txIds.join(", ") : null;
-                    }
-                    else {
-                        // First, transition to EndGame
+                    } else {
+                        // First, transition to EndGame (intermediate state)
                         transactionId = await platform.toEndGame(game);
+                        // Show warning about intermediate state
+                        if (transactionId) {
+                            errorMessage =
+                                "⚠️ Due to a known issue (github.com/game-of-prompts/app/issues/1), the game has transitioned to an intermediate state. You will need to execute this action again to finalize the game definitively.";
+                        }
                     }
                 } else {
                     // Game is already in EndGame state, just finalize
@@ -3009,9 +3016,10 @@
                                                         Disabled because judge
                                                         period is still active.
                                                     {:else}
-                                                        The resolution period has
-                                                        ended. Finalize the game to
-                                                        distribute prizes.
+                                                        The resolution period
+                                                        has ended. Finalize the
+                                                        game to distribute
+                                                        prizes.
                                                     {/if}
                                                 </p>
                                             {/if}
