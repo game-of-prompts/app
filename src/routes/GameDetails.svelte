@@ -127,6 +127,7 @@
     let isNominatedJudge = false;
     let openCeremony = false;
     let acceptedJudgeNominations: string[] = [];
+    let isInvalidationMajorityReached = false;
 
     // Refund State
     let isClaimingRefundFor: string | null = null;
@@ -354,6 +355,12 @@
                                 });
                             })
                             .map(([key, value]) => key);
+
+                    const requiredVotes =
+                        Math.floor(game.judges.length / 2) + 1;
+                    isInvalidationMajorityReached =
+                        candidateParticipationInvalidVotes.length >=
+                        requiredVotes;
                 }
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchParticipations(game);
@@ -2902,6 +2909,43 @@
                                     {#if game.status === "Resolution"}
                                         {@const isBeforeDeadline =
                                             new Date().getTime() < targetDate}
+
+                                        {#if isInvalidationMajorityReached && isBeforeDeadline}
+                                            <div
+                                                class="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3"
+                                            >
+                                                <Gavel
+                                                    class="h-5 w-5 text-red-500 mt-0.5"
+                                                />
+                                                <div>
+                                                    <h4
+                                                        class="text-sm font-bold text-red-500"
+                                                    >
+                                                        Majority Invalidation
+                                                        Reached
+                                                    </h4>
+                                                    <p
+                                                        class="text-xs text-red-400/80 mt-1"
+                                                    >
+                                                        A majority of judges ({candidateParticipationInvalidVotes.length}
+                                                        out of {game.judges
+                                                            .length}) have voted
+                                                        to invalidate the
+                                                        current winner. Anyone
+                                                        can now execute the
+                                                        invalidation to select a
+                                                        new candidate.
+                                                        <br /><br />
+                                                        <strong>Warning:</strong
+                                                        >
+                                                        If the judge period ends
+                                                        and no one executes this
+                                                        action, the current candidate
+                                                        will remain the winner!
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        {/if}
 
                                         <div class="action-item">
                                             <Button
