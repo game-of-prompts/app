@@ -113,6 +113,7 @@
     let transactionId: string | null = null;
     let modalTitle: string = "";
     let errorMessage: string | null = null;
+    let warningMessage: string | null = null;
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
     let showCopyMessage = false;
@@ -254,6 +255,7 @@
         isSubmitting = false;
         transactionId = null;
         errorMessage = null;
+        warningMessage = null;
         try {
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
@@ -644,7 +646,7 @@
                         transactionId = await platform.toEndGame(game);
                         // Show warning about intermediate state
                         if (transactionId) {
-                            errorMessage =
+                            warningMessage =
                                 "⚠️ Due to a known issue (github.com/game-of-prompts/app/issues/2), the game has transitioned to an intermediate state. You will need to execute this action again to finalize the game definitively.";
                         }
                     }
@@ -935,6 +937,7 @@
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
+        warningMessage = null;
         isSubmitting = false;
         transactionId = null;
         showActionModal = true;
@@ -4228,6 +4231,21 @@
                                     prize pool to the winner, your resolver fee,
                                     and other commissions. This action is irreversible.
                                 </p>
+                                {#if !game.isEndGame && !USE_CHAINED_TRANSACTIONS}
+                                    <p
+                                        class="text-sm p-3 rounded-md {$mode ===
+                                        'dark'
+                                            ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30'
+                                            : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"
+                                    >
+                                        ⚠️ Due to a known issue
+                                        (github.com/game-of-prompts/app/issues/2),
+                                        the game will transition to an
+                                        intermediate state. You will need to
+                                        execute this action again to finalize
+                                        the game definitively.
+                                    </p>
+                                {/if}
                                 <Button
                                     on:click={handleEndGame}
                                     disabled={isSubmitting}
@@ -4424,6 +4442,16 @@
                             >
                                 <strong>Error:</strong>
                                 {errorMessage}
+                            </div>
+                        {/if}
+                        {#if warningMessage && !isSubmitting && showActionModal}
+                            <div
+                                class="mt-6 p-3 rounded-md text-sm {$mode ===
+                                'dark'
+                                    ? 'bg-yellow-600/30 text-yellow-300 border border-yellow-500/50'
+                                    : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"
+                            >
+                                {warningMessage}
                             </div>
                         {/if}
                     </div>
