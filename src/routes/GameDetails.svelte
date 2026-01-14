@@ -163,6 +163,21 @@
         | "batch_participations"
         | "submit_creator_opinion"
         | null = null;
+
+    // Didactic Modal State
+    let showDidacticModal = false;
+    let didacticModalTitle = "";
+    let didacticModalText = "";
+
+    function openDidacticModal(title: string, text: string) {
+        didacticModalTitle = title;
+        didacticModalText = text;
+        showDidacticModal = true;
+    }
+
+    function closeDidacticModal() {
+        showDidacticModal = false;
+    }
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
 
@@ -1178,7 +1193,19 @@
                             <div class="stat-block">
                                 <Users class="stat-icon" />
                                 <span>{game.reputation}</span>
-                                <span class="stat-label">Reputation</span>
+                                <span class="stat-label"
+                                    >Reputation<button
+                                        type="button"
+                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                        on:click|stopPropagation={() =>
+                                            openDidacticModal(
+                                                "Reputation",
+                                                "The game's reputation score based on the reputation of the winner and nominated judges.",
+                                            )}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button></span
+                                >
                             </div>
                             <div class="stat-block">
                                 <Edit class="stat-icon" />
@@ -1189,7 +1216,19 @@
                                     )}
                                     {tokenSymbol}</span
                                 >
-                                <span class="stat-label">Fee per Player</span>
+                                <span class="stat-label"
+                                    >Entry Fee<button
+                                        type="button"
+                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                        on:click|stopPropagation={() =>
+                                            openDidacticModal(
+                                                "Entry Fee",
+                                                "The cost each player must pay to participate. This amount accumulates in the Prize Pool.",
+                                            )}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button></span
+                                >
                             </div>
                             <div class="stat-block">
                                 <Users class="stat-icon" />
@@ -1206,7 +1245,19 @@
                                     )}
                                     {tokenSymbol}</span
                                 >
-                                <span class="stat-label">Prize Pool</span>
+                                <span class="stat-label"
+                                    >Prize Pool<button
+                                        type="button"
+                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                        on:click|stopPropagation={() =>
+                                            openDidacticModal(
+                                                "Prize Pool",
+                                                "The accumulated participation fees. Distributed to the winner and commissions upon finalization.",
+                                            )}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button></span
+                                >
                             </div>
                             <div class="stat-block">
                                 <ShieldCheck class="stat-icon" />
@@ -1217,7 +1268,19 @@
                                     )}
                                     {tokenSymbol}</span
                                 >
-                                <span class="stat-label">Creator Stake</span>
+                                <span class="stat-label"
+                                    >Creator Stake<button
+                                        type="button"
+                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                        on:click|stopPropagation={() =>
+                                            openDidacticModal(
+                                                "Creator Stake",
+                                                "Guarantee deposited by the creator. Lost if the secret is revealed or discovered prematurely, incentivizing the creator to keep it safe.",
+                                            )}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button></span
+                                >
                             </div>
                             <div class="stat-block">
                                 <CheckSquare class="stat-icon" />
@@ -1234,7 +1297,17 @@
                                           : "N/A"}%</span
                                 >
                                 <span class="stat-label"
-                                    >Creator Commission</span
+                                    >Commission<button
+                                        type="button"
+                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                        on:click|stopPropagation={() =>
+                                            openDidacticModal(
+                                                "Commission",
+                                                "Percentage of the Prize Pool received by the creator (or resolver) upon successful game finalization.",
+                                            )}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button></span
                                 >
                             </div>
                         </div>
@@ -1252,7 +1325,19 @@
                                         ? game.unlockHeight
                                         : "N/A"}</a
                             >
-                            <span class="stat-label">Deadline</span>
+                            <span class="stat-label"
+                                >Deadline<button
+                                    type="button"
+                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                    on:click|stopPropagation={() =>
+                                        openDidacticModal(
+                                            "Deadline",
+                                            "Block limit for submissions. If not resolved within the grace period after this block, participants can withdraw their entry.",
+                                        )}
+                                >
+                                    <Info class="w-3.5 h-3.5" />
+                                </button></span
+                            >
                         </div>
 
                         {#if !participationIsEnded && targetDate}
@@ -1598,7 +1683,17 @@
 
                                     <div class="info-block">
                                         <span class="info-label"
-                                            >Competition ID (NFT)</span
+                                            >Competition ID (NFT)<button
+                                                type="button"
+                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                on:click|stopPropagation={() =>
+                                                    openDidacticModal(
+                                                        "Competition ID (NFT)",
+                                                        "Unique token identifying this game on the blockchain. Tracks the game's history and is awarded to the winner as a trophy.",
+                                                    )}
+                                            >
+                                                <Info class="w-3.5 h-3.5" />
+                                            </button></span
                                         >
                                         <a
                                             href={$web_explorer_uri_tkn +
@@ -1614,7 +1709,17 @@
 
                                     <div class="info-block">
                                         <span class="info-label"
-                                            >Service ID</span
+                                            >Service ID<button
+                                                type="button"
+                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                on:click|stopPropagation={() =>
+                                                    openDidacticModal(
+                                                        "Service ID",
+                                                        "Hash of the Celaut service running the game. Players must execute it on their own computer to play and can verify they use the same game.",
+                                                    )}
+                                            >
+                                                <Info class="w-3.5 h-3.5" />
+                                            </button></span
                                         >
                                         <span
                                             class="info-value font-mono text-xs break-all"
@@ -1626,7 +1731,17 @@
 
                                     <div class="info-block">
                                         <span class="info-label"
-                                            >Indeterminism Index</span
+                                            >Indeterminism Index<button
+                                                type="button"
+                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                on:click|stopPropagation={() =>
+                                                    openDidacticModal(
+                                                        "Indeterminism Index",
+                                                        "Number of times judges will test your participation to verify if it reproduces your game logs. If judges cannot reproduce the logs, the participation is invalidated.",
+                                                    )}
+                                            >
+                                                <Info class="w-3.5 h-3.5" />
+                                            </button></span
                                         >
                                         <span
                                             class="info-value font-mono text-xs break-all"
@@ -1636,7 +1751,19 @@
                                     </div>
 
                                     <div class="info-block">
-                                        <span class="info-label">Seed</span>
+                                        <span class="info-label"
+                                            >Seed<button
+                                                type="button"
+                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                on:click|stopPropagation={() =>
+                                                    openDidacticModal(
+                                                        "Seed",
+                                                        "Random seed determining the game scenario. Generated during the initial ceremony where anyone can participate.",
+                                                    )}
+                                            >
+                                                <Info class="w-3.5 h-3.5" />
+                                            </button></span
+                                        >
                                         <span
                                             class="info-value font-mono text-xs break-all"
                                         >
@@ -1647,7 +1774,17 @@
                                     {#if game.status === "Resolution" && game.revealedS_Hex}
                                         <div class="info-block md:col-span-2">
                                             <span class="info-label"
-                                                >Revealed Secret (S)</span
+                                                >Revealed Secret (S)<button
+                                                    type="button"
+                                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                    on:click|stopPropagation={() =>
+                                                        openDidacticModal(
+                                                            "Revealed Secret (S)",
+                                                            "The creator's secret, revealed when resolving the game. Allows validation of all participation scores.",
+                                                        )}
+                                                >
+                                                    <Info class="w-3.5 h-3.5" />
+                                                </button></span
                                             >
                                             <span
                                                 class="info-value font-mono text-xs break-all"
@@ -2567,11 +2704,32 @@
                                         : 'text-gray-600'} mt-1"
                                 >
                                     {#if game.status === "Active"}
-                                        Nominated Judges {isNominatedJudge
+                                        Nominated Judges<button
+                                            type="button"
+                                            class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                            on:click|stopPropagation={() =>
+                                                openDidacticModal(
+                                                    "Nominated Judges",
+                                                    "Nominated arbiters who can invalidate fraudulent participations. Requires majority to invalidate. All nominated judges must accept before resolution, ensuring participants can trust the jury or withdraw.",
+                                                )}
+                                        >
+                                            <Info class="w-3.5 h-3.5" />
+                                        </button>
+                                        {isNominatedJudge
                                             ? "(You are a nominated judge)"
                                             : ""}
                                     {:else if game.status === "Resolution"}
-                                        Judges' Votes
+                                        Judges' Votes<button
+                                            type="button"
+                                            class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                            on:click|stopPropagation={() =>
+                                                openDidacticModal(
+                                                    "Judges' Votes",
+                                                    "Nominated arbiters who can invalidate fraudulent participations. Requires majority to invalidate.",
+                                                )}
+                                        >
+                                            <Info class="w-3.5 h-3.5" />
+                                        </button>
                                     {/if}
                                 </p>
                                 <div
@@ -4499,6 +4657,68 @@
             Please choose a game from the list to see its details, or check if
             it's still loading.
         </p>
+    </div>
+{/if}
+
+<!-- Didactic Information Modal -->
+{#if showDidacticModal}
+    <div
+        class="modal-overlay fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[110] p-4 backdrop-blur-sm"
+        on:click|self={closeDidacticModal}
+        role="presentation"
+    >
+        <div
+            class="modal-content {$mode === 'dark'
+                ? 'bg-slate-800 text-gray-200 border border-slate-700'
+                : 'bg-white text-gray-800 border border-gray-200'} p-6 rounded-xl shadow-2xl w-full max-w-lg transform transition-all"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="didactic-modal-title"
+        >
+            <div class="flex justify-between items-center mb-6">
+                <h3
+                    id="didactic-modal-title"
+                    class="text-2xl font-semibold {$mode === 'dark'
+                        ? 'text-slate-400'
+                        : 'text-slate-600'}"
+                >
+                    {didacticModalTitle}
+                </h3>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    on:click={closeDidacticModal}
+                    aria-label="Close modal"
+                    class="{$mode === 'dark'
+                        ? 'text-gray-400 hover:text-white'
+                        : 'text-gray-500 hover:text-gray-800'} -mr-2 -mt-2"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        ><line x1="18" y1="6" x2="6" y2="18"></line><line
+                            x1="6"
+                            y1="6"
+                            x2="18"
+                            y2="18"
+                        ></line></svg
+                    >
+                </Button>
+            </div>
+
+            <div class="modal-form-body">
+                <p class="text-lg leading-relaxed">
+                    {didacticModalText}
+                </p>
+            </div>
+        </div>
     </div>
 {/if}
 
