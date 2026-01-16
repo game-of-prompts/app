@@ -691,11 +691,6 @@
                     } else {
                         // First, transition to EndGame (intermediate state)
                         transactionId = await platform.toEndGame(game);
-                        // Show warning about intermediate state
-                        if (transactionId) {
-                            warningMessage =
-                                "⚠️ Due to a known issue (github.com/game-of-prompts/app/issues/2), the game has transitioned to an intermediate state. You will need to execute this action again to finalize the game definitively.";
-                        }
                     }
                 } else {
                     // Game is already in EndGame state, just finalize
