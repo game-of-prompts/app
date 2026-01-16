@@ -146,6 +146,7 @@
         minutesValue = 0,
         secondsValue = 0;
     let targetDate: number;
+    let clockLabel: string = "TIME LEFT";
     let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
     // Modal State
@@ -386,25 +387,55 @@
             }
 
             if (game.status === "Active") {
-                targetDate = await block_height_to_timestamp(
-                    game.deadlineBlock,
-                    platform,
-                );
+                if (openCeremony) {
+                    targetDate = await block_height_to_timestamp(
+                        game.ceremonyDeadline,
+                        platform,
+                    );
+                    clockLabel = "Ceremony Deadline";
+                } else if (currentHeight < game.deadlineBlock) {
+                    targetDate = await block_height_to_timestamp(
+                        game.deadlineBlock,
+                        platform,
+                    );
+                    clockLabel = "Participation Deadline";
+                } else {
+                    // Grace Period
+                    targetDate = await block_height_to_timestamp(
+                        game.deadlineBlock +
+                            game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS,
+                        platform,
+                    );
+                    clockLabel = "Grace Period Ends";
+                }
+
                 deadlineDateDisplay = format(
                     new Date(targetDate),
                     "MMM d, yyyy 'at' HH:mm",
                 );
             } else if (game.status === "Resolution") {
-                targetDate = await block_height_to_timestamp(
-                    game.resolutionDeadline,
-                    platform,
-                );
+                if (currentHeight < game.resolutionDeadline) {
+                    targetDate = await block_height_to_timestamp(
+                        game.resolutionDeadline,
+                        platform,
+                    );
+                    clockLabel = "Resolution Deadline";
+                } else {
+                    // Grace Period for Resolution
+                    targetDate = await block_height_to_timestamp(
+                        game.resolutionDeadline +
+                            game.constants.END_GAME_AUTH_GRACE_PERIOD,
+                        platform,
+                    );
+                    clockLabel = "Grace Period Ends";
+                }
                 deadlineDateDisplay = `Judge period ends ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
             } else if (game.status === "Cancelled_Draining") {
                 targetDate = await block_height_to_timestamp(
                     game.unlockHeight,
                     platform,
                 );
+                clockLabel = "Stake Unlocks";
                 deadlineDateDisplay = `Stake unlocks ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
             } else {
                 deadlineDateDisplay = "N/A";
@@ -488,7 +519,8 @@
             }
 
             cleanupTimers();
-            if (!participationIsEnded && game.status === "Active") {
+            cleanupTimers();
+            if (game.status !== "Finalized" && targetDate) {
                 clockCountdownInterval = setInterval(
                     updateClockCountdown,
                     1000,
@@ -1340,48 +1372,6 @@
                             >
                         </div>
 
-                        {#if !participationIsEnded && targetDate}
-                            <div class="countdown-container">
-                                <div
-                                    class="timeleft {participationIsEnded
-                                        ? 'ended'
-                                        : ''}"
-                                >
-                                    <span class="timeleft-label">
-                                        {#if participationIsEnded}
-                                            TIME'S UP!
-                                            <small class="secondary-text"
-                                                >Awaiting resolution...</small
-                                            >
-                                        {:else}
-                                            TIME LEFT
-                                            <small class="secondary-text"
-                                                >until participation ends</small
-                                            >
-                                        {/if}
-                                    </span>
-                                    <div class="countdown-items">
-                                        <div class="item">
-                                            <div>{daysValue}</div>
-                                            <div><h3>Days</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{hoursValue}</div>
-                                            <div><h3>Hours</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{minutesValue}</div>
-                                            <div><h3>Minutes</h3></div>
-                                        </div>
-                                        <div class="item">
-                                            <div>{secondsValue}</div>
-                                            <div><h3>Seconds</h3></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {/if}
-
                         <div
                             class="mt-8 flex items-center justify-center md:justify-start gap-3"
                         >
@@ -2204,11 +2194,11 @@
                                 <div
                                     class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 {game.status ===
                                     'Finalized'
-                                        ? 'bg-green-600 border-green-600 text-white shadow-lg scale-110'
+                                        ? 'bg-green-500 border-green-500 text-white shadow-lg scale-110'
                                         : 'bg-gray-200 border-gray-300 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}"
                                 >
                                     {#if game.status === "Finalized"}
-                                        <Trophy class="w-5 h-5" />
+                                        <Check class="w-6 h-6" />
                                     {:else}
                                         <span class="text-base font-bold"
                                             >3</span
@@ -2218,13 +2208,41 @@
                                 <span
                                     class="mt-2 text-xs font-bold uppercase tracking-wider {game.status ===
                                     'Finalized'
-                                        ? 'text-green-600 dark:text-green-400'
+                                        ? 'text-green-500'
                                         : 'text-gray-500 dark:text-gray-400'}"
                                     >Finalized</span
                                 >
                             </div>
                         {/if}
                     </div>
+
+                    {#if !participationIsEnded && targetDate}
+                        <div class="countdown-container mb-8">
+                            <div class="timeleft">
+                                <span class="timeleft-label">
+                                    {clockLabel}
+                                </span>
+                                <div class="countdown-items">
+                                    <div class="item">
+                                        <div>{daysValue}</div>
+                                        <div><h3>Days</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{hoursValue}</div>
+                                        <div><h3>Hours</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{minutesValue}</div>
+                                        <div><h3>Minutes</h3></div>
+                                    </div>
+                                    <div class="item">
+                                        <div>{secondsValue}</div>
+                                        <div><h3>Seconds</h3></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
 
                     <div
                         class="status-description mb-8 rounded-xl border bg-card overflow-hidden {$mode ===
