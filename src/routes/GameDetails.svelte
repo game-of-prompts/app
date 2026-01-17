@@ -92,6 +92,7 @@
     import { type RPBox, type ReputationProof } from "reputation-system";
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import { Forum } from "forum-application";
+    import ShareModal from "./ShareModal.svelte";
 
     const strictMode = true;
 
@@ -306,7 +307,7 @@
     let warningMessage: string | null = null;
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
-    let showCopyMessage = false;
+    let showShareModal = false;
     let showInfoBlocks = true;
 
     // Game Status State
@@ -1182,16 +1183,7 @@
 
     function shareGame() {
         if (!game) return;
-        const urlToCopy = `${window.location.origin}/web/?game=${game.gameId}`;
-        navigator.clipboard
-            .writeText(urlToCopy)
-            .then(() => {
-                showCopyMessage = true;
-                setTimeout(() => {
-                    showCopyMessage = false;
-                }, 2500);
-            })
-            .catch((err) => console.error("Failed to copy game URL: ", err));
+        showShareModal = true;
     }
 
     function updateClockCountdown() {
@@ -1358,6 +1350,16 @@
         }
     }
 </script>
+
+{#if game}
+    <ShareModal
+        bind:open={showShareModal}
+        projectName={game.content.title}
+        projectId={game.gameId}
+        projectStatus={game.status}
+        description={game.content.description}
+    />
+{/if}
 
 {#if game}
     <div
@@ -1582,12 +1584,6 @@
                                 <Share2 class="mr-2 h-4 w-4" />
                                 Share Game
                             </Button>
-                            {#if showCopyMessage}
-                                <span
-                                    class="text-xs text-green-400 ml-2 transition-opacity duration-300"
-                                    >Link Copied!</span
-                                >
-                            {/if}
                         </div>
                     </div>
                 </div>
