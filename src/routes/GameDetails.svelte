@@ -60,6 +60,7 @@
         FileText,
         Settings,
         ArrowUp,
+        Lock as LockIcon,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -98,6 +99,195 @@
 
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
+    let primaryAction: string | null = null;
+
+    $: isBeforeDeadline = targetDate
+        ? new Date().getTime() < targetDate
+        : false;
+    $: primaryAction = getPrimaryAction(
+        game,
+        openCeremony,
+        participationIsEnded,
+        isNominatedJudge,
+        isJudge,
+        isBeforeDeadline,
+    );
+
+    function getPrimaryAction(
+        game: AnyGame | null,
+        openCeremony: boolean,
+        participationIsEnded: boolean,
+        isNominatedJudge: boolean,
+        isJudge: boolean,
+        isBeforeDeadline: boolean,
+    ): string | null {
+        if (!game) return null;
+
+        if (game.status === "Active") {
+            if (openCeremony) return "open_ceremony";
+            if (!participationIsEnded) return "submit_score";
+            return "resolve_game";
+        }
+
+        if (game.status === "Resolution") {
+            if (!isBeforeDeadline) return "end_game";
+            return null; // No primary action during judge period (only secondary/destructive)
+        }
+
+        if (game.status === "Cancelled_Draining") return "drain_stake";
+
+        return null;
+    }
+
+    $: secondaryActions = getSecondaryActions(
+        game,
+        isNominatedJudge,
+        isJudge,
+        isBeforeDeadline,
+        $reputation_proof,
+    );
+
+    $: disabledActions = getDisabledActions(
+        game,
+        openCeremony,
+        participationIsEnded,
+        isBeforeDeadline,
+        strictMode,
+    );
+
+    function getSecondaryActions(
+        game: AnyGame | null,
+        isNominatedJudge: boolean,
+        isJudge: boolean,
+        isBeforeDeadline: boolean,
+        reputationProof: ReputationProof | null,
+    ) {
+        if (!game) return [];
+        const actions = [];
+
+        if (game.status === "Active") {
+            if (isNominatedJudge && !isJudge) {
+                actions.push({
+                    id: "accept_judge_nomination",
+                    label: "Accept Judge Nomination",
+                    icon: Gavel,
+                    variant: "outline",
+                });
+            }
+            actions.push({
+                id: "cancel_game",
+                label: "Cancel Competition",
+                icon: XCircle,
+                variant: "destructive",
+            });
+        }
+
+        if (game.status === "Resolution" && isBeforeDeadline) {
+            actions.push({
+                id: "include_omitted",
+                label: "Include Omitted Participations",
+                icon: Users,
+                variant: "outline",
+            });
+            if (isJudge) {
+                actions.push({
+                    id: "invalidate_winner",
+                    label: "Invalidate Winner",
+                    icon: XCircle,
+                    variant: "destructive",
+                });
+            }
+        }
+
+        // Creator Verification
+        if (
+            game.content.creatorTokenId &&
+            reputationProof &&
+            game.content.creatorTokenId === reputationProof.token_id
+        ) {
+            const creatorPositiveOpinion = game.reputationOpinions?.find(
+                (op) =>
+                    op.token_id === game.content.creatorTokenId &&
+                    op.polarization === true,
+            );
+            if (!creatorPositiveOpinion) {
+                actions.push({
+                    id: "submit_creator_opinion",
+                    label: "Verify as Creator",
+                    icon: ShieldCheck,
+                    variant: "outline",
+                    class: "border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600",
+                });
+            }
+        }
+
+        return actions;
+    }
+
+    function getDisabledActions(
+        game: AnyGame | null,
+        openCeremony: boolean,
+        participationIsEnded: boolean,
+        isBeforeDeadline: boolean,
+        strictMode: boolean,
+    ) {
+        if (!game) return [];
+        const actions = [];
+
+        if (game.status === "Active") {
+            if (!openCeremony) {
+                actions.push({
+                    label: "Add Seed Randomness",
+                    reason: "Ceremony period ended",
+                    icon: Sparkles,
+                });
+            }
+            if (participationIsEnded) {
+                actions.push({
+                    label: "Submit Score",
+                    reason: "Deadline has passed",
+                    icon: Edit,
+                });
+            } else if (strictMode && openCeremony) {
+                actions.push({
+                    label: "Submit Score",
+                    reason: "Ceremony period is open",
+                    icon: Edit,
+                });
+            }
+
+            if (!participationIsEnded) {
+                actions.push({
+                    label: "Resolve Competition",
+                    reason: "Wait for participation deadline",
+                    icon: CheckSquare,
+                });
+            }
+        }
+
+        if (game.status === "Resolution") {
+            if (isBeforeDeadline) {
+                actions.push({
+                    label: "End Competition",
+                    reason: "Judge period active",
+                    icon: Trophy,
+                });
+            } else {
+                actions.push({
+                    label: "Invalidate Winner",
+                    reason: "Judge period ended",
+                    icon: XCircle,
+                });
+                actions.push({
+                    label: "Include Omitted",
+                    reason: "Judge period ended",
+                    icon: Users,
+                });
+            }
+        }
+
+        return actions;
+    }
     let platform = new ErgoPlatform();
     let participations: AnyParticipation[] = [];
     let participationVotes: Map<
@@ -2896,34 +3086,6 @@
                                         opinion verifying this game.
                                     </p>
                                 </div>
-                            {:else if game.content.creatorTokenId && $reputation_proof && game.content.creatorTokenId === $reputation_proof.token_id}
-                                <div
-                                    class="info-block mt-4 pt-4 border-t {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
-                                >
-                                    <p class="text-sm font-medium mb-2">
-                                        Creator Verification
-                                    </p>
-                                    <Button
-                                        on:click={() =>
-                                            setupActionModal(
-                                                "submit_creator_opinion",
-                                            )}
-                                        variant="outline"
-                                        class="w-full border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-                                    >
-                                        <ShieldCheck class="mr-2 h-4 w-4" />
-                                        Verify as Creator
-                                    </Button>
-                                    <p
-                                        class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                    >
-                                        Submit a positive opinion to verify this
-                                        game as the creator.
-                                    </p>
-                                </div>
                             {/if}
                         {/if}
                     </div>
@@ -2940,347 +3102,179 @@
                             <h2 class="text-2xl font-semibold mb-6">
                                 Available Actions
                             </h2>
-                            <div class="space-y-4">
-                                {#if $connected}
-                                    {#if game.status === "Active"}
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "open_ceremony",
-                                                    )}
-                                                disabled={!openCeremony}
-                                                class="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                                            >
-                                                <!-- svelte-ignore missing-declaration -->
-                                                <Sparkles
-                                                    class="mr-2 h-4 w-4"
-                                                /> Add Seed Randomness
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                {#if openCeremony}
-                                                    Add entropy to the game
-                                                    seed. Available because the
-                                                    ceremony period is open.
-                                                {:else}
-                                                    Adding randomness is no
-                                                    longer available (ceremony
-                                                    period ended).
-                                                {/if}
-                                            </p>
-                                        </div>
 
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "accept_judge_nomination",
-                                                    )}
-                                                disabled={!isNominatedJudge ||
-                                                    isJudge}
-                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                                            >
-                                                <Gavel class="mr-2 h-4 w-4" /> Accept
-                                                Judge Nomination
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                {#if !isNominatedJudge}
-                                                    You are not nominated as a
-                                                    judge.
-                                                {:else if isJudge}
-                                                    You are already a judge.
-                                                {:else}
-                                                    You are nominated as a
-                                                    judge. Accept to participate
-                                                    in the resolution process.
-                                                {/if}
-                                            </p>
-                                        </div>
-
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "submit_score",
-                                                    )}
-                                                disabled={participationIsEnded ||
-                                                    (strictMode &&
-                                                        openCeremony)}
-                                                class="w-full bg-slate-500 hover:bg-slate-600 text-white"
-                                            >
-                                                <Edit
-                                                    class="mr-2 h-4 w-4"
-                                                />Submit My Score
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                Submit your solution and score.
-                                                {#if strictMode && openCeremony}
-                                                    Disabled because the
-                                                    ceremony period is open.
-                                                {:else if participationIsEnded}
-                                                    Disabled because the
-                                                    deadline has passed.
-                                                {/if}
-                                            </p>
-                                        </div>
-
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "cancel_game",
-                                                    )}
-                                                variant="destructive"
-                                                class="w-full bg-red-600 hover:bg-red-700 text-white"
-                                            >
-                                                <XCircle
-                                                    class="mr-2 h-4 w-4"
-                                                />Cancel Competition
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                Cancel the game if the secret
-                                                has been revealed prematurely.
-                                            </p>
-                                        </div>
-
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "resolve_game",
-                                                    )}
-                                                disabled={!participationIsEnded}
-                                                class="w-full bg-slate-600 hover:bg-slate-700 text-white"
-                                            >
-                                                <CheckSquare
-                                                    class="mr-2 h-4 w-4"
-                                                />Resolve Competition
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                {#if participationIsEnded}
-                                                    The participation period has
-                                                    ended. The creator can now
-                                                    resolve the game and declare
-                                                    a winner.
-                                                {:else}
-                                                    Available after the
-                                                    participation deadline.
-                                                {/if}
-                                            </p>
-                                        </div>
+                            <!-- ZONE A: PRIMARY ACTION (HERO) -->
+                            {#if primaryAction}
+                                <div class="mb-8">
+                                    {#if primaryAction === "open_ceremony"}
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "open_ceremony",
+                                                )}
+                                            class="w-full py-6 text-xl font-bold shadow-lg bg-purple-600 hover:bg-purple-700 text-white transition-all hover:scale-[1.01]"
+                                        >
+                                            <Sparkles class="mr-3 h-6 w-6" /> Add
+                                            Seed Randomness
+                                        </Button>
+                                        <p
+                                            class="text-sm text-center mt-2 text-muted-foreground"
+                                        >
+                                            Add entropy to the game seed.
+                                        </p>
+                                    {:else if primaryAction === "submit_score"}
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "submit_score",
+                                                )}
+                                            class="w-full py-6 text-xl font-bold shadow-lg bg-blue-600 hover:bg-blue-700 text-white transition-all hover:scale-[1.01]"
+                                        >
+                                            <Edit class="mr-3 h-6 w-6" /> Submit
+                                            My Score
+                                        </Button>
+                                        <p
+                                            class="text-sm text-center mt-2 text-muted-foreground"
+                                        >
+                                            Submit your solution and score
+                                            before the deadline.
+                                        </p>
+                                    {:else if primaryAction === "resolve_game"}
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal(
+                                                    "resolve_game",
+                                                )}
+                                            class="w-full py-6 text-xl font-bold shadow-lg bg-green-600 hover:bg-green-700 text-white transition-all hover:scale-[1.01]"
+                                        >
+                                            <CheckSquare class="mr-3 h-6 w-6" />
+                                            Resolve Competition
+                                        </Button>
+                                        <p
+                                            class="text-sm text-center mt-2 text-muted-foreground"
+                                        >
+                                            Declare the winner and reveal the
+                                            secret.
+                                        </p>
+                                    {:else if primaryAction === "end_game"}
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal("end_game")}
+                                            class="w-full py-6 text-xl font-bold shadow-lg bg-blue-600 hover:bg-blue-700 text-white transition-all hover:scale-[1.01]"
+                                        >
+                                            <Trophy class="mr-3 h-6 w-6" /> End Competition
+                                            & Distribute Prizes
+                                        </Button>
+                                        <p
+                                            class="text-sm text-center mt-2 text-muted-foreground"
+                                        >
+                                            Finalize the game and distribute
+                                            rewards.
+                                        </p>
+                                    {:else if primaryAction === "drain_stake"}
+                                        <Button
+                                            on:click={() =>
+                                                setupActionModal("drain_stake")}
+                                            class="w-full py-6 text-xl font-bold shadow-lg bg-orange-600 hover:bg-orange-700 text-white transition-all hover:scale-[1.01]"
+                                        >
+                                            <Trophy class="mr-3 h-6 w-6" /> Drain
+                                            Creator Stake
+                                        </Button>
                                     {/if}
+                                </div>
+                            {/if}
 
-                                    {#if game.status === "Resolution"}
-                                        {@const isBeforeDeadline =
-                                            new Date().getTime() < targetDate}
-
-                                        {#if isInvalidationMajorityReached && isBeforeDeadline}
-                                            <div
-                                                class="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3"
+                            <!-- ZONE B: SECONDARY ACTIONS (GRID) -->
+                            {#if secondaryActions.length > 0}
+                                <div class="mb-8">
+                                    <h3
+                                        class="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3"
+                                    >
+                                        Other Options
+                                    </h3>
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-3"
+                                    >
+                                        {#each secondaryActions as action}
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(action.id)}
+                                                variant={action.variant ||
+                                                    "outline"}
+                                                class="w-full justify-start {action.class ||
+                                                    ''}"
                                             >
-                                                <Gavel
-                                                    class="h-5 w-5 text-red-500 mt-0.5"
+                                                <svelte:component
+                                                    this={action.icon}
+                                                    class="mr-2 h-4 w-4"
                                                 />
-                                                <div>
-                                                    <h4
-                                                        class="text-sm font-bold text-red-500"
-                                                    >
-                                                        Majority Invalidation
-                                                        Reached
-                                                    </h4>
-                                                    <p
-                                                        class="text-xs text-red-400/80 mt-1"
-                                                    >
-                                                        A majority of judges ({candidateParticipationInvalidVotes.length}
-                                                        out of {game.judges
-                                                            .length}) have voted
-                                                        to invalidate the
-                                                        current winner. Anyone
-                                                        can now execute the
-                                                        invalidation to select a
-                                                        new candidate.
-                                                        <br /><br />
-                                                        <strong>Warning:</strong
-                                                        >
-                                                        If the judge period ends
-                                                        and no one executes this
-                                                        action, the current candidate
-                                                        will remain the winner!
-                                                    </p>
-                                                </div>
-                                            </div>
+                                                {action.label}
+                                            </Button>
+                                        {/each}
+
+                                        {#if participations.filter((p) => p.status === "Submitted").length + participationBatches.length > PARTICIPATION_BATCH_THRESHOLD && game.status === "Resolution" && !isBeforeDeadline}
+                                            <Button
+                                                on:click={() =>
+                                                    setupActionModal(
+                                                        "batch_participations",
+                                                    )}
+                                                class="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+                                            >
+                                                <Trophy class="mr-2 h-4 w-4" />
+                                                Batch Participations
+                                            </Button>
                                         {/if}
+                                    </div>
+                                </div>
+                            {/if}
 
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "include_omitted",
-                                                    )}
-                                                variant="outline"
-                                                disabled={!isBeforeDeadline}
-                                                class="w-full bg-gray-600 hover:bg-gray-700 text-white"
-                                                title="Anyone can execute this action to claim the resolver's commission."
+                            <!-- ZONE C: STATUS & RESTRICTIONS (LIST) -->
+                            {#if disabledActions.length > 0}
+                                <div class="bg-muted/30 rounded-lg p-4">
+                                    <h3
+                                        class="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2"
+                                    >
+                                        <LockIcon class="w-3 h-3" /> Unavailable
+                                        Actions
+                                    </h3>
+                                    <ul class="space-y-3">
+                                        {#each disabledActions as action}
+                                            <li
+                                                class="flex items-center gap-3 text-sm text-muted-foreground opacity-75"
                                             >
-                                                <Users class="mr-2 h-4 w-4" /> Include
-                                                Omitted Participations
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                If a valid participation was
-                                                omitted by the creator, you can
-                                                include it now.
-                                                {#if !isBeforeDeadline}
-                                                    Disabled because judge
-                                                    period has ended.
-                                                {/if}
-                                            </p>
-                                        </div>
-
-                                        <div class="action-item">
-                                            <Button
-                                                on:click={() =>
-                                                    setupActionModal(
-                                                        "invalidate_winner",
-                                                    )}
-                                                disabled={!isJudge ||
-                                                    !isBeforeDeadline}
-                                                variant="destructive"
-                                                class="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
-                                            >
-                                                <XCircle class="mr-2 h-4 w-4" />
-                                                Judges: Invalidate Winner
-                                            </Button>
-                                            <p
-                                                class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                            >
-                                                {#if isJudge}
-                                                    As a judge, you can vote to
-                                                    invalidate the winner if the
-                                                    solution is incorrect.
-                                                {:else}
-                                                    Only judges can invalidate
-                                                    the winner.
-                                                {/if}
-                                                {#if !isBeforeDeadline}
-                                                    Disabled because judge
-                                                    period has ended.
-                                                {/if}
-                                            </p>
-                                        </div>
-
-                                        <div class="action-item">
-                                            {#if participations.filter((p) => p.status === "Submitted").length + participationBatches.length > PARTICIPATION_BATCH_THRESHOLD}
-                                                <Button
-                                                    on:click={() =>
-                                                        setupActionModal(
-                                                            "batch_participations",
-                                                        )}
-                                                    disabled={isBeforeDeadline}
-                                                    variant="outline"
-                                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                                <div
+                                                    class="p-1.5 rounded-full bg-muted"
                                                 >
-                                                    <Trophy
-                                                        class="mr-2 h-4 w-4"
+                                                    <svelte:component
+                                                        this={action.icon}
+                                                        class="w-3 h-3"
                                                     />
-                                                    Batch Participations ({participations.filter(
-                                                        (p) =>
-                                                            p.status ===
-                                                            "Submitted",
-                                                    ).length} pending, {participationBatches.length}
-                                                    batches)
-                                                </Button>
-                                                <p
-                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    There are too many
-                                                    participations to finalize
-                                                    at once. Please batch them
-                                                    first.
-                                                    {#if isBeforeDeadline}
-                                                        Disabled because judge
-                                                        period is still active.
-                                                    {/if}
-                                                </p>
-                                            {:else}
-                                                <Button
-                                                    on:click={() =>
-                                                        setupActionModal(
-                                                            "end_game",
-                                                        )}
-                                                    disabled={isBeforeDeadline}
-                                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                                                >
-                                                    <Trophy
-                                                        class="mr-2 h-4 w-4"
-                                                    /> End Competition & Distribute
-                                                    Prizes
-                                                </Button>
-                                                <p
-                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    {#if isBeforeDeadline}
-                                                        Disabled because judge
-                                                        period is still active.
-                                                    {:else}
-                                                        The resolution period
-                                                        has ended. Finalize the
-                                                        game to distribute
-                                                        prizes.
-                                                    {/if}
-                                                </p>
-                                            {/if}
-                                        </div>
-                                    {/if}
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <span
+                                                        class="font-medium text-foreground/80"
+                                                        >{action.label}</span
+                                                    >
+                                                    <span class="text-xs"
+                                                        >{action.reason}</span
+                                                    >
+                                                </div>
+                                            </li>
+                                        {/each}
+                                    </ul>
+                                </div>
+                            {/if}
 
-                                    {#if iGameDrainingStaking(game)}
-                                        {#await isGameDrainingAllowed(game) then isAllowed}
-                                            <div class="action-item">
-                                                <Button
-                                                    on:click={() =>
-                                                        setupActionModal(
-                                                            "drain_stake",
-                                                        )}
-                                                    disabled={!isAllowed}
-                                                    class="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                                                >
-                                                    <Trophy
-                                                        class="mr-2 h-4 w-4"
-                                                    />Drain Creator Stake
-                                                </Button>
-                                                <p
-                                                    class="text-xs mt-1 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    {#if isAllowed}
-                                                        The game was cancelled.
-                                                        You can drain the
-                                                        creator's stake.
-                                                    {:else}
-                                                        Draining stake is not
-                                                        yet available.
-                                                    {/if}
-                                                </p>
-                                            </div>
-                                        {/await}
-                                    {/if}
-                                {:else}
-                                    <p class="info-box">
+                            {#if !$connected}
+                                <div
+                                    class="p-6 text-center bg-muted/30 rounded-lg border border-dashed"
+                                >
+                                    <p class="text-muted-foreground">
                                         Connect your wallet to interact with the
                                         game competition.
                                     </p>
-                                {/if}
-                            </div>
+                                </div>
+                            {/if}
                         </div>
                     </div>
                 {/if}
