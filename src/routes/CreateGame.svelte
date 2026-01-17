@@ -284,6 +284,16 @@
     let nextJudgeId = 1;
     let judgesExpanded = false;
 
+    $: judgesList = judges.map((j) => j.value.trim()).filter((id) => id);
+    $: judgeValidationError = (() => {
+        const unique = new Set(judgesList);
+        if (unique.size !== judgesList.length)
+            return "Duplicate judges are not allowed.";
+        if (creatorTokenId && judgesList.includes(creatorTokenId))
+            return "The creator cannot be a judge.";
+        return null;
+    })();
+
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
     let activeHashStore: Writable<string> = gameServiceIdStore;
@@ -1421,6 +1431,13 @@
                                                 >+ Add Judge</Button
                                             >
                                         </div>
+                                        {#if judgeValidationError}
+                                            <p
+                                                class="text-xs text-red-500 mt-2 px-4 font-medium"
+                                            >
+                                                {judgeValidationError}
+                                            </p>
+                                        {/if}
                                     {/if}
                                 </div>
                             </div>
