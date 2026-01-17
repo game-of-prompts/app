@@ -1387,6 +1387,20 @@
         }
     }
 
+    // --- Risk Level Logic ---
+    $: uniqueJudges = game?.judges
+        ? [...new Set(game.judges)].filter(
+              (j) => j !== game?.content?.creatorTokenId,
+          )
+        : [];
+
+    $: riskLevel =
+        uniqueJudges.length === 0
+            ? "High"
+            : uniqueJudges.length <= 5
+              ? "Medium"
+              : "Low";
+
     // --- Paper Content Logic ---
     const paperRenderer = new marked.Renderer();
     paperRenderer.heading = function ({
@@ -1946,23 +1960,21 @@
                                         class="info-block col-span-1 md:col-span-2"
                                     >
                                         <span class="info-label"
-                                            >Creator Address {isOwner
+                                            >Creator Reputation Token ID {isOwner
                                                 ? "(You)"
                                                 : ""}</span
                                         >
-                                        {#if creator}
+                                        {#if game.content.creatorTokenId}
                                             <a
                                                 href={$web_explorer_uri_tkn +
-                                                    creator}
+                                                    game.content.creatorTokenId}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 class="info-value font-mono text-xs break-all hover:underline"
-                                                title={creator}
+                                                title={game.content
+                                                    .creatorTokenId}
                                             >
-                                                {creator.slice(
-                                                    0,
-                                                    12,
-                                                )}...{creator.slice(-6)}
+                                                {game.content.creatorTokenId}
                                             </a>
                                         {:else}
                                             <span class="info-value">N/A</span>
@@ -2982,7 +2994,7 @@
                     </h2>
 
                     <div class="grid grid-cols-1 gap-y-6">
-                        {#if game.judges && game.judges.length > 0}
+                        {#if riskLevel === "Low"}
                             <div class="info-block">
                                 <div
                                     class="mb-4 p-3 rounded bg-green-500/10 border border-green-500/20"
@@ -2995,12 +3007,53 @@
                                         class="text-xs text-gray-500 dark:text-gray-400 mt-1"
                                     >
                                         This game uses a decentralized jury
-                                        system. The creator cannot arbitrarily
-                                        decide the winner; a majority of judges
-                                        must agree.
+                                        system with {uniqueJudges.length} unique
+                                        judges. The creator cannot arbitrarily decide
+                                        the winner; a majority of judges must agree.
                                     </p>
                                 </div>
+                            </div>
+                        {:else if riskLevel === "Medium"}
+                            <div class="info-block">
+                                <div
+                                    class="mb-4 p-3 rounded bg-yellow-500/10 border border-yellow-500/20"
+                                >
+                                    <span
+                                        class="text-sm font-bold text-yellow-500"
+                                        >Risk Level: Medium (Small Jury)</span
+                                    >
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                                    >
+                                        This game has a small jury of {uniqueJudges.length}
+                                        judges. While better than no jury, collusion
+                                        is easier than with a large decentralized
+                                        jury.
+                                    </p>
+                                </div>
+                            </div>
+                        {:else}
+                            <div class="info-block">
+                                <div
+                                    class="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20"
+                                >
+                                    <span class="text-sm font-bold text-red-500"
+                                        >Risk Level: High (Trust Creator)</span
+                                    >
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                                    >
+                                        This game relies entirely on the
+                                        creator's honesty (0 judges). If the
+                                        creator acts maliciously, there are no
+                                        independent judges to intervene.
+                                    </p>
+                                </div>
+                            </div>
+                        {/if}
 
+                        {#if uniqueJudges.length > 0}
+                            <div class="info-block">
                                 <p
                                     class="text {$mode === 'dark'
                                         ? 'text-slate-400'
@@ -3038,7 +3091,7 @@
                                 <div
                                     class="info-value font-mono text-xs break-all mt-2"
                                 >
-                                    {#each game.judges as judge}
+                                    {#each uniqueJudges as judge}
                                         <!-- svelte-ignore a11y-click-events-have-key-events -->
                                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                                         <!-- svelte-ignore a11y-invalid-attribute -->
@@ -3069,6 +3122,7 @@
                                                 >
                                             {/if}
                                         </a>
+                                        <br />
                                     {/each}
                                 </div>
                                 {#if game.status === "Active"}
@@ -3076,8 +3130,8 @@
                                         class="text-sm font-medium text-yellow-600 dark:text-yellow-400 mt-2"
                                     >
                                         Trust requires a majority of {Math.floor(
-                                            game.judges.length / 2,
-                                        ) + 1} out of {game.judges.length} judges.
+                                            uniqueJudges.length / 2,
+                                        ) + 1} out of {uniqueJudges.length} judges.
                                     </p>
                                     <p
                                         class="text-xs italic opacity-75 mt-1 {$mode ===
@@ -3093,8 +3147,8 @@
                                         <p class="text-sm font-medium mt-2">
                                             The candidate can be invalidated if
                                             more than {Math.floor(
-                                                game.judges.length / 2,
-                                            )} out of {game.judges.length} judges
+                                                uniqueJudges.length / 2,
+                                            )} out of {uniqueJudges.length} judges
                                             vote to invalidate.
                                         </p>
                                     {:else}
@@ -3105,47 +3159,6 @@
                                         </p>
                                     {/if}
                                 {/if}
-                            </div>
-                        {:else}
-                            <div class="info-block">
-                                <div
-                                    class="mb-4 p-3 rounded bg-yellow-500/10 border border-yellow-500/20"
-                                >
-                                    <span
-                                        class="text-sm font-bold text-yellow-500"
-                                        >Risk Level: High (Trust Creator)</span
-                                    >
-                                    <p
-                                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                                    >
-                                        This game relies entirely on the
-                                        creator's honesty. If the creator acts
-                                        maliciously, there are no judges to
-                                        intervene.
-                                    </p>
-                                </div>
-
-                                <p
-                                    class="text {$mode === 'dark'
-                                        ? 'text-slate-400'
-                                        : 'text-gray-600'} mt-1 text-lg font-semibold"
-                                >
-                                    No Judges Assigned
-                                </p>
-                                <p
-                                    class="text-sm font-medium text-yellow-400 mt-1"
-                                >
-                                    Participants must trust the creator.
-                                </p>
-                                <p
-                                    class="text-xs italic opacity-75 mt-2 {$mode ===
-                                    'dark'
-                                        ? 'text-slate-400'
-                                        : 'text-gray-500'}"
-                                >
-                                    Advanced: You can verify the creator's
-                                    history using external scripts.
-                                </p>
                             </div>
                         {/if}
                         {#if true}
