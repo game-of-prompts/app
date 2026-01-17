@@ -307,7 +307,7 @@
     let jsonUploadError: string | null = null;
     let isSubmitting: boolean = false;
     let showCopyMessage = false;
-    let showInfoBlocks = false;
+    let showInfoBlocks = true;
 
     // Game Status State
     let participationIsEnded = true;
@@ -2495,14 +2495,6 @@
                                     {:else}
                                         CANCELLED (DRAINING)
                                     {/if}
-                                    <button
-                                        on:click={() =>
-                                            (showInfoBlocks = !showInfoBlocks)}
-                                        class="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors animate-pulse"
-                                        title="Toggle Information"
-                                    >
-                                        <Info class="w-4 h-4" />
-                                    </button>
                                 </h3>
                                 <p
                                     class="text-sm text-gray-500 dark:text-gray-400"
@@ -2538,32 +2530,56 @@
                         </div>
 
                         <!-- Content Grid: Allowed vs Restricted -->
-                        {#if showInfoBlocks}
-                            <div
-                                class="grid grid-cols-1 md:grid-cols-1 divide-y md:divide-y-0 md:divide-x {$mode ===
-                                'dark'
-                                    ? 'divide-slate-700'
-                                    : 'divide-gray-100'}"
-                            >
-                                <!-- Allowed Actions -->
-                                <div class="p-4">
-                                    <h4
-                                        class="text-sm font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 mb-3 flex items-center"
-                                    >
-                                        <CheckCircle class="w-4 h-4 mr-2" />
-                                        What can happen?
-                                    </h4>
-                                    <ul class="space-y-2">
-                                        {#if game.status === "Active" && openCeremony}
+
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-1 divide-y md:divide-y-0 md:divide-x {$mode ===
+                            'dark'
+                                ? 'divide-slate-700'
+                                : 'divide-gray-100'}"
+                        >
+                            <!-- Allowed Actions -->
+                            <div class="p-4">
+                                <h4
+                                    class="text-sm font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 mb-3 flex items-center"
+                                >
+                                    <CheckCircle class="w-4 h-4 mr-2" />
+                                    What can happen?
+                                </h4>
+                                <ul class="space-y-2">
+                                    {#if game.status === "Active" && openCeremony}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Anyone:</span
+                                            > Contribute to the random number generation
+                                            process (free) to ensure the game's seed
+                                            is random.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Anyone:</span
+                                            >
+                                            Cancel the game by revealing the secret
+                                            and receive a portion of the creator’s
+                                            stake.
+                                        </li>
+                                    {:else if game.status === "Active"}
+                                        {#if openCeremony}
+                                            <!-- CEREMONY PHASE -->
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
-                                                > Contribute to the random number
-                                                generation process (free) to ensure
-                                                the game's seed is random.
+                                                >
+                                                Contribute to the random number generation
+                                                process (free).
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -2572,302 +2588,273 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the game by revealing the
-                                                secret and receive a portion of the
-                                                creator’s stake.
+                                                Cancel the game (if secret leaked).
                                             </li>
-                                        {:else if game.status === "Active"}
-                                            {#if openCeremony}
-                                                <!-- CEREMONY PHASE -->
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Contribute to the random number
-                                                    generation process (free).
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Cancel the game (if secret leaked).
-                                                </li>
-                                            {:else if !participationIsEnded}
-                                                <!-- PLAYING PHASE -->
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Players:</span
-                                                    >
-                                                    Join the game and submit scores.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Cancel the game (if secret leaked).
-                                                </li>
-                                            {:else}
-                                                <!-- AWAITING RESOLUTION PHASE -->
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Creator:</span
-                                                    >
-                                                    Resolve the game by revealing
-                                                    the secret.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Cancel the game (if secret leaked).
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Rescue funds (if stuck after
-                                                    grace period).
-                                                </li>
-                                            {/if}
-                                        {:else if game.status === "Resolution"}
-                                            {@const isBeforeDeadline =
-                                                new Date().getTime() <
-                                                targetDate}
-                                            {#if isBeforeDeadline}
-                                                <!-- JUDGE PERIOD -->
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Judges:</span
-                                                    >
-                                                    Validate or invalidate the candidate.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Propose a new winner (if higher
-                                                    score).
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Anyone:</span
-                                                    >
-                                                    Include omitted participations.
-                                                </li>
-                                            {:else}
-                                                <!-- POST-JUDGE PERIOD -->
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Winner/Resolver:</span
-                                                    >
-                                                    Finalize the game and distribute
-                                                    prizes.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                                >
-                                                    <span
-                                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                                        >Participants:</span
-                                                    >
-                                                    Claim refunds (if grace period
-                                                    passes).
-                                                </li>
-                                            {/if}
-                                        {:else if game.status === "Finalized"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
-                                            >
-                                                <span
-                                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Everyone:</span
-                                                > View results and history.
-                                            </li>
-                                        {:else}
-                                            <!-- Cancelled -->
+                                        {:else if !participationIsEnded}
+                                            <!-- PLAYING PHASE -->
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Players:</span
-                                                > Claim full refund immediately.
+                                                >
+                                                Join the game and submit scores.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
-                                                    >Creator:</span
-                                                > Drain stake (slowly, over time).
-                                            </li>
-                                        {/if}
-                                    </ul>
-                                </div>
-
-                                <!-- Restricted Actions -->
-                                <div class="p-4">
-                                    <h4
-                                        class="text-sm font-semibold uppercase tracking-wider text-red-500 dark:text-red-400 mb-3 flex items-center"
-                                    >
-                                        <XCircle class="w-4 h-4 mr-2" />
-                                        What cannot happen?
-                                    </h4>
-                                    <ul class="space-y-2">
-                                        {#if game.status === "Active"}
-                                            {#if openCeremony}
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                    >Anyone:</span
                                                 >
-                                                    <span class="font-medium"
-                                                        >Submit Score:</span
-                                                    >
-                                                    Wait for ceremony to end.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Resolve Game:</span
-                                                    >
-                                                    Cannot resolve during ceremony.
-                                                </li>
-                                            {:else if !participationIsEnded}
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Resolve Game:</span
-                                                    >
-                                                    Wait for deadline to expire.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Ceremony:</span
-                                                    >
-                                                    Ceremony is closed.
-                                                </li>
-                                            {:else}
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Submit Score:</span
-                                                    >
-                                                    Deadline has passed.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Ceremony:</span
-                                                    >
-                                                    Ceremony is closed.
-                                                </li>
-                                            {/if}
-                                        {:else if game.status === "Resolution"}
-                                            {@const isBeforeDeadline =
-                                                new Date().getTime() <
-                                                targetDate}
-                                            {#if isBeforeDeadline}
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Submit participation:</span
-                                                    >
-                                                    Participation period has ended.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Finalize Game:</span
-                                                    >
-                                                    Wait for judge period to end.
-                                                </li>
-                                            {:else}
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Invalidate Winner:</span
-                                                    >
-                                                    Judge period has ended.
-                                                </li>
-                                                <li
-                                                    class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                                >
-                                                    <span class="font-medium"
-                                                        >Propose Winner:</span
-                                                    >
-                                                    Judge period has ended.
-                                                </li>
-                                            {/if}
-                                        {:else if game.status === "Finalized"}
-                                            <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
-                                            >
-                                                <span class="font-medium"
-                                                    >Modifying state:</span
-                                                > The game is closed.
+                                                Cancel the game (if secret leaked).
                                             </li>
                                         {:else}
-                                            <!-- Cancelled -->
+                                            <!-- AWAITING RESOLUTION PHASE -->
                                             <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
-                                                <span class="font-medium"
-                                                    >Winning:</span
-                                                > No winner can be declared.
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Creator:</span
+                                                >
+                                                Resolve the game by revealing the
+                                                secret.
                                             </li>
                                             <li
-                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
                                             >
-                                                <span class="font-medium"
-                                                    >Resuming:</span
-                                                > The game is permanently invalid.
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Cancel the game (if secret leaked).
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Rescue funds (if stuck after grace
+                                                period).
                                             </li>
                                         {/if}
-                                    </ul>
-                                </div>
+                                    {:else if game.status === "Resolution"}
+                                        {@const isBeforeDeadline =
+                                            new Date().getTime() < targetDate}
+                                        {#if isBeforeDeadline}
+                                            <!-- JUDGE PERIOD -->
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Judges:</span
+                                                >
+                                                Validate or invalidate the candidate.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Propose a new winner (if higher score).
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Anyone:</span
+                                                >
+                                                Include omitted participations.
+                                            </li>
+                                        {:else}
+                                            <!-- POST-JUDGE PERIOD -->
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Winner/Resolver:</span
+                                                >
+                                                Finalize the game and distribute
+                                                prizes.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Participants:</span
+                                                >
+                                                Claim refunds (if grace period passes).
+                                            </li>
+                                        {/if}
+                                    {:else if game.status === "Finalized"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Everyone:</span
+                                            > View results and history.
+                                        </li>
+                                    {:else}
+                                        <!-- Cancelled -->
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Players:</span
+                                            > Claim full refund immediately.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                                >Creator:</span
+                                            > Drain stake (slowly, over time).
+                                        </li>
+                                    {/if}
+                                </ul>
                             </div>
-                        {/if}
+
+                            <!-- Restricted Actions -->
+                            <div class="p-4">
+                                <h4
+                                    class="text-sm font-semibold uppercase tracking-wider text-red-500 dark:text-red-400 mb-3 flex items-center"
+                                >
+                                    <XCircle class="w-4 h-4 mr-2" />
+                                    What cannot happen?
+                                </h4>
+                                <ul class="space-y-2">
+                                    {#if game.status === "Active"}
+                                        {#if openCeremony}
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Submit Score:</span
+                                                >
+                                                Wait for ceremony to end.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Resolve Game:</span
+                                                >
+                                                Cannot resolve during ceremony.
+                                            </li>
+                                        {:else if !participationIsEnded}
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Resolve Game:</span
+                                                >
+                                                Wait for deadline to expire.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Ceremony:</span
+                                                >
+                                                Ceremony is closed.
+                                            </li>
+                                        {:else}
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Submit Score:</span
+                                                >
+                                                Deadline has passed.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Ceremony:</span
+                                                >
+                                                Ceremony is closed.
+                                            </li>
+                                        {/if}
+                                    {:else if game.status === "Resolution"}
+                                        {@const isBeforeDeadline =
+                                            new Date().getTime() < targetDate}
+                                        {#if isBeforeDeadline}
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Submit participation:</span
+                                                >
+                                                Participation period has ended.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Finalize Game:</span
+                                                >
+                                                Wait for judge period to end.
+                                            </li>
+                                        {:else}
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Invalidate Winner:</span
+                                                >
+                                                Judge period has ended.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                            >
+                                                <span class="font-medium"
+                                                    >Propose Winner:</span
+                                                >
+                                                Judge period has ended.
+                                            </li>
+                                        {/if}
+                                    {:else if game.status === "Finalized"}
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Modifying state:</span
+                                            > The game is closed.
+                                        </li>
+                                    {:else}
+                                        <!-- Cancelled -->
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Winning:</span
+                                            > No winner can be declared.
+                                        </li>
+                                        <li
+                                            class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
+                                        >
+                                            <span class="font-medium"
+                                                >Resuming:</span
+                                            > The game is permanently invalid.
+                                        </li>
+                                    {/if}
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
