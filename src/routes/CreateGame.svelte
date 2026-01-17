@@ -4,7 +4,11 @@
     import { onMount } from "svelte";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
-    import { web_explorer_uri_tx, explorer_uri } from "$lib/ergo/envs";
+    import {
+        web_explorer_uri_tx,
+        explorer_uri,
+        isDevMode,
+    } from "$lib/ergo/envs";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { hexToBytes, uint8ArrayToHex } from "$lib/ergo/utils";
     import {
@@ -184,6 +188,24 @@
     onMount(() => {
         loadUserTokens();
         setTimeout(loadUserTokens, 1000);
+
+        // DEV MODE AUTO-FILL
+        if ($isDevMode) {
+            const randomBytes = new Uint8Array(32);
+            window.crypto.getRandomValues(randomBytes);
+            const randomHex = uint8ArrayToHex(randomBytes);
+
+            gameServiceIdStore.set(randomHex);
+            gameSecret = randomHex;
+            gameTitle = `Dev Game [${randomHex.slice(0, 6)}]`;
+
+            // Default to 20 minutes for quick testing
+            deadlineValue = 20;
+            deadlineUnit = "minutes";
+
+            // Trigger calculation immediately
+            calculateBlockLimit(deadlineValue, deadlineUnit);
+        }
     });
 
     // --- Box Size Validation ---
@@ -576,6 +598,23 @@
             Create a New Competition
         </h2>
         <p class="subtitle">Fill in the details to launch your game.</p>
+        {#if $isDevMode}
+            <div
+                class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg inline-block text-left max-w-2xl"
+            >
+                <p
+                    class="text-sm text-yellow-500 font-semibold flex items-center gap-2"
+                >
+                    <Wand2 class="w-4 h-4" />
+                    Dev Mode Active
+                </p>
+                <p class="text-xs text-muted-foreground mt-1">
+                    Service ID and Secret have been auto-filled with the same
+                    random value for easier testing. Default duration set to 20
+                    minutes.
+                </p>
+            </div>
+        {/if}
     </div>
 
     {#if !transactionId}
@@ -1289,8 +1328,11 @@
             {#if Array.isArray(transactionId)}
                 <div class="space-y-2">
                     {#each transactionId as txId, i}
-                        <p class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all">
-                            Transaction #{i + 1}: <a
+                        <p
+                            class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
+                        >
+                            Transaction #{i + 1}:
+                            <a
                                 href={$web_explorer_uri_tx + txId}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -1300,7 +1342,9 @@
                     {/each}
                 </div>
             {:else}
-                <p class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all">
+                <p
+                    class="font-mono text-xs p-2 rounded bg-green-500/10 dark:bg-slate-800/50 break-all"
+                >
                     Transaction ID: <a
                         href={$web_explorer_uri_tx + transactionId}
                         target="_blank"

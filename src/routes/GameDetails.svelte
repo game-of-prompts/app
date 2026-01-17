@@ -61,6 +61,7 @@
         Settings,
         ArrowUp,
         Lock as LockIcon,
+        Wand2,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -73,8 +74,14 @@
         USE_CHAINED_TRANSACTIONS,
     } from "$lib/ergo/envs";
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
-    import { uint8ArrayToHex, pkHexToBase58Address } from "$lib/ergo/utils";
+    import {
+        uint8ArrayToHex,
+        pkHexToBase58Address,
+        hexToBytes,
+    } from "$lib/ergo/utils";
     import { mode } from "mode-watcher";
+    import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
+    import { isDevMode } from "$lib/ergo/envs";
 
     // SOURCE APPLICATION IMPORTS
     import { FileCard, FileSourceCreation } from "source-application";
@@ -429,6 +436,116 @@
     let scores_input = "";
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
+
+    // DEV MODE STATE
+    let devGenScore = 100;
+    let devGenErrorType: "none" | "wrong_commitment" | "wrong_score" = "none";
+
+    function generateDevParticipation() {
+        try {
+            // 1. Generate Random Values
+            const randomBytes = new Uint8Array(32);
+            window.crypto.getRandomValues(randomBytes);
+            const solverId = uint8ArrayToHex(randomBytes);
+
+            window.crypto.getRandomValues(randomBytes);
+            const hashLogs = uint8ArrayToHex(randomBytes);
+
+            window.crypto.getRandomValues(randomBytes);
+            const seed = uint8ArrayToHex(randomBytes); // Using hex seed for simplicity
+
+            // 2. Get Constants/Context
+            const secretS =
+                "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21"; // Default constant from python script
+            const ergoTree =
+                "a3f1bde417cf029a9d51dceaf45a08e23c4cc6f1ed2a75b3b394ac97b4e23145"; // Default constant
+
+            // 3. Prepare Data for Hashing
+            // Order: solver_id + seed + score + hash_logs + ergoTree + secret_s
+
+            const solverIdBytes = hexToBytes(solverId);
+            const seedBytes = hexToBytes(seed); // Assuming hex seed
+
+            // Score to 8 bytes big endian
+            const scoreBytes = new Uint8Array(8);
+            const view = new DataView(scoreBytes.buffer);
+            view.setBigInt64(0, BigInt(devGenScore), false); // false for big-endian
+
+            const hashLogsBytes = hexToBytes(hashLogs);
+            const ergoTreeBytes = hexToBytes(ergoTree);
+            const secretSBytes = hexToBytes(secretS);
+
+            if (
+                !solverIdBytes ||
+                !seedBytes ||
+                !hashLogsBytes ||
+                !ergoTreeBytes ||
+                !secretSBytes
+            ) {
+                throw new Error("Failed to convert hex to bytes");
+            }
+
+            const concatenated = new Uint8Array(
+                solverIdBytes.length +
+                    seedBytes.length +
+                    scoreBytes.length +
+                    hashLogsBytes.length +
+                    ergoTreeBytes.length +
+                    secretSBytes.length,
+            );
+
+            let offset = 0;
+            concatenated.set(solverIdBytes, offset);
+            offset += solverIdBytes.length;
+            concatenated.set(seedBytes, offset);
+            offset += seedBytes.length;
+            concatenated.set(scoreBytes, offset);
+            offset += scoreBytes.length;
+            concatenated.set(hashLogsBytes, offset);
+            offset += hashLogsBytes.length;
+            concatenated.set(ergoTreeBytes, offset);
+            offset += ergoTreeBytes.length;
+            concatenated.set(secretSBytes, offset);
+            offset += secretSBytes.length;
+
+            // 4. Hash
+            const commitment = uint8ArrayToHex(fleetBlake2b256(concatenated));
+
+            // 5. Apply Errors if requested
+            let finalCommitment = commitment;
+            let finalScore = devGenScore.toString();
+
+            if (devGenErrorType === "wrong_commitment") {
+                // Change last char
+                finalCommitment =
+                    finalCommitment.slice(0, -1) +
+                    (finalCommitment.endsWith("a") ? "b" : "a");
+            } else if (devGenErrorType === "wrong_score") {
+                finalScore = (devGenScore + 1).toString();
+            }
+
+            // 6. Fill Inputs
+            solverId_input = solverId;
+            hashLogs_input = hashLogs;
+            commitmentC_input = finalCommitment;
+            scores_input = finalScore;
+
+            console.log("Dev Generation Complete", {
+                solverId,
+                seed,
+                score: devGenScore,
+                hashLogs,
+                ergoTree,
+                secretS,
+                commitment,
+                finalCommitment,
+                finalScore,
+            });
+        } catch (e) {
+            console.error("Dev Generation Error", e);
+            alert("Error generating participation: " + e);
+        }
+    }
 
     // Tabs State
     let activeTab: "participations" | "forum" = "participations";
@@ -4033,6 +4150,62 @@
 
                     <div class="modal-form-body">
                         {#if currentActionType === "submit_score"}
+                            {#if $isDevMode}
+                                <div
+                                    class="mb-6 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10"
+                                >
+                                    <div
+                                        class="flex items-center gap-2 mb-3 text-yellow-500 font-semibold"
+                                    >
+                                        <Wand2 class="w-4 h-4" />
+                                        <span
+                                            >Dev Mode: Generate Participation</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3"
+                                    >
+                                        <div>
+                                            <Label class="text-xs mb-1.5 block"
+                                                >Score</Label
+                                            >
+                                            <Input
+                                                type="number"
+                                                bind:value={devGenScore}
+                                                class="h-8 text-sm"
+                                            />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <Label class="text-xs mb-1.5 block"
+                                                >Simulate Error</Label
+                                            >
+                                            <select
+                                                bind:value={devGenErrorType}
+                                                class="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            >
+                                                <option value="none"
+                                                    >None (Valid)</option
+                                                >
+                                                <option value="wrong_commitment"
+                                                    >Wrong Commitment (Tampered)</option
+                                                >
+                                                <option value="wrong_score"
+                                                    >Wrong Score (Mismatch)</option
+                                                >
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        class="w-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"
+                                        on:click={generateDevParticipation}
+                                    >
+                                        Generate & Fill Form
+                                    </Button>
+                                </div>
+                            {/if}
+
                             <div class="space-y-4">
                                 <div
                                     class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4"
