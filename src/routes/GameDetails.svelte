@@ -4243,10 +4243,10 @@
                                         !solverId_input.trim() ||
                                         !hashLogs_input.trim() ||
                                         !scores_input.trim()}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-slate-500 hover:bg-slate-600 text-white'
-                                        : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold"
+                                        : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >{isSubmitting
                                         ? "Processing..."
                                         : "Confirm & Submit Score"}</Button
@@ -4276,10 +4276,10 @@
                                     on:click={handleResolveGame}
                                     disabled={isSubmitting ||
                                         !secret_S_input_resolve.trim()}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                                        : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold"
+                                        : 'bg-slate-500 hover:bg-slate-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >{isSubmitting
                                         ? "Processing..."
                                         : "Resolve Game"}</Button
@@ -4319,10 +4319,10 @@
                                     on:click={handleCancelGame}
                                     disabled={isSubmitting ||
                                         !secret_S_input_cancel.trim()}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-red-500 hover:bg-red-600 text-white'} font-semibold"
+                                        : 'bg-red-500 hover:bg-red-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >{isSubmitting
                                         ? "Processing..."
                                         : "Confirm Game Cancellation"}</Button
@@ -4353,10 +4353,10 @@
                                 <Button
                                     on:click={handleDrainStake}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                                        : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold"
+                                        : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4383,6 +4383,7 @@
                                 <Button
                                     on:click={handleBatchParticipations}
                                     disabled={isSubmitting}
+                                    class="disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4420,10 +4421,10 @@
                                 <Button
                                     on:click={handleEndGame}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold"
+                                        : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4448,10 +4449,10 @@
                                 <Button
                                     on:click={handleJudgesInvalidate}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                        : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold"
+                                        : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4477,10 +4478,10 @@
                                 <Button
                                     on:click={handleIncludeOmitted}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                                        : 'bg-gray-500 hover:bg-gray-600 text-white'} font-semibold"
+                                        : 'bg-gray-500 hover:bg-gray-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4504,10 +4505,10 @@
                                 <Button
                                     on:click={handleSubmitCreatorOpinion}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-green-600 hover:bg-green-700 text-white'
-                                        : 'bg-green-500 hover:bg-green-600 text-white'} font-semibold"
+                                        : 'bg-green-500 hover:bg-green-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4532,10 +4533,10 @@
                                 <Button
                                     on:click={handleJudgeNomination}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold"
+                                        : 'bg-blue-500 hover:bg-blue-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4571,10 +4572,10 @@
                                 <Button
                                     on:click={handleOpenCeremony}
                                     disabled={isSubmitting}
-                                    class="w-full mt-3 py-2.5 text-base {$mode ===
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
                                     'dark'
                                         ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                        : 'bg-purple-500 hover:bg-purple-600 text-white'} font-semibold"
+                                        : 'bg-purple-500 hover:bg-purple-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting
                                         ? "Processing..."
@@ -4910,7 +4911,7 @@
         flex-wrap: wrap;
         align-items: center;
         gap: 2rem;
-        color: #fff;
+        @apply text-foreground;
     }
 
     .timeleft-label {
@@ -4945,7 +4946,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background-color: rgba(255, 255, 255, 0.1);
+        @apply bg-slate-100 dark:bg-white/10;
         -webkit-backdrop-filter: blur(4px);
         backdrop-filter: blur(4px);
         border-radius: 0.5rem;
@@ -4965,7 +4966,7 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 0.5rem;
-        color: rgba(255, 255, 255, 0.7);
+        @apply text-muted-foreground;
     }
 
     .timeleft.ended {
