@@ -564,19 +564,13 @@
         }
     });
 
-    function handleViewDetails() {
-        if (game) {
-            game_detail.set(null);
-        }
-    }
-
     async function loadGameDetailsAndTimers() {
         if (!game) {
             cleanupTimers();
             return;
         }
 
-        currentHeight = await ergo.get_current_height();
+        currentHeight = await platform.get_current_height();
 
         isSubmitting = false;
         transactionId = null;
