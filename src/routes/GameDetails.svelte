@@ -71,6 +71,7 @@
         web_explorer_uri_tx,
         web_explorer_uri_addr,
         explorer_uri,
+        source_explorer_url,
         USE_CHAINED_TRANSACTIONS,
     } from "$lib/ergo/envs";
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
@@ -2169,6 +2170,7 @@
                                                 fileHash={game.content.imageURL}
                                                 sources={imageSources}
                                                 explorerUri={$explorer_uri}
+                                                source_explorer_url={$source_explorer_url}
                                                 webExplorerUriTkn={$web_explorer_uri_tkn}
                                             />
                                         </div>
@@ -2253,6 +2255,7 @@
                                             fileHash={game.content.serviceId}
                                             sources={serviceSources}
                                             explorerUri={$explorer_uri}
+                                            source_explorer_url={$source_explorer_url}
                                             webExplorerUriTkn={$web_explorer_uri_tkn}
                                         />
                                     </div>
@@ -2328,6 +2331,7 @@
                                             fileHash={game.content.paper}
                                             sources={paperSources}
                                             explorerUri={$explorer_uri}
+                                            source_explorer_url={$source_explorer_url}
                                             webExplorerUriTkn={$web_explorer_uri_tkn}
                                         />
                                     </div>
@@ -4914,6 +4918,7 @@
             <FileSourceCreation
                 profile={$reputation_proof}
                 explorerUri={$explorer_uri}
+                source_explorer_url={$source_explorer_url}
                 onSourceAdded={handleFileSourceAdded}
                 hash={writable(modalFileHash)}
                 class="{$mode === 'dark'

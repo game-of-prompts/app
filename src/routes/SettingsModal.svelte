@@ -11,6 +11,8 @@
         default_web_explorer_uri_tx,
         default_web_explorer_uri_addr,
         default_web_explorer_uri_tkn,
+        source_explorer_url,
+        default_source_explorer_url,
         isDevMode,
     } from "$lib/ergo/envs";
     import { Checkbox } from "$lib/components/ui/checkbox";
@@ -28,6 +30,7 @@
         web_explorer_uri_tx.set(default_web_explorer_uri_tx);
         web_explorer_uri_addr.set(default_web_explorer_uri_addr);
         web_explorer_uri_tkn.set(default_web_explorer_uri_tkn);
+        source_explorer_url.set(default_source_explorer_url);
     }
 </script>
 
@@ -90,6 +93,15 @@
                         id="web_explorer_uri_tkn"
                         bind:value={$web_explorer_uri_tkn}
                         placeholder="https://sigmaspace.io/en/token/"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="source_explorer_url">Source Explorer URL</Label>
+                    <Input
+                        id="source_explorer_url"
+                        bind:value={$source_explorer_url}
+                        placeholder="https://reputation-systems.github.io/source-application"
                     />
                 </div>
 

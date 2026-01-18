@@ -7,6 +7,7 @@
     import {
         web_explorer_uri_tx,
         explorer_uri,
+        source_explorer_url,
         isDevMode,
     } from "$lib/ergo/envs";
     import { ErgoPlatform } from "$lib/ergo/platform";
@@ -1891,6 +1892,7 @@
                               : "Add Paper Source"}
                         profile={reputationProofAny}
                         explorerUri={$explorer_uri}
+                        source_explorer_url={$source_explorer_url}
                         hash={activeHashStore}
                         onSourceAdded={handleSourceAdded}
                         class="border-none shadow-none bg-transparent rounded-none"
