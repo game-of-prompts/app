@@ -72,6 +72,7 @@
         web_explorer_uri_addr,
         explorer_uri,
         source_explorer_url,
+        forum_explorer_url,
         USE_CHAINED_TRANSACTIONS,
     } from "$lib/ergo/envs";
     import { type Amount, type Box, ErgoAddress } from "@fleet-sdk/core";
@@ -4102,6 +4103,8 @@
                 {:else if activeTab === "forum"}
                     <div class="forum-container">
                         <Forum
+                            forum_explorer_url={$forum_explorer_url}
+                            showTopicInput={false}
                             topic_id={game.gameId}
                             {web_explorer_uri_tx}
                             {web_explorer_uri_addr}

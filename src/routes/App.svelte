@@ -46,6 +46,7 @@
         web_explorer_uri_addr,
         web_explorer_uri_tkn,
         source_explorer_url,
+        forum_explorer_url,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
@@ -114,6 +115,8 @@
                     web_explorer_uri_tkn.set(settings.web_explorer_uri_tkn);
                 if (settings.source_explorer_url)
                     source_explorer_url.set(settings.source_explorer_url);
+                if (settings.forum_explorer_url)
+                    forum_explorer_url.set(settings.forum_explorer_url);
             } catch (e) {
                 console.error("Error loading settings:", e);
             }
@@ -125,6 +128,7 @@
             web_explorer_uri_addr,
             web_explorer_uri_tkn,
             source_explorer_url,
+            forum_explorer_url,
         ].map((store) =>
             store.subscribe(() => {
                 if (browser) {
@@ -134,6 +138,7 @@
                         web_explorer_uri_addr: get(web_explorer_uri_addr),
                         web_explorer_uri_tkn: get(web_explorer_uri_tkn),
                         source_explorer_url: get(source_explorer_url),
+                        forum_explorer_url: get(forum_explorer_url),
                     };
                     localStorage.setItem(
                         "gop_settings",

@@ -13,6 +13,8 @@
         default_web_explorer_uri_tkn,
         source_explorer_url,
         default_source_explorer_url,
+        forum_explorer_url,
+        default_forum_explorer_url,
         isDevMode,
     } from "$lib/ergo/envs";
     import { Checkbox } from "$lib/components/ui/checkbox";
@@ -31,6 +33,7 @@
         web_explorer_uri_addr.set(default_web_explorer_uri_addr);
         web_explorer_uri_tkn.set(default_web_explorer_uri_tkn);
         source_explorer_url.set(default_source_explorer_url);
+        forum_explorer_url.set(default_forum_explorer_url);
     }
 </script>
 
@@ -102,6 +105,15 @@
                         id="source_explorer_url"
                         bind:value={$source_explorer_url}
                         placeholder="https://reputation-systems.github.io/source-application"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="forum_explorer_url">Forum Explorer URL</Label>
+                    <Input
+                        id="forum_explorer_url"
+                        bind:value={$forum_explorer_url}
+                        placeholder="https://reputation-systems.github.io/forum-application"
                     />
                 </div>
 
