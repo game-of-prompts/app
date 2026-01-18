@@ -18,8 +18,9 @@
         isDevMode,
     } from "$lib/ergo/envs";
     import { fetchGoPGames } from "$lib/ergo/fetch";
+    import { isLoadingGames } from "$lib/common/store";
     import { Checkbox } from "$lib/components/ui/checkbox";
-    import { X, RotateCcw } from "lucide-svelte";
+    import { X, RotateCcw, Loader2 } from "lucide-svelte";
     import { createEventDispatcher } from "svelte";
 
     const dispatch = createEventDispatcher();
@@ -129,13 +130,27 @@
                 <div
                     class="flex items-center space-x-2 pt-4 border-t border-border"
                 >
-                    <Checkbox id="dev-mode" bind:checked={$isDevMode} />
-                    <Label for="dev-mode" class="cursor-pointer">
-                        <span class="font-medium">Development Mode</span>
-                        <span class="block text-xs text-muted-foreground">
-                            Use shorter periods for testing (requires app reload
-                            to take full effect on contracts)
-                        </span>
+                    <Checkbox
+                        id="dev-mode"
+                        bind:checked={$isDevMode}
+                        disabled={$isLoadingGames}
+                    />
+                    <Label
+                        for="dev-mode"
+                        class="cursor-pointer flex items-center gap-2"
+                    >
+                        <div>
+                            <span class="font-medium">Development Mode</span>
+                            <span class="block text-xs text-muted-foreground">
+                                Use shorter periods for testing (requires app
+                                reload to take full effect on contracts)
+                            </span>
+                        </div>
+                        {#if $isLoadingGames}
+                            <Loader2
+                                class="h-4 w-4 animate-spin text-muted-foreground"
+                            />
+                        {/if}
                     </Label>
                 </div>
             </div>

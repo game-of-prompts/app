@@ -42,7 +42,7 @@ import { GAME as GAME_TYPE_NFT, PARTICIPATION as PARTICIPATION_TYPE_NFT } from "
 import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
-import { games, judges as judgesStore } from "../common/store";
+import { games, judges as judgesStore, isLoadingGames } from "../common/store";
 import { getGameConstants } from "$lib/common/constants";
 
 export interface TokenEIP4 {
@@ -998,6 +998,7 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
 
     // Start the fetch operation
     inFlightFetch = (async () => {
+        isLoadingGames.set(true);
         try {
             // 1. If forced, clear the store. Otherwise, just update the timestamp.
             if (force) {
@@ -1050,6 +1051,7 @@ export async function fetchGoPGames(force: boolean = false, avoidFullLoad: boole
             return finalState.data;
 
         } finally {
+            isLoadingGames.set(false);
             // 6. Release the lock for the next fetch
             inFlightFetch = null;
         }

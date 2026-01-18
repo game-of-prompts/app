@@ -1,7 +1,7 @@
 <script lang="ts">
     import GameCard from "./GameCard.svelte";
     import { type AnyGame as Game } from "$lib/common/game";
-    import { games } from "$lib/common/store";
+    import { games, isLoadingGames } from "$lib/common/store";
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from "lucide-svelte";
     import { onMount, onDestroy, afterUpdate, tick } from "svelte";
@@ -287,19 +287,27 @@
         </Alert.Root>
     {/if}
 
-    {#if isLoadingApi}
-        <div class="game-list-container">
-            {#each Array(3) as _, i}
-                <div class="skeleton-row" class:reverse={i % 2 !== 0}>
-                    <div class="skeleton-image-large"></div>
-                    <div class="skeleton-content">
-                        <div class="skeleton-line title"></div>
-                        <div class="skeleton-line text"></div>
-                        <div class="skeleton-line text short"></div>
-                        <div class="skeleton-button"></div>
+    {#if isLoadingApi || $isLoadingGames}
+        <div class="loading-state">
+            <div class="loading-content">
+                <Loader2 class="h-10 w-10 animate-spin text-primary mb-4" />
+                <p class="text-lg font-medium text-muted-foreground">
+                    Fetching competitions from Ergo...
+                </p>
+            </div>
+            <div class="game-list-container opacity-40">
+                {#each Array(3) as _, i}
+                    <div class="skeleton-row" class:reverse={i % 2 !== 0}>
+                        <div class="skeleton-image-large"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-line title"></div>
+                            <div class="skeleton-line text"></div>
+                            <div class="skeleton-line text short"></div>
+                            <div class="skeleton-button"></div>
+                        </div>
                     </div>
-                </div>
-            {/each}
+                {/each}
+            </div>
         </div>
     {:else if listedItems && Array.from(listedItems).length > 0}
         <div class="game-list-container">
