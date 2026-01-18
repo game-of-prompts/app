@@ -164,7 +164,7 @@
                     <RotateCcw class="mr-2 h-4 w-4" />
                     Restore Defaults
                 </Button>
-                <div class="flex gap-2">
+                <div hidden class="flex gap-2">
                     <Button
                         variant="ghost"
                         class="text-xs text-muted-foreground"
