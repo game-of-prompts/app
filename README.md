@@ -4,6 +4,59 @@
 
 ![logo](static/logo.png)
 
+-----
+
+## 1. FAQ (Frequently Asked Questions)
+
+### 1.1. General Concepts
+
+*   **What is Game of Prompts?**
+    It is a **bot competition audited by blockchain**.
+
+*   **What is the "Ceremony Phase"?**
+    It is the initial period of the game designed to add randomness to the seed. This prevents the **Creator** from pre-calculating cheats or solutions based on a known initial state.
+
+*   **What do I need to play?**
+    You need an **Ergo Wallet** (with some ERG for fees) and a **Celaut Node**.
+
+*   **What is a Celaut Node and why do I need it?**
+    Think of it as your secure "game console". It is the infrastructure that allows the **Game Service** (provided by the creator) and your **Solver Service** (your bot) to interact in an isolated and deterministic environment. It ensures that the game runs correctly and generates the necessary proofs (`commitmentC`, logs) without external interference.
+
+### 1.2. Security and Trust
+
+*   **How do I know the game is fair?**
+    The game's rules and the hash of the secret `S` (`hashS`) are registered on the blockchain from the beginning. This ensures immutability: the creator cannot change the rules or the secret once the game has started.
+
+*   **Can the Creator steal the funds?**
+    No. The funds are locked in a **Smart Contract**, not in the Creator's wallet. The contract only releases funds according to the programmed rules (to the winner, judges, etc.).
+    > **Note on Collusion:** While theoretically judges could collude with a creator to approve a fraudulent participation (created before the deadline), doing so would leave an immutable trace of fraud. Since verifying fraud is a deterministic and easy process, any observer could prove their dishonesty. If the judges' reputation (stake) is valuable, they have no economic incentive to destroy it for a one-time gain.
+
+*   **What happens if the Creator disappears?**
+    If the Creator does not reveal the secret `S` after the deadline, the game enters a "Stuck" state. After a **Grace Period**, players can trigger a **Refund Action** to recover their funds automatically.
+
+### 1.3. Judges and Penalties
+
+*   **Who are the Judges and why should I trust them?**
+    Judges are entities nominated by the Creator, but they operate under a strict economic incentive structure. Their role is to audit the resolution phase.
+
+*   **Why do Judges earn money if they invalidate a participation?**
+    If judges detect that the Game Service generated an invalid proof (fraud), they invalidate that candidate. The protocol then transfers the **Creator's commission** to the Judges. This incentivizes them to be vigilant and penalize the Creator for faulty or malicious services.
+    > **Important:** Even if the Creator is penalized, the game continues to find a valid winner among the honest participants.
+
+*   **Can I be penalized as a player?**
+    The system is designed to penalize the **Creator/Game Service**. A player could only successfully forge a participation if they knew the Creator's secret `S` in advance. Therefore, an invalid proof implies a leak of the secret or a malfunction of the Creator's service.
+    > While judges *could* theoretically invalidate an honest player, doing so without cause would destroy their reputation (as the proof is public and deterministic). Economically, it is not in their interest to attack honest players.
+
+### 1.4. Economy
+
+*   **How is the winner calculated?**
+    The winner is the participant with the highest **Time-Weighted Score**. This formula (`Score * (TimeWeight + RemainingTime)`) rewards players who submit their solutions earlier.
+
+*   **When do I receive my prize?**
+    You receive the prize immediately upon the **End Game** action on the blockchain. The Smart Contract **obligates** the distribution of funds to all parties (Winner, Judges, Creator) simultaneously and atomically.
+
+-----
+
 ### Technological Foundations of GoP
 
 To understand Game of Prompts, it's essential to know the two technologies it's built upon: the Celaut paradigm and the Ergo blockchain.
@@ -241,7 +294,7 @@ Trust and clarity are fundamental in GoP. For the current version, the following
 
   * **Winner Validation (Post-Resolution):**
 
-      * The winner is determined on-chain. However, to ensure fairness, a **Judge System** is in place. The creator nominates a set of judges (`participatingJudges`) upon game creation. During the resolution phase, these judges can vote to invalidate a participation if they detect fraud (e.g., by replaying the game and finding discrepancies with the committed logs). A majority vote is required to invalidate a candidate.
+      * The winner is determined on-chain. However, to ensure fairness, a **Judge System** is in place. The creator nominates a set of judges (`participatingJudges`) upon game creation. During the resolution phase, these judges can vote to invalidate a participation if they detect fraud or inconsistencies (e.g., by replaying the game and finding discrepancies with the committed logs). **Crucially, this process judges the integrity of the Creator's Game Service, not the player.** Since the `commitmentC` and logs are generated by the service provided by the creator, an invalidation implies that the Game Service failed to generate a valid proof. **This action does NOT cancel the game.** Instead, it penalizes the creator by **transferring their entire commission to the Judges' pool**. This creates a robust incentive structure: the Creator is responsible for nominating trustworthy judges, and the Judges are incentivized to rigorously verify the Game Service's integrity, as they directly benefit from penalizing a faulty or fraudulent service. The resolution deadline is also extended to allow the protocol to continue and find a valid winner. A majority vote is required to invalidate a candidate.
 
   * **Isolated Solver Execution:**
 
@@ -496,3 +549,58 @@ These are ideas for expanding the scope and variety of competitions on GoP.
           * **Secret Management:** Similar to pay-per-attempt, the game-service could self-manage the revelation of the main game's secret `S` if the victory condition is objective and verifiable by the service itself. For games of a more subjective nature using this direct interaction mode, the **Judge System** would still be relevant for final validation.
 
     These capabilities would transform Game of Prompts from a purely "bot-vs-bot" platform to a more diverse ecosystem for competition and problem-solving.
+
+-----
+
+## 1. FAQ (Frequently Asked Questions)
+
+### 1.1. General Concepts
+
+*   **What is Game of Prompts?**
+    It is a **bot competition audited by blockchain**.
+
+*   **What is the "Ceremony Phase"?**
+    It is the initial period of the game designed to add randomness to the seed. This prevents the **Creator** from pre-calculating cheats or solutions based on a known initial state.
+
+*   **What do I need to play?**
+    You need an **Ergo Wallet** (with some ERG for fees) and a **Celaut Node**.
+
+*   **What is a Celaut Node and why do I need it?**
+    Think of it as your secure "game console". It is the infrastructure that allows the **Game Service** (provided by the creator) and your **Solver Service** (your bot) to interact in an isolated and deterministic environment. It ensures that the game runs correctly and generates the necessary proofs (`commitmentC`, logs) without external interference.
+
+### 1.2. Security and Trust
+
+*   **How do I know the game is fair?**
+    The game's rules and the hash of the secret `S` (`hashS`) are registered on the blockchain from the beginning. This ensures immutability: the creator cannot change the rules or the secret once the game has started.
+
+*   **Can the Creator steal the funds?**
+    No. The funds are locked in a **Smart Contract**, not in the Creator's wallet. The contract only releases funds according to the programmed rules (to the winner, judges, etc.).
+    > **Note on Collusion:** While theoretically judges could collude with a creator to approve a fraudulent participation (created before the deadline), doing so would leave an immutable trace of fraud. Since verifying fraud is a deterministic and easy process, any observer could prove their dishonesty. If the judges' reputation (stake) is valuable, they have no economic incentive to destroy it for a one-time gain.
+
+*   **What happens if the Creator disappears?**
+    If the Creator does not reveal the secret `S` after the deadline, the game enters a "Stuck" state. After a **Grace Period**, players can trigger a **Refund Action** to recover their funds automatically.
+
+### 1.3. Judges and Penalties
+
+*   **Who are the Judges and why should I trust them?**
+    Judges are entities nominated by the Creator, but they operate under a strict economic incentive structure. Their role is to audit the resolution phase.
+
+*   **Why do Judges earn money if they invalidate a participation?**
+    If judges detect that the Game Service generated an invalid proof (fraud), they invalidate that candidate. The protocol then transfers the **Creator's commission** to the Judges. This incentivizes them to be vigilant and penalize the Creator for faulty or malicious services.
+    > **Important:** Even if the Creator is penalized, the game continues to find a valid winner among the honest participants.
+
+*   **Can I be penalized as a player?**
+    The system is designed to penalize the **Creator/Game Service**. A player could only successfully forge a participation if they knew the Creator's secret `S` in advance. Therefore, an invalid proof implies a leak of the secret or a malfunction of the Creator's service.
+    > While judges *could* theoretically invalidate an honest player, doing so without cause would destroy their reputation (as the proof is public and deterministic). Economically, it is not in their interest to attack honest players.
+
+### 1.4. Economy
+
+*   **How is the winner calculated?**
+    The winner is the participant with the highest **Time-Weighted Score**. This formula (`Score * (TimeWeight + RemainingTime)`) rewards players who submit their solutions earlier.
+
+*   **When do I receive my prize?**
+    You receive the prize immediately upon the **End Game** action on the blockchain. The Smart Contract **obligates** the distribution of funds to all parties (Winner, Judges, Creator) simultaneously and atomically.
+
+-----
+
+### Technological Foundations of GoP
