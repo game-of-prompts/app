@@ -17,6 +17,7 @@
         default_forum_explorer_url,
         isDevMode,
     } from "$lib/ergo/envs";
+    import { fetchGoPGames } from "$lib/ergo/fetch";
     import { Checkbox } from "$lib/components/ui/checkbox";
     import { X, RotateCcw } from "lucide-svelte";
     import { createEventDispatcher } from "svelte";
@@ -35,8 +36,16 @@
         source_explorer_url.set(default_source_explorer_url);
         forum_explorer_url.set(default_forum_explorer_url);
     }
+
+    let previousDevMode = $isDevMode;
+    $: if ($isDevMode !== previousDevMode) {
+        previousDevMode = $isDevMode;
+        fetchGoPGames(true);
+    }
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
     on:click|self={close}
