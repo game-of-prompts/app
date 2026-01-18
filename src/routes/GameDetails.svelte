@@ -4128,7 +4128,7 @@
                 <div
                     class="modal-content {$mode === 'dark'
                         ? 'bg-slate-800 text-gray-200 border border-slate-700'
-                        : 'bg-white text-gray-800 border border-gray-200'} p-6 rounded-xl shadow-2xl w-full max-w-lg lg:max-w-4xl transform transition-all"
+                        : 'bg-white text-gray-800 border border-gray-200'} p-6 rounded-xl shadow-2xl w-full max-w-lg lg:max-w-4xl transform transition-all flex flex-col max-h-[90vh]"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="modal-title"
@@ -4168,7 +4168,7 @@
                         </Button>
                     </div>
 
-                    <div class="modal-form-body">
+                    <div class="modal-form-body overflow-y-auto flex-1 min-h-0">
                         {#if currentActionType === "submit_score"}
                             {#if $isDevMode}
                                 <div
