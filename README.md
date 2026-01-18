@@ -436,25 +436,3 @@ These are ideas for expanding the scope and variety of competitions on GoP.
           * **Secret Management:** Similar to pay-per-attempt, the game-service could self-manage the revelation of the main game's secret `S` if the victory condition is objective and verifiable by the service itself. For games of a more subjective nature using this direct interaction mode, the **Judge System** would still be relevant for final validation.
 
     These capabilities would transform Game of Prompts from a purely "bot-vs-bot" platform to a more diverse ecosystem for competition and problem-solving.
-
-  * **10.3.2. Multi-Chain Expansion via Satellite Contracts and Rosen Bridge**
-    To extend participation in Game of Prompts to users and communities on other blockchains (especially account-based chains), a "satellite contract" model is contemplated.
-
-      * **Satellite Contract Concept:** For each game created with the `game.es` script on Ergo, "satellite" contracts could be instantiated on other compatible chains. Each satellite contract would mirror the essential game parameters, such as:
-          * The participation cost (denominated in a currency of the satellite chain).
-          * A `deadline` for participation on that specific chain (which could be the same as or earlier than the `deadline` on Ergo to allow time for synchronization).
-          * The Rosen Bridge address (or similar system) for transferring funds and data to Ergo.
-      * **Participation Flow on Satellite Chain:**
-        1.  Players on the external chain would interact with the satellite contract to register their participation, paying the fee in the local currency. Their participation details (similar to `commitmentC`, `solverId`, etc., adapted if necessary) would be stored or referenced in this satellite contract.
-        2.  The satellite contract would accumulate participation fees.
-      * **Resolution and Synchronization with Ergo (Modified GameBox Resolution):**
-        1.  Once the `deadline` on the satellite chain is reached (or just before the main `deadline` on Ergo), a function in the satellite contract would be activated. This function's sole purpose would be to securely transfer all accumulated funds and participation data (possibly `commitmentC`s and `playerPKs`) via Rosen Bridge to a designated box on Ergo. This "satellite aggregation box" on Ergo would be controlled by or readable by the main `gameBox` contract. It is crucial that Rosen Bridge allows the reliable transfer of this data (registers or structured data); for this, **we must be able to perform P2HS transfers instead of P2PK**.
-        2.  The **Resolution** transaction in the main `gameBox` on Ergo would be modified from the current version. In addition to `INPUTS` from native Ergo `ParticipationBox`es, it would now also take these "satellite aggregation boxes" (one for each supported external chain) as inputs.
-        3.  The `gameBox` script would process participations from all chains (both native Ergo and those from satellites via Rosen Bridge) to determine the global winner. The `commitmentC` validation logic with the secret `S` (revealed in `OUTPUTS(1).R4` of the `gameBox`) would apply universally.
-        4.  Prize distribution would occur on Ergo. If winners are from external chains, they could claim their prizes in ERG, or Rosen Bridge could facilitate the transfer of value back to the winner's origin chain.
-        5.  Rosen Bridge fees would be distributed as an aggregate in the participation fee cost for participants from the satellite for the way in, and, if applicable, from the winner for the way out.
-      * **Security and Restrictions:**
-          * The satellite contract on the external chain would be designed to be very simple: collect participations and funds, and only allow them to be spent (after the satellite's `deadline`) to a specific Rosen Bridge address destined for the predefined aggregation box on Ergo.
-          * The aggregation box on Ergo, in turn, could only be spent as an input in the Resolution transaction of the original `gameBox`.
-
-    > This approach would allow Game of Prompts to become a truly interoperable competition platform, leveraging Ergo's security and capabilities for core game logic and settlement, while expanding its reach to a broader blockchain ecosystem.
