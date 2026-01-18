@@ -131,7 +131,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Implementar EIP-004, para ello primero el token del juego debe mintarse con mint_idt.es
 
-[] Terminar Demo y agregar puntos de información en GameDetails
+[x] Terminar Demo y agregar puntos de información en GameDetails
 
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
