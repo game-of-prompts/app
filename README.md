@@ -44,65 +44,56 @@ The fundamental elements that constitute the Game of Prompts platform are:
 The following flowchart illustrates the lifecycle of a game and the interactions between the different states and actions:
 
 ```ascii
-                                   +-------------------+
-                                   |    Create Game    |
-                                   +---------+---------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|                                  STATE 0: ACTIVE                                        |
-|  (Secret 'S' hidden. Players participate. Ceremony phase for randomness.)               |
-+-----------------------------------------------------------------------------------------+
-       |                                     |                                     |
-       | (After Deadline)                    | (Secret revealed early)             | (Stuck > Grace Period)
-       v                                     v                                     v
-+-------------------+              +-------------------+                 +-------------------+
-| Action 1:         |              | Action 2:         |                 | Players Reclaim   |
-| Transition to     |              | Transition to     |                 | Funds (Refund)    |
-| RESOLUTION        |              | CANCELLATION      |                 +-------------------+
-+-------------------+              +-------------------+
-       |                                     |
-       v                                     v
-+--------------------------------+ +------------------------------------------------------+
-|      STATE 1: RESOLUTION       | |               STATE 2: CANCELLED                     |
-| (Secret 'S' revealed.          | | (Game invalid. Creator punished.)                    |
-|  Scores verifiable.)           | +------------------------------------------------------+
-+--------------------------------+       |
-       |          |          |           | (Creator stake drains slowly)
-       |          |          |           v
-       |          |          |     +-------------------+
-       |          |          |     |   Creator Stake   |
-       |          |          |     |      Drained      |
-       |          |          |     +-------------------+
-       |          |          |
-       |          |          +---------------------------------------------+
-       |          |                                                        |
-       |          v                                                        v
-       |    +-------------------+                                +-------------------+
-       |    | Action 1:         |                                | Players Refund    |
-       |    | Include Omitted   |                                | (Immediate)       |
-       |    | Participation     |                                +-------------------+
-       |    +-------------------+
-       |
-       v
-+-------------------+
-| Action 2:         |
-| Judges Invalidate |
-| (If fraud found)  |
-+-------------------+
-       |
-       | (After Resolution Deadline)
-       v
-+-------------------+
-| Action 3:         |
-| End Game          |
-| (Prize Distr.)    |
-+-------------------+
-       |
-       v
-+-------------------+
-|     FINALIZED     |
-+-------------------+
+                                     +---------------------+
+                                     |     Create Game     |
+                                     +----------+----------+
+                                                |
+                                                v
++---------------------------------------------------------------------------------------------+
+|                                       STATE 0: ACTIVE                                       |
+| +------------------+           +----------------------------------------------------------+ |
+| |  Ceremony Phase  | --------> |                   Participation Phase                    | |
+| | (Add Randomness) |           |              (Players submit participations)             | |
+| +------------------+           +----------------------------------------------------------+ |
+|           ^                                           ^                                     |
+|           | (Time < Ceremony Deadline)                | (Time < Game Deadline)              |
++---------------------------------------------------------------------------------------------+
+        |                                       |                                       |
+        | (Deadline Reached)                    | (Secret Revealed Early)               | (Stuck > Grace Period)
+        v                                       v                                       v
++-----------------------+               +-----------------------+               +-----------------------+
+| Action: Transition    |               | Action: Transition    |               | Action: Refund        |
+| to RESOLUTION         |               | to CANCELLATION       |               | (Players Recover      |
+| (Creator reveals S)   |               | (Anyone can trigger)  |               |  Funds)               |
++-----------------------+               +-----------------------+               +-----------------------+
+        |                                       |
+        v                                       v
++-----------------------------------+   +-------------------------------------------------------+
+|        STATE 1: RESOLUTION        |   |                  STATE 2: CANCELLED                   |
+| (Secret 'S' revealed.             |   | (Game invalid. Creator punished.)                     |
+|  Scores verifiable.)              |   +---------------------------+---------------------------+
++-----------------------------------+                               |
+        |           |                                               |
+        |           +-----------------------------+                 +--------------+
+        |           |                             |                 |              |
+        |           v                             v                 |              |
+        |    +---------------------+       +---------------------+  |              |
+        |    | Action: Include     |       | Action: Judges      |  |              |
+        |    | Omitted Particip.   |       | Invalidate Fraud    |  |              |
+        |    | (Anti-Censorship)   |       | (Penalizes Creator) |  |              |
+        |    +---------------------+       +---------------------+  |              |
+        |                                                           |              |
+        | (Resolution Deadline Reached)                             |              |
+        v                                                           v              v
++-----------------------+                                     +-----------+ +---------------------+
+| Action: End Game      |                                     | Players   | | Creator Stake       |
+| (Distribute Prizes)   |                                     | Refund    | | Drained (Slowly)    |
++-----------------------+                                     | (Immed.)  | | (1/5 per 30 blks)   |
+        |                                                     +-----------+ +---------------------+
+        v
++-----------------------+
+|       FINALIZED       |
++-----------------------+
 ```
 
 -----
