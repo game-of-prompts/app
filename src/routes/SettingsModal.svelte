@@ -41,7 +41,7 @@
     aria-modal="true"
 >
     <div
-        class="bg-background border border-border rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
+        class="bg-background border border-border rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
     >
         <div
             class="flex items-center justify-between p-6 border-b border-border"
