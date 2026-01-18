@@ -39,6 +39,74 @@ The fundamental elements that constitute the Game of Prompts platform are:
 
 -----
 
+## 1.1. System Flowchart
+
+The following flowchart illustrates the lifecycle of a game and the interactions between the different states and actions:
+
+```ascii
+                                   +-------------------+
+                                   |    Create Game    |
+                                   +---------+---------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|                                  STATE 0: ACTIVE                                        |
+|  (Secret 'S' hidden. Players participate. Ceremony phase for randomness.)               |
++-----------------------------------------------------------------------------------------+
+       |                                     |                                     |
+       | (After Deadline)                    | (Secret revealed early)             | (Stuck > Grace Period)
+       v                                     v                                     v
++-------------------+              +-------------------+                 +-------------------+
+| Action 1:         |              | Action 2:         |                 | Players Reclaim   |
+| Transition to     |              | Transition to     |                 | Funds (Refund)    |
+| RESOLUTION        |              | CANCELLATION      |                 +-------------------+
++-------------------+              +-------------------+
+       |                                     |
+       v                                     v
++--------------------------------+ +------------------------------------------------------+
+|      STATE 1: RESOLUTION       | |               STATE 2: CANCELLED                     |
+| (Secret 'S' revealed.          | | (Game invalid. Creator punished.)                    |
+|  Scores verifiable.)           | +------------------------------------------------------+
++--------------------------------+       |
+       |          |          |           | (Creator stake drains slowly)
+       |          |          |           v
+       |          |          |     +-------------------+
+       |          |          |     |   Creator Stake   |
+       |          |          |     |      Drained      |
+       |          |          |     +-------------------+
+       |          |          |
+       |          |          +---------------------------------------------+
+       |          |                                                        |
+       |          v                                                        v
+       |    +-------------------+                                +-------------------+
+       |    | Action 1:         |                                | Players Refund    |
+       |    | Include Omitted   |                                | (Immediate)       |
+       |    | Participation     |                                +-------------------+
+       |    +-------------------+
+       |
+       v
++-------------------+
+| Action 2:         |
+| Judges Invalidate |
+| (If fraud found)  |
++-------------------+
+       |
+       | (After Resolution Deadline)
+       v
++-------------------+
+| Action 3:         |
+| End Game          |
+| (Prize Distr.)    |
++-------------------+
+       |
+       v
++-------------------+
+|     FINALIZED     |
++-------------------+
+```
+
+-----
+
 ## 2. Creator's Flow (Game Designer)
 
 The process for a creator to design and publish a game on the GoP platform involves several steps:
@@ -128,9 +196,10 @@ For a player to participate in a GoP game, they follow these steps:
 
   * **Collection and Comparison**
 
-      * The winner is the solver with the **highest score**, determined and validated on-chain during the **Resolution State (State 1)** using the secret `S` revealed by the creator and each participant's `commitmentC`.
-      * In case of a tie:
-          * The one added first in the resolution transaction wins.
+      * The winner is the solver with the **highest time-weighted score**, determined and validated on-chain during the **Resolution State (State 1)** using the secret `S` revealed by the creator and each participant's `commitmentC`.
+      * **Time Factor:** To incentivize early participation and prevent "last-minute sniping" or copycats, the protocol applies a time weight to the raw score. The formula is roughly `FinalScore = RawScore * (TimeWeight + RemainingDuration)`. This means that for the same raw score, a participation submitted earlier (when `RemainingDuration` is higher) will beat a later one. The `TimeWeight` parameter is set by the creator (e.g., "Balanced" gives a ~2x advantage to the first block vs the last block).
+      * In case of a tie in the final time-weighted score:
+          * The participation created at the earlier block height wins.
 
   * **Prize Distribution**
 
