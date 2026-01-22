@@ -1201,7 +1201,7 @@
             )[0];
 
             let judgeUnavailableVotesDataInputsBoxes: Box<Amount>[] = [];
-            const winnerVotes = participationVotes.get(
+            const winnerVotes = participationUnavailableVotes.get(
                 game.winnerCandidateCommitment,
             );
             if (winnerVotes) {
