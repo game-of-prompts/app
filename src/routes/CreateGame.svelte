@@ -1,6 +1,6 @@
 <script lang="ts">
     // CORE IMPORTS
-    import { writable, type Writable } from "svelte/store";
+    import { writable, type Writable, get } from "svelte/store";
     import { onMount } from "svelte";
     import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
     import { block_to_date, time_to_block } from "$lib/common/countdown";
@@ -43,11 +43,6 @@
         FileSourceCreation,
         fetchFileSourcesByHash,
     } from "source-application";
-
-    $: reputationProofAny = $reputation_proof as any;
-    $: if (reputationProofAny && reputationProofAny.token_id) {
-        creatorTokenId = reputationProofAny.token_id;
-    }
 
     let platform = new ErgoPlatform();
 
@@ -229,6 +224,12 @@
 
             // Trigger calculation immediately
             calculateBlockLimit(deadlineValue, deadlineUnit);
+        }
+
+        // Set creatorTokenId from reputation proof only on load if not set
+        const repProof = get(reputation_proof);
+        if (!creatorTokenId && repProof && (repProof as any).token_id) {
+            creatorTokenId = (repProof as any).token_id;
         }
     });
 
