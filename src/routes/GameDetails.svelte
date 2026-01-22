@@ -330,6 +330,10 @@
         string,
         Map<string, ReputationProof>
     > = new Map();
+    let participationUnavailableVotes: Map<
+        string,
+        Map<string, ReputationProof>
+    > = new Map();
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
     let candidateParticipationUnavailableVotes: string[] = [];
@@ -701,6 +705,26 @@
                     );
 
                     participationVotes.set(participation, votes);
+
+                    const unavailableVotes = new Map<string, ReputationProof>(
+                        Array.from(get(judges).data.entries()).filter(
+                            ([key, judge]) => {
+                                return judge.current_boxes.some((box) => {
+                                    return (
+                                        box.object_pointer === participation &&
+                                        box.type.tokenId ===
+                                            game?.constants
+                                                .PARTICIPATION_UNAVAILABLE_TYPE_ID
+                                    );
+                                });
+                            },
+                        ),
+                    );
+
+                    participationUnavailableVotes.set(
+                        participation,
+                        unavailableVotes,
+                    );
                 });
 
                 const candidate_participation_votes = Array.from(
@@ -737,8 +761,14 @@
                             })
                             .map(([key, value]) => key);
 
+                    const candidate_unavailable_votes = Array.from(
+                        participationUnavailableVotes
+                            .get(game.winnerCandidateCommitment)
+                            ?.entries() ?? [],
+                    );
+
                     candidateParticipationUnavailableVotes =
-                        candidate_participation_votes
+                        candidate_unavailable_votes
                             .filter(([key, value]) => {
                                 return value.current_boxes.some((box) => {
                                     return (
@@ -746,8 +776,7 @@
                                             game.winnerCandidateCommitment &&
                                         box.type.tokenId ===
                                             game.constants
-                                                .PARTICIPATION_UNAVAILABLE_TYPE_ID &&
-                                        box.polarization === false
+                                                .PARTICIPATION_UNAVAILABLE_TYPE_ID
                                     );
                                 });
                             })
@@ -1184,7 +1213,6 @@
                     judgeUnavailableVotesDataInputs.map(([Key, value]) => {
                         return value.current_boxes.filter((box) => {
                             return (
-                                box.polarization === false &&
                                 box.object_pointer ===
                                     game.winnerCandidateCommitment &&
                                 box.type.tokenId ===
