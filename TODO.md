@@ -142,6 +142,8 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] add music into game content. reproduce soundtrack on game details.
 
+[] Alinear review competition details.
+
 [] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
 
 
