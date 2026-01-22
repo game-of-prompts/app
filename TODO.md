@@ -135,6 +135,15 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
+
+[] Actualizar datos de Judges votes y what can happen con el voto unavailable.
+
+[] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
+
+
+
+[] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
+
 ---
 
 [] Obtener datos de mem-pool [implementar como libreria ¿?]
@@ -167,6 +176,10 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 
 
 #### Servicio para supervisar jueces
+
+[] Comprobar si el historico de las validaciones e invalidaciones de los jueces son correctas. (ejecutando el robot en caso de que el servicio siga accesible, y comprobando si los logs eran coincidentes o no lo eran).
+
+[] Comprobar si las opiniones de "unavailable" de los jueces eran correctas (basandose en este caso en otras opiniones de ese momento ... ya que no puede saberse si el servicio estaba en ese momento disponible o no).
 
 [] La reputación de un juez en un juego debe de reducirse en caso de que el juego, aun pudiendo invalidar la participación, no lo terminara haciendo.
 > Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
