@@ -1,5 +1,6 @@
 .svelte-kit/
 build/
+.github/
 public/
 src/routes/__generated/
 src/lib/__generated/
