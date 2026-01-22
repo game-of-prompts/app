@@ -183,7 +183,7 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 [] Comprobar si el historico de las validaciones e invalidaciones de los jueces son correctas. (ejecutando el robot en caso de que el servicio siga accesible, y comprobando si los logs eran coincidentes o no lo eran).
 
 
-    IMPORTANTE:  ¿COMO SE HARÁ ESTO?
+    RAZONAMIENTO IMPORTANTE:  ¿COMO SE HARÁ ESTO?
         ¿Main in the middle?
          ¿Porque no iba el robot a generar los pasos necesarios para resolver el problema con esa puntuación ....? 
          Pensemos en el caso del stake.
