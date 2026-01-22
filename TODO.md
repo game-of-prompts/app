@@ -136,7 +136,11 @@ Teoricamente se permite un numero ilimitado de participaciones.
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 
-[] Actualizar datos de Judges votes y "what can happen" con el voto unavailable.
+[x] Actualizar datos de Judges votes y "what can happen" con el voto unavailable.
+
+[] failed to convert hex to bytes en fill demo participation.
+
+[] add music into game content. reproduce soundtrack on game details.
 
 [] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
 
