@@ -128,6 +128,7 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (constants.DEV_COMMISSION_PERCENTAGE / 100 * constants.COMMISSION_DENOMINATOR).toString())
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, constants.PARTICIPATION_TYPE_ID)
+        .replace(/`\+PARTICIPATION_UNAVAILABLE_TYPE_ID\+`/g, constants.PARTICIPATION_UNAVAILABLE_TYPE_ID)
         .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
         .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
 

@@ -18,6 +18,7 @@ import { end_game } from './actions/end_game';
 import { to_end_game } from './actions/to_end_game';
 import { end_game_chained } from './actions/end_game_chained';
 import { judges_invalidate } from './actions/judges_invalidate';
+import { judges_invalidate_unavailable } from './actions/judges_invalidate_unavailable';
 import { judges_invalidation_chained } from './actions/judges_invalidation_chained';
 import { type Amount, type Box } from '@fleet-sdk/core';
 import { include_omitted_participation } from './actions/include_omitted_participation';
@@ -48,7 +49,8 @@ async function createOrUpdateOpinion(
     typeId: string,
     object_pointer: string,
     polarization: boolean,
-    content: string | null
+    content: string | null,
+    is_locked: boolean = false
 ): Promise<string | null> {
     const proof = get(reputation_proof);
     if (!proof) throw new Error("User has no reputation proof");
@@ -56,6 +58,9 @@ async function createOrUpdateOpinion(
     const existingOpinion = proof.current_boxes.find(b => b.type.tokenId === typeId && b.object_pointer === object_pointer);
 
     if (existingOpinion) {
+        if (existingOpinion.is_locked) {
+            throw new Error("Opinion is locked and cannot be updated");
+        }
         return await update_opinion(
             get(explorer_uri),
             existingOpinion as any,
@@ -73,7 +78,7 @@ async function createOrUpdateOpinion(
             object_pointer,
             polarization,
             content,
-            true,
+            is_locked,
             mainBox as any
         );
     }
@@ -252,9 +257,36 @@ export class ErgoPlatform implements Platform {
         } else {
             // Not enough votes yet - just create the opinion
             const txId = await createOrUpdateOpinion(
-                PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null
+                PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null, true
             );
             return txId ? [txId] : null;
+        }
+    }
+
+    /**
+     * Permite a un juez votar para marcar al candidato a ganador actual como no disponible.
+     * Similar a la invalidación pero no penaliza al creador. La opinión no necesita ser locked.
+     */
+    async judgesInvalidateUnavailable(
+        game: GameResolution,
+        invalidatedParticipation: ValidParticipation,
+        participations: ValidParticipation[],
+        judgeVoteDataInputs: Box<Amount>[]
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+
+        const requiredVotes = Math.floor(game.judges.length / 2) + 1;
+
+        // For unavailable marking, we always use a single transaction since no penalty to creator
+        if (judgeVoteDataInputs.length >= requiredVotes) {
+            const tx_id = await judges_invalidate_unavailable(game, invalidatedParticipation, participations, judgeVoteDataInputs);
+            return tx_id;
+        } else {
+            // Not enough votes yet - just create the opinion (unlocked)
+            const txId = await createOrUpdateOpinion(
+                game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID, invalidatedParticipation.commitmentC_Hex, false, null, false
+            );
+            return txId;
         }
     }
 
@@ -328,7 +360,7 @@ export class ErgoPlatform implements Platform {
             throw new Error("The game is not in an active state.");
         }
         try {
-            return await createOrUpdateOpinion(GAME, game.gameId, true, null);
+            return await createOrUpdateOpinion(GAME, game.gameId, true, null, true);
         } catch (error) {
             console.error("Error in platform method acceptJudgeNomination:", error);
             if (error instanceof Error) throw new Error(`Failed to accept judge nomination: ${error.message}`);
@@ -388,7 +420,7 @@ export class ErgoPlatform implements Platform {
     async submitCreatorOpinion(game: AnyGame): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected.");
         try {
-            return await createOrUpdateOpinion(GAME, game.gameId, true, null);
+            return await createOrUpdateOpinion(GAME, game.gameId, true, null, true);
         } catch (error) {
             console.error("Error in platform method submitCreatorOpinion:", error);
             if (error instanceof Error) throw new Error(`Failed to submit creator opinion: ${error.message}`);

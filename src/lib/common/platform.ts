@@ -123,6 +123,17 @@ export interface Platform {
     ): Promise<string[] | null>
 
     /**
+     * Permite a un juez votar para marcar al candidato a ganador actual como no disponible.
+     * Similar a la invalidación pero no penaliza al creador. La opinión no necesita ser locked.
+     */
+    judgesInvalidateUnavailable(
+        game: GameResolution,
+        invalidatedParticipation: ValidParticipation,
+        participations: ValidParticipation[],
+        judgeVoteDataInputs: Box<bigint>[]
+    ): Promise<string | null>
+
+    /**
      * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
      * El usuario que ejecuta esta acción se convierte en el nuevo 'resolver' para reclamar la comisión.
      */

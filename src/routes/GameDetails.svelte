@@ -47,6 +47,7 @@
         Edit,
         CheckSquare,
         XCircle,
+        AlertTriangle,
         ExternalLink,
         Gavel,
         Check,
@@ -206,6 +207,12 @@
                     icon: XCircle,
                     variant: "destructive",
                 });
+                actions.push({
+                    id: "judge_unavailable",
+                    label: "Mark Winner Service Unavailable",
+                    icon: AlertTriangle,
+                    variant: "outline",
+                });
             }
         }
 
@@ -306,6 +313,7 @@
     > = new Map();
     let candidateParticipationValidVotes: string[] = [];
     let candidateParticipationInvalidVotes: string[] = [];
+    let candidateParticipationUnavailableVotes: string[] = [];
     let currentHeight: number = 0;
     let participationBatches: Box<Amount>[] = [];
 
@@ -358,6 +366,7 @@
         | "drain_stake"
         | "end_game"
         | "invalidate_winner"
+        | "judge_unavailable"
         | "include_omitted"
         | "accept_judge_nomination"
         | "open_ceremony"
@@ -672,6 +681,20 @@
                                         box.object_pointer ===
                                             game.winnerCandidateCommitment &&
                                         box.type.tokenId === PARTICIPATION &&
+                                        box.polarization === false
+                                    );
+                                });
+                            })
+                            .map(([key, value]) => key);
+
+                    candidateParticipationUnavailableVotes =
+                        candidate_participation_votes
+                            .filter(([key, value]) => {
+                                return value.current_boxes.some((box) => {
+                                    return (
+                                        box.object_pointer ===
+                                            game.winnerCandidateCommitment &&
+                                        box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
                                         box.polarization === false
                                     );
                                 });
@@ -1085,6 +1108,60 @@
         }
     }
 
+    async function handleJudgesInvalidateUnavailable() {
+        if (game?.status !== "Resolution") return;
+        errorMessage = null;
+        isSubmitting = true;
+        try {
+            const winner_participation = participations.filter(
+                (p) => game.winnerCandidateCommitment === p.commitmentC_Hex,
+            )[0];
+
+            let judgeUnavailableVotesDataInputsBoxes: Box<Amount>[] = [];
+            const winnerVotes = participationVotes.get(
+                game.winnerCandidateCommitment,
+            );
+            if (winnerVotes) {
+                const judgeUnavailableVotesDataInputs = Array.from(
+                    winnerVotes.entries(),
+                ).filter(([key, value]) => {
+                    return candidateParticipationUnavailableVotes.includes(key);
+                });
+
+                judgeUnavailableVotesDataInputsBoxes =
+                    judgeUnavailableVotesDataInputs.map(([Key, value]) => {
+                        return value.current_boxes.filter((box) => {
+                            return (
+                                box.polarization === false &&
+                                box.object_pointer ===
+                                    game.winnerCandidateCommitment &&
+                                box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID
+                            );
+                        })[0].box;
+                    });
+            }
+
+            const otherParticipations: ValidParticipation[] =
+                participations.filter(
+                    (p) =>
+                        p.commitmentC_Hex !==
+                            winner_participation.commitmentC_Hex &&
+                        p.status === "Submitted",
+                ) as ValidParticipation[];
+
+            transactionId = await platform.judgesInvalidateUnavailable(
+                game,
+                winner_participation as ValidParticipation,
+                otherParticipations,
+                judgeUnavailableVotesDataInputsBoxes,
+            );
+        } catch (e: any) {
+            errorMessage = e.message;
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     async function handleIncludeOmitted() {
         console.log("handleIncludeOmitted called");
 
@@ -1275,6 +1352,7 @@
             drain_stake: `Drain Creator Stake`,
             end_game: `Finalize Game`,
             invalidate_winner: `Judge Invalidation`,
+            judge_unavailable: `Judge Mark Unavailable`,
             include_omitted: `Include Omitted Participation`,
             accept_judge_nomination: "Accept Judge Nomination",
             open_ceremony: "Add Seed Randomness",
@@ -4621,6 +4699,34 @@
                                     {isSubmitting
                                         ? "Processing..."
                                         : "Confirm Invalidation Vote"}
+                                </Button>
+                            </div>
+                        {:else if currentActionType === "judge_unavailable"}
+                            <div class="space-y-4">
+                                <p
+                                    class="text-sm p-3 rounded-md {$mode ===
+                                    'dark'
+                                        ? 'bg-orange-600/20 text-orange-300 border border-orange-500/30'
+                                        : 'bg-orange-100 text-orange-700 border border-orange-200'}"
+                                >
+                                    <strong>Action: Judge Mark Unavailable</strong
+                                    ><br />
+                                    As a judge, you are voting to mark the current
+                                    winner candidate as unavailable. This requires
+                                    a majority of judges to perform the same action.
+                                    Unlike invalidation, this does not penalize the creator.
+                                </p>
+                                <Button
+                                    on:click={handleJudgesInvalidateUnavailable}
+                                    disabled={isSubmitting}
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
+                                    'dark'
+                                        ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                                        : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting
+                                        ? "Processing..."
+                                        : "Confirm Unavailable Vote"}
                                 </Button>
                             </div>
                         {:else if currentActionType === "include_omitted"}
