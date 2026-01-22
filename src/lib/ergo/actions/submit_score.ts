@@ -56,41 +56,41 @@ export async function submit_score(
     // 1. Obtener la clave pública del jugador desde la billetera
     const playerAddressString = await ergo.get_change_address();
     if (!playerAddressString) {
-        throw new Error("No se pudo obtener la dirección del jugador desde la billetera.");
+        throw new Error("Could not get the player's address from the wallet.");
     }
     const playerP2PKAddress = ErgoAddress.fromBase58(playerAddressString);
     const playerPkBytes = playerP2PKAddress.getPublicKeys()[0];
     if (!playerPkBytes) {
-        throw new Error(`No se pudo extraer la clave pública de la dirección del jugador (${playerAddressString}).`);
+        throw new Error(`Could not extract the public key from the player's address (${playerAddressString}).`);
     }
 
     // 2. Obtener UTXOs del jugador para cubrir la tarifa
     const inputs: Box<Amount>[] = await ergo.get_utxos();
     if (!inputs || inputs.length === 0) {
-        throw new Error("No se encontraron UTXOs en la billetera. Asegúrate de tener fondos.");
+        throw new Error("No UTXOs found in the wallet. Make sure you have funds.");
     }
 
     // 3. Obtener el ErgoTree del contrato de participación
     const participationContractErgoTree = getGopParticipationErgoTreeHex(); // <-- Uso de la función actualizada
     if (!participationContractErgoTree) {
-        throw new Error("No se pudo obtener el ErgoTree del contrato de participación.");
+        throw new Error("Could not get the participation contract ErgoTree.");
     }
 
     // 4. Preparar los valores para los registros
     const commitmentC_bytes = hexToBytes(commitmentCHex);
-    if (!commitmentC_bytes) throw new Error("Fallo al convertir commitmentC a bytes.");
+    if (!commitmentC_bytes) throw new Error("Could not convert commitmentC to bytes.");
 
     const gameNftId_bytes = hexToBytes(gameNftIdHex);
-    if (!gameNftId_bytes) throw new Error("Fallo al convertir gameNftId a bytes.");
+    if (!gameNftId_bytes) throw new Error("Could not convert gameNftId to bytes.");
 
     const hashLogs_bytes = hexToBytes(hashLogsHex);
-    if (!hashLogs_bytes) throw new Error("Fallo al convertir hashLogs a bytes.");
+    if (!hashLogs_bytes) throw new Error("Could not convert hashLogs to bytes.");
 
     // 5. Construir la caja de salida (ParticipationBox)
     const participationBoxOutput = new OutputBuilder(
-            gameValue,
-            participationContractErgoTree
-        )
+        gameValue,
+        participationContractErgoTree
+    )
         .addTokens(gameTokens)
         .setAdditionalRegisters({
             R4: SColl(SByte, prependHexPrefix(playerPkBytes)).toHex(),
@@ -112,15 +112,15 @@ export async function submit_score(
 
     const signedTransaction = await ergo.sign_tx(unsignedTransaction.toEIP12Object());
     if (!signedTransaction) {
-        throw new Error("El usuario canceló o falló la firma de la transacción.");
+        throw new Error("The user canceled or failed to sign the transaction.");
     }
 
     // 7. Enviar la transacción a la red
     const transactionId = await ergo.submit_tx(signedTransaction);
     if (!transactionId) {
-        throw new Error("Fallo al enviar la transacción a la red.");
+        throw new Error("Failed to send the transaction to the network.");
     }
 
-    console.log(`Transacción de envío de puntuación enviada con éxito. ID: ${transactionId}`);
+    console.log(`Transaction submitted successfully. ID: ${transactionId}`);
     return transactionId;
 }

@@ -95,6 +95,7 @@
         getDisplayStake,
         getParticipationFee,
         formatTokenBigInt,
+        prependHexPrefix,
     } from "$lib/utils";
     import {
         fetchJudges,
@@ -220,7 +221,10 @@
                     icon: AlertTriangle,
                     variant: "outline",
                 });
-                if (candidateParticipationInvalidVotes.includes(address) || candidateParticipationUnavailableVotes.includes(address)) {
+                if (
+                    candidateParticipationInvalidVotes.includes(address) ||
+                    candidateParticipationUnavailableVotes.includes(address)
+                ) {
                     actions.push({
                         id: "remove_opinion",
                         label: "Mark Winner Service Available",
@@ -468,7 +472,7 @@
     let devGenScore = 100;
     let devGenErrorType: "none" | "wrong_commitment" | "wrong_score" = "none";
 
-    function generateDevParticipation() {
+    async function generateDevParticipation() {
         try {
             // 1. Generate Random Values
             const randomBytes = new Uint8Array(32);
@@ -478,14 +482,26 @@
             window.crypto.getRandomValues(randomBytes);
             const hashLogs = uint8ArrayToHex(randomBytes);
 
-            window.crypto.getRandomValues(randomBytes);
-            const seed = uint8ArrayToHex(randomBytes); // Using hex seed for simplicity
+            const seed = game?.seed;
 
             // 2. Get Constants/Context
-            const secretS =
-                "35aa11186c18d3e04f81656248213a1a3c43e89a67045763287e644db60c3f21"; // Default constant from python script
-            const ergoTree =
-                "a3f1bde417cf029a9d51dceaf45a08e23c4cc6f1ed2a75b3b394ac97b4e23145"; // Default constant
+            const secretS = game?.content.serviceId; // Dev competitions typically use the serviceId as secretS
+
+            const playerAddressString = await ergo.get_change_address();
+            if (!playerAddressString) {
+                throw new Error(
+                    "Could not get the player's address from the wallet.",
+                );
+            }
+            const playerP2PKAddress =
+                ErgoAddress.fromBase58(playerAddressString);
+            const playerPkBytes = playerP2PKAddress.getPublicKeys()[0];
+            if (!playerPkBytes) {
+                throw new Error(
+                    `Could not extract the public key from the player's address (${playerAddressString}).`,
+                );
+            }
+            const ergoTree = prependHexPrefix(playerPkBytes);
 
             // 3. Generate Score List with Decoys
             const numScores = 5; // Total scores in the list
@@ -571,20 +587,20 @@
             solverId_input = solverId;
             hashLogs_input = hashLogs;
             commitmentC_input = finalCommitment;
-            scores_input = finalScores.map(s => s.toString()).join(",");
+            scores_input = finalScores.map((s) => s.toString()).join(",");
 
             console.log("Dev Generation Complete", {
                 solverId,
                 seed,
                 realScore: devGenScore,
                 realScoreIndex,
-                scores: finalScores.map(s => s.toString()),
+                scores: finalScores.map((s) => s.toString()),
                 hashLogs,
                 ergoTree,
                 secretS,
                 commitment,
                 finalCommitment,
-                finalScores: finalScores.map(s => s.toString()),
+                finalScores: finalScores.map((s) => s.toString()),
             });
         } catch (e) {
             console.error("Dev Generation Error", e);
@@ -728,7 +744,9 @@
                                     return (
                                         box.object_pointer ===
                                             game.winnerCandidateCommitment &&
-                                        box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
+                                        box.type.tokenId ===
+                                            game.constants
+                                                .PARTICIPATION_UNAVAILABLE_TYPE_ID &&
                                         box.polarization === false
                                     );
                                 });
@@ -1169,7 +1187,9 @@
                                 box.polarization === false &&
                                 box.object_pointer ===
                                     game.winnerCandidateCommitment &&
-                                box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID
+                                box.type.tokenId ===
+                                    game.constants
+                                        .PARTICIPATION_UNAVAILABLE_TYPE_ID
                             );
                         })[0].box;
                     });
@@ -1202,22 +1222,29 @@
         isSubmitting = true;
         try {
             // Find the opinion box for this judge and participation
-            const opinionBox = $reputation_proof.boxes.find(box =>
-                box.object_pointer === game.winnerCandidateCommitment &&
-                box.polarization === false &&
-                (box.type.tokenId === PARTICIPATION || box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID)
+            const opinionBox = $reputation_proof.boxes.find(
+                (box) =>
+                    box.object_pointer === game.winnerCandidateCommitment &&
+                    box.polarization === false &&
+                    (box.type.tokenId === PARTICIPATION ||
+                        box.type.tokenId ===
+                            game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID),
             );
             if (!opinionBox) {
                 throw new Error("No opinion box found for this participation.");
             }
             // Find the main reputation box
-            const mainBox = $reputation_proof.boxes.find(box =>
-                box.type.tokenId === $reputation_proof.token_id
+            const mainBox = $reputation_proof.boxes.find(
+                (box) => box.type.tokenId === $reputation_proof.token_id,
             );
             if (!mainBox) {
                 throw new Error("Main reputation box not found.");
             }
-            transactionId = await remove_opinion(explorer_uri, opinionBox, mainBox);
+            transactionId = await remove_opinion(
+                explorer_uri,
+                opinionBox,
+                mainBox,
+            );
         } catch (e: any) {
             errorMessage = e.message;
         } finally {
@@ -4318,6 +4345,10 @@
                                             >Dev Mode: Generate Participation</span
                                         >
                                     </div>
+                                    <p class="text-xs text-yellow-500/70 mb-4">
+                                        remember, only if service id is the
+                                        secret
+                                    </p>
                                     <div
                                         class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3"
                                     >
@@ -4773,12 +4804,14 @@
                                         ? 'bg-orange-600/20 text-orange-300 border border-orange-500/30'
                                         : 'bg-orange-100 text-orange-700 border border-orange-200'}"
                                 >
-                                    <strong>Action: Judge Mark Unavailable</strong
+                                    <strong
+                                        >Action: Judge Mark Unavailable</strong
                                     ><br />
                                     As a judge, you are voting to mark the current
                                     winner candidate as unavailable. This requires
                                     a majority of judges to perform the same action.
-                                    Unlike invalidation, this does not penalize the creator.
+                                    Unlike invalidation, this does not penalize the
+                                    creator.
                                 </p>
                                 <Button
                                     on:click={handleJudgesInvalidateUnavailable}
@@ -4803,9 +4836,10 @@
                                 >
                                     <strong>Action: Remove My Opinion</strong
                                     ><br />
-                                    You are removing your previous opinion on this participation.
-                                    This will merge the opinion box back into your main reputation box,
-                                    effectively deleting your vote.
+                                    You are removing your previous opinion on this
+                                    participation. This will merge the opinion box
+                                    back into your main reputation box, effectively
+                                    deleting your vote.
                                 </p>
                                 <Button
                                     on:click={handleRemoveOpinion}
