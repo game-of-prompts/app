@@ -136,7 +136,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 
-[] Actualizar datos de Judges votes y what can happen con el voto unavailable.
+[] Actualizar datos de Judges votes y "what can happen" con el voto unavailable.
 
 [] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
 

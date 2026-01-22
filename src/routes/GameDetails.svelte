@@ -2947,7 +2947,8 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Judges:</span
                                                 >
-                                                Validate or invalidate the candidate.
+                                                Validate, invalidate, or mark the
+                                                candidate's service as unavailable.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -3279,6 +3280,10 @@
                                             {:else if game.status === "Resolution" && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationInvalidVotes.includes(judge)}
                                                 <span class="text-red-500">
                                                     (invalidated)</span
+                                                >
+                                            {:else if game.status === "Resolution" && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationUnavailableVotes.includes(judge)}
+                                                <span class="text-orange-500">
+                                                    (unavailable)</span
                                                 >
                                             {:else if game.status === "Resolution" && participationVotes.get(game.winnerCandidateCommitment) && candidateParticipationValidVotes.includes(judge)}
                                                 <span class="text-green-500">
