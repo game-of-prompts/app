@@ -208,7 +208,8 @@
                 icon: Users,
                 variant: "outline",
             });
-            if (isJudge) {
+            // Only allow judge actions if there's a winner candidate
+            if (isJudge && game.winnerCandidateCommitment) {
                 actions.push({
                     id: "invalidate_winner",
                     label: "Invalidate Winner",

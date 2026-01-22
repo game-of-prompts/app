@@ -133,25 +133,22 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Terminar Demo y agregar puntos de información en GameDetails
 
-[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
-
-
 [x] Actualizar datos de Judges votes y "what can happen" con el voto unavailable.
 
 [] failed to convert hex to bytes en fill demo participation.
 
 [] add music into game content. reproduce soundtrack on game details.
 
-[] Alinear review competition details.
+[x] Alinear review competition details.
 
-[] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
+[x] No permitir voto del juez en caso de que no haya ganador. (de ninguna de las dos acciones)
 
 
 [] La participación es valida si y solo si existe una caja cuyo R4 sea el id del servicio y su creación sea anterior a deadline - M. Donde M es una nueva constante llamada ROBOT_SUBMIT_DEADLINE o similar.
 
-
-
 [] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
+
+[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 ---
 
