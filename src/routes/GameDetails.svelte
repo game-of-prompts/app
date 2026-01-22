@@ -32,6 +32,7 @@
         fetch_token_details,
         fetchParticipationBatches,
     } from "$lib/ergo/fetch";
+    import { remove_opinion } from "reputation-system";
     // UI COMPONENTS
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
@@ -156,6 +157,9 @@
         isJudge,
         isBeforeDeadline,
         $reputation_proof,
+        candidateParticipationInvalidVotes,
+        candidateParticipationUnavailableVotes,
+        $address,
     );
 
     $: disabledActions = getDisabledActions(
@@ -172,6 +176,9 @@
         isJudge: boolean,
         isBeforeDeadline: boolean,
         reputationProof: ReputationProof | null,
+        candidateParticipationInvalidVotes: string[],
+        candidateParticipationUnavailableVotes: string[],
+        address: string,
     ) {
         if (!game) return [];
         const actions = [];
@@ -213,6 +220,14 @@
                     icon: AlertTriangle,
                     variant: "outline",
                 });
+                if (candidateParticipationInvalidVotes.includes(address) || candidateParticipationUnavailableVotes.includes(address)) {
+                    actions.push({
+                        id: "remove_opinion",
+                        label: "Mark Winner Service Available",
+                        icon: Trash2,
+                        variant: "outline",
+                    });
+                }
             }
         }
 
@@ -367,6 +382,7 @@
         | "end_game"
         | "invalidate_winner"
         | "judge_unavailable"
+        | "remove_opinion"
         | "include_omitted"
         | "accept_judge_nomination"
         | "open_ceremony"
@@ -1162,6 +1178,35 @@
         }
     }
 
+    async function handleRemoveOpinion() {
+        if (game?.status !== "Resolution" || !$reputation_proof) return;
+        errorMessage = null;
+        isSubmitting = true;
+        try {
+            // Find the opinion box for this judge and participation
+            const opinionBox = $reputation_proof.boxes.find(box =>
+                box.object_pointer === game.winnerCandidateCommitment &&
+                box.polarization === false &&
+                (box.type.tokenId === PARTICIPATION || box.type.tokenId === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID)
+            );
+            if (!opinionBox) {
+                throw new Error("No opinion box found for this participation.");
+            }
+            // Find the main reputation box
+            const mainBox = $reputation_proof.boxes.find(box =>
+                box.type.tokenId === $reputation_proof.token_id
+            );
+            if (!mainBox) {
+                throw new Error("Main reputation box not found.");
+            }
+            transactionId = await remove_opinion(explorer_uri, opinionBox, mainBox);
+        } catch (e: any) {
+            errorMessage = e.message;
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
     async function handleIncludeOmitted() {
         console.log("handleIncludeOmitted called");
 
@@ -1358,6 +1403,7 @@
             open_ceremony: "Add Seed Randomness",
             batch_participations: "Batch Participations",
             submit_creator_opinion: "Verify Game (Creator Opinion)",
+            remove_opinion: "Judge Mark Available",
         };
         modalTitle = titles[type] || "Action";
         errorMessage = null;
@@ -4727,6 +4773,33 @@
                                     {isSubmitting
                                         ? "Processing..."
                                         : "Confirm Unavailable Vote"}
+                                </Button>
+                            </div>
+                        {:else if currentActionType === "remove_opinion"}
+                            <div class="space-y-4">
+                                <p
+                                    class="text-sm p-3 rounded-md {$mode ===
+                                    'dark'
+                                        ? 'bg-red-600/20 text-red-300 border border-red-500/30'
+                                        : 'bg-red-100 text-red-700 border border-red-200'}"
+                                >
+                                    <strong>Action: Remove My Opinion</strong
+                                    ><br />
+                                    You are removing your previous opinion on this participation.
+                                    This will merge the opinion box back into your main reputation box,
+                                    effectively deleting your vote.
+                                </p>
+                                <Button
+                                    on:click={handleRemoveOpinion}
+                                    disabled={isSubmitting}
+                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
+                                    'dark'
+                                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                                        : 'bg-red-500 hover:bg-red-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting
+                                        ? "Processing..."
+                                        : "Confirm Remove Opinion"}
                                 </Button>
                             </div>
                         {:else if currentActionType === "include_omitted"}
