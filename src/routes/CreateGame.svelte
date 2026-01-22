@@ -695,110 +695,109 @@
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div>
-                                <h4
-                                    class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
-                                >
-                                    Identity
-                                </h4>
-                                <p class="text-lg font-semibold">{gameTitle}</p>
-                                <p
-                                    class="text-sm font-mono text-muted-foreground break-all"
-                                >
-                                    Service ID: {gameServiceId}
-                                </p>
-                                <p class="text-xs text-muted-foreground mt-1">
-                                    Sources: {serviceSourceCount}
-                                </p>
-                            </div>
+                        <!-- Identity section spans full width -->
+                        <div class="md:col-span-2">
+                            <h4
+                                class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                            >
+                                Identity
+                            </h4>
+                            <p class="text-lg font-semibold">{gameTitle}</p>
+                            <p
+                                class="text-sm font-mono text-muted-foreground break-all"
+                            >
+                                Service ID: {gameServiceId}
+                            </p>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Sources: {serviceSourceCount}
+                            </p>
+                        </div>
 
-                            <div>
-                                <h4
-                                    class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                        <!-- Rules section - left column -->
+                        <div>
+                            <h4
+                                class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                            >
+                                Rules
+                            </h4>
+                            <div class="flex flex-col gap-1 mt-1">
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
                                 >
-                                    Rules
-                                </h4>
-                                <div class="flex flex-col gap-1 mt-1">
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                    <span>Indetermism Index:</span>
+                                    <span class="font-mono"
+                                        >{indetermismIndex}</span
                                     >
-                                        <span>Indetermism Index:</span>
-                                        <span class="font-mono"
-                                            >{indetermismIndex}</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Duration:</span>
+                                    <span class="font-mono"
+                                        >{deadlineValue}
+                                        {deadlineUnit}</span
                                     >
-                                        <span>Duration:</span>
-                                        <span class="font-mono"
-                                            >{deadlineValue}
-                                            {deadlineUnit}</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Time Factor:</span>
+                                    <span class="font-mono capitalize"
+                                        >{timeFactorOption}</span
                                     >
-                                        <span>Time Factor:</span>
-                                        <span class="font-mono capitalize"
-                                            >{timeFactorOption}</span
-                                        >
-                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-4">
-                            <div>
-                                <h4
-                                    class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                        <!-- Economics section - right column -->
+                        <div>
+                            <h4
+                                class="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                            >
+                                Economics
+                            </h4>
+                            <div class="flex flex-col gap-1 mt-1">
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
                                 >
-                                    Economics
-                                </h4>
-                                <div class="flex flex-col gap-1 mt-1">
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                    <span>Token:</span>
+                                    <span class="font-mono"
+                                        >{participationTokenName}</span
                                     >
-                                        <span>Token:</span>
-                                        <span class="font-mono"
-                                            >{participationTokenName}</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Stake:</span>
+                                    <span class="font-mono"
+                                        >{creatorStakeAmount}
+                                        {participationTokenName}</span
                                     >
-                                        <span>Stake:</span>
-                                        <span class="font-mono"
-                                            >{creatorStakeAmount}
-                                            {participationTokenName}</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Fee:</span>
+                                    <span class="font-mono"
+                                        >{participationFeeAmount}
+                                        {participationTokenName}</span
                                     >
-                                        <span>Fee:</span>
-                                        <span class="font-mono"
-                                            >{participationFeeAmount}
-                                            {participationTokenName}</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Creator Comm.:</span>
+                                    <span class="font-mono"
+                                        >{commissionPercentage}%</span
                                     >
-                                        <span>Creator Comm.:</span>
-                                        <span class="font-mono"
-                                            >{commissionPercentage}%</span
-                                        >
-                                    </div>
-                                    <div
-                                        class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                </div>
+                                <div
+                                    class="flex justify-between text-sm border-b border-border/50 pb-1"
+                                >
+                                    <span>Judge Comm.:</span>
+                                    <span class="font-mono"
+                                        >{perJudgeComissionPercentage}% (x{judgesCount})</span
                                     >
-                                        <span>Judge Comm.:</span>
-                                        <span class="font-mono"
-                                            >{perJudgeComissionPercentage}% (x{judgesCount})</span
-                                        >
-                                    </div>
                                 </div>
                             </div>
                         </div>
