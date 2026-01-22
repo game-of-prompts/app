@@ -487,13 +487,28 @@
             const ergoTree =
                 "a3f1bde417cf029a9d51dceaf45a08e23c4cc6f1ed2a75b3b394ac97b4e23145"; // Default constant
 
-            // 3. Prepare Data for Hashing
+            // 3. Generate Score List with Decoys
+            const numScores = 5; // Total scores in the list
+            const scores: bigint[] = [];
+            const realScoreIndex = Math.floor(Math.random() * numScores); // Random position for real score
+
+            for (let i = 0; i < numScores; i++) {
+                if (i === realScoreIndex) {
+                    scores.push(BigInt(devGenScore));
+                } else {
+                    // Generate random decoy score between -100 and 200
+                    const decoyScore = Math.floor(Math.random() * 301) - 100;
+                    scores.push(BigInt(decoyScore));
+                }
+            }
+
+            // 4. Prepare Data for Hashing (using the real score for commitment)
             // Order: solver_id + seed + score + hash_logs + ergoTree + secret_s
 
             const solverIdBytes = hexToBytes(solverId);
             const seedBytes = hexToBytes(seed); // Assuming hex seed
 
-            // Score to 8 bytes big endian
+            // Real score to 8 bytes big endian
             const scoreBytes = new Uint8Array(8);
             const view = new DataView(scoreBytes.buffer);
             view.setBigInt64(0, BigInt(devGenScore), false); // false for big-endian
@@ -535,12 +550,12 @@
             concatenated.set(secretSBytes, offset);
             offset += secretSBytes.length;
 
-            // 4. Hash
+            // 5. Hash
             const commitment = uint8ArrayToHex(fleetBlake2b256(concatenated));
 
-            // 5. Apply Errors if requested
+            // 6. Apply Errors if requested
             let finalCommitment = commitment;
-            let finalScore = devGenScore.toString();
+            let finalScores = [...scores];
 
             if (devGenErrorType === "wrong_commitment") {
                 // Change last char
@@ -548,25 +563,28 @@
                     finalCommitment.slice(0, -1) +
                     (finalCommitment.endsWith("a") ? "b" : "a");
             } else if (devGenErrorType === "wrong_score") {
-                finalScore = (devGenScore + 1).toString();
+                // Change the real score in the list
+                finalScores[realScoreIndex] = BigInt(devGenScore + 1);
             }
 
-            // 6. Fill Inputs
+            // 7. Fill Inputs
             solverId_input = solverId;
             hashLogs_input = hashLogs;
             commitmentC_input = finalCommitment;
-            scores_input = finalScore;
+            scores_input = finalScores.map(s => s.toString()).join(",");
 
             console.log("Dev Generation Complete", {
                 solverId,
                 seed,
-                score: devGenScore,
+                realScore: devGenScore,
+                realScoreIndex,
+                scores: finalScores.map(s => s.toString()),
                 hashLogs,
                 ergoTree,
                 secretS,
                 commitment,
                 finalCommitment,
-                finalScore,
+                finalScores: finalScores.map(s => s.toString()),
             });
         } catch (e) {
             console.error("Dev Generation Error", e);
