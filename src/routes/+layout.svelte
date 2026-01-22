@@ -47,4 +47,6 @@
 	</div>
 {/if}
 
-<slot></slot>
+<div class={$isDevMode ? "pt-7" : ""}>
+	<slot></slot>
+</div>
