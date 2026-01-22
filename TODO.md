@@ -178,9 +178,39 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 #### Servicio para supervisar jueces
 
 [] Comprobar si el historico de las validaciones e invalidaciones de los jueces son correctas. (ejecutando el robot en caso de que el servicio siga accesible, y comprobando si los logs eran coincidentes o no lo eran).
+
+
     IMPORTANTE:  ¿COMO SE HARÁ ESTO?
         ¿Main in the middle?
-         ¿Porque no iba el robot a generar los pasos necesarios para resolver el problema con esa puntuación ....?
+         ¿Porque no iba el robot a generar los pasos necesarios para resolver el problema con esa puntuación ....? 
+         Pensemos en el caso del stake.
+         Primero no sabemos el seed, pero despues de la ceremonia ... sabmeos exactamente donde estarán las manzanas.
+         Entonces los participantes crean sus participaciones ...
+         ¿Porque no iba en este punto el creador a hacer un robot que simplemente emita los pasos necesarios para comerse todas las manzanas?
+         No hace falta pensar que el robot tenía un limite de recursos a utilizar ... el juego de la serpiente consiste en que la serpiente no para, tienes un tiempo concreto para computar que acción tomar, y los posibles caminos se reducen a medida que el tiempo avanza (porque la serpiente no para) ... pero el creador ha podido computar cuales son los pasos optimos, crear un robot que genere esos pasos y despues subir una participación con el score coincidente a esos logs ... de esta forma el robot que probaran los jueces efectivamente ejecuta los logs ... pero no hubiera funcionado en ningun otro seed.
+         Esto solo signfica una cosa: "El seed de la ceremonia no puede terminar antes de que los participantes emitan su participación!!!! Los participantes deben de subir su robot, y solo despues subir la participación". 
+
+         La solución a esto implica un doble paso para los participantes: 
+          - 1. Subir su robot antes de finalizar la ceremonia.  (De hecho, un tiempo antes de que termine ...)
+          - 2. Subir su participación tras la ceremonia (porque se necesita saber el seed).
+
+          Esto significa que realmente las participaciones se podrían calcular por parte del creador del juego ¿? ....
+          Si es asi ... ¿sigue teniendo sentido pensar en include ommited y las comparaciones de score .... ?
+
+          Bueno, los participantes deben participar como hasta ahora ... un robot puede generar una variedad enorme de participaciones con un mismo seed. ... y sin el score el creador no sabe cual es la mas alta ... asi que obviamente los participantes deben de participar como hasta ahora ... pero con la obligación de que su solver se hubiera subido antes de saber el seed.
+
+          Esto es algo incomodo para los participantes ... deberán estar atentos de antemano ... simplemente tendrán casi todo el tiempo de Game Active en el que el seed estará cambiando ... y ellos se dedicarań a mejorar y mejorar su robot hasta que decidan subir su robot (particpation.es fase 1)  ... tras la ceremonia, podrán actualizar su participation.es con su score y commitment.
+
+          Esto destruye los incentivos de ver que otros scores hay y pensar en participar o no ... tal vez podríamos pensar que el pago por participar realmente es en la fase 2, y no en la 1 ... realmente tienes que crear una participacion con tu robot antes de terminar la ceremonia ... y tras la ceremonia decides si pagas la tarifa y participas o te retiras. ....
+
+          Esta es la forma correcta de hacerlo, con la que menos se rompen los incentivos que ya teníamos.
+          De esta manera el creador ya no puede subir un robot que emite los pasos correctos ... ya que no se conocerá el seed hasta despues de haber empaquetado el robot.
+
+
+          Para llevar a cabo esta implementación, debemos asegurarnos de que la ceremonia ahora dura todo el tiempo ... asi que la constante será mas bien los últimos N bloques antes del deadline, cuando ya no es posible modificar el seed y los M bloques antes del deadline cuando ya no se pueden subir mas robots (de forma que M < N).
+
+
+
 
 [] Comprobar si las opiniones de "unavailable" de los jueces eran correctas (basandose en este caso en otras opiniones de ese momento ... ya que no puede saberse si el servicio estaba en ese momento disponible o no).
 
