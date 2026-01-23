@@ -23,6 +23,7 @@
         judge_detail,
         judges,
         reputation_proof,
+        muted,
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount } from "svelte";
@@ -65,6 +66,7 @@
         Lock as LockIcon,
         Wand2,
         Music,
+        VolumeX,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -171,6 +173,19 @@
         isBeforeDeadline,
         strictMode,
     );
+
+    $: if (soundtrackUrl) loadedHandlerAdded = false;
+    $: if (soundtrackUrl && audioElement && !$muted && !loadedHandlerAdded) {
+        loadedHandlerAdded = true;
+        audioElement.addEventListener('loadeddata', () => {
+            if (!$muted) audioElement.play().catch(() => {});
+        });
+        audioElement.load();
+    }
+    $: if (audioElement) {
+        audioElement.volume = 0.3;
+        audioElement.muted = $muted;
+    }
 
     function getSecondaryActions(
         game: AnyGame | null,
@@ -429,6 +444,9 @@
     let paperToc: { level: number; text: string; id: string }[] = [];
     let soundtrackSources: any[] = [];
     let soundtrackUrl: string | null = null;
+    let audioElement: HTMLAudioElement;
+    let showAudioControls = false;
+    let loadedHandlerAdded = false;
 
     function openFileSourceModal(
         hash: string,
@@ -1929,6 +1947,17 @@
                                 <Share2 class="mr-2 h-4 w-4" />
                                 Share Game
                             </Button>
+
+                            <Button
+                                on:click={() => muted.set(!$muted)}
+                                class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg"
+                            >
+                                {#if $muted}
+                                    <VolumeX class="h-4 w-4" />
+                                {:else}
+                                    <Music class="h-4 w-4" />
+                                {/if}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -2063,7 +2092,7 @@
 
                             {#if soundtrackUrl}
                                 <div class="mt-8 border-t border-border pt-8">
-                                    <div class="flex items-center gap-2 mb-4">
+                                    <div class="flex items-center gap-2 mb-2">
                                         <Music class="w-5 h-5 text-green-500" />
                                         <h3 class="text-lg font-semibold">
                                             Soundtrack
@@ -2077,13 +2106,21 @@
                                                         game.content.soundtrack,
                                                         "soundtrack",
                                                     )}
-                                                class="ml-auto"
                                             >
                                                 Add Source
                                             </Button>
                                         {/if}
                                     </div>
-                                    <audio controls class="w-full">
+                                    <div class="mb-4">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={() => showAudioControls = !showAudioControls}
+                                        >
+                                            {showAudioControls ? 'Hide' : 'Show'} Controls
+                                        </Button>
+                                    </div>
+                                    <audio bind:this={audioElement} controls={showAudioControls} class="w-full {showAudioControls ? '' : 'absolute left-[-9999px]'} " muted={$muted}>
                                         <source src={soundtrackUrl} type="audio/mpeg" />
                                         Your browser does not support the audio element.
                                     </audio>

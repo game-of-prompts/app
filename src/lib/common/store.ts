@@ -24,3 +24,4 @@ export const judges = writable<{ data: Map<string, ReputationProof>; last_fetch:
     last_fetch: 0
 })
 export const isLoadingGames = writable<boolean>(false);
+export const muted = writable<boolean>(false);
