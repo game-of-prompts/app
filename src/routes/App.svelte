@@ -23,7 +23,7 @@
     import Kya from "./kya.svelte";
     import Theme from "./Theme.svelte";
     import { get } from "svelte/store";
-    import { slide } from "svelte/transition";
+    import { slide, fade } from "svelte/transition";
     import CreateJudge from "./CreateJudge.svelte";
     import { reputation_proof } from "$lib/common/store";
     import ShowJudge from "./ShowJudge.svelte";
@@ -411,28 +411,44 @@
 <main class="pb-16">
     {#if $game_detail === null && $judge_detail == null}
         {#if activeTab === "participateGame"}
-            <TokenAcquisition />
+            <div transition:fade={{duration: 300}}>
+                <TokenAcquisition />
+            </div>
         {/if}
         {#if activeTab === "createGame"}
-            <CreateGame />
+            <div transition:fade={{duration: 300}}>
+                <CreateGame />
+            </div>
         {/if}
         {#if activeTab === "judges"}
-            <JudgeList />
+            <div transition:fade={{duration: 300}}>
+                <JudgeList />
+            </div>
         {/if}
         {#if activeTab === "createJudge"}
-            <CreateJudge />
+            <div transition:fade={{duration: 300}}>
+                <CreateJudge />
+            </div>
         {/if}
         {#if activeTab === "showJudge"}
-            <ShowJudge />
+            <div transition:fade={{duration: 300}}>
+                <ShowJudge />
+            </div>
         {/if}
 
         {#if activeTab === "demo"}
-            <Demo />
+            <div transition:fade={{duration: 300}}>
+                <Demo />
+            </div>
         {/if}
     {:else if $game_detail !== null}
-        <GameDetails />
+        <div transition:fade={{duration: 300}}>
+            <GameDetails />
+        </div>
     {:else}
-        <ShowJudge />
+        <div transition:fade={{duration: 300}}>
+            <ShowJudge />
+        </div>
     {/if}
 </main>
 
