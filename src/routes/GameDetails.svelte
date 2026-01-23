@@ -2104,7 +2104,7 @@
                             {/if}
 
                             {#if soundtrackUrl}
-                                <div class="mt-8 border-t border-border pt-8">
+                                <div class="mt-8 border-t border-border pt-8 hidden">
                                     <div class="flex items-center gap-2 mb-2">
                                         <Music class="w-5 h-5 text-green-500" />
                                         <h3 class="text-lg font-semibold">
