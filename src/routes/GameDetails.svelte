@@ -64,6 +64,7 @@
         ArrowUp,
         Lock as LockIcon,
         Wand2,
+        Music,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -419,17 +420,19 @@
     // File Source Modal State
     let showFileSourceModal = false;
     let modalFileHash = "";
-    let modalFileType: "image" | "service" | "paper" = "image";
+    let modalFileType: "image" | "service" | "paper" | "soundtrack" = "image";
     let imageSources: any[] = [];
     let serviceSources: any[] = [];
     let paperSources: any[] = [];
     let paperContent: string | null = null;
     let isPaperExpanded = false;
     let paperToc: { level: number; text: string; id: string }[] = [];
+    let soundtrackSources: any[] = [];
+    let soundtrackUrl: string | null = null;
 
     function openFileSourceModal(
         hash: string,
-        type: "image" | "service" | "paper",
+        type: "image" | "service" | "paper" | "soundtrack",
     ) {
         modalFileHash = hash;
         modalFileType = type;
@@ -458,6 +461,11 @@
                 );
             } else if (modalFileType === "paper") {
                 paperSources = await fetchFileSourcesByHash(
+                    modalFileHash,
+                    get(explorer_uri),
+                );
+            } else if (modalFileType === "soundtrack") {
+                soundtrackSources = await fetchFileSourcesByHash(
                     modalFileHash,
                     get(explorer_uri),
                 );
@@ -672,6 +680,15 @@
                     } catch (e) {
                         console.error("Error fetching paper content:", e);
                     }
+                }
+            }
+            if (game.content.soundtrack) {
+                soundtrackSources = await fetchFileSourcesByHash(
+                    game.content.soundtrack,
+                    get(explorer_uri),
+                );
+                if (soundtrackSources.length > 0) {
+                    soundtrackUrl = soundtrackSources[0].sourceUrl;
                 }
             }
 
@@ -2039,6 +2056,35 @@
                                             </Button>
                                         </div>
                                     {/if}
+                                </div>
+                            {/if}
+
+                            {#if soundtrackUrl}
+                                <div class="mt-8 border-t border-border pt-8">
+                                    <div class="flex items-center gap-2 mb-4">
+                                        <Music class="w-5 h-5 text-green-500" />
+                                        <h3 class="text-lg font-semibold">
+                                            Soundtrack
+                                        </h3>
+                                        {#if $reputation_proof && game.content.soundtrack}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.soundtrack,
+                                                        "soundtrack",
+                                                    )}
+                                                class="ml-auto"
+                                            >
+                                                Add Source
+                                            </Button>
+                                        {/if}
+                                    </div>
+                                    <audio controls class="w-full">
+                                        <source src={soundtrackUrl} type="audio/mpeg" />
+                                        Your browser does not support the audio element.
+                                    </audio>
                                 </div>
                             {/if}
                         </div>

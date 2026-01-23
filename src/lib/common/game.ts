@@ -51,6 +51,7 @@ export interface GameContent {
     imageURL?: string;
     creatorTokenId?: string;
     paper?: string; // Blake2b256 hash of the detailed game description markdown file
+    soundtrack?: string; // Blake2b256 hash of the soundtrack file
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
 }
 

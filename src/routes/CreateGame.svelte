@@ -35,6 +35,7 @@
         Info,
         ArrowLeft,
         CheckCircle2,
+        Music,
     } from "lucide-svelte";
     import { fetch_token_details } from "$lib/ergo/fetch";
 
@@ -50,10 +51,12 @@
     let gameServiceIdStore = writable("");
     let gameImageHashStore = writable("");
     let gamePaperHashStore = writable("");
+    let gameSoundtrackHashStore = writable("");
 
     $: gameServiceId = $gameServiceIdStore;
     $: gameImageHash = $gameImageHashStore;
     $: gamePaperHash = $gamePaperHashStore;
+    $: gameSoundtrackHash = $gameSoundtrackHashStore;
 
     let gameSecret: string = "";
     let showGameSecret: boolean = false;
@@ -241,6 +244,7 @@
         creatorTokenId: creatorTokenId,
         serviceId: gameServiceId,
         paper: gamePaperHash,
+        soundtrack: gameSoundtrackHash,
         indetermismIndex: indetermismIndex,
     } as GameDetails;
 
@@ -252,6 +256,7 @@
             creatorTokenId: "",
             serviceId: "",
             paper: "",
+            soundtrack: "",
             indetermismIndex: 1,
         },
         0,
@@ -299,16 +304,17 @@
     // --- Modal state for FileSourceCreation
     let showFileSourceModal = false;
     let activeHashStore: Writable<string> = gameServiceIdStore;
-    let modalFileType: "image" | "service" | "paper" = "image";
+    let modalFileType: "image" | "service" | "paper" | "soundtrack" = "image";
 
     function openFileSourceModal(
         hash: string,
-        type: "image" | "service" | "paper",
+        type: "image" | "service" | "paper" | "soundtrack",
     ) {
         modalFileType = type;
         if (type === "service") activeHashStore = gameServiceIdStore;
         else if (type === "image") activeHashStore = gameImageHashStore;
         else if (type === "paper") activeHashStore = gamePaperHashStore;
+        else if (type === "soundtrack") activeHashStore = gameSoundtrackHashStore;
 
         activeHashStore.set(hash);
         showFileSourceModal = true;
@@ -327,6 +333,7 @@
     let imageSourceCount = 0;
     let serviceSourceCount = 0;
     let paperSourceCount = 0;
+    let soundtrackSourceCount = 0;
 
     async function updateSourceCounts() {
         if (gameImageHash && gameImageHash.length === 64) {
@@ -358,12 +365,23 @@
         } else {
             paperSourceCount = 0;
         }
+
+        if (gameSoundtrackHash && gameSoundtrackHash.length === 64) {
+            const sources = await fetchFileSourcesByHash(
+                gameSoundtrackHash,
+                $explorer_uri,
+            );
+            soundtrackSourceCount = sources.length;
+        } else {
+            soundtrackSourceCount = 0;
+        }
     }
 
     // Trigger search when hashes change (debounced ideally, but simple for now)
     $: if (gameImageHash && gameImageHash.length === 64) updateSourceCounts();
     $: if (gameServiceId && gameServiceId.length === 64) updateSourceCounts();
     $: if (gamePaperHash && gamePaperHash.length === 64) updateSourceCounts();
+    $: if (gameSoundtrackHash && gameSoundtrackHash.length === 64) updateSourceCounts();
 
     // --- Logic for repeaters
     function addJudge() {
@@ -612,6 +630,7 @@
             creatorTokenId: creatorTokenId,
             serviceId: gameServiceId,
             paper: gamePaperHash,
+            soundtrack: gameSoundtrackHash,
             indetermismIndex: indetermismIndex,
         });
 
@@ -863,6 +882,13 @@
                                         >{gamePaperHash || "None"}</span
                                     >
                                     <span>Sources: {paperSourceCount}</span>
+                                </div>
+                                <div>
+                                    <span class="font-bold">Soundtrack Hash:</span>
+                                    <span class="block font-mono truncate"
+                                        >{gameSoundtrackHash || "None"}</span
+                                    >
+                                    <span>Sources: {soundtrackSourceCount}</span>
                                 </div>
                             </div>
                         </div>
@@ -1635,6 +1661,33 @@
                                     detailed game description
                                 </p>
                             </div>
+                            <div class="form-group lg:col-span-4">
+                                <Label for="gameSoundtrackHash"
+                                    >Game Soundtrack Hash</Label
+                                >
+                                <div class="flex gap-2">
+                                    <Input
+                                        id="gameSoundtrackHash"
+                                        bind:value={$gameSoundtrackHashStore}
+                                        placeholder="Blake2b256 hash (64-character hex)"
+                                        maxlength={64}
+                                        pattern="[a-fA-F0-9]{64}"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        on:click={() =>
+                                            gameSoundtrackHashStore.set("")}
+                                        class="shrink-0"
+                                        title="Clear hash"
+                                    >
+                                        <Trash2 class="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <p class="text-xs mt-1 text-muted-foreground">
+                                    The Blake2b256 hash of the game's soundtrack or audio file
+                                </p>
+                            </div>
                         </div>
                     </section>
                     <div class="form-actions mt-8">
@@ -1811,6 +1864,53 @@
                                         </div>
                                     {/if}
                                 </div>
+
+                                <!-- Soundtrack Download Sources -->
+                                <div
+                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                                >
+                                    <Label
+                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-green-500"
+                                        ></div>
+                                        Soundtrack Source
+                                    </Label>
+                                    <p
+                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                    >
+                                        Provide download locations for the
+                                        game's soundtrack or audio files.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() =>
+                                            openFileSourceModal(
+                                                gameSoundtrackHash,
+                                                "soundtrack",
+                                            )}
+                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                    >
+                                        Add Soundtrack Source
+                                    </Button>
+                                    {#if soundtrackSourceCount > 0}
+                                        <div
+                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        >
+                                            <div
+                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                            ></div>
+                                            <span
+                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                            >
+                                                {soundtrackSourceCount} source(s) active
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
                             </div>
                         </section>
                     {/if}
@@ -1889,8 +1989,10 @@
                             ? "Add Image Source"
                             : modalFileType === "service"
                               ? "Add Game Service Source"
-                              : "Add Paper Source"}
-                        profile={reputationProofAny}
+                              : modalFileType === "paper"
+                                ? "Add Paper Source"
+                                : "Add Soundtrack Source"}
+                        profile={$reputation_proof}
                         explorerUri={$explorer_uri}
                         source_explorer_url={$source_explorer_url}
                         hash={activeHashStore}

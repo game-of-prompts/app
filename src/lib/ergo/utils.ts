@@ -208,6 +208,7 @@ export function parseGameContent(
                 imageURL: defaultImageUrl,
                 creatorTokenId: parsed.creatorTokenId || undefined,
                 paper: parsed.paper || undefined,
+                soundtrack: parsed.soundtrack || undefined,
                 indetermismIndex: parsed.indetermismIndex || undefined,
             };
         } catch (error) {

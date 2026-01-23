@@ -31,6 +31,7 @@ export interface GameDetails {
     creatorTokenId: string;
     serviceId: string;
     paper: string;
+    soundtrack: string;
     indetermismIndex: number;
 }
 
