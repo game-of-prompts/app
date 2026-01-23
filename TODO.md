@@ -141,7 +141,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] failed to convert hex to bytes en fill demo participation.
 
-[] Add soundtrack hash into game content. The soundtrack must be a source like the image and paper. Download soundtrack on fetch.ts if it's available some of their sources.  Reproduce soundtrack on game details.
+[x] Add soundtrack hash into game content. The soundtrack must be a source like the image and paper. Download soundtrack on fetch.ts if it's available some of their sources.  Reproduce soundtrack on game details.
 
 [] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
 
