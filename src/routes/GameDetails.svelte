@@ -178,12 +178,16 @@
     $: if (soundtrackUrl && audioElement && !$muted && !loadedHandlerAdded) {
         loadedHandlerAdded = true;
         audioElement.addEventListener('loadeddata', () => {
-            if (!$muted) audioElement.play().catch(() => {});
+            if (!$muted) {
+                audioElement.volume = 0;
+                audioElement.play().catch(() => {});
+                fadeInAudio(audioElement, userVolume);
+            }
         });
         audioElement.load();
     }
     $: if (audioElement) {
-        audioElement.volume = 0.3;
+        audioElement.volume = userVolume;
         audioElement.muted = $muted;
     }
 
@@ -429,6 +433,22 @@
     function closeDidacticModal() {
         showDidacticModal = false;
     }
+
+    function fadeInAudio(audio: HTMLAudioElement, targetVolume: number, duration: number = 2000) {
+        const startVolume = 0;
+        const steps = 50;
+        const stepDuration = duration / steps;
+        const volumeStep = (targetVolume - startVolume) / steps;
+        let currentStep = 0;
+        const interval = setInterval(() => {
+            currentStep++;
+            audio.volume = Math.min(startVolume + volumeStep * currentStep, targetVolume);
+            if (currentStep >= steps) {
+                clearInterval(interval);
+            }
+        }, stepDuration);
+    }
+
     let tokenSymbol = "ERG";
     let tokenDecimals = 9;
 
@@ -447,6 +467,7 @@
     let audioElement: HTMLAudioElement;
     let showAudioControls = false;
     let loadedHandlerAdded = false;
+    let userVolume = 0.3;
 
     function openFileSourceModal(
         hash: string,
