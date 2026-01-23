@@ -184,10 +184,10 @@ export function parseGameContent(
     // Get image from static, img1.png, img2.png, img3.png
     const defaultImageUrl = [
         `${base}/img1.png`,
-        `${base}/img2.png`,
-        `${base}/img3.png`,
+        // `${base}/img2.png`,
+        // `${base}/img3.png`,
     ][(rawJsonDetails?.length ?? 0) % 3];
-    const defaultSoundtrackUrl = "https://raw.githubusercontent.com/0xf965/sountrack/refs/heads/master/4WIMyqBG9gsc.mp3";
+    const defaultSoundtrackUrl = `${base}/sound1.mp3`;
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
     let content: GameContent = {
