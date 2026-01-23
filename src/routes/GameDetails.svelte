@@ -3669,7 +3669,7 @@
                                             class="w-full py-6 text-xl font-bold shadow-lg bg-orange-600 hover:bg-orange-700 text-white transition-all hover:scale-[1.01]"
                                         >
                                             <Trophy class="mr-3 h-6 w-6" /> Drain
-                                            Creator Stake
+                                            Resolver Stake
                                         </Button>
                                     {/if}
                                 </div>
