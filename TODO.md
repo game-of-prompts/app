@@ -176,6 +176,11 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 
 # Servicios
 
+##### game-robot-factory
+
+[] Permite escribir el script, a mano o mediante vibe-coding. Realiza todo lo demás bajo el capó.
+[] Permite o asiste sobre cuando subir el hash del robot, cuando participar y cuando subir el robot.
+
 
 ##### game-service-factory
 [] Game obfuscated
@@ -228,4 +233,8 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 
 ----
 
+# Otros
+
 [] ¿Ceremonia de secreto del servicio juego?
+
+[] Explorar "Participación no interactiva" Basada en pagos a servicios y contratos de participación por terceros.
