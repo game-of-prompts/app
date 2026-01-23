@@ -22,6 +22,7 @@
     import { Checkbox } from "$lib/components/ui/checkbox";
     import { X, RotateCcw, Loader2 } from "lucide-svelte";
     import { createEventDispatcher } from "svelte";
+    import { user_volume } from "$lib/common/store";
 
     const dispatch = createEventDispatcher();
 
@@ -152,6 +153,26 @@
                             />
                         {/if}
                     </Label>
+                </div>
+
+                <div class="space-y-2 pt-4 border-t border-border">
+                    <Label>Audio Settings</Label>
+                    <div class="space-y-2">
+                        <label for="volume-slider" class="text-sm font-medium">Volume</label>
+                        <input
+                            type="range"
+                            id="volume-slider"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            bind:value={$user_volume}
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                        />
+                        <div class="flex justify-between text-xs text-muted-foreground">
+                            <span>0</span>
+                            <span>1</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

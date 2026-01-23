@@ -10,6 +10,7 @@
         network,
         audio_element,
         muted,
+        user_volume,
     } from "$lib/common/store";
     import CreateGame from "./CreateGame.svelte";
     import Demo from "./Demo.svelte";
@@ -40,7 +41,7 @@
         walletBalance,
         walletManager,
     } from "wallet-svelte-component";
-    import { Settings, Menu, X, Wallet } from "lucide-svelte";
+    import { Settings, Menu, X, Wallet, VolumeX, Music } from "lucide-svelte";
     import SettingsModal from "./SettingsModal.svelte";
     import {
         explorer_uri,
@@ -53,6 +54,7 @@
     import { Button } from "$lib/components/ui/button";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
     import { JUDGE } from "$lib/ergo/reputation/types";
+    import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -345,6 +347,17 @@
             <Button
                 variant="ghost"
                 size="icon"
+                on:click={() => muted.set(!$muted)}
+            >
+                {#if $muted}
+                    <VolumeX class="h-[1.2rem] w-[1.2rem]" />
+                {:else}
+                    <Music class="h-[1.2rem] w-[1.2rem]" />
+                {/if}
+            </Button>
+            <Button
+                variant="ghost"
+                size="icon"
                 on:click={() => (showSettings = true)}
             >
                 <Settings class="h-[1.2rem] w-[1.2rem]" />
@@ -415,6 +428,17 @@
                 >
                 <div class="flex gap-2">
                     <Theme />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        on:click={() => muted.set(!$muted)}
+                    >
+                        {#if $muted}
+                            <VolumeX class="h-5 w-5" />
+                        {:else}
+                            <Music class="h-5 w-5" />
+                        {/if}
+                    </Button>
                     <Button
                         variant="ghost"
                         size="icon"

@@ -25,6 +25,7 @@
         reputation_proof,
         muted,
         audio_element,
+        user_volume,
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount } from "svelte";
@@ -182,13 +183,13 @@
             if (!$muted) {
                 audioElement.volume = 0;
                 audioElement.play().catch(() => {});
-                fadeInAudio(audioElement, userVolume);
+                fadeInAudio(audioElement, $user_volume);
             }
         });
         audioElement.load();
     }
     $: if (audioElement) {
-        audioElement.volume = userVolume;
+        audioElement.volume = $user_volume;
         audioElement.muted = $muted;
     }
 
@@ -468,7 +469,6 @@
     let audioElement: HTMLAudioElement;
     let showAudioControls = false;
     let loadedHandlerAdded = false;
-    let userVolume = 0.3;
 
     $: audio_element.set(audioElement || null);
 
@@ -1970,17 +1970,6 @@
                             >
                                 <Share2 class="mr-2 h-4 w-4" />
                                 Share Game
-                            </Button>
-
-                            <Button
-                                on:click={() => muted.set(!$muted)}
-                                class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg"
-                            >
-                                {#if $muted}
-                                    <VolumeX class="h-4 w-4" />
-                                {:else}
-                                    <Music class="h-4 w-4" />
-                                {/if}
                             </Button>
                         </div>
                     </div>
