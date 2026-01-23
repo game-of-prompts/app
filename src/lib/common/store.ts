@@ -25,3 +25,4 @@ export const judges = writable<{ data: Map<string, ReputationProof>; last_fetch:
 })
 export const isLoadingGames = writable<boolean>(false);
 export const muted = writable<boolean>(false);
+export const audio_element = writable<HTMLAudioElement | null>(null);

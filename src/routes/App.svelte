@@ -8,6 +8,8 @@
         timer,
         judge_detail,
         network,
+        audio_element,
+        muted,
     } from "$lib/common/store";
     import CreateGame from "./CreateGame.svelte";
     import Demo from "./Demo.svelte";
@@ -164,7 +166,14 @@
         }
     });
 
-    function changeTab(tab: string) {
+    async function changeTab(tab: string) {
+        // Fade out audio
+        const currentAudio = get(audio_element);
+        if (currentAudio && !currentAudio.paused && !get(muted)) {
+            await fadeOutAudio(currentAudio, 0, 300);
+            currentAudio.pause();
+        }
+
         if (tab === "demo") {
             goto("/demo");
             return;
@@ -245,6 +254,24 @@
     }
 
     $: changeUrl($game_detail);
+
+    function fadeOutAudio(audio: HTMLAudioElement, targetVolume: number, duration: number = 2000): Promise<void> {
+        return new Promise((resolve) => {
+            const startVolume = audio.volume;
+            const steps = 50;
+            const stepDuration = duration / steps;
+            const volumeStep = (startVolume - targetVolume) / steps;
+            let currentStep = 0;
+            const interval = setInterval(() => {
+                currentStep++;
+                audio.volume = Math.max(targetVolume, startVolume - volumeStep * currentStep);
+                if (currentStep >= steps) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, stepDuration);
+        });
+    }
 </script>
 
 <header class="navbar-container">

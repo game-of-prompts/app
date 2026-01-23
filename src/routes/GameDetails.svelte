@@ -24,6 +24,7 @@
         judges,
         reputation_proof,
         muted,
+        audio_element,
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount } from "svelte";
@@ -468,6 +469,8 @@
     let showAudioControls = false;
     let loadedHandlerAdded = false;
     let userVolume = 0.3;
+
+    $: audio_element.set(audioElement || null);
 
     function openFileSourceModal(
         hash: string,
