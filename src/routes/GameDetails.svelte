@@ -653,6 +653,8 @@
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
 
+            soundtrackUrl = game.content.soundtrackURL;
+
             if (game.content.image) {
                 imageSources = await fetchFileSourcesByHash(
                     game.content.image,

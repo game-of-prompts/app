@@ -187,13 +187,16 @@ export function parseGameContent(
         `${base}/img2.png`,
         `${base}/img3.png`,
     ][(rawJsonDetails?.length ?? 0) % 3];
+    const defaultSoundtrackUrl = "https://raw.githubusercontent.com/0xf965/sountrack/refs/heads/master/4WIMyqBG9gsc.mp3";
     const defaultTitle = nft?.name || `Game ${gameBoxId.slice(0, 8)}`;
     const defaultDescription = nft?.description || "No description provided.";
     let content: GameContent = {
         rawJsonString: rawJsonDetails || "{}",
         title: defaultTitle,
         description: defaultDescription,
-        serviceId: ""
+        serviceId: "",
+        imageURL: defaultImageUrl,
+        soundtrackURL: defaultSoundtrackUrl
     };
 
     if (rawJsonDetails) {
@@ -209,6 +212,7 @@ export function parseGameContent(
                 creatorTokenId: parsed.creatorTokenId || undefined,
                 paper: parsed.paper || undefined,
                 soundtrack: parsed.soundtrack || undefined,
+                soundtrackURL: defaultSoundtrackUrl,
                 indetermismIndex: parsed.indetermismIndex || undefined,
             };
         } catch (error) {

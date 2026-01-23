@@ -39,19 +39,17 @@ export interface WinnerInfo {
     participationBoxId?: string;
 }
 
-/**
- * Describes the detailed content of a GoP game, typically parsed from a JSON in a register.
- */
 export interface GameContent {
     rawJsonString: string;
     title: string;
     description: string;
     serviceId: string;
     image?: string;
-    imageURL?: string;
+    imageURL: string;
     creatorTokenId?: string;
     paper?: string; // Blake2b256 hash of the detailed game description markdown file
     soundtrack?: string; // Blake2b256 hash of the soundtrack file
+    soundtrackURL: string; // Default soundtrack URL
     indetermismIndex?: number; // How many times a game needs to be executed to reproduce a logs (using the same seed).
 }
 
