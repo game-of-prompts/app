@@ -61,7 +61,7 @@
 
 [x] Implementar en frontend la fórmula de reputación para jueces: SUM[participations => p]( T * p.on_time * p.honest + p.honest + B * burn_erg ), donde se muestra visualmente la fiabilidad basada en participaciones oportunas, honestidad y ERG quemado.
 
-[x] Durante N bloques tras una invalidación la acción de omisión no permite modificar el creador/resolver actual.  Esto permite al creador actualizar la participacion candidata sin ser penalizado.
+[x] Durante N bloques tras una invalidación la acción de omisión no permite modificar el resolver actual.  Esto permite al creador actualizar la participacion candidata sin ser penalizado.
 
 [x]  En accion end_game, asegurar que el ganador como minimo obtiene el coste de participar, aunque las comisiones del resto tengan que ser 0 (de lo contrario se desincentivaría a participar el primero ya que obligaría al jugador a especular que habrá otros jugadores tambien).
 
@@ -143,7 +143,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Add soundtrack hash into game content. The soundtrack must be a source like the image and paper. Download soundtrack on fetch.ts if it's available some of their sources.  Reproduce soundtrack on game details.
 
-[] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
+[x] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
 
 -----
 

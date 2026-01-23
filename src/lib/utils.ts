@@ -65,9 +65,9 @@ export const flyAndScale = (
 // Devuelve el stake, sin importar el estado del juego
 export function getDisplayStake(game: AnyGame): bigint {
 	if (game.status === 'Cancelled_Draining') {
-		return (game as GameCancellation).currentStakeAmount;
+		return (game as GameCancellation).resolverStakeAmount;
 	}
-	return game.creatorStakeAmount;
+	return game.resolverStakeAmount;
 }
 
 // Devuelve la tarifa de participación o 0 si el juego está cancelado

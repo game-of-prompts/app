@@ -19,7 +19,7 @@
   // R4: Integer           - Game state (0: Active, 1: Resolved, 2: Cancelled).
   // R5: Long              - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.
   // R6: Coll[Byte]        - revealedSecret: El secreto 'S' del juego, ya revelado.
-  // R7: Long              - creatorStake: La cantidad actual (y decreciente) del stake del creador.
+  // R7: Long              - resolverStake: La cantidad actual (y decreciente) del stake del resolver.
   // R8  Long              - originalDeadline
   // R9: Coll[Coll[Byte]]  - gameDetailsJsonHex, ParticipationTokenID
 

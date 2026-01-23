@@ -2,13 +2,13 @@ import { GAME, PARTICIPATION, PARTICIPATION_UNAVAILABLE } from "$lib/ergo/reputa
 
 export interface GameConstants {
     JUDGE_PERIOD: number;    // VARIOS BLOQUES PARA PERMITIR A TODOS LOS JUECES PROBAR EL CANDIDATO.
-    CREATOR_OMISSION_NO_PENALTY_PERIOD: number;  // VARIOS BLOQUES PARA NO PERMITIR QUE SE MODFIQUE EL RESOLVER. // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize creator after this period.
+    RESOLVER_OMISSION_NO_PENALTY_PERIOD: number;  // VARIOS BLOQUES PARA NO PERMITIR QUE SE MODFIQUE EL RESOLVER. // Must be less than JUDGE_PERIOD, but the difference must be enough to allow others penalize resolver after this period.
     MAX_SCORE_LIST: number;
     DEV_COMMISSION_PERCENTAGE: number;
     STAKE_DENOMINATOR: number;
     COOLDOWN_IN_BLOCKS: number;
     END_GAME_AUTH_GRACE_PERIOD: number;   // A PARTIR DE RESOLUTION DEADLINE (R8.5)
-    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: number;    // A PARTIR DE DEADLINE (R8.0) - TIEMPO QUE TIENE EL CREADOR PARA REVELAR EL SECRETO
+    PARTICIPATION_GRACE_PERIOD_IN_BLOCKS: number;    // A PARTIR DE DEADLINE (R8.0) - TIEMPO QUE TIENE EL RESOLVER PARA REVELAR EL SECRETO
     OPEN_CEREMONY_BLOCKS: number;  // DEBE SER MENOR QUE DEADLINE
 
     PARTICIPATION_TYPE_ID: string;
@@ -20,7 +20,7 @@ export interface GameConstants {
 
 const DevelopmentMode: GameConstants = {
     JUDGE_PERIOD: 5,
-    CREATOR_OMISSION_NO_PENALTY_PERIOD: 5,
+    RESOLVER_OMISSION_NO_PENALTY_PERIOD: 5,
     MAX_SCORE_LIST: 10,
     DEV_COMMISSION_PERCENTAGE: 5,
     STAKE_DENOMINATOR: 5,
@@ -38,7 +38,7 @@ const DevelopmentMode: GameConstants = {
 
 const ProductionMode: GameConstants = {
     JUDGE_PERIOD: 720,  // aprox. one day
-    CREATOR_OMISSION_NO_PENALTY_PERIOD: 5,
+    RESOLVER_OMISSION_NO_PENALTY_PERIOD: 5,
     MAX_SCORE_LIST: 10,
     DEV_COMMISSION_PERCENTAGE: 5,
     STAKE_DENOMINATOR: 5,

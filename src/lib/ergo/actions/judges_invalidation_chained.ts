@@ -205,9 +205,9 @@ export async function judges_invalidation_chained(
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
             R8: SColl(SLong, [
                 BigInt(game.deadlineBlock),
-                BigInt(game.creatorStakeAmount),
+                BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
-                BigInt(game.perJudgeComissionPercentage) + BigInt(game.resolverCommission),
+                BigInt(game.perJudgeCommissionPercentage) + BigInt(game.resolverCommission),
                 0n,  // resolver commission goes to judges
                 BigInt(newDeadline),
                 BigInt(game.timeWeight)

@@ -83,9 +83,9 @@ export async function contribute_to_ceremony(
     // R8: numericalParameters (se mantiene)
     const numericalParams = [
         BigInt(game.deadlineBlock),
-        game.creatorStakeAmount,
+        game.resolverStakeAmount,
         game.participationFeeAmount,
-        game.perJudgeComissionPercentage,
+        game.perJudgeCommissionPercentage,
         BigInt(game.commissionPercentage),
         BigInt(game.timeWeight)
     ];

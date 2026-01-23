@@ -22,16 +22,16 @@ export function calculatePayouts(
     // B. Cálculo del Prize Pool
     const totalParticipations = participations.reduce((acc, p) => acc + BigInt(p.value), 0n);
     // prizePool = Lo que pusieron los jugadores + Lo que había en el contrato - Lo que puso el creador (Stake)
-    const prizePool = totalParticipations + contractBalance - game.creatorStakeAmount;
+    const prizePool = totalParticipations + contractBalance - game.resolverStakeAmount;
 
     console.log("--- DEBUG CALCULATION START ---");
     console.log(`Total Participations: ${totalParticipations}`);
     console.log(`Contract Balance: ${contractBalance}`);
-    console.log(`Creator Stake: ${game.creatorStakeAmount}`);
+    console.log(`Resolver Stake: ${game.resolverStakeAmount}`);
     console.log(`Calculated Prize Pool: ${prizePool}`);
 
     // C. Comisiones Base
-    const perJudgePctNumber = game.perJudgeComissionPercentage ?? 0;
+    const perJudgePctNumber = game.perJudgeCommissionPercentage ?? 0;
     const perJudgePct = BigInt(perJudgePctNumber);
     const judge_count = BigInt((game.judges ?? []).length);
 
@@ -49,7 +49,7 @@ export function calculatePayouts(
 
     if (winnerParticipation === null) {
         // --- CASO: NO HAY GANADOR ---
-        const totalValue = prizePool + game.creatorStakeAmount;
+        const totalValue = prizePool + game.resolverStakeAmount;
 
         finalDevPayout = devCommission;
         finalJudgesPayout = totalJudgeCommission;
@@ -58,7 +58,7 @@ export function calculatePayouts(
 
     } else {
         // --- CASO: HAY GANADOR ---
-        const creatorStake = game.creatorStakeAmount;
+        const resolverStake = game.resolverStakeAmount;
         const resolverCommission = (prizePool * BigInt(game.resolverCommission)) / BigInt(game.constants.COMMISSION_DENOMINATOR);
 
         // Premio tentativo restando comisiones
@@ -99,7 +99,7 @@ export function calculatePayouts(
             adjustedPerJudge = perJudgeCommission;
         }
 
-        finalResolverPayout = creatorStake + adjustedResolverComm;
+        finalResolverPayout = resolverStake + adjustedResolverComm;
         finalWinnerPrize = adjustedWinnerPrize;
         finalDevPayout = adjustedDevPayout;
         finalJudgesPayout = adjustedJudgesPayout;
@@ -108,7 +108,7 @@ export function calculatePayouts(
 
     console.log("--- FINAL PAYOUTS ---");
     console.log(`Final Winner: ${finalWinnerPrize}`);
-    console.log(`Final Resolver: ${finalResolverPayout} (Stake: ${game.creatorStakeAmount} + Comm: ${finalResolverPayout - game.creatorStakeAmount})`);
+    console.log(`Final Resolver: ${finalResolverPayout} (Stake: ${game.resolverStakeAmount} + Comm: ${finalResolverPayout - game.resolverStakeAmount})`);
     console.log(`Final Dev: ${finalDevPayout}`);
     console.log("---------------------");
 

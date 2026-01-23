@@ -24,7 +24,7 @@
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R8: Coll[Long]                 - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline, timeWeight]
+  // R8: Coll[Long]                 - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
   // R9: Coll[Coll[Byte]]           - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, resolverErgoTree]
 
   // =================================================================
@@ -41,10 +41,10 @@
   val participatingJudges = SELF.R7[Coll[Coll[Byte]]].get
   val numericalParams = SELF.R8[Coll[Long]].get
   val deadline = numericalParams(0)
-  val creatorStake = numericalParams(1)
+  val resolverStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val perJudgeComissionPercentage = numericalParams(3)
-  val creatorComissionPercentage = numericalParams(4)
+  val perJudgeCommissionPercentage = numericalParams(3)
+  val resolverCommissionPercentage = numericalParams(4)
   val resolutionDeadline = numericalParams(5)
   val timeWeight = numericalParams(6)
 
@@ -160,7 +160,7 @@
 
     val prizePool = {
         val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + box_value(pBox) })
-        val contractPrize = box_value(SELF) - creatorStake
+        val contractPrize = box_value(SELF) - resolverStake
         participationsAmount + contractPrize
     }
     val judge_amount = participatingJudges.size
@@ -172,7 +172,7 @@
     val devCommission = prizePool * DEV_COMMISSION_PERCENTAGE / 1000000L
     
     // 2. Calcular payout para los JUECES
-    val perJudgeComission = prizePool * perJudgeComissionPercentage / 1000000L
+    val perJudgeComission = prizePool * perJudgeCommissionPercentage / 1000000L
     val totalJudgeComission = perJudgeComission * judge_amount
     
     // 3. Verificación de que el DEV recibe su pago
@@ -217,7 +217,7 @@
 
             if (validWinner) {
             val winnerPK = winnerBox.R4[Coll[Byte]].get
-            val resolverCommission = prizePool * creatorComissionPercentage / 1000000L
+            val resolverCommission = prizePool * resolverCommissionPercentage / 1000000L
             
             // El premio se calcula restando los payouts finales (que ya consideran el polvo)
             val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission
@@ -260,7 +260,7 @@
                 addedValue >= amount && hasNFT
             }
 
-            val finalResolverPayout = creatorStake + adjustedResolverCommission
+            val finalResolverPayout = resolverStake + adjustedResolverCommission
             val resolverGetsPaid = {
                 val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
                 val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })
@@ -280,7 +280,7 @@
         // --- CASO 2: NO HAY GANADOR DECLARADO ---
 
         // El resolutor reclama el stake del creador y el pozo de premios.
-        val totalValue = prizePool + creatorStake
+        val totalValue = prizePool + resolverStake
         
         // Las comisiones de dev y jueces ya se han calculado y validado fuera.
         // El resolutor se lleva todo lo demás.

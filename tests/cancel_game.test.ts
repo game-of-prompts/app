@@ -38,7 +38,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
     let gameActiveErgoTree: ReturnType<typeof compile>;
     let gameCancellationErgoTree: ReturnType<typeof compile>;
 
-    const creatorStake = 10_000_000_000n; // 10 ERG de apuesta inicial
+    const resolverStake = 10_000_000_000n; // 10 ERG de apuesta inicial
     const deadlineBlock = 800_200;
     const secret = stringToBytes("utf8", "this-is-the-revealed-secret");
     const hashedSecret = blake2b256(secret);
@@ -62,10 +62,10 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
         gameActiveErgoTree = getGopGameActiveErgoTree();
 
         // Configuración de la caja del juego (donde está el dinero o los tokens)
-        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
             { tokenId: gameNftId, amount: 1n },
-            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
         ];
 
         game.addUTxOs({
@@ -80,7 +80,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                 R7: SColl(SColl(SByte), []).toHex(),
                 R8: SColl(SLong, [
                     BigInt(deadlineBlock),
-                    creatorStake,
+                    resolverStake,
                     1_000_000n,
                     500n,
                     1000n
@@ -100,8 +100,8 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
         // --- Arrange ---
         // 1. Cálculos de la penalización (Lógica del contrato)
         // El contrato dice: Si cancelas, pierdes 1/5 del stake.
-        const stakePortionForClaimer = creatorStake / 5n; // 2 ERG (si stake es 10)
-        const stakePortionForGame = creatorStake - stakePortionForClaimer; // 8 ERG
+        const stakePortionForClaimer = resolverStake / 5n; // 2 ERG (si stake es 10)
+        const stakePortionForGame = resolverStake - stakePortionForClaimer; // 8 ERG
 
         const newUnlockHeight = BigInt(mockChain.height + 40);
 
@@ -195,7 +195,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
 
     // --- Parámetros del Juego para la Prueba ---
     // Stake: 1.2 ERG. El 80% restante es 960,000 nanoergs, que es < 1,000,000 (Min Box Value)
-    const creatorStake = 1_200_000n;
+    const resolverStake = 1_200_000n;
     const deadlineBlock = 800_200;
     const secret = stringToBytes("utf8", "this-is-the-revealed-secret");
     const hashedSecret = blake2b256(secret);
@@ -213,10 +213,10 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
         gameCancellationErgoTree = getGopGameCancellationErgoTree();
         gameActiveErgoTree = getGopGameActiveErgoTree();
 
-        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
             { tokenId: gameNftId, amount: 1n },
-            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
         ];
 
         // Se usa una deadline de ceremonia ficticia que ya pasó (800_005) para este registro
@@ -240,10 +240,10 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
                 // R8: Se restaura el formato completo de parámetros numéricos.
                 R8: SColl(SLong, [
                     BigInt(deadlineBlock),
-                    creatorStake,
+                    resolverStake,
                     1_000_000n,                // participationFee
-                    500n,                      // perJudgeComissionPercentage
-                    1000n                      // creatorComissionPercentage
+                    500n,                      // perJudgeCommissionPercentage
+                    1000n                      // resolverCommissionPercentage
                 ]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes("utf8", "{}"),
@@ -261,23 +261,23 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
     it("should fail to cancel if remaining stake is less than MIN_BOX_VALUE (ERG Mode Only)", () => {
         // --- Arrange ---
         // Stake total: 1,200,000n
-        const stakePortionToClaim = creatorStake / 5n; // 240,000 nanoergs (20% de penalización)
-        const newCreatorStake = creatorStake - stakePortionToClaim; // 960,000 nanoergs (80% restante)
+        const stakePortionToClaim = resolverStake / 5n; // 240,000 nanoergs (20% de penalización)
+        const newResolverStake = resolverStake - stakePortionToClaim; // 960,000 nanoergs (80% restante)
         const newUnlockHeight = BigInt(mockChain.height + 40);
 
         // Mínimo valor requerido por el protocolo de Ergo para cualquier caja de salida.
         const MIN_BOX_VALUE = 1_000_000n;
 
         // Verificamos que el stake restante (960,000n) es menor que el valor mínimo (1,000,000n).
-        expect(newCreatorStake).to.be.lessThan(MIN_BOX_VALUE);
+        expect(newResolverStake).to.be.lessThan(MIN_BOX_VALUE);
 
         // --- Act ---
-        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN ? newCreatorStake : RECOMMENDED_MIN_FEE_VALUE;
+        const cancellationBoxValue = mode.token === ERG_BASE_TOKEN ? newResolverStake : RECOMMENDED_MIN_FEE_VALUE;
         const penaltyValue = mode.token === ERG_BASE_TOKEN ? stakePortionToClaim : RECOMMENDED_MIN_FEE_VALUE;
 
         const cancellationAssets = [
             { tokenId: gameNftId, amount: 1n },
-            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: newCreatorStake }] : [])
+            ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: newResolverStake }] : [])
         ];
 
         const penaltyAssets = mode.token !== ERG_BASE_TOKEN
@@ -294,7 +294,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
                         R4: SInt(2).toHex(),
                         R5: SLong(newUnlockHeight).toHex(),
                         R6: SColl(SByte, secret).toHex(),
-                        R7: SLong(newCreatorStake).toHex(),
+                        R7: SLong(newResolverStake).toHex(),
                         R8: SLong(BigInt(deadlineBlock)).toHex(),
                         R9: gameBox.additionalRegisters.R9,
                     }),

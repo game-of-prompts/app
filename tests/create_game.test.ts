@@ -76,7 +76,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
     // Parameters for the game to be created.
     const deadlineBlock = mockChain.height + 200;
-    const creatorStake = 2_000_000_000n; // 2 ERG
+    const resolverStake = 2_000_000_000n; // 2 ERG
     const participationFee = 1_000_000n; // 0.001 ERG
     const commissionPercentage = 10;
     const gameDetailsJson = JSON.stringify({ title: "New Test Game", desc: "A test." });
@@ -119,7 +119,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
     const r7Hex = SColl(SColl(SByte), []).toHex();
     const r8Hex = SColl(SLong, [
       BigInt(deadlineBlock),
-      creatorStake,
+      resolverStake,
       participationFee,
       50000n,
       100000n
@@ -148,7 +148,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
     let gameBoxValue: bigint;
     if (mode.token === ERG_BASE_TOKEN) {
-      gameBoxValue = creatorStake;
+      gameBoxValue = resolverStake;
     } else {
       gameBoxValue = maxBigInt(SAFE_MIN_BOX_VALUE, minRequiredValue);
     }
@@ -165,7 +165,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
     // Add token stake if in token mode (NFT is always at index 0, token at index 1)
     if (mode.token !== ERG_BASE_TOKEN) {
-      gameBoxOutput.addTokens([{ tokenId: mode.token, amount: creatorStake }]);
+      gameBoxOutput.addTokens([{ tokenId: mode.token, amount: resolverStake }]);
     }
 
     // Set the additional registers with the game information,
@@ -183,7 +183,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
       // R7: Invited judges (empty in this test)
       R7: r7Hex,
 
-      // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+      // R8: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
       R8: r8Hex,
 
       // R9: Detalles del juego
@@ -224,7 +224,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
     // In token mode, verify the token stake is at index 1
     if (mode.token !== ERG_BASE_TOKEN) {
       expect(createdGameBox.assets[1].tokenId).to.equal(mode.token);
-      expect(createdGameBox.assets[1].amount).to.equal(creatorStake);
+      expect(createdGameBox.assets[1].amount).to.equal(resolverStake);
     }
 
     // Verify that each register contains the correct, serialized information.

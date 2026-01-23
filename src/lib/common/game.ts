@@ -73,10 +73,10 @@ export interface GameActive {
     ceremonyDeadline: number;
     judges: string[];
     deadlineBlock: number;
-    creatorStakeAmount: bigint;
+    resolverStakeAmount: bigint;
     participationFeeAmount: bigint;
     participationTokenId: string;
-    perJudgeComissionPercentage: bigint;
+    perJudgeCommissionPercentage: bigint;
     timeWeight: bigint;
     content: GameContent;
     value: bigint;
@@ -101,10 +101,10 @@ export interface GameResolution {
     winnerCandidateCommitment: string | null;
     judges: string[];
     deadlineBlock: number;
-    creatorStakeAmount: bigint;
+    resolverStakeAmount: bigint;
     participationFeeAmount: bigint;
     participationTokenId: string;
-    perJudgeComissionPercentage: bigint;
+    perJudgeCommissionPercentage: bigint;
     timeWeight: bigint;
     resolverPK_Hex: string | null;
     resolverScript_Hex: string
@@ -131,7 +131,7 @@ export interface GameCancellation {
     gameId: string;
     unlockHeight: number;
     revealedS_Hex: string;
-    currentStakeAmount: bigint;
+    resolverStakeAmount: bigint;
     content: GameContent;
     participationFeeAmount: bigint;
     participationTokenId: string;
@@ -167,8 +167,8 @@ export interface GameFinalized {
     seed: string;
     revealedS_Hex: string;
     winnerCandidateCommitment: string | null;
-    creatorStakeAmount: bigint;
-    perJudgeComissionPercentage: bigint;
+    resolverStakeAmount: bigint;
+    perJudgeCommissionPercentage: bigint;
     timeWeight: bigint;
     resolverPK_Hex: string | null;
     resolverScript_Hex: string;

@@ -68,7 +68,7 @@
     let deadlineUnit: "days" | "minutes" = "days";
     let deadlineBlock: number | undefined;
     let deadlineBlockDateText: string = "";
-    let creatorStakeAmount: number | undefined;
+    let resolverStakeAmount: number | undefined;
     let participationFeeAmount: number | undefined;
     let commissionPercentage: number | undefined;
     let perJudgeComissionPercentage: number | undefined;
@@ -538,11 +538,11 @@
     }
 
     $: judgesCount = judges.filter((e) => e.value && e.value.trim()).length;
-    $: creatorPct = asNumber(commissionPercentage);
+    $: resolverPct = asNumber(commissionPercentage);
     $: perJudgePct = asNumber(perJudgeComissionPercentage);
     $: judgesTotalPct = judgesCount * perJudgePct;
     const developersPct = 5;
-    $: totalAllocated = creatorPct + judgesTotalPct + developersPct;
+    $: totalAllocated = resolverPct + judgesTotalPct + developersPct;
     $: winnerPctRaw = 100 - totalAllocated;
     $: winnerPct = winnerPctRaw < 0 ? 0 : winnerPctRaw;
     $: overAllocated =
@@ -565,7 +565,7 @@
             !gameSecret.trim() ||
             !gameTitle.trim() ||
             !deadlineBlock ||
-            creatorStakeAmount === undefined ||
+            resolverStakeAmount === undefined ||
             participationFeeAmount === undefined ||
             commissionPercentage === undefined ||
             perJudgeComissionPercentage === undefined
@@ -639,7 +639,7 @@
                 gameServiceId: gameServiceId,
                 hashedSecret: hashedSecret,
                 deadlineBlock: deadlineBlock,
-                creatorStakeAmount: toTokenSmallestUnit(creatorStakeAmount),
+                resolverStakeAmount: toTokenSmallestUnit(resolverStakeAmount),
                 participationFeeAmount: toTokenSmallestUnit(
                     participationFeeAmount,
                 ),
@@ -650,7 +650,7 @@
                 commissionPercentage: commissionPercentage,
                 judges: judgesArray,
                 gameDetailsJson: gameDetails,
-                perJudgeComissionPercentage: perJudgeComissionPercentage,
+                perJudgeCommissionPercentage: perJudgeComissionPercentage,
                 timeWeight: calculateTimeWeight(),
             });
             transactionId = result;
@@ -789,7 +789,7 @@
                                 >
                                     <span>Stake:</span>
                                     <span class="font-mono"
-                                        >{creatorStakeAmount}
+                                        >{resolverStakeAmount}
                                         {participationTokenName}</span
                                     >
                                 </div>
@@ -805,7 +805,7 @@
                                 <div
                                     class="flex justify-between text-sm border-b border-border/50 pb-1"
                                 >
-                                    <span>Creator Comm.:</span>
+                                    <span>Resolver Comm.:</span>
                                     <span class="font-mono"
                                         >{commissionPercentage}%</span
                                     >
@@ -1220,15 +1220,15 @@
                             </div>
                             <div class="form-group lg:col-span-2">
                                 <div class="flex items-center gap-2 mb-1.5">
-                                    <Label for="creatorStakeAmount" class="mb-0"
-                                        >Creator Stake ({participationTokenName})</Label
+                                    <Label for="resolverStakeAmount" class="mb-0"
+                                        >Resolver Stake ({participationTokenName})</Label
                                     >
                                     <div class="group relative">
                                         <button
                                             type="button"
                                             on:click={() =>
                                                 openDidacticModal(
-                                                    "Creator Stake",
+                                                    "Resolver Stake",
                                                     "Amount you put at risk to guarantee the game.",
                                                 )}
                                         >
@@ -1239,8 +1239,8 @@
                                     </div>
                                 </div>
                                 <Input
-                                    id="creatorStakeAmount"
-                                    bind:value={creatorStakeAmount}
+                                    id="resolverStakeAmount"
+                                    bind:value={resolverStakeAmount}
                                     type="number"
                                     min="0"
                                     step="0.001"
@@ -1286,15 +1286,24 @@
                                     <Label
                                         for="commissionPercentage"
                                         class="mb-0"
-                                        >Creator Commission (%)</Label
+                                        >Resolver Commission (%)</Label
                                     >
                                     <div class="group relative">
                                         <button
                                             type="button"
                                             on:click={() =>
                                                 openDidacticModal(
-                                                    "Creator Commission",
-                                                    "Percentage of the prize pool you keep.",
+                                                    "Resolver Commission",
+                                                    /**
+                                                     * Percentage of the prize pool paid to whoever resolves the game.
+                                                     * 
+                                                     * You (the creator) set this rate, but if someone else resolves the game first,
+                                                     * they get this commission instead of you.
+                                                     * 
+                                                     * @type {number}
+                                                     * @description Commission for the resolver (you or someone else).
+                                                     */
+                                                    "Commission paid to whoever resolves the game (you or someone else).",
                                                 )}
                                         >
                                             <Info
@@ -1486,8 +1495,8 @@
                                     ></div>
                                     <div
                                         class="bar-segment creator"
-                                        style:width="{clampPct(creatorPct)}%"
-                                        title="Creator: {creatorPct.toFixed(
+                                        style:width="{clampPct(resolverPct)}%"
+                                        title="Resolver: {resolverPct.toFixed(
                                             2,
                                         )}%"
                                     ></div>
@@ -1520,7 +1529,7 @@
                                     <div class="legend-item">
                                         <div class="legend-color creator"></div>
                                         <span
-                                            >Creator ({creatorPct.toFixed(
+                                            >Resolver ({resolverPct.toFixed(
                                                 2,
                                             )}%)</span
                                         >
@@ -1699,7 +1708,7 @@
                                 !gameSecret.trim() ||
                                 !gameTitle.trim() ||
                                 !deadlineBlock ||
-                                creatorStakeAmount === undefined ||
+                                resolverStakeAmount === undefined ||
                                 participationFeeAmount === undefined ||
                                 commissionPercentage === undefined ||
                                 overAllocated > 0 ||

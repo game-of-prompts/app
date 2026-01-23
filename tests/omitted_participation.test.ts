@@ -135,13 +135,13 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                 // participatingJudges (en este caso vacío)
                 R7: SColl(SColl(SByte), []).toHex(),
 
-                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline, timeWeight]
+                // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline, timeWeight]
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -195,16 +195,16 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         mockChain.newBlocks(newBlocks);
     };
 
-    it("Must maintain the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
+    it("Must maintain the resolver during RESOLVER_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1);
 
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            updatedNumericalParams[4],         // creatorComissionPercentage
+            updatedNumericalParams[4],         // resolverCommissionPercentage
             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
         ];
@@ -243,7 +243,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         expect(newGameBox.additionalRegisters.R8).to.equal(SColl(SLong, newNumericalParams).toHex());
     });
 
-    it("Fails if not maintains the resolver during CREATOR_OMISSION_NO_PENALTY_PERIOD blocks", () => {
+    it("Fails if not maintains the resolver during RESOLVER_OMISSION_NO_PENALTY_PERIOD blocks", () => {
         setupScenario(1000n, 1200n, 600_000, [], 1, false);
 
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
@@ -263,10 +263,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         R7: SColl(SColl(SByte), []).toHex(),
                         R8: SColl(SLong, [
                             BigInt(updatedNumericalParams[0]), // deadline
-                            updatedNumericalParams[1],         // creatorStake
+                            updatedNumericalParams[1],         // resolverStake
                             updatedNumericalParams[2],         // participationFee
                             updatedNumericalParams[3],         // perJudgeCommissionPercent
-                            updatedNumericalParams[4],         // creatorComissionPercentage
+                            updatedNumericalParams[4],         // resolverCommissionPercentage
                             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
                         ]).toHex(),
@@ -292,10 +292,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            updatedNumericalParams[4],         // creatorComissionPercentage
+            updatedNumericalParams[4],         // resolverCommissionPercentage
             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
         ];
@@ -341,10 +341,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            200000n,                        // creatorComissionPercentage (nuevo)
+            200000n,                        // resolverCommissionPercentage (nuevo)
             BigInt(updatedNumericalParams[4])  // resolutionDeadline
         ];
 
@@ -385,10 +385,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 1n, BigInt(resolutionDeadline)];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            200000n,                        // creatorComissionPercentage (nuevo)
+            200000n,                        // resolverCommissionPercentage (nuevo)
             BigInt(updatedNumericalParams[4])  // resolutionDeadline
         ];
 
@@ -428,10 +428,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            updatedNumericalParams[4],         // creatorComissionPercentage
+            updatedNumericalParams[4],         // resolverCommissionPercentage
             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
         ];
@@ -481,7 +481,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -531,7 +531,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -576,7 +576,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -629,7 +629,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -728,7 +728,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -788,7 +788,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -852,7 +852,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -896,7 +896,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -936,7 +936,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
             2_000_000_000n,
             1_000_000n,
             10000n,  // perJudgeCommissionPercent
-            200000n, // creatorComissionPercentage
+            200000n, // resolverCommissionPercentage
             BigInt(resolutionDeadline),
             0n  // timeWeight
         ];
@@ -975,10 +975,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            updatedNumericalParams[4],         // creatorComissionPercentage
+            updatedNumericalParams[4],         // resolverCommissionPercentage
             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
         ];
@@ -1024,10 +1024,10 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         const updatedNumericalParams: bigint[] = [game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(resolutionDeadline), 0n];
         const newNumericalParams: bigint[] = [
             BigInt(updatedNumericalParams[0]), // deadline
-            updatedNumericalParams[1],         // creatorStake
+            updatedNumericalParams[1],         // resolverStake
             updatedNumericalParams[2],         // participationFee
             updatedNumericalParams[3],         // perJudgeCommissionPercent
-            updatedNumericalParams[4],         // creatorComissionPercentage
+            updatedNumericalParams[4],         // resolverCommissionPercentage
             BigInt(updatedNumericalParams[5]), // resolutionDeadline
             0n                              // timeWeight
         ];

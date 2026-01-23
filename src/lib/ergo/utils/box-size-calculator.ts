@@ -50,13 +50,13 @@ export interface GameBoxInputs {
     judgesColl: number[][];
     /** Game deadline block */
     deadlineBlock: number;
-    /** Creator stake amount */
-    creatorStakeAmount: bigint;
+    /** Resolver stake amount */
+    resolverStakeAmount: bigint;
     /** Participation fee amount */
     participationFeeAmount: bigint;
     /** Per judge commission percentage */
     perJudgeCommissionPercentage: number;
-    /** Commission percentage for creator */
+    /** Commission percentage for resolver */
     commissionPercentage: number;
     /** Game details JSON bytes */
     gameDetailsBytes: Uint8Array;
@@ -95,7 +95,7 @@ export function estimateTotalBoxSizeFromInputs(
         hashedSecretBytes,
         judgesColl,
         deadlineBlock,
-        creatorStakeAmount,
+        resolverStakeAmount,
         participationFeeAmount,
         perJudgeCommissionPercentage,
         commissionPercentage,
@@ -116,7 +116,7 @@ export function estimateTotalBoxSizeFromInputs(
     const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
     const r8Hex = SColl(SLong, [
         BigInt(deadlineBlock),
-        creatorStakeAmount,
+        resolverStakeAmount,
         participationFeeAmount,
         BigInt(perJudgeCommissionPercentage),
         BigInt(commissionPercentage)
@@ -137,7 +137,7 @@ export function estimateTotalBoxSizeFromInputs(
     if (isTokenGame) {
         assets.push({
             tokenId: "00".repeat(32),
-            amount: creatorStakeAmount
+            amount: resolverStakeAmount
         });
     }
     // Minted token (NFT)
@@ -186,10 +186,10 @@ export function estimateTotalBoxSizeFromInputs(
         const resR7 = r7Hex;
 
         // Resolution R8: Config (6 elements in resolution vs 5 in active)
-        // [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline]
+        // [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
         const resR8 = SColl(SLong, [
             BigInt(deadlineBlock),
-            creatorStakeAmount,
+            resolverStakeAmount,
             participationFeeAmount,
             BigInt(perJudgeCommissionPercentage),
             BigInt(commissionPercentage),
@@ -241,7 +241,7 @@ export function estimateTotalBoxSizeFromInputs(
         const cancR6 = SColl(SByte, dummyRevealedSecret).toHex();
 
         // Cancelled R7: SLong(remainingStake) - remaining stake amount
-        const cancR7 = SLong(creatorStakeAmount).toHex();
+        const cancR7 = SLong(resolverStakeAmount).toHex();
 
         // Cancelled R8: SLong(deadlineBlock) - original deadline
         const cancR8 = SLong(BigInt(deadlineBlock)).toHex();
@@ -315,7 +315,7 @@ export function estimateTotalBoxSize(
         hashedSecretBytes: dummyHash,
         judgesColl: judgesColl,
         deadlineBlock: 1100000,
-        creatorStakeAmount: BigInt(1000000),
+        resolverStakeAmount: BigInt(1000000),
         participationFeeAmount: BigInt(100000),
         perJudgeCommissionPercentage: 5,
         commissionPercentage: 10,

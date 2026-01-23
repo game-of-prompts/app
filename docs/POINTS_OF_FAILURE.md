@@ -20,6 +20,6 @@ Estos puntos no bloquean fondos, pero otorgan un poder significativo al creador,
 
 Estos son problemas más sutiles relacionados con los cálculos y las tarifas.
 
-1.  **Reclamación de Penalización "Atascada":** En la `Acción 2`, la porción de la fianza que se puede reclamar se calcula con división entera (`creatorStake / STAKE_DENOMINATOR`). Si la fianza restante (`creatorStake`) cae por debajo del denominador (`5L`), la `stakePortionToClaim` **será `0`**. En ese punto, nadie tendrá incentivo para ejecutar la `Acción 2`, ya que gastarían una tarifa de transacción para no obtener ninguna recompensa. Esto puede dejar una pequeña cantidad "atascada" en la fianza del creador.
+1.  **Reclamación de Penalización "Atascada":** En la `Acción 2`, la porción de la fianza que se puede reclamar se calcula con división entera (`resolverStake / STAKE_DENOMINATOR`). Si la fianza restante (`resolverStake`) cae por debajo del denominador (`5L`), la `stakePortionToClaim` **será `0`**. En ese punto, nadie tendrá incentivo para ejecutar la `Acción 2`, ya que gastarían una tarifa de transacción para no obtener ninguna recompensa. Esto puede dejar una pequeña cantidad "atascada" en la fianza del creador.
 
 2.  **Comisión Cero:** En la `Acción 1`, la comisión del creador (`finalTotalPrizePool * commissionPercentage / 100`) también usa división entera. Si el pozo de premios es pequeño, es posible que la comisión calculada sea `0`, lo cual podría no ser el comportamiento esperado por el creador.

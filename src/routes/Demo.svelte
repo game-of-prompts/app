@@ -54,7 +54,7 @@
         ceremonyDeadline: 1000,
         judges: ["judge1_token", "judge2_token"],
         deadlineBlock: 1200,
-        creatorStakeAmount: 1000000000n,
+        resolverStakeAmount: 1000000000n,
         participationFeeAmount: 100000000n,
         participationTokenId: "",
         perJudgeComissionPercentage: 1n,
@@ -66,6 +66,7 @@
             serviceId: "mock_service_id",
             imageURL: "https://picsum.photos/seed/gop-demo/800/400",
             indetermismIndex: 1,
+            soundtrackURL: "",
         },
         value: 2000000000n,
         reputationOpinions: [],
@@ -304,7 +305,7 @@
             g.status === "Resolution" ||
             g.status === "Finalized"
         ) {
-            return g.creatorStakeAmount;
+            return g.resolverStakeAmount;
         }
         return 0n;
     }
@@ -314,7 +315,7 @@
     }
 
     // Prize Distribution Logic (Simplified for Demo)
-    $: creatorPct =
+    $: resolverPct =
         game.status === "Active"
             ? (game as GameActive).commissionPercentage
             : (game as any).resolverCommission || 5;
@@ -323,7 +324,7 @@
     $: developersPct = game.constants.DEV_COMMISSION_PERCENTAGE;
     $: winnerPct = Math.max(
         0,
-        100 - (creatorPct + judgesTotalPct + developersPct),
+        100 - (resolverPct + judgesTotalPct + developersPct),
     );
 
     function isInvalidParticipation(p: AnyParticipation | undefined) {
@@ -472,7 +473,7 @@
                                 the resolution phase.
                             </p>
                             <p>
-                                The <strong>Creator Stake</strong> ensures the creator
+                                The <strong>Resolver Stake</strong> ensures the creator
                                 will eventually reveal the secret to resolve the
                                 game fairly.
                             </p>
@@ -503,7 +504,7 @@
                             <p>
                                 If a judge finds the result is fake, they issue
                                 an <strong>Invalidation</strong>. If the winner
-                                is invalidated, the creator's stake is slashed!
+                                is invalidated, the resolver's stake is slashed!
                             </p>
                             <div
                                 class="mt-4 p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg border border-indigo-200 dark:border-indigo-800"
@@ -514,7 +515,7 @@
                                     Game Theory Tip:
                                 </p>
                                 <p class="text-xs italic">
-                                    The Creator is incentivized to pick the real
+                                    The resolver is incentivized to pick the real
                                     winner because if they pick a fake one, they
                                     lose their stake. Judges are incentivized to
                                     catch cheaters to earn a portion of the
@@ -700,7 +701,7 @@
                         ></div>
                         <div
                             class="bg-blue-500 h-full"
-                            style:width="{clampPct(creatorPct)}%"
+                            style:width="{clampPct(resolverPct)}%"
                             title="Creator"
                         ></div>
                         <div
@@ -723,7 +724,7 @@
                         </div>
                         <div class="flex items-center gap-1">
                             <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            Creator ({creatorPct.toFixed(2)}%)
+                            Creator ({resolverPct.toFixed(2)}%)
                         </div>
                         <div class="flex items-center gap-1">
                             <div

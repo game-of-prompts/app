@@ -44,12 +44,12 @@ export async function to_end_game(
     const r7Hex = SColl(SColl(SByte), judgesBytes).toHex();
 
     // R8: Numerical Parameters
-    // [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline, timeWeight]
+    // [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
     const numericalParams = [
         BigInt(game.deadlineBlock),
-        game.creatorStakeAmount,
+        game.resolverStakeAmount,
         game.participationFeeAmount,
-        game.perJudgeComissionPercentage,
+        game.perJudgeCommissionPercentage,
         BigInt(game.resolverCommission),
         BigInt(game.resolutionDeadline),
         BigInt(game.timeWeight)

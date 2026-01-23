@@ -31,7 +31,7 @@
   // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, timeWeight].
+  // R8: Coll[Long]         - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, timeWeight].
   // R9: Coll[Coll[Byte]]   - gameDetailsJsonHex, ParticipationTokenID
 
 
@@ -54,13 +54,13 @@
   // R7: Jueces invitados
   val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get
 
-  // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+  // R8: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
   val numericalParams = SELF.R8[Coll[Long]].get
   val deadline = numericalParams(0)
-  val creatorStake = numericalParams(1)
+  val resolverStake = numericalParams(1)
   val participationFee = numericalParams(2)
-  val perJudgeComissionPercentage = numericalParams(3)
-  val creatorComissionPercentage = numericalParams(4)
+  val perJudgeCommissionPercentage = numericalParams(3)
+  val resolverCommissionPercentage = numericalParams(4)
   val timeWeight = numericalParams(5)
 
   // R9: [gameDetailsJsonHex, ParticipationTokenID]
@@ -166,16 +166,16 @@
           }
 
           val resolutionBoxIsValid = {
-              box_value(resolutionBox) >= creatorStake &&
+              box_value(resolutionBox) >= resolverStake &&
               resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
               resolutionBox.R5[Coll[Byte]].get == gameSeed &&
               resolutionBox.R7[Coll[Coll[Byte]]].get == invitedJudges &&
               resolutionBox.R8[Coll[Long]].get(0) == deadline &&
-              resolutionBox.R8[Coll[Long]].get(1) == creatorStake &&
+              resolutionBox.R8[Coll[Long]].get(1) == resolverStake &&
               resolutionBox.R8[Coll[Long]].get(2) == participationFee &&
-              resolutionBox.R8[Coll[Long]].get(3) == perJudgeComissionPercentage &&
-              resolutionBox.R8[Coll[Long]].get(4) >= creatorComissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(4) >= resolverCommissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId &&
@@ -199,8 +199,8 @@
       val claimerOutput = OUTPUTS(1)
 
       // Calcular los valores iniciales.
-      val initialStakePortionToClaim = creatorStake / STAKE_DENOMINATOR
-      val remainingStake = creatorStake - initialStakePortionToClaim
+      val initialStakePortionToClaim = resolverStake / STAKE_DENOMINATOR
+      val remainingStake = resolverStake - initialStakePortionToClaim
 
       // --- Validar la caja de cancelación (OUTPUTS(0)) ---
       val cancellationBoxIsValid = {

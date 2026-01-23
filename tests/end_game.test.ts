@@ -54,7 +54,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
   // --- Constantes del Juego para la Prueba ---
   const deadline = 800_050;
   const resolutionDeadline = mockChain.height + 100;
-  const creatorStake = 2_000_000n;
+  const resolverStake = 2_000_000n;
   const participationFee = 100_000_000n;
   const resolverCommissionPercent = 100000;
   const seed = "a3f9b7e12c9d55ab8068e3ff22b7a19c34d8f1cbeaa1e9c0138b82f00d5ea712";
@@ -127,7 +127,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     // Asignar fondos a las partes para crear cajas y pagar tasas
     if (mode.token !== ERG_BASE_TOKEN) {
       creator.addBalance({
-        tokens: [{ tokenId: mode.token, amount: creatorStake * 2n }],
+        tokens: [{ tokenId: mode.token, amount: resolverStake * 2n }],
         nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
       });
       winner.addBalance({
@@ -195,10 +195,10 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
@@ -219,10 +219,10 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
         R8: SColl(SLong, [
           BigInt(deadline),
-          creatorStake,
+          resolverStake,
           participationFee,
-          0n,                                       // perJudgeComissionPercentage
-          BigInt(resolverCommissionPercent),        // creatorComissionPercentage
+          0n,                                       // perJudgeCommissionPercentage
+          BigInt(resolverCommissionPercent),        // resolverCommissionPercentage
           BigInt(resolutionDeadline),
           1000n                                     // timeWeight
         ]).toHex(),
@@ -275,7 +275,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -419,9 +419,9 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
@@ -442,10 +442,10 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
         R8: SColl(SLong, [
           BigInt(deadline),
-          creatorStake,
+          resolverStake,
           participationFee,
-          0n,        // perJudgeComissionPercentage
-          BigInt(resolverCommissionPercent), // creatorComissionPercentage
+          0n,        // perJudgeCommissionPercentage
+          BigInt(resolverCommissionPercent), // resolverCommissionPercentage
           BigInt(resolutionDeadline),
           1000n                                     // timeWeight
         ]).toHex(),
@@ -493,7 +493,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -606,9 +606,9 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
@@ -629,10 +629,10 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
         R8: SColl(SLong, [
           BigInt(deadline),
-          creatorStake,
+          resolverStake,
           participationFee,
-          0n,        // perJudgeComissionPercentage
-          BigInt(resolverCommissionPercent), // creatorComissionPercentage
+          0n,        // perJudgeCommissionPercentage
+          BigInt(resolverCommissionPercent), // resolverCommissionPercentage
           BigInt(resolutionDeadline),
           1000n                                     // timeWeight
         ]).toHex(),
@@ -683,7 +683,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     }
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -797,9 +797,9 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
@@ -822,10 +822,10 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         // numericalParameters:
         R8: SColl(SLong, [
           BigInt(deadline),
-          creatorStake,
+          resolverStake,
           participationFee,
-          0n,        // perJudgeComissionPercentage
-          BigInt(resolverCommissionPercent),        // creatorComissionPercentage
+          0n,        // perJudgeCommissionPercentage
+          BigInt(resolverCommissionPercent),        // resolverCommissionPercentage
           BigInt(resolutionDeadline),
           1000n                                     // timeWeight
         ]).toHex(),
@@ -872,7 +872,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -962,7 +962,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -1074,7 +1074,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePoolWithoutBatch - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -1170,11 +1170,11 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const assets = mode.token === ERG_BASE_TOKEN
       ? []
-      : [{ tokenId: mode.token, amount: creatorStake }];
+      : [{ tokenId: mode.token, amount: resolverStake }];
 
     gameResolutionContract.addUTxOs({
       creationHeight: mockChain.height,
-      value: creatorStake,
+      value: resolverStake,
       ergoTree: gameResolutionErgoTree.toHex(),
       assets: [{ tokenId: gameNftId, amount: 1n }, ...assets],
       additionalRegisters: {
@@ -1192,13 +1192,13 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         // participatingJudges (lista de tokens de reputación de los jueces)
         R7: SColl(SColl(SByte), judgesTokenIds).toHex(),
 
-        // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
         R8: SColl(SLong, [
           BigInt(deadline),              // deadline
-          creatorStake,                  // creator stake
+          resolverStake,                  // creator stake
           participationFee,              // participation fee
           perJudgeCommissionPercent,     // per-judge commission
-          BigInt(resolverCommissionPercent),                            // creatorComissionPercentage
+          BigInt(resolverCommissionPercent),                            // resolverCommissionPercentage
           BigInt(resolutionDeadline),    // resolution deadline
           1000n                           // timeWeight
         ]).toHex(),
@@ -1253,7 +1253,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     // Additional winner/resolver dust handling
     const winnerGetsBasePrize = winnerBasePrize >= dustThreshold;
     const intermediateWinnerPayout = winnerGetsBasePrize ? winnerBasePrize : 0n;
-    const intermediateResolverPayout = winnerGetsBasePrize ? creatorStake + resolverCommission : creatorStake;
+    const intermediateResolverPayout = winnerGetsBasePrize ? resolverStake + resolverCommission : resolverStake;
 
     // Resolver forfeits
     const resolverForfeits = (intermediateResolverPayout < dustThreshold && intermediateResolverPayout > 0n) ? intermediateResolverPayout : 0n;
@@ -1403,7 +1403,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = prizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
@@ -1495,7 +1495,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const winnerBasePrize = partialPrizePool - resolverCommission - devCommission;
 
     const finalWinnerPrize = winnerBasePrize;
-    const finalResolverPayout = creatorStake + resolverCommission;
+    const finalResolverPayout = resolverStake + resolverCommission;
     const finalDevPayout = devCommission;
 
     const winnerAssets = [

@@ -35,7 +35,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
   let gameActiveBox: Box;
   let participationBox: Box;
 
-  const creatorStake = 1_000_000_000n;
+  const resolverStake = 1_000_000_000n;
   const participationFee = 1_000_000_000n;
   const deadlineBlock = 800_200;
 
@@ -61,10 +61,10 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
     gameActiveContract = mockChain.addParty(gameActiveErgoTree.toHex(), "GameActive");
     participationContract = mockChain.addParty(participationErgoTree.toHex(), "Participation");
 
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     gameActiveContract.addUTxOs({
@@ -88,10 +88,10 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
         // R7: Invited judges (empty in this test)
         R7: SColl(SColl(SByte), []).toHex(),
 
-        // R8: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+        // R8: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
         R8: SColl(SLong, [
           BigInt(deadlineBlock),
-          creatorStake,
+          resolverStake,
           participationFee,
           500n,  // 5.00% comisión por juez
           1000n  // 10.00% comisión del creador,

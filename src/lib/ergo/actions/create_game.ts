@@ -33,24 +33,24 @@ function randomSeed(): string {
  * @param gameServiceId - Service ID
  * @param hashedSecret - The Blake2b256 hash of the secret 'S'.
  * @param deadlineBlock - The block height at which the game ends.
- * @param creatorStakeAmount - The amount of ERG the creator stakes.
+ * @param resolverStakeAmount - The amount of ERG the resolver stakes.
  * @param participationFeeAmount - The fee for players to participate.
  * @param commissionPercentage - The commission percentage for the creator
  * @param judges - An array of reputation token IDs for invited judges.
  * @param gameDetailsJson - A JSON string with game details.
- * @param perJudgeComissionPercentage - The commission percentage for each judge.
+ * @param perJudgeCommissionPercentage - The commission percentage for each judge.
  * @returns The ID of the submitted transaction.
  */
 export async function create_game(
     gameServiceId: string,
     hashedSecret: string,
     deadlineBlock: number,
-    creatorStakeAmount: bigint,
+    resolverStakeAmount: bigint,
     participationFeeAmount: bigint,
     commissionPercentage: number,
     judges: string[],
     gameDetailsJson: string,
-    perJudgeComissionPercentage: number,
+    perJudgeCommissionPercentage: number,
     participationTokenId: string,
     timeWeight: bigint
 ): Promise<string[] | null> {
@@ -71,7 +71,7 @@ export async function create_game(
     console.log("Attempting to create a game:", {
         hashedSecret: hashedSecret.substring(0, 10) + "...",
         deadlineBlock,
-        creatorStakeAmount: creatorStakeAmount.toString(),
+        resolverStakeAmount: resolverStakeAmount.toString(),
         judges,
         gameDetailsJsonBrief: gameDetailsJson.substring(0, 100) + "...",
         seedHex: seedHex.substring(0, 10) + "...",
@@ -132,9 +132,9 @@ export async function create_game(
         hashedSecretBytes: hashedSecretBytes,
         judgesColl: judgesColl,
         deadlineBlock: deadlineBlock,
-        creatorStakeAmount: creatorStakeAmount,
+        resolverStakeAmount: resolverStakeAmount,
         participationFeeAmount: participationFeeAmount,
-        perJudgeCommissionPercentage: Math.round(perJudgeComissionPercentage * 10000),
+        perJudgeCommissionPercentage: Math.round(perJudgeCommissionPercentage * 10000),
         commissionPercentage: Math.round(commissionPercentage * 10000),
         gameDetailsBytes: gameDetailsBytes,
         participationTokenIdBytes: participationTokenIdBytes
@@ -169,9 +169,9 @@ export async function create_game(
     const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
     const r8Hex = SColl(SLong, [
         BigInt(deadlineBlock),
-        creatorStakeAmount,
+        resolverStakeAmount,
         participationFeeAmount,
-        BigInt(Math.round(perJudgeComissionPercentage * 10000)),
+        BigInt(Math.round(perJudgeCommissionPercentage * 10000)),
         BigInt(Math.round(commissionPercentage * 10000)),
         timeWeight
     ]).toHex();
@@ -190,7 +190,7 @@ export async function create_game(
 
     const gameTokens = [{
         tokenId: participationTokenId,
-        amount: creatorStakeAmount
+        amount: resolverStakeAmount
     }];
 
     // Use the maximum size to determine the safe minimum value

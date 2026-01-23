@@ -35,12 +35,12 @@ interface CreateGoPGamePlatformParams {
     gameServiceId: string;
     hashedSecret: string; // Hex string of blake2b256(S)
     deadlineBlock: number;
-    creatorStakeAmount: bigint | BigInt;
+    resolverStakeAmount: bigint | BigInt;
     participationFeeAmount: bigint | BigInt;
     commissionPercentage: number;
     judges: string[];
     gameDetailsJson: string; // JSON string with title, description, serviceId, etc.
-    perJudgeComissionPercentage: number;
+    perJudgeCommissionPercentage: number;
     participationTokenId?: string;
     timeWeight: bigint;
 }
@@ -125,12 +125,12 @@ export class ErgoPlatform implements Platform {
                 params.gameServiceId,
                 params.hashedSecret,
                 params.deadlineBlock,
-                params.creatorStakeAmount as bigint,
+                params.resolverStakeAmount as bigint,
                 params.participationFeeAmount as bigint,
                 params.commissionPercentage,
                 params.judges,
                 params.gameDetailsJson,
-                params.perJudgeComissionPercentage,
+                params.perJudgeCommissionPercentage,
                 params.participationTokenId || "",
                 params.timeWeight
             );

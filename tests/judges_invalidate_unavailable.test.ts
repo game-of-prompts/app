@@ -121,7 +121,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -140,13 +140,13 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                 // participatingJudges
                 R7: SColl(SColl(SByte), judges).toHex(),
 
-                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -239,10 +239,10 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
             BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // creatorStake
+            numericalParams[1],         // resolverStake
             numericalParams[2],         // participationFee
             numericalParams[3],         // perJudgeCommissionPercent unchanged
-            numericalParams[4],         // creatorComissionPercentage unchanged
+            numericalParams[4],         // resolverCommissionPercentage unchanged
             extendedDeadline, // resolutionDeadline
             0n                // timeWeight
         ];
@@ -269,7 +269,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                         // participatingJudges
                         R7: SColl(SColl(SByte), judges).toHex(),
 
-                        // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                         R8: SColl(SLong, newNumericalParams).toHex(),
 
                         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -301,7 +301,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         expect(newGameBox.assets[0].tokenId).to.equal(gameNftId);
         expect(newGameBox.assets[0].amount).to.equal(1n);
         expect(newGameBox.assets[1].tokenId).to.equal(USD_BASE_TOKEN);
-        expect(newGameBox.assets[1].amount).to.equal(2_000_000_000n + 1_000_000n); // creatorStake + participationFee
+        expect(newGameBox.assets[1].amount).to.equal(2_000_000_000n + 1_000_000n); // resolverStake + participationFee
 
         // 3. Estado del juego permanece en resolución
         expect(newGameBox.additionalRegisters.R4).to.equal(SInt(1).toHex());

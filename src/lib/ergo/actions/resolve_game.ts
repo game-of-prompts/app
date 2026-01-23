@@ -163,9 +163,9 @@ export async function resolve_game(
 
     const newNumericalParams = [
         BigInt(game.deadlineBlock),
-        game.creatorStakeAmount,
+        game.resolverStakeAmount,
         game.participationFeeAmount,
-        game.perJudgeComissionPercentage,
+        game.perJudgeCommissionPercentage,
         BigInt(game.commissionPercentage),
         resolutionDeadline,
         game.timeWeight

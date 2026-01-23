@@ -123,7 +123,7 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+END_GAME_SCRIPT_HASH\+`/g, endGameHash)
         .replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString())
         .replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, constants.END_GAME_AUTH_GRACE_PERIOD.toString())
-        .replace(/`\+CREATOR_OMISSION_NO_PENALTY_PERIOD\+`/g, constants.CREATOR_OMISSION_NO_PENALTY_PERIOD.toString())
+        .replace(/`\+RESOLVER_OMISSION_NO_PENALTY_PERIOD\+`/g, constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD.toString())
         .replace(/`\+DEV_SCRIPT\+`/g, constants.DEV_SCRIPT)
         .replace(/`\+DEV_COMMISSION_PERCENTAGE\+`/g, (constants.DEV_COMMISSION_PERCENTAGE / 100 * constants.COMMISSION_DENOMINATOR).toString())
         .replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash)

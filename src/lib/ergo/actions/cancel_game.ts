@@ -54,9 +54,9 @@ export async function cancel_game(
     }
 
     // --- 2. Calcular valores para la nueva caja de cancelación y la penalización ---
-    let stakePortionToClaim = game.creatorStakeAmount / STAKE_DENOMINATOR;
+    let stakePortionToClaim = game.resolverStakeAmount / STAKE_DENOMINATOR;
     const newValue = game.value - stakePortionToClaim;
-    let newCreatorStake = game.creatorStakeAmount - stakePortionToClaim;
+    let newResolverStake = game.resolverStakeAmount - stakePortionToClaim;
 
     let gameValue = game.participationTokenId == "" ? newValue : BigInt(game.box.value);
     const gameTokens = game.participationTokenId == "" ? [] : [{
@@ -74,7 +74,7 @@ export async function cancel_game(
         const amountAdded = SAFE_MIN_BOX_VALUE - newValue;
         
         stakePortionToClaim = maxBigInt(stakePortionToClaim - amountAdded, 0n);
-        newCreatorStake = newCreatorStake + amountAdded;
+        newResolverStake = newResolverStake + amountAdded;
     }
 
     // --- 3. Construir Salidas de la Transacción ---
@@ -97,7 +97,7 @@ export async function cancel_game(
         // R6: El secreto 'S' revelado
         R6: SColl(SByte, secretS_bytes).toHex(),
         // R7: El stake restante del creador
-        R7: SLong(newCreatorStake).toHex(),
+        R7: SLong(newResolverStake).toHex(),
         // R8: Deadline original
         R8: SLong(BigInt(game.deadlineBlock)).toHex(),
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]

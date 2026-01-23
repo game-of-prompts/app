@@ -17,8 +17,8 @@ const JUDGE_PERIOD_MARGIN = 10;
 
 /**
  * Allows a judge (or group of judges) to mark the current winner as unavailable.
- * This is similar to invalidation but does not penalize the creator.
- * The participation is invalidated but the creator's stake is not affected.
+ * This is similar to invalidation but does not penalize the resolver.
+ * The participation is invalidated but the resolver's stake is not affected.
  *
  * @param game The current GameResolution object.
  * @param invalidatedParticipation The participation box of the candidate to be marked as unavailable.
@@ -185,13 +185,13 @@ export async function judges_invalidate_unavailable(
             // --- R7: participatingJudges: Coll[Coll[Byte]] ---
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
-            // R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline, timeWeight]
+            // R8: numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
             R8: SColl(SLong, [
                 BigInt(game.deadlineBlock),
-                BigInt(game.creatorStakeAmount),
+                BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
-                BigInt(game.perJudgeComissionPercentage),
-                BigInt(game.creatorComissionPercentage),  // Creator commission is NOT penalized in unavailable case
+                BigInt(game.perJudgeCommissionPercentage),
+                BigInt(game.resolverCommission),  // Resolver commission is NOT penalized in unavailable case
                 BigInt(newDeadline),
                 BigInt(game.timeWeight)
             ]).toHex(),

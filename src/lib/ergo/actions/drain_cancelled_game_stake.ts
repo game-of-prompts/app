@@ -16,7 +16,7 @@ const COOLDOWN_IN_BLOCKS_MARGIN = 10;
 /**
  * Executes the drain action on a game box in the "Cancellation" state.
  * Anyone can call this function after the cooldown period has ended
- * to claim a portion of the creator's stake and recreate the box for the next cycle.
+ * to claim a portion of the resolver's stake and recreate the box for the next cycle.
  *
  * @param game The GameCancellation object to act upon.
  * @param claimerAddressString The address of the user executing the action, who will receive the stake portion.

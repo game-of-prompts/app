@@ -36,7 +36,7 @@ export async function include_omitted_participation(
         throw new Error("No se pueden incluir participaciones después de que finalice el período de los jueces.");
     }
 
-    const resolverErgoTree = (((game.resolutionDeadline - game.constants.JUDGE_PERIOD) + game.constants.CREATOR_OMISSION_NO_PENALTY_PERIOD) < currentHeight) ? prependHexPrefix(hexToBytes(newResolverPkHex)!) : hexToBytes(game.resolverScript_Hex)!;
+    const resolverErgoTree = (((game.resolutionDeadline - game.constants.JUDGE_PERIOD) + game.constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD) < currentHeight) ? prependHexPrefix(hexToBytes(newResolverPkHex)!) : hexToBytes(game.resolverScript_Hex)!;
 
     // --- 3. Construir las Salidas de la Transacción ---
 
@@ -61,12 +61,12 @@ export async function include_omitted_participation(
             // --- R7: participatingJudges: Coll[Coll[Byte]] ---
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
-            // --- R8: numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage, resolutionDeadline, timeWeight] ---
+            // --- R8: numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight] ---
             R8: SColl(SLong, [
                 BigInt(game.deadlineBlock),
-                BigInt(game.creatorStakeAmount),
+                BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
-                BigInt(game.perJudgeComissionPercentage),
+                BigInt(game.perJudgeCommissionPercentage),
                 BigInt(game.resolverCommission),
                 BigInt(game.resolutionDeadline),
                 BigInt(game.timeWeight)

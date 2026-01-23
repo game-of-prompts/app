@@ -47,11 +47,11 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   // --- Estado del Juego ---
   let secret: Uint8Array;
   let gameNftId: string;
-  const creator_commission_percentage = 10n;
+  const resolver_commission_percentage = 10n;
   const perJudgeCommission = 1n;
   const deadlineBlock = 800_200;
   const participationFee = 1_000_000n;
-  const creatorStake = 2_000_000_000n;
+  const resolverStake = 2_000_000_000n;
   const resolutionDeadline = BigInt(deadlineBlock + DefaultGameConstants.JUDGE_PERIOD + 10);  // Seems that the mockchain goes various blocks forward when executing the tx!
   let commitment1Hex: string;
   let gameBoxOutput: OutputBuilder;
@@ -73,7 +73,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     if (mode.token !== ERG_BASE_TOKEN) {
       creator.addBalance({
-        tokens: [{ tokenId: mode.token, amount: creatorStake * 2n }],
+        tokens: [{ tokenId: mode.token, amount: resolverStake * 2n }],
         nanoergs: RECOMMENDED_MIN_FEE_VALUE * 10n
       });
     } else {
@@ -92,10 +92,10 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const creatorPkBytes = creator.address.getPublicKeys()[0];
     gameNftId = "c94a63ec4e9ae8700c671a908bd2121d4c049cec75a40f1309e09ab59d0bbc71";
 
-    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     // INPUTS(0)
@@ -117,13 +117,13 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         // R7: Coll[Coll[Byte]] - invitedJudgesReputationProofs
         R7: SColl(SColl(SByte), []).toHex(),
 
-        // R8: Coll[Long] - numericalParameters: [deadline, creatorStake, participationFee, perJudgeComissionPercentage, creatorComissionPercentage]
+        // R8: Coll[Long] - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
         R8: SColl(SLong, [
           BigInt(deadlineBlock),
-          creatorStake,
+          resolverStake,
           participationFee,
           perJudgeCommission,
-          creator_commission_percentage
+          resolver_commission_percentage
         ]).toHex(),
 
         // R9: JSON Details
@@ -143,12 +143,12 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     winnerCandidateCommitment = commitment1Hex;
 
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
 
-    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     // OUTPUT(0)
@@ -334,12 +334,12 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const resolvedorPkBytes = creator.address.getPublicKeys()[0];
 
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
 
-    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     const tx = new TransactionBuilder(currentHeight)
@@ -387,15 +387,15 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   it("should successfully transition the game to the resolution phase without winner", () => {
     const currentHeight = mockChain.height;
 
-    const creator_commission_percentage = 10n;
+    const resolver_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
     const resolvedorPkBytes = creatorPkBytes;
 
-    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     const gameBoxOutputWithAnyWinner = new OutputBuilder(gameResolutionBoxValue, gameResolutionContract.address)
@@ -480,12 +480,12 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   it("should FAIL transition the game to the resolution phase if R9 is modified", () => {
     const currentHeight = mockChain.height;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), creatorStake, participationFee, perJudgeCommission, creator_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
 
-    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? creatorStake : RECOMMENDED_MIN_FEE_VALUE;
+    const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
       { tokenId: gameNftId, amount: 1n },
-      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorStake }] : [])
+      ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
     const tx = new TransactionBuilder(currentHeight)

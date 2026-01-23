@@ -125,7 +125,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -144,13 +144,13 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 // participatingJudges
                 R7: SColl(SColl(SByte), judges).toHex(),
 
-                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -243,10 +243,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
             BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // creatorStake
+            numericalParams[1],         // resolverStake
             numericalParams[2],         // participationFee
-            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
-            0n,                         // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + resolverCommissionPercentage
+            0n,                         // resolverCommissionPercentage
             extendedDeadline, // resolutionDeadline
             0n                // timeWeight
         ];
@@ -273,7 +273,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                         // participatingJudges
                         R7: SColl(SColl(SByte), judges).toHex(),
 
-                        // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                         R8: SColl(SLong, newNumericalParams).toHex(),
 
                         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -347,7 +347,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -366,13 +366,13 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 // participatingJudges
                 R7: SColl(SColl(SByte), judges).toHex(),
 
-                // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -461,10 +461,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
             BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // creatorStake
+            numericalParams[1],         // resolverStake
             numericalParams[2],         // participationFee
-            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
-            0n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + resolverCommissionPercentage
+            0n,                 // resolverCommissionPercentage
             extendedDeadline, // resolutionDeadline
             0n               // timeWeight
         ]
@@ -492,7 +492,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                             // participatingJudges
                             R7: SColl(SColl(SByte), judges).toHex(),
 
-                            // numericalParameters: [deadline, creatorStake, participationFee, perJudgeCommissionPercent, creatorComissionPercentage, resolutionDeadline]
+                            // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
                             R8: SColl(SLong, newNumericalParams).toHex(),
 
                             // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -570,7 +570,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -583,10 +583,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -691,10 +691,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
             BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // creatorStake
+            numericalParams[1],         // resolverStake
             numericalParams[2],         // participationFee
-            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
-            0n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + resolverCommissionPercentage
+            0n,                 // resolverCommissionPercentage
             extendedDeadline, // resolutionDeadline
             0n                // timeWeight
         ];
@@ -785,7 +785,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -798,10 +798,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -874,10 +874,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
             BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // creatorStake
+            numericalParams[1],         // resolverStake
             numericalParams[2],         // participationFee
-            numericalParams[3] + 10n,   // perJudgeCommissionPercent + creatorComissionPercentage
-            0n,                 // creatorComissionPercentage
+            numericalParams[3] + 10n,   // perJudgeCommissionPercent + resolverCommissionPercentage
+            0n,                 // resolverCommissionPercentage
             extendedDeadline, // resolutionDeadline
             0n                // timeWeight
         ];
@@ -983,10 +983,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1132,7 +1132,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1144,10 +1144,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1297,7 +1297,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1309,10 +1309,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1461,7 +1461,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1473,10 +1473,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1623,7 +1623,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1635,10 +1635,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1786,7 +1786,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1798,10 +1798,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
@@ -1948,7 +1948,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
                 { tokenId: gameNftId, amount: 1n },
-                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // creatorStake
+                { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
             additionalRegisters: {
@@ -1960,10 +1960,10 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
                 R7: SColl(SColl(SByte), judges).toHex(),
                 R8: SColl(SLong, [
                     BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // creatorStake
+                    numericalParams[1],         // resolverStake
                     numericalParams[2],         // participationFee
                     numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // creatorComissionPercentage
+                    numericalParams[4],         // resolverCommissionPercentage
                     BigInt(numericalParams[5]), // resolutionDeadline
                     numericalParams[6]          // timeWeight
                 ]).toHex(),
