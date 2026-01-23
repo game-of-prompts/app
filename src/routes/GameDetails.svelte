@@ -2580,6 +2580,83 @@
                                 </details>
                             </div>
                         {/if}
+
+                        {#if game.content.soundtrack && game.content.soundtrack.length === 64}
+                            <div
+                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
+                            >
+                                <details
+                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
+                                    'dark'
+                                        ? 'border-slate-700'
+                                        : 'border-gray-200'}"
+                                >
+                                    <summary
+                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <Music
+                                                class="w-5 h-5 text-green-500"
+                                            />
+                                            <span>Game Soundtrack Sources</span>
+                                        </div>
+                                        <span
+                                            class="transition group-open:rotate-180"
+                                        >
+                                            <ChevronDown class="w-5 h-5" />
+                                        </span>
+                                    </summary>
+
+                                    <div class="mt-4 space-y-4">
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            Community-verified download sources
+                                            for the game soundtrack audio file
+                                            (hash: <span
+                                                class="font-mono text-xs"
+                                                >{game.content.soundtrack.slice(
+                                                    0,
+                                                    16,
+                                                )}...</span
+                                            >)
+                                        </p>
+
+                                        {#if $reputation_proof}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                on:click={() =>
+                                                    openFileSourceModal(
+                                                        game.content.soundtrack,
+                                                        "soundtrack",
+                                                    )}
+                                                class="w-full"
+                                            >
+                                                Add Download Source
+                                            </Button>
+                                        {:else}
+                                            <p
+                                                class="text-xs text-muted-foreground italic"
+                                            >
+                                                Create a reputation profile to
+                                                add or manage download sources
+                                            </p>
+                                        {/if}
+
+                                        <FileCard
+                                            profile={$reputation_proof}
+                                            fileHash={game.content.soundtrack}
+                                            sources={soundtrackSources}
+                                            explorerUri={$explorer_uri}
+                                            source_explorer_url={$source_explorer_url}
+                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                        />
+                                    </div>
+                                </details>
+                            </div>
+                        {/if}
+
                     </div>
                 {/if}
             </section>
