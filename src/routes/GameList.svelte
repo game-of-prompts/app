@@ -1,7 +1,7 @@
 <script lang="ts">
     import GameCard from "./GameCard.svelte";
     import { type AnyGame as Game } from "$lib/common/game";
-    import { games, isLoadingGames } from "$lib/common/store";
+    import { games, isLoadingGames, muted } from "$lib/common/store";
     import * as Alert from "$lib/components/ui/alert";
     import { Loader2, Search } from "lucide-svelte";
     import { onMount, onDestroy, afterUpdate, tick } from "svelte";
@@ -32,6 +32,13 @@
 
     export let filterGame: ((item: Game) => Promise<boolean>) | null = null;
 
+    // Audio variables
+    let audioContext: AudioContext | null = null;
+    let soundBuffers: AudioBuffer[] = [];
+    let currentSoundIndex = 0;
+    let isInitialLoad = true;
+    let observer: IntersectionObserver | null = null;
+
     function getStatus(item: Game) {
         return (
             (item.status as string) ||
@@ -40,6 +47,49 @@
             (item.box?.status as string) ||
             "unknown"
         );
+    }
+
+    // Audio functions
+    function generateClickSound(frequency: number, duration: number): AudioBuffer | null {
+        if (!audioContext) return null;
+        const sampleRate = audioContext.sampleRate;
+        const length = Math.floor(sampleRate * duration / 1000);
+        const buffer = audioContext.createBuffer(1, length, sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
+            // Organic decay envelope
+            const envelope = Math.exp(-t * 15) * (1 - Math.exp(-t * 50)); // attack and decay
+            // Mix of sine wave and noise for organic feel
+            const sine = Math.sin(2 * Math.PI * frequency * t);
+            const noise = (Math.random() - 0.5) * 0.3;
+            data[i] = envelope * (sine + noise);
+        }
+        return buffer;
+    }
+
+    function playScrollSound() {
+        if (!audioContext || soundBuffers.length === 0 || get(muted)) return;
+        const source = audioContext.createBufferSource();
+        source.buffer = soundBuffers[currentSoundIndex];
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.08; // slightly higher volume for lower frequencies
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        source.start();
+        currentSoundIndex = (currentSoundIndex + 1) % soundBuffers.length;
+    }
+
+    function setupIntersectionObserver() {
+        if (observer) observer.disconnect();
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !isInitialLoad) {
+                    playScrollSound();
+                }
+            });
+        }, { threshold: 0.3 }); // 30% visible
+        cardElements.forEach(el => observer.observe(el));
     }
 
     async function applyFiltersAndSearch(sourceItems: Map<string, Game>) {
@@ -175,12 +225,29 @@
                 if (isLoadingApi) isLoadingApi = false;
             });
         }
+
+        // Initialize audio
+        try {
+            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const frequencies = [200, 300, 400]; // lower frequencies for organic feel
+            for (const freq of frequencies) {
+                const buffer = generateClickSound(freq, 100); // 100ms duration for more organic
+                if (buffer) soundBuffers.push(buffer);
+            }
+        } catch (e) {
+            console.warn("Audio not supported:", e);
+        }
+
+        window.addEventListener("keydown", handleKeyNavigation);
+
+        // Set initial load to false after a short delay
+        setTimeout(() => isInitialLoad = false, 1500);
     });
 
     onDestroy(() => {
-        unsubscribeGames();
         if (debouncedSearch) clearTimeout(debouncedSearch);
         window.removeEventListener("keydown", handleKeyNavigation);
+        if (observer) observer.disconnect();
     });
 
     let cardElements: HTMLElement[] = [];
@@ -214,10 +281,7 @@
 
     afterUpdate(() => {
         cardElements = Array.from(document.querySelectorAll(".game-card"));
-    });
-
-    onMount(() => {
-        window.addEventListener("keydown", handleKeyNavigation);
+        setupIntersectionObserver();
     });
 </script>
 
