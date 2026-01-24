@@ -278,6 +278,7 @@ export class ErgoPlatform implements Platform {
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
 
         // For unavailable marking, we always use a single transaction since no penalty to creator
+        console.log("Judge vote data inputs ", judgeVoteDataInputs)
         if (judgeVoteDataInputs.length >= requiredVotes) {
             const tx_id = await judges_invalidate_unavailable(game, invalidatedParticipation, participations, judgeVoteDataInputs);
             return tx_id;

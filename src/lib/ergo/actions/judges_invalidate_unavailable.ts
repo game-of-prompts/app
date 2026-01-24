@@ -50,8 +50,9 @@ export async function judges_invalidate_unavailable(
     for (const p of judgeVoteDataInputs) {
         const reg = p.additionalRegisters;
 
-        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
-            reg.R5.renderedValue === game.winnerCandidateCommitment;
+        // TODO CHECK.
+        const valid = reg.R4.renderedValue === "0e20"+game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
+            reg.R5.renderedValue === "0e20"+game.winnerCandidateCommitment;
 
         if (!valid) {
             console.log(reg.R4.renderedValue)
