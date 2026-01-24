@@ -1537,17 +1537,17 @@
         currentActionType = type;
         const titles = {
             submit_score: `Submit Score`,
-            resolve_game: `Resolve Game`,
-            cancel_game: `Cancel Game`,
+            resolve_game: `Resolve Competition`,
+            cancel_game: `Cancel Competition`,
             drain_stake: `Drain Creator Stake`,
-            end_game: `Finalize Game`,
+            end_game: `Finalize Competition`,
             invalidate_winner: `Judge Invalidation`,
             judge_unavailable: `Judge Mark Unavailable`,
             include_omitted: `Include Omitted Participation`,
             accept_judge_nomination: "Accept Judge Nomination",
             open_ceremony: "Add Seed Randomness",
             batch_participations: "Batch Participations",
-            submit_creator_opinion: "Verify Game (Creator Opinion)",
+            submit_creator_opinion: "Verify Competition (Creator Opinion)",
             remove_opinion: "Judge Mark Available",
         };
         modalTitle = titles[type] || "Action";
@@ -3025,11 +3025,11 @@
                                         Seed ceremony is open. Collaborate to
                                         ensure a random seed.
                                     {:else if game.status === "Active" && !participationIsEnded}
-                                        The game is live. Solvers can submit
+                                        The competition is live. Solvers can submit
                                         their scores until the deadline.
                                     {:else if game.status === "Active" && participationIsEnded}
                                         Time is up. The creator must now resolve
-                                        the game.
+                                        the competition.
                                     {:else if game.status === "Resolution"}
                                         {@const isBeforeDeadline =
                                             new Date().getTime() < targetDate}
@@ -3037,14 +3037,14 @@
                                             Judges are validating the winner.
                                             New candidates can be proposed.
                                         {:else}
-                                            Judge period ended. The game can be
+                                            Judge period ended. The competition can be
                                             finalized.
                                         {/if}
                                     {:else if game.status === "Finalized"}
                                         The competition has ended and prizes
                                         have been distributed.
                                     {:else}
-                                        The game was cancelled after the
+                                        The competition was cancelled after the
                                         creator’s secret was compromised.
                                     {/if}
                                 </p>
@@ -3076,7 +3076,7 @@
                                                 class="font-medium text-gray-900 dark:text-gray-100"
                                                 >Anyone:</span
                                             > Contribute to the random number generation
-                                            process (free) to ensure the game's seed
+                                            process (free) to ensure the competition's seed
                                             is random.
                                         </li>
                                         <li
@@ -3086,7 +3086,7 @@
                                                 class="font-medium text-gray-900 dark:text-gray-100"
                                                 >Anyone:</span
                                             >
-                                            Cancel the game by revealing the secret
+                                            Cancel the competition by revealing the secret
                                             and receive a portion of the creator’s
                                             stake.
                                         </li>
@@ -3110,7 +3110,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the game (if secret leaked).
+                                                Cancel the competition (if secret leaked).
                                             </li>
                                         {:else if !participationIsEnded}
                                             <!-- PLAYING PHASE -->
@@ -3121,7 +3121,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Players:</span
                                                 >
-                                                Join the game and submit scores.
+                                                Join the competition and submit scores.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -3130,7 +3130,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the game (if secret leaked).
+                                                Cancel the competition (if secret leaked).
                                             </li>
                                         {:else}
                                             <!-- AWAITING RESOLUTION PHASE -->
@@ -3151,7 +3151,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the game (if secret leaked).
+                                                Cancel the competition (if secret leaked).
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -3206,7 +3206,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Winner/Resolver:</span
                                                 >
-                                                Finalize the game and distribute
+                                                Finalize the competition and distribute
                                                 prizes.
                                             </li>
                                             <li
@@ -3273,7 +3273,7 @@
                                                 class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
                                             >
                                                 <span class="font-medium"
-                                                    >Resolve Game:</span
+                                                    >Resolve Competition:</span
                                                 >
                                                 Cannot resolve during ceremony.
                                             </li>
@@ -3282,7 +3282,7 @@
                                                 class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
                                             >
                                                 <span class="font-medium"
-                                                    >Resolve Game:</span
+                                                    >Resolve Competition:</span
                                                 >
                                                 Wait for deadline to expire.
                                             </li>
@@ -3328,7 +3328,7 @@
                                                 class="text-sm flex items-start gap-2 text-gray-500 dark:text-gray-400"
                                             >
                                                 <span class="font-medium"
-                                                    >Finalize Game:</span
+                                                    >Finalize Competition:</span
                                                 >
                                                 Wait for judge period to end.
                                             </li>
@@ -3356,7 +3356,7 @@
                                         >
                                             <span class="font-medium"
                                                 >Modifying state:</span
-                                            > The game is closed.
+                                            > The competition is closed.
                                         </li>
                                     {:else}
                                         <!-- Cancelled -->
@@ -3372,7 +3372,7 @@
                                         >
                                             <span class="font-medium"
                                                 >Resuming:</span
-                                            > The game is permanently invalid.
+                                            > The competition is permanently invalid.
                                         </li>
                                     {/if}
                                 </ul>
@@ -3404,7 +3404,7 @@
                                     <p
                                         class="text-xs text-gray-500 dark:text-gray-400 mt-1"
                                     >
-                                        This game uses a decentralized jury
+                                        This competition uses a decentralized jury
                                         system with {uniqueJudges.length} unique
                                         judges. The creator cannot arbitrarily decide
                                         the winner; a majority of judges must agree.
@@ -3423,7 +3423,7 @@
                                     <p
                                         class="text-xs text-gray-500 dark:text-gray-400 mt-1"
                                     >
-                                        This game has a small jury of {uniqueJudges.length}
+                                        This competition has a small jury of {uniqueJudges.length}
                                         judges. While better than no jury, collusion
                                         is easier than with a large decentralized
                                         jury.
@@ -3441,7 +3441,7 @@
                                     <p
                                         class="text-xs text-gray-500 dark:text-gray-400 mt-1"
                                     >
-                                        This game relies entirely on the
+                                        This competition relies entirely on the
                                         creator's honesty (0 judges). If the
                                         creator acts maliciously, there are no
                                         independent judges to intervene.
@@ -3598,7 +3598,7 @@
                                         class="text-xs mt-1 text-gray-500 dark:text-gray-400"
                                     >
                                         The creator has submitted a positive
-                                        opinion verifying this game.
+                                        opinion verifying this competition.
                                     </p>
                                 </div>
                             {/if}
@@ -3635,7 +3635,7 @@
                                         <p
                                             class="text-sm text-center mt-2 text-muted-foreground"
                                         >
-                                            Add entropy to the game seed.
+                                            Add entropy to the competition seed.
                                         </p>
                                     {:else if primaryAction === "submit_score"}
                                         <Button
@@ -3683,7 +3683,7 @@
                                         <p
                                             class="text-sm text-center mt-2 text-muted-foreground"
                                         >
-                                            Finalize the game and distribute
+                                            Finalize the competition and distribute
                                             rewards.
                                         </p>
                                     {:else if primaryAction === "drain_stake"}
@@ -4845,9 +4845,9 @@
                                                     >
                                                         Generates a valid
                                                         participation using the
-                                                        game's service ID as the
+                                                        competition's service ID as the
                                                         secret. Only works if
-                                                        you created the game
+                                                        you created the competition
                                                         with that secret.
                                                     </p>
                                                 </div>
