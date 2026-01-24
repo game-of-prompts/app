@@ -68,6 +68,9 @@
         Wand2,
         Music,
         VolumeX,
+        Terminal,
+        ArrowRight,
+        Copy,
     } from "lucide-svelte";
     // UTILITIES
     import { format, formatDistanceToNow } from "date-fns";
@@ -405,6 +408,7 @@
 
     // Modal State
     let showActionModal = false;
+    let showParticipantGuide = true;
     let currentActionType:
         | "submit_score"
         | "resolve_game"
@@ -4643,320 +4647,499 @@
 
                     <div class="modal-form-body overflow-y-auto flex-1 min-h-0">
                         {#if currentActionType === "submit_score"}
-                            <div class="space-y-6 max-w-3xl mx-auto">
-                                <!-- JSON Upload -->
-                                <div>
-                                    <Label
-                                        for="jsonFile"
-                                        class="block text-sm font-medium mb-1 {$mode ===
-                                        'dark'
-                                            ? 'text-gray-300'
-                                            : 'text-gray-700'}"
-                                        >Load Data from JSON File (Optional)</Label
-                                    >
-                                    <Input
-                                        id="jsonFile"
-                                        type="file"
-                                        accept=".json"
-                                        on:change={handleJsonFileUpload}
-                                        class="w-full text-sm rounded-md shadow-sm border {$mode ===
-                                        'dark'
-                                            ? 'bg-slate-800/50 border-slate-700 text-slate-300 placeholder-slate-400'
-                                            : 'bg-white border-gray-200 text-gray-700 placeholder-gray-400'} file:mr-3 file:py-1.5 file:px-3 file:border-0 file:text-xs file:font-medium {$mode ===
-                                        'dark'
-                                            ? 'file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 file:rounded-l-sm'
-                                            : 'file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:rounded-l-sm'} cursor-pointer focus-visible:outline-none focus-visible:ring-2 {$mode ===
-                                        'dark'
-                                            ? 'focus-visible:ring-slate-500'
-                                            : 'focus-visible:ring-slate-400'} focus-visible:ring-offset-2 {$mode ===
-                                        'dark'
-                                            ? 'focus-visible:ring-offset-slate-900'
-                                            : 'focus-visible:ring-offset-white'}"
-                                    />
-                                    <p
-                                        class="text-xs text-muted-foreground mt-1.5"
-                                    >
-                                        Expected fields: `solver_id`,
-                                        `hash_logs_hex`, `commitment_c_hex`,
-                                        `score_list` (array of numbers).
-                                    </p>
-                                    {#if jsonUploadError}
-                                        <p
-                                            class="text-xs mt-1 {$mode ===
-                                            'dark'
-                                                ? 'text-red-400'
-                                                : 'text-red-600'}"
-                                        >
-                                            {jsonUploadError}
+                            {#if showParticipantGuide}
+                                <div
+                                    class="space-y-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
+                                >
+                                    <div class="text-center mb-8">
+                                        <h3 class="text-2xl font-bold mb-2">
+                                            Participate in the Challenge
+                                        </h3>
+                                        <p class="text-muted-foreground">
+                                            Follow these steps to create your
+                                            bot and submit your solution.
                                         </p>
-                                    {/if}
-                                </div>
+                                    </div>
 
-                                <!-- "Or Fill Manually" Divider -->
-                                <div class="flex items-center my-2">
-                                    <span
-                                        class="flex-grow border-t {$mode ===
-                                        'dark'
-                                            ? 'border-slate-700'
-                                            : 'border-gray-300'}"
-                                    ></span><span
-                                        class="mx-3 text-xs uppercase {$mode ===
-                                        'dark'
-                                            ? 'text-slate-500'
-                                            : 'text-gray-500'}"
-                                        >Or Fill Manually</span
-                                    ><span
-                                        class="flex-grow border-t {$mode ===
-                                        'dark'
-                                            ? 'border-slate-700'
-                                            : 'border-gray-300'}"
-                                    ></span>
-                                </div>
-
-                                <!-- Main Form -->
-                                <div class="space-y-5">
-                                    <!-- Commitment Code -->
-                                    <div>
-                                        <Label
-                                            for="commitmentC"
-                                            class="block text-sm font-medium mb-1.5 {$mode ===
-                                            'dark'
-                                                ? 'text-gray-200'
-                                                : 'text-gray-700'}"
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-6"
+                                    >
+                                        <!-- Step 1: Check Judges -->
+                                        <div
+                                            class="p-4 rounded-xl border bg-card text-card-foreground shadow-sm"
                                         >
-                                            Commitment Code
-                                            <span
-                                                class="text-xs font-normal text-muted-foreground ml-1"
-                                                >(from game service)</span
+                                            <div
+                                                class="flex items-center gap-3 mb-3"
                                             >
-                                        </Label>
-                                        <Textarea
-                                            id="commitmentC"
-                                            bind:value={commitmentC_input}
-                                            rows={3}
-                                            placeholder="Enter the hexadecimal commitment code..."
-                                            class="w-full font-mono text-sm {$mode ===
-                                            'dark'
-                                                ? 'bg-slate-800/50 border-slate-700 focus:border-primary/50'
-                                                : 'bg-white border-gray-200 focus:border-primary/50'}"
-                                        />
+                                                <div
+                                                    class="p-2 bg-blue-500/10 rounded-lg text-blue-500"
+                                                >
+                                                    <ShieldCheck
+                                                        class="w-6 h-6"
+                                                    />
+                                                </div>
+                                                <h4
+                                                    class="font-semibold text-lg"
+                                                >
+                                                    1. Check Judges
+                                                </h4>
+                                            </div>
+                                            <p
+                                                class="text-sm text-muted-foreground mb-4"
+                                            >
+                                                Verify the reputation of the
+                                                judges to ensure fair play.
+                                            </p>
+                                            <div
+                                                class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                                                    on:click={() =>
+                                                        navigator.clipboard.writeText(
+                                                            `nodo gop_judges_check ${game?.boxId}`,
+                                                        )}
+                                                    title="Copy command"
+                                                >
+                                                    <Copy class="w-3.5 h-3.5" />
+                                                </button>
+                                                <span class="text-primary"
+                                                    >nodo</span
+                                                >
+                                                gop_judges_check {game?.boxId.slice(
+                                                    0,
+                                                    10,
+                                                )}...
+                                            </div>
+                                        </div>
+
+                                        <!-- Step 2: Create Bot -->
+                                        <div
+                                            class="p-4 rounded-xl border bg-card text-card-foreground shadow-sm"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3 mb-3"
+                                            >
+                                                <div
+                                                    class="p-2 bg-purple-500/10 rounded-lg text-purple-500"
+                                                >
+                                                    <Terminal class="w-6 h-6" />
+                                                </div>
+                                                <h4
+                                                    class="font-semibold text-lg"
+                                                >
+                                                    2. Create Bot
+                                                </h4>
+                                            </div>
+                                            <p
+                                                class="text-sm text-muted-foreground mb-4"
+                                            >
+                                                Use the CLI to generate your bot
+                                                template and integrate with
+                                                LLMs.
+                                            </p>
+                                            <div
+                                                class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                                                    on:click={() =>
+                                                        navigator.clipboard.writeText(
+                                                            `nodo gop_create_bot ${game?.boxId}`,
+                                                        )}
+                                                    title="Copy command"
+                                                >
+                                                    <Copy class="w-3.5 h-3.5" />
+                                                </button>
+                                                <span class="text-primary"
+                                                    >nodo</span
+                                                >
+                                                gop_create_bot {game?.boxId.slice(
+                                                    0,
+                                                    10,
+                                                )}...
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <!-- Solver ID -->
-                                    <div>
-                                        <Label
-                                            for="solverId"
-                                            class="block text-sm font-medium mb-1.5 {$mode ===
-                                            'dark'
-                                                ? 'text-gray-200'
-                                                : 'text-gray-700'}"
-                                            >Solver ID / Name</Label
+                                    <div
+                                        class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 text-sm text-yellow-600 dark:text-yellow-400"
+                                    >
+                                        <p class="font-semibold mb-2">
+                                            Important:
+                                        </p>
+                                        <ul
+                                            class="list-disc list-inside space-y-1.5 opacity-90"
                                         >
-                                        <Input
-                                            id="solverId"
-                                            type="text"
-                                            bind:value={solverId_input}
-                                            placeholder="e.g., my_solver.celaut.bee"
-                                            class="w-full {$mode === 'dark'
-                                                ? 'bg-slate-800/50 border-slate-700'
-                                                : 'bg-white border-gray-200'}"
-                                        />
+                                            <li>
+                                                You must publish your bot hash <b
+                                                    >before</b
+                                                >
+                                                the deadline. Publishing the
+                                                hash is <b>free</b> - no participation
+                                                fee required yet.
+                                            </li>
+                                            <li>
+                                                After the ceremony reveals the
+                                                seed, you need to submit your
+                                                bot's participation with that
+                                                seed to the Ergo blockchain. <b
+                                                    >The participation fee is
+                                                    only charged at this step.</b
+                                                >
+                                            </li>
+                                            <li>
+                                                You can set up a scheduled task
+                                                to automatically generate and
+                                                submit the participation, or
+                                                monitor the <a
+                                                    href="https://t.me/gameofprompts"
+                                                    target="_blank"
+                                                    class="underline font-semibold hover:text-yellow-500"
+                                                    >Game of Prompts Telegram
+                                                    channel</a
+                                                > where a bot notifies these events.
+                                            </li>
+                                        </ul>
                                     </div>
 
-                                    <!-- Hash Logs -->
-                                    <div>
-                                        <Label
-                                            for="hashLogs"
-                                            class="block text-sm font-medium mb-1.5 {$mode ===
-                                            'dark'
-                                                ? 'text-gray-200'
-                                                : 'text-gray-700'}"
-                                            >Hash of Logs (Hex)</Label
+                                    <div class="flex justify-center pt-4">
+                                        <Button
+                                            size="lg"
+                                            class="gap-2"
+                                            on:click={() =>
+                                                (showParticipantGuide = false)}
                                         >
-                                        <Input
-                                            id="hashLogs"
-                                            type="text"
-                                            bind:value={hashLogs_input}
-                                            placeholder="Blake2b-256 hash..."
-                                            class="w-full font-mono text-sm {$mode ===
-                                            'dark'
-                                                ? 'bg-slate-800/50 border-slate-700'
-                                                : 'bg-white border-gray-200'}"
-                                        />
+                                            I have my Bot & Participation
+                                            <ArrowRight class="w-4 h-4" />
+                                        </Button>
                                     </div>
-
-                                    <!-- Scores -->
+                                </div>
+                            {:else}
+                                <div class="space-y-6 max-w-3xl mx-auto">
+                                    <!-- JSON Upload -->
                                     <div>
                                         <Label
-                                            for="user_score"
-                                            class="block text-sm font-medium mb-1.5 {$mode ===
+                                            for="jsonFile"
+                                            class="block text-sm font-medium mb-1 {$mode ===
                                             'dark'
-                                                ? 'text-gray-200'
+                                                ? 'text-gray-300'
                                                 : 'text-gray-700'}"
+                                            >Load Data from JSON File (Optional)</Label
                                         >
-                                            Your Score
-                                        </Label>
-
                                         <Input
-                                            id="user_score"
-                                            type="number"
-                                            bind:value={user_score}
-                                            placeholder="e.g., 85"
-                                            class="w-full {$mode === 'dark'
-                                                ? 'bg-slate-800/50 border-slate-700'
-                                                : 'bg-white border-gray-200'}"
+                                            id="jsonFile"
+                                            type="file"
+                                            accept=".json"
+                                            on:change={handleJsonFileUpload}
+                                            class="w-full text-sm rounded-md shadow-sm border {$mode ===
+                                            'dark'
+                                                ? 'bg-slate-800/50 border-slate-700 text-slate-300 placeholder-slate-400'
+                                                : 'bg-white border-gray-200 text-gray-700 placeholder-gray-400'} file:mr-3 file:py-1.5 file:px-3 file:border-0 file:text-xs file:font-medium {$mode ===
+                                            'dark'
+                                                ? 'file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 file:rounded-l-sm'
+                                                : 'file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:rounded-l-sm'} cursor-pointer focus-visible:outline-none focus-visible:ring-2 {$mode ===
+                                            'dark'
+                                                ? 'focus-visible:ring-slate-500'
+                                                : 'focus-visible:ring-slate-400'} focus-visible:ring-offset-2 {$mode ===
+                                            'dark'
+                                                ? 'focus-visible:ring-offset-slate-900'
+                                                : 'focus-visible:ring-offset-white'}"
                                         />
-
                                         <p
                                             class="text-xs text-muted-foreground mt-1.5"
                                         >
-                                            Enter your result. Will be mixed
-                                            with random data to preserve your
-                                            score private on-chain.
+                                            Expected fields: `solver_id`,
+                                            `hash_logs_hex`, `commitment_c_hex`,
+                                            `score_list` (array of numbers).
                                         </p>
-
-                                        {#if scores_list.length > 0}
+                                        {#if jsonUploadError}
                                             <p
-                                                class="text-xs text-blue-500 mt-2"
+                                                class="text-xs mt-1 {$mode ===
+                                                'dark'
+                                                    ? 'text-red-400'
+                                                    : 'text-red-600'}"
                                             >
-                                                Public data (Anonymized): {scores_list.join(
-                                                    ", ",
-                                                )}
+                                                {jsonUploadError}
                                             </p>
                                         {/if}
                                     </div>
 
-                                    <!-- Fee & Action -->
-                                    <div
-                                        class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4"
-                                    >
-                                        <p
-                                            class="text-sm text-muted-foreground"
-                                        >
-                                            Fee: <span
-                                                class="font-medium text-foreground"
-                                                >{formatTokenBigInt(
-                                                    game.participationFeeAmount,
-                                                    tokenDecimals,
-                                                )}
-                                                {tokenSymbol}</span
-                                            >
-                                        </p>
-                                        <Button
-                                            on:click={handleSubmitScore}
-                                            disabled={isSubmitting ||
-                                                !commitmentC_input.trim() ||
-                                                !solverId_input.trim() ||
-                                                !hashLogs_input.trim() ||
-                                                scores_list.length === 0}
-                                            class="w-full sm:w-auto min-w-[200px]"
-                                            variant="default"
-                                        >
-                                            {isSubmitting
-                                                ? "Processing..."
-                                                : "Confirm & Submit Score"}
-                                        </Button>
+                                    <!-- "Or Fill Manually" Divider -->
+                                    <div class="flex items-center my-2">
+                                        <span
+                                            class="flex-grow border-t {$mode ===
+                                            'dark'
+                                                ? 'border-slate-700'
+                                                : 'border-gray-300'}"
+                                        ></span><span
+                                            class="mx-3 text-xs uppercase {$mode ===
+                                            'dark'
+                                                ? 'text-slate-500'
+                                                : 'text-gray-500'}"
+                                            >Or Fill Manually</span
+                                        ><span
+                                            class="flex-grow border-t {$mode ===
+                                            'dark'
+                                                ? 'border-slate-700'
+                                                : 'border-gray-300'}"
+                                        ></span>
                                     </div>
-                                </div>
 
-                                <!-- Dev Mode (Collapsible) -->
-                                {#if $isDevMode}
-                                    <div class="pt-6 border-t border-border/50">
-                                        <button
-                                            type="button"
-                                            on:click={() =>
-                                                (isDevModeExpanded =
-                                                    !isDevModeExpanded)}
-                                            class="flex items-center gap-2 text-xs font-medium text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors"
-                                        >
-                                            <Wand2 class="w-3.5 h-3.5" />
-                                            <span>Dev Mode Tools</span>
-                                            <ChevronDown
-                                                class="w-3 h-3 transition-transform {isDevModeExpanded
-                                                    ? 'rotate-180'
-                                                    : ''}"
+                                    <!-- Main Form -->
+                                    <div class="space-y-5">
+                                        <!-- Commitment Code -->
+                                        <div>
+                                            <Label
+                                                for="commitmentC"
+                                                class="block text-sm font-medium mb-1.5 {$mode ===
+                                                'dark'
+                                                    ? 'text-gray-200'
+                                                    : 'text-gray-700'}"
+                                            >
+                                                Commitment Code
+                                                <span
+                                                    class="text-xs font-normal text-muted-foreground ml-1"
+                                                    >(from game service)</span
+                                                >
+                                            </Label>
+                                            <Textarea
+                                                id="commitmentC"
+                                                bind:value={commitmentC_input}
+                                                rows={3}
+                                                placeholder="Enter the hexadecimal commitment code..."
+                                                class="w-full font-mono text-sm {$mode ===
+                                                'dark'
+                                                    ? 'bg-slate-800/50 border-slate-700 focus:border-primary/50'
+                                                    : 'bg-white border-gray-200 focus:border-primary/50'}"
                                             />
-                                        </button>
+                                        </div>
 
-                                        {#if isDevModeExpanded}
-                                            <div
-                                                class="mt-3 p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20 space-y-4"
+                                        <!-- Solver ID -->
+                                        <div>
+                                            <Label
+                                                for="solverId"
+                                                class="block text-sm font-medium mb-1.5 {$mode ===
+                                                'dark'
+                                                    ? 'text-gray-200'
+                                                    : 'text-gray-700'}"
+                                                >Solver ID / Name</Label
                                             >
-                                                <div
-                                                    class="flex items-start gap-3"
-                                                >
-                                                    <Info
-                                                        class="w-4 h-4 text-yellow-600/70 mt-0.5 shrink-0"
-                                                    />
-                                                    <p
-                                                        class="text-xs text-yellow-600/80 dark:text-yellow-500/80"
-                                                    >
-                                                        Generates a valid
-                                                        participation using the
-                                                        competition's service ID
-                                                        as the secret. Only
-                                                        works if you created the
-                                                        competition with that
-                                                        secret.
-                                                    </p>
-                                                </div>
+                                            <Input
+                                                id="solverId"
+                                                type="text"
+                                                bind:value={solverId_input}
+                                                placeholder="e.g., my_solver.celaut.bee"
+                                                class="w-full {$mode === 'dark'
+                                                    ? 'bg-slate-800/50 border-slate-700'
+                                                    : 'bg-white border-gray-200'}"
+                                            />
+                                        </div>
 
-                                                <div
-                                                    class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                                                >
-                                                    <div>
-                                                        <Label
-                                                            class="text-xs text-yellow-600/90 mb-1.5 block"
-                                                            >Score to Generate</Label
-                                                        >
-                                                        <Input
-                                                            type="number"
-                                                            bind:value={
-                                                                devGenScore
-                                                            }
-                                                            class="h-8 text-xs bg-transparent border-yellow-500/30 focus:border-yellow-500/50"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label
-                                                            class="text-xs text-yellow-600/90 mb-1.5 block"
-                                                            >Simulate Error</Label
-                                                        >
-                                                        <select
-                                                            bind:value={
-                                                                devGenErrorType
-                                                            }
-                                                            class="w-full h-8 text-xs rounded-md bg-transparent border border-yellow-500/30 focus:border-yellow-500/50 text-foreground px-2"
-                                                        >
-                                                            <option value="none"
-                                                                >None (Valid)</option
-                                                            >
-                                                            <option
-                                                                value="wrong_commitment"
-                                                                >Invalid
-                                                                Commitment</option
-                                                            >
-                                                            <option
-                                                                value="wrong_score"
-                                                                >Score Mismatch</option
-                                                            >
-                                                        </select>
-                                                    </div>
-                                                </div>
+                                        <!-- Hash Logs -->
+                                        <div>
+                                            <Label
+                                                for="hashLogs"
+                                                class="block text-sm font-medium mb-1.5 {$mode ===
+                                                'dark'
+                                                    ? 'text-gray-200'
+                                                    : 'text-gray-700'}"
+                                                >Hash of Logs (Hex)</Label
+                                            >
+                                            <Input
+                                                id="hashLogs"
+                                                type="text"
+                                                bind:value={hashLogs_input}
+                                                placeholder="Blake2b-256 hash..."
+                                                class="w-full font-mono text-sm {$mode ===
+                                                'dark'
+                                                    ? 'bg-slate-800/50 border-slate-700'
+                                                    : 'bg-white border-gray-200'}"
+                                            />
+                                        </div>
 
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    class="w-full border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500"
-                                                    on:click={generateDevParticipation}
+                                        <!-- Scores -->
+                                        <div>
+                                            <Label
+                                                for="user_score"
+                                                class="block text-sm font-medium mb-1.5 {$mode ===
+                                                'dark'
+                                                    ? 'text-gray-200'
+                                                    : 'text-gray-700'}"
+                                            >
+                                                Your Score
+                                            </Label>
+
+                                            <Input
+                                                id="user_score"
+                                                type="number"
+                                                bind:value={user_score}
+                                                placeholder="e.g., 85"
+                                                class="w-full {$mode === 'dark'
+                                                    ? 'bg-slate-800/50 border-slate-700'
+                                                    : 'bg-white border-gray-200'}"
+                                            />
+
+                                            <p
+                                                class="text-xs text-muted-foreground mt-1.5"
+                                            >
+                                                Enter your result. Will be mixed
+                                                with random data to preserve
+                                                your score private on-chain.
+                                            </p>
+
+                                            {#if scores_list.length > 0}
+                                                <p
+                                                    class="text-xs text-blue-500 mt-2"
                                                 >
-                                                    Auto-Fill Form
-                                                </Button>
-                                            </div>
-                                        {/if}
+                                                    Public data (Anonymized): {scores_list.join(
+                                                        ", ",
+                                                    )}
+                                                </p>
+                                            {/if}
+                                        </div>
+
+                                        <!-- Fee & Action -->
+                                        <div
+                                            class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4"
+                                        >
+                                            <p
+                                                class="text-sm text-muted-foreground"
+                                            >
+                                                Fee: <span
+                                                    class="font-medium text-foreground"
+                                                    >{formatTokenBigInt(
+                                                        game.participationFeeAmount,
+                                                        tokenDecimals,
+                                                    )}
+                                                    {tokenSymbol}</span
+                                                >
+                                            </p>
+                                            <Button
+                                                on:click={handleSubmitScore}
+                                                disabled={isSubmitting ||
+                                                    !commitmentC_input.trim() ||
+                                                    !solverId_input.trim() ||
+                                                    !hashLogs_input.trim() ||
+                                                    scores_list.length === 0}
+                                                class="w-full sm:w-auto min-w-[200px]"
+                                                variant="default"
+                                            >
+                                                {isSubmitting
+                                                    ? "Processing..."
+                                                    : "Confirm & Submit Score"}
+                                            </Button>
+                                        </div>
                                     </div>
-                                {/if}
-                            </div>
+
+                                    <!-- Dev Mode (Collapsible) -->
+                                    {#if $isDevMode}
+                                        <div
+                                            class="pt-6 border-t border-border/50"
+                                        >
+                                            <button
+                                                type="button"
+                                                on:click={() =>
+                                                    (isDevModeExpanded =
+                                                        !isDevModeExpanded)}
+                                                class="flex items-center gap-2 text-xs font-medium text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors"
+                                            >
+                                                <Wand2 class="w-3.5 h-3.5" />
+                                                <span>Dev Mode Tools</span>
+                                                <ChevronDown
+                                                    class="w-3 h-3 transition-transform {isDevModeExpanded
+                                                        ? 'rotate-180'
+                                                        : ''}"
+                                                />
+                                            </button>
+
+                                            {#if isDevModeExpanded}
+                                                <div
+                                                    class="mt-3 p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20 space-y-4"
+                                                >
+                                                    <div
+                                                        class="flex items-start gap-3"
+                                                    >
+                                                        <Info
+                                                            class="w-4 h-4 text-yellow-600/70 mt-0.5 shrink-0"
+                                                        />
+                                                        <p
+                                                            class="text-xs text-yellow-600/80 dark:text-yellow-500/80"
+                                                        >
+                                                            Generates a valid
+                                                            participation using
+                                                            the competition's
+                                                            service ID as the
+                                                            secret. Only works
+                                                            if you created the
+                                                            competition with
+                                                            that secret.
+                                                        </p>
+                                                    </div>
+
+                                                    <div
+                                                        class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                                                    >
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs text-yellow-600/90 mb-1.5 block"
+                                                                >Score to
+                                                                Generate</Label
+                                                            >
+                                                            <Input
+                                                                type="number"
+                                                                bind:value={
+                                                                    devGenScore
+                                                                }
+                                                                class="h-8 text-xs bg-transparent border-yellow-500/30 focus:border-yellow-500/50"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <Label
+                                                                class="text-xs text-yellow-600/90 mb-1.5 block"
+                                                                >Simulate Error</Label
+                                                            >
+                                                            <select
+                                                                bind:value={
+                                                                    devGenErrorType
+                                                                }
+                                                                class="w-full h-8 text-xs rounded-md bg-transparent border border-yellow-500/30 focus:border-yellow-500/50 text-foreground px-2"
+                                                            >
+                                                                <option
+                                                                    value="none"
+                                                                    >None
+                                                                    (Valid)</option
+                                                                >
+                                                                <option
+                                                                    value="wrong_commitment"
+                                                                    >Invalid
+                                                                    Commitment</option
+                                                                >
+                                                                <option
+                                                                    value="wrong_score"
+                                                                    >Score
+                                                                    Mismatch</option
+                                                                >
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        class="w-full border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500"
+                                                        on:click={generateDevParticipation}
+                                                    >
+                                                        Auto-Fill Form
+                                                    </Button>
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    {/if}
+                                </div>
+                            {/if}
                         {:else if currentActionType === "resolve_game"}
                             <div class="space-y-4">
                                 <div>
