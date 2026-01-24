@@ -29,81 +29,15 @@ export async function detectExplorerSuffixes(baseUrl: string): Promise<{ isValid
         const url = baseUrl + path;
         try {
             const response = await fetch(url, { method: 'GET', mode: 'no-cors' });
-            // With no-cors, we get an opaque response (status 0, ok false).
-            // We can't know for sure if it exists or not, but at least it didn't throw a network error.
-            // However, 404s also don't throw network errors in no-cors, they just return opaque.
-            // So 'no-cors' makes it hard to distinguish 200 from 404.
-            // But the user says "transactions si que me funciona", implying they can access it in browser.
-            // The issue is the browser blocking the cross-origin request from the app.
-
-            // If we use 'no-cors', we assume success if it doesn't throw.
-            // But this is risky as it validates 404s too.
-
-            // Alternative: Try to use an image or script tag hack? No, that's for loading resources.
-            // We are checking if a page exists.
-
-            // Let's try to revert to simple fetch but catch the error.
-            // The error "net::ERR_FAILED 200 (OK)" suggests the request actually succeeded (200 OK) but was blocked by CORS.
-            // If we catch the error, can we distinguish CORS block from network error?
-            // Usually no.
-
-            // Wait, if the user sees "200 (OK)" in the console but "blocked by CORS policy", it means the resource IS there.
-            // If it were 404, it would be 404.
-            // So if we get a CORS error, it MIGHT mean it exists?
-            // But we can't see the status code in JS if CORS blocks it.
-
-            // Let's try 'no-cors'. If it returns type 'opaque', it means the request went through.
-            // If the domain didn't exist, it would throw.
-            // But if the path doesn't exist (404), it still returns opaque.
-
-            // Given the constraints, maybe we should just accept 'opaque' responses as "potentially valid" and warn the user?
-            // Or, since this is a "Web Explorer", maybe we can assume that if we can fetch it with 'no-cors', it's reachable.
-            // The goal is to find the suffix.
-
-            // Let's try this:
-            // If we use 'no-cors', we get a response.
-            // If we try a nonsense path, e.g. "transaction/NON_EXISTENT_THING", does it return opaque? Yes.
-            // So 'no-cors' is useless for checking 404 vs 200.
-
-            // BUT, the user's log shows:
-            // GET ... 200 (OK)
-            // blocked by CORS policy
-
-            // This confirms the resource exists.
-            // If we can't fix CORS on the server (it's an external explorer), we can't fully validate it from the browser client-side reliably without a proxy.
-
-            // However, we can try to be optimistic.
-            // If the user is providing a URL, they probably copied it.
-            // Maybe we can just relax the validation?
-            // "si alguno de los tres tipos de elementos no van ni en singular ni en plural debemos de considerar que el web explorer es invalido"
-
-            // If we can't validate due to CORS, we might have to trust the user or use a proxy.
-            // We don't have a backend proxy.
-
-            // Let's look at the error again.
-            // "Access to fetch at ... has been blocked by CORS policy"
-
-            // If we use `mode: 'no-cors'`, we won't get the error, but we won't know if it's 200 or 404.
-            // But wait, if the server sends 404, does it send CORS headers?
-            // Usually CORS headers are on the resource.
-            // If 404, maybe no CORS headers?
-
-            // Let's try a hybrid approach.
-            // We can't easily fix CORS from here.
-
-            // Let's just try to use 'no-cors' and assume that if it doesn't throw a network error (like DNS resolution failed), it's "accessible".
-            // It's not perfect but better than failing valid URLs.
-            // And we can log "Accessible (opaque response)".
-
-            if (response.type === 'opaque' || response.ok) {
-                logs.push(`✅ ${url} is accessible (or opaque).`);
+            if (response.ok || response.type === 'opaque') {
+                logs.push(`✅ ${url} is reachable.`);
                 return true;
             } else {
                 logs.push(`❌ ${url} returned status ${response.status}.`);
                 return false;
             }
         } catch (e) {
-            logs.push(`❌ ${url} failed to load.`);
+            logs.push(`❌ ${url} failed to load (Network Error).`);
             return false;
         }
     };
@@ -182,3 +116,12 @@ export const isDevMode = writable<boolean>(false);
  * - judges_invalidation_chained.ts (judgesInvalidate)
  */
 export const USE_CHAINED_TRANSACTIONS = false;
+
+/**
+ * Controls whether web explorer URL validation is performed.
+ * Set to false to disable:
+ * - Validation on app startup
+ * - The "Detect" button in settings
+ * - The InvalidExplorerModal popup
+ */
+export const VALIDATE_WEB_EXPLORER = false;

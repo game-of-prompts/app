@@ -49,6 +49,7 @@
         detectExplorerSuffixes,
         source_explorer_url,
         forum_explorer_url,
+        VALIDATE_WEB_EXPLORER,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
@@ -117,23 +118,27 @@
                     explorer_uri.set(settings.explorer_uri);
                 if (settings.web_explorer_uri) {
                     web_explorer_uri.set(settings.web_explorer_uri);
-                    detectExplorerSuffixes(settings.web_explorer_uri).then(
-                        (result) => {
-                            if (!result.isValid) {
-                                web_explorer_uri.set(""); // Clear invalid URI
-                                showInvalidExplorerModal = true;
-                            }
-                        },
-                    );
+                    if (VALIDATE_WEB_EXPLORER) {
+                        detectExplorerSuffixes(settings.web_explorer_uri).then(
+                            (result) => {
+                                if (!result.isValid) {
+                                    web_explorer_uri.set(""); // Clear invalid URI
+                                    showInvalidExplorerModal = true;
+                                }
+                            },
+                        );
+                    }
                 } else {
-                    detectExplorerSuffixes(get(web_explorer_uri)).then(
-                        (result) => {
-                            if (!result.isValid) {
-                                web_explorer_uri.set(""); // Clear invalid URI
-                                showInvalidExplorerModal = true;
-                            }
-                        },
-                    );
+                    if (VALIDATE_WEB_EXPLORER) {
+                        detectExplorerSuffixes(get(web_explorer_uri)).then(
+                            (result) => {
+                                if (!result.isValid) {
+                                    web_explorer_uri.set(""); // Clear invalid URI
+                                    showInvalidExplorerModal = true;
+                                }
+                            },
+                        );
+                    }
                 }
                 if (settings.source_explorer_url)
                     source_explorer_url.set(settings.source_explorer_url);

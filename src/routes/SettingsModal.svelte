@@ -81,6 +81,7 @@
                             placeholder="https://sigmaspace.io/en/"
                         />
                         <Button
+                            class="hidden"
                             variant="outline"
                             on:click={async () => {
                                 const result =

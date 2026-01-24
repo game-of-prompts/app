@@ -79,24 +79,59 @@
                             class="list-disc pl-5 text-sm text-muted-foreground break-all"
                         >
                             {#each logs as log}
-                                <li>{log}</li>
+                                <li>
+                                    {#if log.includes("http")}
+                                        {@const parts =
+                                            log.split(/(https?:\/\/[^\s]+)/g)}
+                                        {#each parts as part}
+                                            {#if part.match(/^https?:\/\//)}
+                                                <a
+                                                    href={part}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="text-primary underline hover:text-primary/80"
+                                                >
+                                                    {part}
+                                                </a>
+                                            {:else}
+                                                {part}
+                                            {/if}
+                                        {/each}
+                                    {:else}
+                                        {log}
+                                    {/if}
+                                </li>
                             {/each}
                         </ul>
                     {/if}
                 </div>
 
-                <Button
-                    class="w-full"
-                    on:click={handleSave}
-                    disabled={isChecking}
-                >
-                    {#if isChecking}
-                        <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
-                    {:else}
-                        Save and Continue
+                <div class="flex gap-2">
+                    <Button
+                        class="w-full"
+                        on:click={handleSave}
+                        disabled={isChecking}
+                    >
+                        {#if isChecking}
+                            <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                        {:else}
+                            Save and Continue
+                        {/if}
+                    </Button>
+                    {#if errorMessage}
+                        <Button
+                            variant="destructive"
+                            class="w-full"
+                            on:click={() => {
+                                web_explorer_uri.set(newUri);
+                                dispatch("close");
+                            }}
+                        >
+                            Force Save
+                        </Button>
                     {/if}
-                </Button>
+                </div>
             </div>
         </div>
     </div>
