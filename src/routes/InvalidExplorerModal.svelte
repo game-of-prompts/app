@@ -11,6 +11,7 @@
     let newUri = "";
     let isChecking = false;
     let errorMessage = "";
+    let logs: string[] = [];
 
     async function handleSave() {
         if (!newUri) {
@@ -27,10 +28,10 @@
         isChecking = true;
         errorMessage = "";
 
-        const isValid = await detectExplorerSuffixes(newUri);
+        const result = await detectExplorerSuffixes(newUri);
         isChecking = false;
-
-        if (isValid) {
+        logs = result.logs ?? [];
+        if (result.isValid) {
             web_explorer_uri.set(newUri);
             dispatch("close");
         } else {
@@ -44,7 +45,7 @@
     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
 >
     <div
-        class="bg-background border border-destructive/50 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+        class="bg-background border border-destructive/50 rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden animate-in fade-in zoom-in duration-200"
     >
         <div class="p-6 space-y-6">
             <div class="flex flex-col items-center text-center space-y-2">
@@ -72,6 +73,15 @@
                     />
                     {#if errorMessage}
                         <p class="text-xs text-destructive">{errorMessage}</p>
+                    {/if}
+                    {#if logs && logs.length}
+                        <ul
+                            class="list-disc pl-5 text-sm text-muted-foreground break-all"
+                        >
+                            {#each logs as log}
+                                <li>{log}</li>
+                            {/each}
+                        </ul>
                     {/if}
                 </div>
 

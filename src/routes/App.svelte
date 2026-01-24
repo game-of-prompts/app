@@ -118,8 +118,8 @@
                 if (settings.web_explorer_uri) {
                     web_explorer_uri.set(settings.web_explorer_uri);
                     detectExplorerSuffixes(settings.web_explorer_uri).then(
-                        (isValid) => {
-                            if (!isValid) {
+                        (result) => {
+                            if (!result.isValid) {
                                 web_explorer_uri.set(""); // Clear invalid URI
                                 showInvalidExplorerModal = true;
                             }
@@ -127,8 +127,8 @@
                     );
                 } else {
                     detectExplorerSuffixes(get(web_explorer_uri)).then(
-                        (isValid) => {
-                            if (!isValid) {
+                        (result) => {
+                            if (!result.isValid) {
                                 web_explorer_uri.set(""); // Clear invalid URI
                                 showInvalidExplorerModal = true;
                             }

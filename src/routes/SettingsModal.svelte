@@ -83,11 +83,11 @@
                         <Button
                             variant="outline"
                             on:click={async () => {
-                                const isValid =
+                                const result =
                                     await detectExplorerSuffixes(
                                         $web_explorer_uri,
                                     );
-                                if (isValid) {
+                                if (result.isValid) {
                                     alert(
                                         "Explorer configuration detected successfully!",
                                     );
