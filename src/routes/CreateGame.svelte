@@ -1538,33 +1538,6 @@
                                 />
                             </div>
                             <div class="form-group lg:col-span-4">
-                                <Label for="gameImageHash"
-                                    >Game Image Hash</Label
-                                >
-                                <div class="flex gap-2">
-                                    <Input
-                                        id="gameImageHash"
-                                        bind:value={$gameImageHashStore}
-                                        placeholder="Blake2b256 hash (64-character hex)"
-                                        maxlength={64}
-                                        pattern="[a-fA-F0-9]{64}"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        on:click={() =>
-                                            gameImageHashStore.set("")}
-                                        class="shrink-0"
-                                        title="Clear hash"
-                                    >
-                                        <Trash2 class="w-4 h-4" />
-                                    </Button>
-                                </div>
-                                <p class="text-xs mt-1 text-muted-foreground">
-                                    The Blake2b256 hash of the game's image file
-                                </p>
-                            </div>
-                            <div class="form-group lg:col-span-4">
                                 <Label for="gamePaperHash"
                                     >Game Paper Hash (Required)</Label
                                 >
@@ -1591,6 +1564,33 @@
                                 <p class="text-xs mt-1 text-muted-foreground">
                                     The Blake2b256 hash of a markdown file with
                                     detailed game description
+                                </p>
+                            </div>
+                            <div class="form-group lg:col-span-4">
+                                <Label for="gameImageHash"
+                                    >Game Image Hash</Label
+                                >
+                                <div class="flex gap-2">
+                                    <Input
+                                        id="gameImageHash"
+                                        bind:value={$gameImageHashStore}
+                                        placeholder="Blake2b256 hash (64-character hex)"
+                                        maxlength={64}
+                                        pattern="[a-fA-F0-9]{64}"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        on:click={() =>
+                                            gameImageHashStore.set("")}
+                                        class="shrink-0"
+                                        title="Clear hash"
+                                    >
+                                        <Trash2 class="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <p class="text-xs mt-1 text-muted-foreground">
+                                    The Blake2b256 hash of the game's image file
                                 </p>
                             </div>
                             <div class="form-group lg:col-span-4">
@@ -1703,53 +1703,6 @@
                                     {/if}
                                 </div>
 
-                                <!-- Image Download Sources -->
-                                <div
-                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
-                                >
-                                    <Label
-                                        class="text-base font-bold mb-1 flex items-center gap-2"
-                                    >
-                                        <div
-                                            class="w-2 h-2 rounded-full bg-blue-500"
-                                        ></div>
-                                        Image Source
-                                    </Label>
-                                    <p
-                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
-                                    >
-                                        Provide download locations for the
-                                        game's cover image or assets.
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        on:click={() =>
-                                            openFileSourceModal(
-                                                gameImageHash,
-                                                "image",
-                                            )}
-                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                                    >
-                                        Add Image Source
-                                    </Button>
-                                    {#if imageSourceCount > 0}
-                                        <div
-                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
-                                        >
-                                            <div
-                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-                                            ></div>
-                                            <span
-                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
-                                            >
-                                                {imageSourceCount} source(s) active
-                                            </span>
-                                        </div>
-                                    {/if}
-                                </div>
-
                                 <!-- Game Paper Download Sources -->
                                 <div
                                     class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
@@ -1793,6 +1746,53 @@
                                                 class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                             >
                                                 {paperSourceCount} source(s) active
+                                            </span>
+                                        </div>
+                                    {/if}
+                                </div>
+
+                                <!-- Image Download Sources -->
+                                <div
+                                    class="form-group p-5 rounded-xl border border-slate-500/10 bg-slate-500/5 backdrop-blur-sm hover:border-primary/30 transition-colors"
+                                >
+                                    <Label
+                                        class="text-base font-bold mb-1 flex items-center gap-2"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-blue-500"
+                                        ></div>
+                                        Image Source
+                                    </Label>
+                                    <p
+                                        class="text-xs text-muted-foreground mb-4 leading-relaxed"
+                                    >
+                                        Provide download locations for the
+                                        game's cover image or assets.
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() =>
+                                            openFileSourceModal(
+                                                gameImageHash,
+                                                "image",
+                                            )}
+                                        class="w-full bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                                    >
+                                        Add Image Source
+                                    </Button>
+                                    {#if imageSourceCount > 0}
+                                        <div
+                                            class="flex items-center justify-center gap-2 mt-3 py-1 px-3 rounded-full bg-green-500/10 border border-green-500/20 w-fit mx-auto"
+                                        >
+                                            <div
+                                                class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
+                                            ></div>
+                                            <span
+                                                class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
+                                            >
+                                                {imageSourceCount} source(s) active
                                             </span>
                                         </div>
                                     {/if}
