@@ -154,7 +154,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] failed to convert hex to bytes en fill demo participation.
 
-[] Agregar pantallas de guia para pasos off-chain - creador.
+[x] Agregar pantallas de guia para pasos off-chain - creador.
     - Agregar una primera pantalla en CreateGame que guie al usuario en que debe de diseñar un servicio juego y un paper. Para que una vez lo tenga pueda seguir al formulario.
 
 [] Agregar pantalla de guia para pasos off-chain - participante.
