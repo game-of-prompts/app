@@ -526,9 +526,26 @@
     let commitmentC_input = "";
     let solverId_input = "";
     let hashLogs_input = "";
-    let scores_input = "";
+    let user_score: number | null = null;
+    let scores_list: number[] = [];
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
+
+    // Reactivity: Each time 'user_score' changes, we regenerate the rivals
+    $: if (user_score !== null && user_score !== undefined) {
+        // Generate 6 random numbers between 0 and 100
+        const random_scores = Array.from({ length: 6 }, () =>
+            Math.floor(Math.random() * 100),
+        );
+
+        // Combine user score with rivals in a random position
+        const full_list = [...random_scores];
+        const randomIndex = Math.floor(Math.random() * (full_list.length + 1));
+        full_list.splice(randomIndex, 0, user_score);
+        scores_list = full_list;
+    } else {
+        scores_list = [];
+    }
 
     // DEV MODE STATE
     let devGenScore = 100;
@@ -603,7 +620,13 @@
                 !ergoTreeBytes ||
                 !secretSBytes
             ) {
-                console.log(solverIdBytes, seedBytes, hashLogsBytes, ergoTreeBytes, secretSBytes);
+                console.log(
+                    solverIdBytes,
+                    seedBytes,
+                    hashLogsBytes,
+                    ergoTreeBytes,
+                    secretSBytes,
+                );
                 throw new Error("Failed to convert hex to bytes");
             }
 
@@ -1035,9 +1058,7 @@
         errorMessage = null;
         isSubmitting = true;
         try {
-            const parsedScores = scores_input
-                .split(",")
-                .map((s) => BigInt(s.trim()));
+            const parsedScores = scores_list.map((s) => BigInt(s));
             transactionId = await platform.submitScoreToGopGame(
                 game,
                 parsedScores,
@@ -1503,16 +1524,20 @@
                                 typeof item === "string",
                         )
                     ) {
-                        scores_input = jsonData.score_list
-                            .map((s: number | string) => s.toString())
-                            .join(", ");
+                        scores_list = jsonData.score_list.map((s: any) =>
+                            Number(s),
+                        );
+                        if (scores_list.length > 0) {
+                            user_score = scores_list[0];
+                        }
                     } else throw new Error("Missing or invalid 'score_list'");
                 } catch (e: any) {
                     jsonUploadError = `Error reading JSON: ${e.message}`;
                     commitmentC_input = "";
                     solverId_input = "";
                     hashLogs_input = "";
-                    scores_input = "";
+                    user_score = null;
+                    scores_list = [];
                 }
             } else
                 jsonUploadError =
@@ -3026,8 +3051,8 @@
                                         Seed ceremony is open. Collaborate to
                                         ensure a random seed.
                                     {:else if game.status === "Active" && !participationIsEnded}
-                                        The competition is live. Solvers can submit
-                                        their scores until the deadline.
+                                        The competition is live. Solvers can
+                                        submit their scores until the deadline.
                                     {:else if game.status === "Active" && participationIsEnded}
                                         Time is up. The creator must now resolve
                                         the competition.
@@ -3038,8 +3063,8 @@
                                             Judges are validating the winner.
                                             New candidates can be proposed.
                                         {:else}
-                                            Judge period ended. The competition can be
-                                            finalized.
+                                            Judge period ended. The competition
+                                            can be finalized.
                                         {/if}
                                     {:else if game.status === "Finalized"}
                                         The competition has ended and prizes
@@ -3077,8 +3102,8 @@
                                                 class="font-medium text-gray-900 dark:text-gray-100"
                                                 >Anyone:</span
                                             > Contribute to the random number generation
-                                            process (free) to ensure the competition's seed
-                                            is random.
+                                            process (free) to ensure the competition's
+                                            seed is random.
                                         </li>
                                         <li
                                             class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -3087,8 +3112,8 @@
                                                 class="font-medium text-gray-900 dark:text-gray-100"
                                                 >Anyone:</span
                                             >
-                                            Cancel the competition by revealing the secret
-                                            and receive a portion of the creator’s
+                                            Cancel the competition by revealing the
+                                            secret and receive a portion of the creator’s
                                             stake.
                                         </li>
                                     {:else if game.status === "Active"}
@@ -3111,7 +3136,8 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the competition (if secret leaked).
+                                                Cancel the competition (if secret
+                                                leaked).
                                             </li>
                                         {:else if !participationIsEnded}
                                             <!-- PLAYING PHASE -->
@@ -3131,7 +3157,8 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the competition (if secret leaked).
+                                                Cancel the competition (if secret
+                                                leaked).
                                             </li>
                                         {:else}
                                             <!-- AWAITING RESOLUTION PHASE -->
@@ -3152,7 +3179,8 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
-                                                Cancel the competition (if secret leaked).
+                                                Cancel the competition (if secret
+                                                leaked).
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
@@ -3405,8 +3433,8 @@
                                     <p
                                         class="text-xs text-gray-500 dark:text-gray-400 mt-1"
                                     >
-                                        This competition uses a decentralized jury
-                                        system with {uniqueJudges.length} unique
+                                        This competition uses a decentralized
+                                        jury system with {uniqueJudges.length} unique
                                         judges. The creator cannot arbitrarily decide
                                         the winner; a majority of judges must agree.
                                     </p>
@@ -3684,8 +3712,8 @@
                                         <p
                                             class="text-sm text-center mt-2 text-muted-foreground"
                                         >
-                                            Finalize the competition and distribute
-                                            rewards.
+                                            Finalize the competition and
+                                            distribute rewards.
                                         </p>
                                     {:else if primaryAction === "drain_stake"}
                                         <Button
@@ -4752,28 +4780,42 @@
                                     <!-- Scores -->
                                     <div>
                                         <Label
-                                            for="scores"
+                                            for="user_score"
                                             class="block text-sm font-medium mb-1.5 {$mode ===
                                             'dark'
                                                 ? 'text-gray-200'
                                                 : 'text-gray-700'}"
-                                            >Scores</Label
                                         >
+                                            Your Score
+                                        </Label>
+
                                         <Input
-                                            id="scores"
-                                            type="text"
-                                            bind:value={scores_input}
-                                            placeholder="e.g., 100, 25, -10, 0"
+                                            id="user_score"
+                                            type="number"
+                                            bind:value={user_score}
+                                            placeholder="e.g., 85"
                                             class="w-full {$mode === 'dark'
                                                 ? 'bg-slate-800/50 border-slate-700'
                                                 : 'bg-white border-gray-200'}"
                                         />
+
                                         <p
                                             class="text-xs text-muted-foreground mt-1.5"
                                         >
-                                            Enter a comma-separated list of
-                                            numerical scores.
+                                            Enter your result. Will be mixed
+                                            with random data to preserve your
+                                            score private on-chain.
                                         </p>
+
+                                        {#if scores_list.length > 0}
+                                            <p
+                                                class="text-xs text-blue-500 mt-2"
+                                            >
+                                                Public data (Anonymized): {scores_list.join(
+                                                    ", ",
+                                                )}
+                                            </p>
+                                        {/if}
                                     </div>
 
                                     <!-- Fee & Action -->
@@ -4798,7 +4840,7 @@
                                                 !commitmentC_input.trim() ||
                                                 !solverId_input.trim() ||
                                                 !hashLogs_input.trim() ||
-                                                !scores_input.trim()}
+                                                scores_list.length === 0}
                                             class="w-full sm:w-auto min-w-[200px]"
                                             variant="default"
                                         >
@@ -4843,10 +4885,11 @@
                                                     >
                                                         Generates a valid
                                                         participation using the
-                                                        competition's service ID as the
-                                                        secret. Only works if
-                                                        you created the competition
-                                                        with that secret.
+                                                        competition's service ID
+                                                        as the secret. Only
+                                                        works if you created the
+                                                        competition with that
+                                                        secret.
                                                     </p>
                                                 </div>
 
