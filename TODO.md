@@ -150,9 +150,9 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Detectar de forma automática si el explorador web funciona mediante los datos mock previamente utilizados.
 
-[] mejorar submit score layout
+[x] mejorar submit score layout
 
-[] failed to convert hex to bytes en fill demo participation.
+[x] failed to convert hex to bytes en fill demo participation.
 
 [] Agregar pantallas de guia para pasos off-chain - creador.
     - Agregar una primera pantalla en CreateGame que guie al usuario en que debe de diseñar un servicio juego y un paper. Para que una vez lo tenga pueda seguir al formulario.
