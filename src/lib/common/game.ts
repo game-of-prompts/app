@@ -212,7 +212,7 @@ export interface MalformedParticipation extends ParticipationBase {
     reason: MalformedParticipationReason;
 }
 
-export type ParticipationConsumedReason = "cancelled" | "invalidated" | "bywinner" | "byparticipant" | "abandoned" | "batched" | "unknown";
+export type ParticipationConsumedReason = "cancelled" | "invalidated" | "unavailable" | "bywinner" | "byparticipant" | "abandoned" | "batched" | "unknown";
 export interface ParticipationConsumed extends ParticipationBase {
     status: 'Consumed';
     spent: true;

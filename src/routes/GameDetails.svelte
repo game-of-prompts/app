@@ -3857,6 +3857,9 @@
                                 {@const isInvalidated =
                                     p.status === "Consumed" &&
                                     p.reason === "invalidated"}
+                                {@const isUnavailable =
+                                    p.status === "Consumed" &&
+                                    p.reason === "unavailable"}
                                 {@const isCancelled =
                                     p.status === "Consumed" &&
                                     p.reason === "cancelled"}
@@ -3892,6 +3895,22 @@
                                             class="expired-badge absolute top-6 right-16 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold"
                                         >
                                             DISQUALIFIED
+                                        </div>
+                                    {/if}
+
+                                    {#if isUnavailable}
+                                        <div
+                                            class="expired-badge absolute top-6 right-16 bg-orange-600 text-white px-2 py-1 rounded-full text-xs font-semibold"
+                                        >
+                                            UNAVAILABLE
+                                        </div>
+                                    {/if}
+
+                                    {#if isCancelled}
+                                        <div
+                                            class="expired-badge absolute top-6 right-16 bg-gray-600 text-white px-2 py-1 rounded-full text-xs font-semibold"
+                                        >
+                                            CANCELLED
                                         </div>
                                     {/if}
 
@@ -4400,6 +4419,24 @@
                                                 to reproduce its result. Since participations
                                                 are deterministic, the judges invalidate
                                                 any that cannot be correctly replicated.
+                                            </p>
+                                        </div>
+                                    {/if}
+
+                                    {#if isUnavailable && isCurrentUserParticipant}
+                                        <div
+                                            class="info-block sm:col-span-2 lg:col-span-4 mt-4 mx-4 mb-4"
+                                        >
+                                            <p
+                                                class="text-xs {$mode === 'dark'
+                                                    ? 'text-red-400'
+                                                    : 'text-red-600'}"
+                                            >
+                                                Your participation was marked as <strong
+                                                    >unavailable</strong
+                                                > by the majority of judges. This indicates
+                                                that there were issues obtaining your robot service from
+                                                the source you provided, preventing judges from validating your participation.
                                             </p>
                                         </div>
                                     {/if}

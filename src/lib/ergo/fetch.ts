@@ -864,12 +864,22 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                             if (game.status === GameState.Resolution) {
                                 // Check if a majority of nominated judges have invalidated this participation
                                 const nominatedJudges = (game as GameResolution).judges;
+
                                 const invalidationVotes = p_base.reputationOpinions.filter(
-                                    (opinion) => nominatedJudges.includes(opinion.token_id) && (opinion.type.tokenId === PARTICIPATION_TYPE_NFT && opinion.is_locked === true && opinion.polarization === false || opinion.type.tokenId === PARTICIPATION_UNAVAILABLE)
+                                    (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.type.tokenId === PARTICIPATION_TYPE_NFT && opinion.is_locked === true && opinion.polarization === false
                                 );
                                 const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
+                                
+                                const invalidationUnavailableVotes = p_base.reputationOpinions.filter(
+                                    (opinion) => nominatedJudges.includes(opinion.token_id) && (opinion.type.tokenId === PARTICIPATION_UNAVAILABLE)
+                                );
+                                const invalidationUnavailable = nominatedJudges.length > 0 && invalidationUnavailableVotes.length > nominatedJudges.length / 2;
+
                                 if (invalidated) {
                                     return "invalidated";
+                                }
+                                else if (invalidationUnavailable) {
+                                    return "unavailable";
                                 }
                                 else {
                                     return "batched";
