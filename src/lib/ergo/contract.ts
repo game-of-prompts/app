@@ -4,7 +4,7 @@ import { compile, type ErgoTree } from "@fleet-sdk/compiler";
 import { Network, type ErgoAddress as Address } from "@fleet-sdk/core";
 import { blake2b256, sha256 } from "@fleet-sdk/crypto";
 import { uint8ArrayToHex } from "./utils";
-import { network_id, isDevMode } from "./envs";
+import { isDevMode } from "./envs";
 
 // --- Importación de todos los fuentes de los contratos ---
 import GAME_ACTIVE_SOURCE from '../../../contracts/game_active.es?raw';
@@ -20,7 +20,7 @@ import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-sy
 
 import { getGameConstants } from "$lib/common/constants";
 
-const networkType: Network = network_id === "mainnet" ? Network.Mainnet : Network.Testnet;
+const networkType: Network = Network.Mainnet;
 const ergoTreeVersion = 1;
 
 // --- Variables para almacenar en caché los resultados de la compilación ---

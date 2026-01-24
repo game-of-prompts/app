@@ -1,17 +1,67 @@
 
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 
-export const network_id: "mainnet" | "testnet" = "mainnet";
-
-export const default_explorer_uri = (network_id == "mainnet") ? "https://api.ergoplatform.com" : "https://api-testnet.ergoplatform.com";
-export const default_web_explorer_uri_tx = (network_id == "mainnet") ? "https://sigmaspace.io/en/transaction/" : "https://testnet.ergoplatform.com/transactions/";
-export const default_web_explorer_uri_addr = (network_id == "mainnet") ? "https://sigmaspace.io/en/address/" : "https://testnet.ergoplatform.com/addresses/";
-export const default_web_explorer_uri_tkn = (network_id == "mainnet") ? "https://sigmaspace.io/en/token/" : "https://testnet.ergoplatform.com/tokens/";
+export const default_explorer_uri = "https://api.ergoplatform.com";
+export const default_web_explorer_uri = "https://sigmaspace.io/en/";
 
 export const explorer_uri = writable<string>(default_explorer_uri);
-export const web_explorer_uri_tx = writable<string>(default_web_explorer_uri_tx);
-export const web_explorer_uri_addr = writable<string>(default_web_explorer_uri_addr);
-export const web_explorer_uri_tkn = writable<string>(default_web_explorer_uri_tkn);
+export const web_explorer_uri = writable<string>(default_web_explorer_uri);
+
+export const web_explorer_suffixes = writable<{ tx: string, addr: string, tkn: string }>({
+    tx: "transaction/",
+    addr: "address/",
+    tkn: "token/"
+});
+
+export const web_explorer_uri_tx = derived([web_explorer_uri, web_explorer_suffixes], ([$uri, $suffixes]) => $uri + $suffixes.tx);
+export const web_explorer_uri_addr = derived([web_explorer_uri, web_explorer_suffixes], ([$uri, $suffixes]) => $uri + $suffixes.addr);
+export const web_explorer_uri_tkn = derived([web_explorer_uri, web_explorer_suffixes], ([$uri, $suffixes]) => $uri + $suffixes.tkn);
+
+export async function detectExplorerSuffixes(baseUrl: string): Promise<boolean> {
+    const mockData = {
+        token: "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12",
+        address: "9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T",
+        transaction: "843a5c85ed0f0cf6a936e48eb9d1de0771092ebb7ca54eba0bf95fb13827812b"
+    };
+
+    const check = async (path: string) => {
+        try {
+            const response = await fetch(baseUrl + path, { method: 'HEAD' });
+            return response.ok;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    let tx = "transaction/";
+    let addr = "address/";
+    let tkn = "token/";
+    let valid = false;
+
+    if (await check(tx + mockData.transaction)) {
+        valid = true;
+    } else if (await check("transactions/" + mockData.transaction)) {
+        tx = "transactions/";
+        valid = true;
+    }
+
+    if (await check(addr + mockData.address)) {
+        valid = true;
+    } else if (await check("addresses/" + mockData.address)) {
+        addr = "addresses/";
+        valid = true;
+    }
+
+    if (await check(tkn + mockData.token)) {
+        valid = true;
+    } else if (await check("tokens/" + mockData.token)) {
+        tkn = "tokens/";
+        valid = true;
+    }
+
+    web_explorer_suffixes.set({ tx, addr, tkn });
+    return valid;
+}
 export const default_source_explorer_url = "https://reputation-systems.github.io/source-application";
 export const source_explorer_url = writable<string>(default_source_explorer_url);
 export const default_forum_explorer_url = "https://reputation-systems.github.io/forum-application";

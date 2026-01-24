@@ -4,13 +4,10 @@
     import { Label } from "$lib/components/ui/label";
     import {
         explorer_uri,
-        web_explorer_uri_tx,
-        web_explorer_uri_addr,
-        web_explorer_uri_tkn,
+        web_explorer_uri,
         default_explorer_uri,
-        default_web_explorer_uri_tx,
-        default_web_explorer_uri_addr,
-        default_web_explorer_uri_tkn,
+        default_web_explorer_uri,
+        detectExplorerSuffixes,
         source_explorer_url,
         default_source_explorer_url,
         forum_explorer_url,
@@ -32,9 +29,7 @@
 
     function restoreDefaults() {
         explorer_uri.set(default_explorer_uri);
-        web_explorer_uri_tx.set(default_web_explorer_uri_tx);
-        web_explorer_uri_addr.set(default_web_explorer_uri_addr);
-        web_explorer_uri_tkn.set(default_web_explorer_uri_tkn);
+        web_explorer_uri.set(default_web_explorer_uri);
         source_explorer_url.set(default_source_explorer_url);
         forum_explorer_url.set(default_forum_explorer_url);
     }
@@ -78,36 +73,35 @@
                 </div>
 
                 <div class="space-y-2">
-                    <Label for="web_explorer_uri_tx"
-                        >Web Explorer Transaction URI</Label
-                    >
-                    <Input
-                        id="web_explorer_uri_tx"
-                        bind:value={$web_explorer_uri_tx}
-                        placeholder="https://sigmaspace.io/en/transaction/"
-                    />
-                </div>
-
-                <div class="space-y-2">
-                    <Label for="web_explorer_uri_addr"
-                        >Web Explorer Address URI</Label
-                    >
-                    <Input
-                        id="web_explorer_uri_addr"
-                        bind:value={$web_explorer_uri_addr}
-                        placeholder="https://sigmaspace.io/en/address/"
-                    />
-                </div>
-
-                <div class="space-y-2">
-                    <Label for="web_explorer_uri_tkn"
-                        >Web Explorer Token URI</Label
-                    >
-                    <Input
-                        id="web_explorer_uri_tkn"
-                        bind:value={$web_explorer_uri_tkn}
-                        placeholder="https://sigmaspace.io/en/token/"
-                    />
+                    <Label for="web_explorer_uri">Web Explorer URI</Label>
+                    <div class="flex gap-2">
+                        <Input
+                            id="web_explorer_uri"
+                            bind:value={$web_explorer_uri}
+                            placeholder="https://sigmaspace.io/en/"
+                        />
+                        <Button
+                            variant="outline"
+                            on:click={async () => {
+                                const isValid =
+                                    await detectExplorerSuffixes(
+                                        $web_explorer_uri,
+                                    );
+                                if (isValid) {
+                                    alert(
+                                        "Explorer configuration detected successfully!",
+                                    );
+                                } else {
+                                    alert(
+                                        "Warning: Could not detect valid explorer endpoints. Please check the URI.",
+                                    );
+                                }
+                            }}
+                            title="Detect singular/plural suffixes"
+                        >
+                            Detect
+                        </Button>
+                    </div>
                 </div>
 
                 <div class="space-y-2">
@@ -158,7 +152,9 @@
                 <div class="space-y-2 pt-4 border-t border-border">
                     <Label>Audio Settings</Label>
                     <div class="space-y-2">
-                        <label for="volume-slider" class="text-sm font-medium">Volume</label>
+                        <label for="volume-slider" class="text-sm font-medium"
+                            >Volume</label
+                        >
                         <input
                             type="range"
                             id="volume-slider"
@@ -168,7 +164,9 @@
                             bind:value={$user_volume}
                             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                         />
-                        <div class="flex justify-between text-xs text-muted-foreground">
+                        <div
+                            class="flex justify-between text-xs text-muted-foreground"
+                        >
                             <span>0</span>
                             <span>1</span>
                         </div>

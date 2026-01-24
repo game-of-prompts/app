@@ -22,7 +22,6 @@
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
     import { type AnyGame as Game } from "$lib/common/game";
-    import { network_id } from "$lib/ergo/envs";
     import Kya from "./kya.svelte";
     import Theme from "./Theme.svelte";
     import { get } from "svelte/store";
@@ -43,18 +42,22 @@
     } from "wallet-svelte-component";
     import { Settings, Menu, X, Wallet, VolumeX, Music } from "lucide-svelte";
     import SettingsModal from "./SettingsModal.svelte";
+    import InvalidExplorerModal from "./InvalidExplorerModal.svelte";
     import {
         explorer_uri,
-        web_explorer_uri_tx,
-        web_explorer_uri_addr,
-        web_explorer_uri_tkn,
+        web_explorer_uri,
+        detectExplorerSuffixes,
         source_explorer_url,
         forum_explorer_url,
     } from "$lib/ergo/envs";
     import { Button } from "$lib/components/ui/button";
     import { fetchTypeNfts } from "$lib/ergo/reputation/fetch";
     import { JUDGE } from "$lib/ergo/reputation/types";
-    import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
+    import {
+        DropdownMenu,
+        DropdownMenuContent,
+        DropdownMenuTrigger,
+    } from "$lib/components/ui/dropdown-menu";
 
     // Sync stores
     $: connected.set($walletConnected);
@@ -68,6 +71,7 @@
     let showWalletInfo = false;
     let mobileMenuOpen = false;
     let showSettings = false;
+    let showInvalidExplorerModal = false;
 
     let platform = new ErgoPlatform();
 
@@ -89,7 +93,7 @@
     onMount(() => {
         if (!browser) return;
 
-        network.set(network_id == "mainnet" ? "ergo-mainnet" : "ergo-testnet");
+        network.set("ergo-mainnet");
 
         const gameToken = $page.url.searchParams.get("game");
         if (gameToken) {
@@ -111,12 +115,26 @@
                 const settings = JSON.parse(storedSettings);
                 if (settings.explorer_uri)
                     explorer_uri.set(settings.explorer_uri);
-                if (settings.web_explorer_uri_tx)
-                    web_explorer_uri_tx.set(settings.web_explorer_uri_tx);
-                if (settings.web_explorer_uri_addr)
-                    web_explorer_uri_addr.set(settings.web_explorer_uri_addr);
-                if (settings.web_explorer_uri_tkn)
-                    web_explorer_uri_tkn.set(settings.web_explorer_uri_tkn);
+                if (settings.web_explorer_uri) {
+                    web_explorer_uri.set(settings.web_explorer_uri);
+                    detectExplorerSuffixes(settings.web_explorer_uri).then(
+                        (isValid) => {
+                            if (!isValid) {
+                                web_explorer_uri.set(""); // Clear invalid URI
+                                showInvalidExplorerModal = true;
+                            }
+                        },
+                    );
+                } else {
+                    detectExplorerSuffixes(get(web_explorer_uri)).then(
+                        (isValid) => {
+                            if (!isValid) {
+                                web_explorer_uri.set(""); // Clear invalid URI
+                                showInvalidExplorerModal = true;
+                            }
+                        },
+                    );
+                }
                 if (settings.source_explorer_url)
                     source_explorer_url.set(settings.source_explorer_url);
                 if (settings.forum_explorer_url)
@@ -128,9 +146,7 @@
 
         const unsubscribeSettings = [
             explorer_uri,
-            web_explorer_uri_tx,
-            web_explorer_uri_addr,
-            web_explorer_uri_tkn,
+            web_explorer_uri,
             source_explorer_url,
             forum_explorer_url,
         ].map((store) =>
@@ -138,9 +154,7 @@
                 if (browser) {
                     const settings = {
                         explorer_uri: get(explorer_uri),
-                        web_explorer_uri_tx: get(web_explorer_uri_tx),
-                        web_explorer_uri_addr: get(web_explorer_uri_addr),
-                        web_explorer_uri_tkn: get(web_explorer_uri_tkn),
+                        web_explorer_uri: get(web_explorer_uri),
                         source_explorer_url: get(source_explorer_url),
                         forum_explorer_url: get(forum_explorer_url),
                     };
@@ -257,7 +271,11 @@
 
     $: changeUrl($game_detail);
 
-    function fadeOutAudio(audio: HTMLAudioElement, targetVolume: number, duration: number = 2000): Promise<void> {
+    function fadeOutAudio(
+        audio: HTMLAudioElement,
+        targetVolume: number,
+        duration: number = 2000,
+    ): Promise<void> {
         return new Promise((resolve) => {
             const startVolume = audio.volume;
             const steps = 50;
@@ -266,7 +284,10 @@
             let currentStep = 0;
             const interval = setInterval(() => {
                 currentStep++;
-                audio.volume = Math.max(targetVolume, startVolume - volumeStep * currentStep);
+                audio.volume = Math.max(
+                    targetVolume,
+                    startVolume - volumeStep * currentStep,
+                );
                 if (currentStep >= steps) {
                     clearInterval(interval);
                     resolve();
@@ -462,42 +483,42 @@
 <main class="pb-16">
     {#if $game_detail === null && $judge_detail == null}
         {#if activeTab === "participateGame"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <TokenAcquisition />
             </div>
         {/if}
         {#if activeTab === "createGame"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <CreateGame />
             </div>
         {/if}
         {#if activeTab === "judges"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <JudgeList />
             </div>
         {/if}
         {#if activeTab === "createJudge"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <CreateJudge />
             </div>
         {/if}
         {#if activeTab === "showJudge"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <ShowJudge />
             </div>
         {/if}
 
         {#if activeTab === "demo"}
-            <div transition:fade={{duration: 300}}>
+            <div transition:fade={{ duration: 300 }}>
                 <Demo />
             </div>
         {/if}
     {:else if $game_detail !== null}
-        <div transition:fade={{duration: 300}}>
+        <div transition:fade={{ duration: 300 }}>
             <GameDetails />
         </div>
     {:else}
-        <div transition:fade={{duration: 300}}>
+        <div transition:fade={{ duration: 300 }}>
             <ShowJudge />
         </div>
     {/if}
@@ -511,6 +532,10 @@
             changeTab("demo");
         }}
     />
+{/if}
+
+{#if showInvalidExplorerModal}
+    <InvalidExplorerModal on:close={() => (showInvalidExplorerModal = false)} />
 {/if}
 
 <footer class="page-footer">
