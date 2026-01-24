@@ -8,7 +8,6 @@
         type ValidParticipation,
         GameState,
         iGameDrainingStaking,
-        isGameDrainingAllowed,
         isGameParticipationEnded,
         isGameEnded,
         isOpenCeremony,
@@ -401,6 +400,7 @@
         secondsValue = 0;
     let targetDate: number;
     let clockLabel: string = "TIME LEFT";
+    let clockInformation: string = "Depends on game status";
     let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
     // Modal State
@@ -870,6 +870,7 @@
                         platform,
                     );
                     clockLabel = "Participation Deadline";
+                    clockInformation = "Block limit for submissions. After this block, no new participations will be accepted.";
                 } else {
                     // Grace Period
                     targetDate = await block_height_to_timestamp(
@@ -877,7 +878,7 @@
                             game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS,
                         platform,
                     );
-                    clockLabel = "Grace Period Ends";
+                    clockLabel = "Grace Period";
                 }
 
                 deadlineDateDisplay = format(
@@ -898,9 +899,9 @@
                             game.constants.END_GAME_AUTH_GRACE_PERIOD,
                         platform,
                     );
-                    clockLabel = "Grace Period Ends";
+                    clockLabel = "Grace Period";
                 }
-                deadlineDateDisplay = `Judge period ends ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
+                deadlineDateDisplay = `${clockLabel} ends ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
             } else if (game.status === "Cancelled_Draining") {
                 targetDate = await block_height_to_timestamp(
                     game.unlockHeight,
@@ -1932,13 +1933,13 @@
                                         : "N/A"}</a
                             >
                             <span class="stat-label"
-                                >Deadline<button
+                                >{clockLabel}<button
                                     type="button"
                                     class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
                                     on:click|stopPropagation={() =>
                                         openDidacticModal(
-                                            "Deadline",
-                                            "Block limit for submissions. If not resolved within the grace period after this block, participants can withdraw their entry.",
+                                            clockLabel,
+                                            clockInformation,
                                         )}
                                 >
                                     <Info class="w-3.5 h-3.5" />
