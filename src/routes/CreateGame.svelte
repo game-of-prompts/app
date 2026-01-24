@@ -101,8 +101,6 @@
     let participationTokenName: string = "ERG";
 
     let selectedTokenOption: string = "";
-    let customTokenId: string = "";
-    let isCustomToken: boolean = false;
 
     let availableTokens: {
         tokenId: string;
@@ -191,15 +189,6 @@
             });
 
             availableTokens = tokensWithDetails;
-
-            // Set default if not set
-            if (selectedTokenOption === "ERG" || selectedTokenOption === "") {
-                if (availableTokens.length > 0) {
-                    selectedTokenOption = availableTokens[0].tokenId;
-                } else {
-                    selectedTokenOption = "custom";
-                }
-            }
         } catch (e) {
             console.error("Error loading user tokens", e);
         } finally {
@@ -314,7 +303,8 @@
         if (type === "service") activeHashStore = gameServiceIdStore;
         else if (type === "image") activeHashStore = gameImageHashStore;
         else if (type === "paper") activeHashStore = gamePaperHashStore;
-        else if (type === "soundtrack") activeHashStore = gameSoundtrackHashStore;
+        else if (type === "soundtrack")
+            activeHashStore = gameSoundtrackHashStore;
 
         activeHashStore.set(hash);
         showFileSourceModal = true;
@@ -381,7 +371,8 @@
     $: if (gameImageHash && gameImageHash.length === 64) updateSourceCounts();
     $: if (gameServiceId && gameServiceId.length === 64) updateSourceCounts();
     $: if (gamePaperHash && gamePaperHash.length === 64) updateSourceCounts();
-    $: if (gameSoundtrackHash && gameSoundtrackHash.length === 64) updateSourceCounts();
+    $: if (gameSoundtrackHash && gameSoundtrackHash.length === 64)
+        updateSourceCounts();
 
     // --- Logic for repeaters
     function addJudge() {
@@ -474,34 +465,8 @@
     }
 
     // --- Token Reactive Logic ---
-    let customTokenDebounceTimer: any;
     $: {
-        if (customTokenDebounceTimer) clearTimeout(customTokenDebounceTimer);
-
-        isCustomToken = selectedTokenOption === "custom";
-
-        if (isCustomToken) {
-            if (customTokenId && customTokenId.length === 64) {
-                participationTokenId = customTokenId;
-                participationTokenName = "Loading...";
-
-                customTokenDebounceTimer = setTimeout(async () => {
-                    try {
-                        const { name, decimals } =
-                            await fetch_token_details(customTokenId);
-                        participationTokenName = name;
-                        participationTokenDecimals = decimals;
-                    } catch (e) {
-                        participationTokenName = "Unknown Token";
-                        participationTokenDecimals = 0;
-                    }
-                }, 500);
-            } else {
-                participationTokenId = "";
-                participationTokenName = "Enter 64-char ID";
-                participationTokenDecimals = 0;
-            }
-        } else if (selectedTokenOption && selectedTokenOption !== "ERG") {
+        if (selectedTokenOption) {
             const token = availableTokens.find(
                 (t) => t.tokenId === selectedTokenOption,
             );
@@ -511,19 +476,7 @@
                 participationTokenDecimals = token.decimals;
                 participationTokenName = token.title;
             } else {
-                // Should not happen if selected from dropdown, unless list changed.
-                // Fallback to custom or keep existing if valid
-                if (!isCustomToken) {
-                    // Maybe it's a token that was available but now isn't?
-                    // Or we are initializing.
-                }
-            }
-        } else {
-            // If ERG is selected (shouldn't be possible via UI) or empty
-            if (availableTokens.length > 0) {
-                selectedTokenOption = availableTokens[0].tokenId;
-            } else {
-                selectedTokenOption = "custom";
+                alert("Token not found. Contact developers on Telegram.");
             }
         }
     }
@@ -884,11 +837,14 @@
                                     <span>Sources: {paperSourceCount}</span>
                                 </div>
                                 <div>
-                                    <span class="font-bold">Soundtrack Hash:</span>
+                                    <span class="font-bold"
+                                        >Soundtrack Hash:</span
+                                    >
                                     <span class="block font-mono truncate"
                                         >{gameSoundtrackHash || "None"}</span
                                     >
-                                    <span>Sources: {soundtrackSourceCount}</span>
+                                    <span>Sources: {soundtrackSourceCount}</span
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -1164,63 +1120,30 @@
                                 <Label class="mb-1.5 block"
                                     >Token for Stake & Fee</Label
                                 >
-                                <select
-                                    bind:value={selectedTokenOption}
-                                    class="w-full p-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                >
-                                    {#each availableTokens as token (token.tokenId)}
-                                        <option value={token.tokenId}>
-                                            {token.title}
-                                        </option>
-                                    {/each}
-
-                                    <option value="custom"
-                                        >Other Token ID...</option
+                                {#if isLoadingTokens && availableTokens.length === 0}
+                                    <p
+                                        class="text-sm text-muted-foreground italic p-2"
                                     >
-                                </select>
-
-                                {#if isCustomToken}
-                                    <div class="mt-3">
-                                        <Label
-                                            for="customTokenId"
-                                            class="text-xs font-medium mb-1.5 block"
-                                        >
-                                            Custom Token ID
-                                        </Label>
-                                        <div class="flex gap-2">
-                                            <Input
-                                                id="customTokenId"
-                                                bind:value={customTokenId}
-                                                placeholder="Enter the 64-character token ID"
-                                                class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-500/20 text-xs font-mono"
-                                                maxlength={64}
-                                                pattern="[a-fA-F0-9]{64}"
-                                            />
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                on:click={() =>
-                                                    (customTokenId = "")}
-                                                class="shrink-0 h-9 w-9"
-                                                title="Clear token ID"
-                                            >
-                                                <Trash2 class="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                        {#if customTokenId.length === 64 && participationTokenName !== "Loading..." && participationTokenName !== "Enter 64-char ID"}
-                                            <p
-                                                class="text-xs text-muted-foreground mt-1"
-                                            >
-                                                Token: {participationTokenName} (Decimals:
-                                                {participationTokenDecimals})
-                                            </p>
-                                        {/if}
-                                    </div>
+                                        Loading your tokens...
+                                    </p>
+                                {:else}
+                                    <select
+                                        bind:value={selectedTokenOption}
+                                        class="w-full p-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    >
+                                        {#each availableTokens as token (token.tokenId)}
+                                            <option value={token.tokenId}>
+                                                {token.title}
+                                            </option>
+                                        {/each}
+                                    </select>
                                 {/if}
                             </div>
                             <div class="form-group lg:col-span-2">
                                 <div class="flex items-center gap-2 mb-1.5">
-                                    <Label for="resolverStakeAmount" class="mb-0"
+                                    <Label
+                                        for="resolverStakeAmount"
+                                        class="mb-0"
                                         >Resolver Stake ({participationTokenName})</Label
                                     >
                                     <div class="group relative">
@@ -1296,10 +1219,10 @@
                                                     "Resolver Commission",
                                                     /**
                                                      * Percentage of the prize pool paid to whoever resolves the game.
-                                                     * 
+                                                     *
                                                      * You (the creator) set this rate, but if someone else resolves the game first,
                                                      * they get this commission instead of you.
-                                                     * 
+                                                     *
                                                      * @type {number}
                                                      * @description Commission for the resolver (you or someone else).
                                                      */
@@ -1694,7 +1617,8 @@
                                     </Button>
                                 </div>
                                 <p class="text-xs mt-1 text-muted-foreground">
-                                    The Blake2b256 hash of the game's soundtrack or audio file
+                                    The Blake2b256 hash of the game's soundtrack
+                                    or audio file
                                 </p>
                             </div>
                         </div>
@@ -1915,7 +1839,8 @@
                                             <span
                                                 class="text-[10px] text-green-500 font-bold uppercase tracking-wider"
                                             >
-                                                {soundtrackSourceCount} source(s) active
+                                                {soundtrackSourceCount} source(s)
+                                                active
                                             </span>
                                         </div>
                                     {/if}
