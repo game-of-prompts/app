@@ -145,6 +145,8 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] failed to convert hex to bytes en fill demo participation.
 
+[] mejorar settings del explorador (solo indicar una vez y automaticamente seleccionar rutas) y validar si funciona el explorador ... si no funciona mostrar alerta para el usuario o cambiar a otro.
+
 -----
 
 [] Invalidación por no disponibilidad.
