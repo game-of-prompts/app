@@ -38,7 +38,7 @@ import {
     getArrayFromValue
 } from "./utils"; // Assumes this file contains parsing utilities
 import { fetchOpinionsAbout } from "./reputation/fetch";
-import { GAME as GAME_TYPE_NFT, PARTICIPATION as PARTICIPATION_TYPE_NFT } from "./reputation/types";
+import { GAME as GAME_TYPE_NFT, PARTICIPATION as PARTICIPATION_TYPE_NFT, PARTICIPATION_UNAVAILABLE } from "./reputation/types";
 import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
@@ -114,7 +114,7 @@ async function fetchReputationOpinionsForTarget(
 ): Promise<RPBox[]> {
     try {
         // Determine the correct type NFT ID based on the target type
-        const typeNftId = type === "game" ? GAME_TYPE_NFT : PARTICIPATION_TYPE_NFT;
+        const typeNftId = type === "game" ? GAME_TYPE_NFT : undefined;
 
         // Use fetchOpinionsAbout which correctly searches by objectPointer and typeNftId
         return await fetchOpinionsAbout(targetId, typeNftId);
@@ -775,7 +775,7 @@ async function _parseParticipationBox(box: any, participationTokenId: string): P
             solverId_String: solverId_RawBytesHex,
             hashLogs_Hex,
             scoreList,
-            reputationOpinions: await fetchReputationOpinionsForTarget("participation", box.boxId)
+            reputationOpinions: await fetchReputationOpinionsForTarget("participation", commitmentC_Hex)
         };
         return participationBase;
 
@@ -865,7 +865,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                 // Check if a majority of nominated judges have invalidated this participation
                                 const nominatedJudges = (game as GameResolution).judges;
                                 const invalidationVotes = p_base.reputationOpinions.filter(
-                                    (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.polarization === false
+                                    (opinion) => nominatedJudges.includes(opinion.token_id) && (opinion.type.tokenId === PARTICIPATION_TYPE_NFT && opinion.is_locked === true && opinion.polarization === false || opinion.type.tokenId === PARTICIPATION_UNAVAILABLE)
                                 );
                                 const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
                                 if (invalidated) {
