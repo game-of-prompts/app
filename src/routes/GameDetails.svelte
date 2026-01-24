@@ -575,8 +575,8 @@
                 if (i === realScoreIndex) {
                     scores.push(BigInt(devGenScore));
                 } else {
-                    // Generate random decoy score between -100 and 200
-                    const decoyScore = Math.floor(Math.random() * 301) - 100;
+                    // Generate random decoy score (always positive, 0-200)
+                    const decoyScore = Math.floor(Math.random() * 201);
                     scores.push(BigInt(decoyScore));
                 }
             }
@@ -593,7 +593,7 @@
             view.setBigInt64(0, BigInt(devGenScore), false); // false for big-endian
 
             const hashLogsBytes = hexToBytes(hashLogs);
-            const ergoTreeBytes = hexToBytes(ergoTree);
+            const ergoTreeBytes = ergoTree;
             const secretSBytes = hexToBytes(secretS);
 
             if (
@@ -603,6 +603,7 @@
                 !ergoTreeBytes ||
                 !secretSBytes
             ) {
+                console.log(solverIdBytes, seedBytes, hashLogsBytes, ergoTreeBytes, secretSBytes);
                 throw new Error("Failed to convert hex to bytes");
             }
 
@@ -4705,50 +4706,47 @@
                                         />
                                     </div>
 
-                                    <!-- Solver ID & Hash Logs -->
-                                    <div
-                                        class="grid grid-cols-1 md:grid-cols-2 gap-5"
-                                    >
-                                        <div>
-                                            <Label
-                                                for="solverId"
-                                                class="block text-sm font-medium mb-1.5 {$mode ===
-                                                'dark'
-                                                    ? 'text-gray-200'
-                                                    : 'text-gray-700'}"
-                                                >Solver ID / Name</Label
-                                            >
-                                            <Input
-                                                id="solverId"
-                                                type="text"
-                                                bind:value={solverId_input}
-                                                placeholder="e.g., my_solver.celaut.bee"
-                                                class="w-full {$mode === 'dark'
-                                                    ? 'bg-slate-800/50 border-slate-700'
-                                                    : 'bg-white border-gray-200'}"
-                                            />
-                                        </div>
+                                    <!-- Solver ID -->
+                                    <div>
+                                        <Label
+                                            for="solverId"
+                                            class="block text-sm font-medium mb-1.5 {$mode ===
+                                            'dark'
+                                                ? 'text-gray-200'
+                                                : 'text-gray-700'}"
+                                            >Solver ID / Name</Label
+                                        >
+                                        <Input
+                                            id="solverId"
+                                            type="text"
+                                            bind:value={solverId_input}
+                                            placeholder="e.g., my_solver.celaut.bee"
+                                            class="w-full {$mode === 'dark'
+                                                ? 'bg-slate-800/50 border-slate-700'
+                                                : 'bg-white border-gray-200'}"
+                                        />
+                                    </div>
 
-                                        <div>
-                                            <Label
-                                                for="hashLogs"
-                                                class="block text-sm font-medium mb-1.5 {$mode ===
-                                                'dark'
-                                                    ? 'text-gray-200'
-                                                    : 'text-gray-700'}"
-                                                >Hash of Logs (Hex)</Label
-                                            >
-                                            <Input
-                                                id="hashLogs"
-                                                type="text"
-                                                bind:value={hashLogs_input}
-                                                placeholder="Blake2b-256 hash..."
-                                                class="w-full font-mono text-sm {$mode ===
-                                                'dark'
-                                                    ? 'bg-slate-800/50 border-slate-700'
-                                                    : 'bg-white border-gray-200'}"
-                                            />
-                                        </div>
+                                    <!-- Hash Logs -->
+                                    <div>
+                                        <Label
+                                            for="hashLogs"
+                                            class="block text-sm font-medium mb-1.5 {$mode ===
+                                            'dark'
+                                                ? 'text-gray-200'
+                                                : 'text-gray-700'}"
+                                            >Hash of Logs (Hex)</Label
+                                        >
+                                        <Input
+                                            id="hashLogs"
+                                            type="text"
+                                            bind:value={hashLogs_input}
+                                            placeholder="Blake2b-256 hash..."
+                                            class="w-full font-mono text-sm {$mode ===
+                                            'dark'
+                                                ? 'bg-slate-800/50 border-slate-700'
+                                                : 'bg-white border-gray-200'}"
+                                        />
                                     </div>
 
                                     <!-- Scores -->
