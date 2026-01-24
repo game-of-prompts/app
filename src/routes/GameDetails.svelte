@@ -27,7 +27,7 @@
         user_volume,
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import { get, writable } from "svelte/store";
     import {
         fetchParticipations,
@@ -531,8 +531,10 @@
     let secret_S_input_resolve = "";
     let secret_S_input_cancel = "";
 
+    let isAutoFilling = false;
+
     // Reactivity: Each time 'user_score' changes, we regenerate the rivals
-    $: if (user_score !== null && user_score !== undefined) {
+    $: if (!isAutoFilling && user_score !== null && user_score !== undefined) {
         // Generate 6 random numbers between 0 and 100
         const random_scores = Array.from({ length: 6 }, () =>
             Math.floor(Math.random() * 100),
@@ -584,7 +586,7 @@
             const ergoTree = prependHexPrefix(playerPkBytes);
 
             // 3. Generate Score List with Decoys
-            const numScores = 5; // Total scores in the list
+            const numScores = 7; // Total scores in the list (1 real + 6 decoys)
             const scores: bigint[] = [];
             const realScoreIndex = Math.floor(Math.random() * numScores); // Random position for real score
 
@@ -671,10 +673,16 @@
             }
 
             // 7. Fill Inputs
+            isAutoFilling = true;
             solverId_input = solverId;
             hashLogs_input = hashLogs;
             commitmentC_input = finalCommitment;
-            scores_input = finalScores.map((s) => s.toString()).join(",");
+            user_score = devGenScore;
+            scores_list = finalScores.map((s) => Number(s));
+
+            tick().then(() => {
+                isAutoFilling = false;
+            });
 
             console.log("Dev Generation Complete", {
                 solverId,
