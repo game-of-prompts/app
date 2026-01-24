@@ -49,16 +49,16 @@ export async function judges_invalidate(
     for (const p of judgeVoteDataInputs) {
         const reg = p.additionalRegisters;
 
-        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
-            reg.R5.renderedValue === game.winnerCandidateCommitment &&
-            reg.R6.renderedValue === "true" &&
-            reg.R8.renderedValue === "false";
+        const valid = reg.R4 === "0e20"+game.constants.PARTICIPATION_TYPE_ID &&
+            reg.R5 === "0e20"+game.winnerCandidateCommitment &&
+            reg.R6 === "true" &&
+            reg.R8 === "false";
 
         if (!valid) {
-            console.log(reg.R4.renderedValue)
-            console.log(reg.R5.renderedValue)
-            console.log(reg.R6.renderedValue)
-            console.log(reg.R8.renderedValue)
+            console.log(reg.R4)
+            console.log(reg.R5)
+            console.log(reg.R6)
+            console.log(reg.R8)
             throw new Error("Invalid judge vote [basic].")
         }
 
@@ -150,7 +150,7 @@ export async function judges_invalidate(
     // --- 3. Prepare data for the new resolution box ---
 
     const dataInputs = [
-        ...judgeVoteDataInputs.map(e => parseBox(e)),
+        ...judgeVoteDataInputs.map(e => e),
         ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
     ];
 

@@ -50,13 +50,15 @@ export async function judges_invalidate_unavailable(
     for (const p of judgeVoteDataInputs) {
         const reg = p.additionalRegisters;
 
+        console.log("Regs ", reg)
+
         // TODO CHECK.
-        const valid = reg.R4.renderedValue === "0e20"+game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
-            reg.R5.renderedValue === "0e20"+game.winnerCandidateCommitment;
+        const valid = reg.R4 === "0e20"+game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
+            reg.R5 === "0e20"+game.winnerCandidateCommitment;
 
         if (!valid) {
-            console.log(reg.R4.renderedValue)
-            console.log(reg.R5.renderedValue)
+            console.log(reg.R4)
+            console.log(reg.R5)
             throw new Error("Invalid judge vote for unavailable marking.")
         }
 
@@ -148,7 +150,7 @@ export async function judges_invalidate_unavailable(
     // --- 3. Prepare data for the new resolution box ---
 
     const dataInputs = [
-        ...judgeVoteDataInputs.map(e => parseBox(e)),
+        ...judgeVoteDataInputs.map(e => e),
         ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
     ];
 
