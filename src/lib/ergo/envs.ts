@@ -2,7 +2,7 @@
 import { writable, derived } from 'svelte/store';
 
 export const default_explorer_uri = "https://api.ergoplatform.com";
-export const default_web_explorer_uri = "https://sigmaspace.io/en/";
+export const default_web_explorer_uri = "https://explorer.ergoplatform.com/";
 
 export const explorer_uri = writable<string>(default_explorer_uri);
 export const web_explorer_uri = writable<string>(default_web_explorer_uri);

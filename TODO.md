@@ -145,12 +145,12 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [] failed to convert hex to bytes en fill demo participation.
 
-[] El explorador web posee tres endpoints distintos, eso ocurre porque algunos usan plural y otros singular (ej: transaction o transactions) ... vamos a permitir que el usuario ponga solo el web explorer una vez e internamente comprobaremos que caso es (si plugral o singular) para cada caso (transaction, address, token) ... deberemos utilizar datos mock para hacer llamadas de prueba (sabemos que estos existen en mainnet)
+[x] El explorador web posee tres endpoints distintos, eso ocurre porque algunos usan plural y otros singular (ej: transaction o transactions) ... vamos a permitir que el usuario ponga solo el web explorer una vez e internamente comprobaremos que caso es (si plugral o singular) para cada caso (transaction, address, token) ... deberemos utilizar datos mock para hacer llamadas de prueba (sabemos que estos existen en mainnet)
 - token: ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12
 - address: 9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T
 - transaction: 843a5c85ed0f0cf6a936e48eb9d1de0771092ebb7ca54eba0bf95fb13827812b
 
-[] Detectar de forma automática si el explorador web funciona mediante los datos mock previamente utilizados.
+[x] Detectar de forma automática si el explorador web funciona mediante los datos mock previamente utilizados.
 
 [] mejorar submit score layout
 
