@@ -143,8 +143,6 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Aclarar nomenclatura: El creador solo es el creator token id ... en todo lo demas, lo llamamos "resolver" ... (lo digo porque en algunas partes se menciona tanto como resolver como creador ... realmente la unica relacion de los dos terminos es que el creador es quien tiene la oportunidad de ser el resolver)
 
-[] failed to convert hex to bytes en fill demo participation.
-
 [x] El explorador web posee tres endpoints distintos, eso ocurre porque algunos usan plural y otros singular (ej: transaction o transactions) ... vamos a permitir que el usuario ponga solo el web explorer una vez e internamente comprobaremos que caso es (si plugral o singular) para cada caso (transaction, address, token) ... deberemos utilizar datos mock para hacer llamadas de prueba (sabemos que estos existen en mainnet)
 - token: ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12
 - address: 9fcwctfPQPkDfHgxBns5Uu3dwWpaoywhkpLEobLuztfQuV5mt3T
@@ -153,6 +151,8 @@ Teoricamente se permite un numero ilimitado de participaciones.
 [x] Detectar de forma automática si el explorador web funciona mediante los datos mock previamente utilizados.
 
 [] mejorar submit score layout
+
+[] failed to convert hex to bytes en fill demo participation.
 
 [] Agregar pantallas de guia para pasos off-chain - creador.
     - Agregar una primera pantalla en CreateGame que guie al usuario en que debe de diseñar un servicio juego y un paper. Para que una vez lo tenga pueda seguir al formulario.
@@ -166,7 +166,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 -----
 
-[] Invalidación por no disponibilidad.
+[x] Invalidación por no disponibilidad.
 
 [] La participación es valida si y solo si existe una caja cuyo R4 sea el id del servicio y su creación sea anterior a deadline - M. Donde M es una nueva constante llamada ROBOT_SUBMIT_DEADLINE o similar.
 
