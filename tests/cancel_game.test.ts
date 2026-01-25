@@ -75,7 +75,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
             creationHeight: mockChain.height,
             additionalRegisters: {
                 R4: SInt(0).toHex(), // Estado 0: Activo
-                R5: SPair(SColl(SByte, "ab".repeat(32)), SLong(BigInt(800_005))).toHex(),
+                R5: SColl(SByte, "ab".repeat(32)).toHex(),
                 R6: SColl(SByte, hashedSecret).toHex(),
                 R7: SColl(SColl(SByte), []).toHex(),
                 R8: SColl(SLong, [
