@@ -107,10 +107,11 @@ export async function create_game(
     const seedBytes = hexToBytes(seedHex);
     if (!seedBytes) throw new Error("Failed to convert the seedHex to bytes.");
 
-    const ceremonyDeadlineBlock = (await ergo.get_current_height()) + getGameConstants().OPEN_CEREMONY_BLOCKS;
+    const ceremonyDeadlineBlock = deadlineBlock - getGameConstants().PARTICIPATION_TIME_WINDOW;
+    const currentHeight = await ergo.get_current_height();
 
-    if (ceremonyDeadlineBlock >= deadlineBlock) {
-        throw new Error("Deadline can't be before ceremony deadline. You are trying to create a fast-game. Select Fast Game Mode constants instead.")
+    if (currentHeight >= ceremonyDeadlineBlock) {
+        throw new Error(`Current height (${currentHeight}) is past the ceremony deadline (${ceremonyDeadlineBlock}). Increase the deadline or reduce the participation time window.`)
     }
 
     const gameDetailsBytes = stringToBytes("utf8", gameDetailsJson);
@@ -161,10 +162,7 @@ export async function create_game(
 
     // Registers preparation (using the same data as the calculator)
     const r4Hex = SInt(0).toHex();
-    const r5Hex = SPair(
-        SColl(SByte, seedBytes),
-        SLong(BigInt(ceremonyDeadlineBlock))
-    ).toHex();
+    const r5Hex = SColl(SByte, seedBytes).toHex();
     const r6Hex = SColl(SByte, hashedSecretBytes).toHex();
     const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
     const r8Hex = SColl(SLong, [

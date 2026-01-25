@@ -9,6 +9,8 @@
   val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")
   val PARTICIPATION_UNAVAILABLE_TYPE_ID = fromBase16("`+PARTICIPATION_UNAVAILABLE_TYPE_ID+`")
   val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L
+  val PARTICIPATION_TIME_WINDOW = `+PARTICIPATION_TIME_WINDOW+`L
+  val SEED_MARGIN = `+SEED_MARGIN+`L
 
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
@@ -115,7 +117,7 @@
 
                 // Check if any of these boxes were created before the game seed was set.
                 botHashBoxes.exists({ (box: Box) =>
-                  box.creationInfo._1 < deadline  // - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
+                  box.creationInfo._1 < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
                 })
               }
 

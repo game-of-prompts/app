@@ -19,7 +19,8 @@
   val COOLDOWN_IN_BLOCKS   = `+COOLDOWN_IN_BLOCKS+`L
   val JUDGE_PERIOD         = `+JUDGE_PERIOD+`L
   val MAX_SCORE_LIST       = `+MAX_SCORE_LIST+`L
-  val OPEN_CEREMONY_BLOCKS = `+OPEN_CEREMONY_BLOCKS+`L
+  val PARTICIPATION_TIME_WINDOW = `+PARTICIPATION_TIME_WINDOW+`L
+  val SEED_MARGIN          = `+SEED_MARGIN+`L
 
   val MIN_BOX_VALUE       = 1000000L
 
@@ -28,7 +29,7 @@
   // =================================================================
 
   // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).
-  // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline).
+  // R5: Coll[Byte]         - seed
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
   // R8: Coll[Long]         - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, timeWeight].
@@ -43,10 +44,8 @@
 
   val gameState = SELF.R4[Int].get
   
-  // R5: (Seed, Ceremony deadline)
-  val seedInfo = SELF.R5[(Coll[Byte], Long)].get
-  val gameSeed = seedInfo._1
-  val ceremonyDeadline = seedInfo._2  // Will be DEADLINE - PARTICIPATION_TIME_WINDOW
+  // R5: Seed
+  val gameSeed = SELF.R5[Coll[Byte]].get
 
   // R6: Hash del secreto 'S'
   val secretHash = SELF.R6[Coll[Byte]].get
@@ -62,6 +61,8 @@
   val perJudgeCommissionPercentage = numericalParams(3)
   val resolverCommissionPercentage = numericalParams(4)
   val timeWeight = numericalParams(5)
+
+  val ceremonyDeadline = deadline - PARTICIPATION_TIME_WINDOW
 
   // R9: [gameDetailsJsonHex, ParticipationTokenID]
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
@@ -144,7 +145,7 @@
 
                 // Check if any of these boxes were created before the game seed was set.
                 botHashBoxes.exists({ (box: Box) =>
-                  box.creationInfo._1 < ceremonyDeadline // - SEED_MARGIN
+                  box.creationInfo._1 < ceremonyDeadline - SEED_MARGIN
                 })
               }
 
@@ -242,18 +243,18 @@
   // desde la creación, para agregar entropía adicional al 'seed'.
   //
   // Condiciones:
-  //   - Debe ocurrir antes de 'ceremonyDeadline' (definido en R5._2)
-  //   - Se mantiene todo igual salvo el registro R5._1 (la semilla actualizada)
+  //   - Debe ocurrir antes de 'ceremonyDeadline'
+  //   - Se mantiene todo igual salvo el registro R5 (la semilla actualizada)
   //   - updated_seed = blake2b256(old_seed ++ INPUTS(0).id)
   //   - El script de salida debe ser idéntico (SELF mismo script)
   //   - El NFT y valores deben preservarse
   //
   val action3_add_randomness = {
-    // Usa ceremonyDeadline del nuevo R5
+    // Usa ceremonyDeadline calculado
     val ceremonyActive = HEIGHT < ceremonyDeadline
 
     if (ceremonyActive && OUTPUTS.size > 0) {
-      // La caja de salida debe ser una copia del contrato actual, excepto R5._1
+      // La caja de salida debe ser una copia del contrato actual, excepto R5
       val out = OUTPUTS.filter({ (box: Box) => 
         blake2b256(box.propositionBytes) == blake2b256(SELF.propositionBytes)
       })(0)
@@ -271,11 +272,9 @@
       // Calculamos la nueva semilla (gameSeed es R5._1)
       val updated_seed = blake2b256(gameSeed ++ SELF.id)
 
-      // Validar que R5._1 del output sea igual al updated_seed
-      val outR5 = out.R5[(Coll[Byte], Long)].get
-      val validUpdatedSeed = outR5._1 == updated_seed
-      // Validar que R5._2 (deadline) no cambie
-      val sameCeremonyDeadline = outR5._2 == ceremonyDeadline
+      // Validar que R5 del output sea igual al updated_seed
+      val outR5 = out.R5[Coll[Byte]].get
+      val validUpdatedSeed = outR5 == updated_seed
 
       // Todos los demás registros deben permanecer iguales
       val sameR4 = out.R4[Int].get == gameState
@@ -287,7 +286,6 @@
       sameNFT &&
       sameValue &&
       validUpdatedSeed &&
-      sameCeremonyDeadline && // Check R5._2
       sameR4 && sameR6 && sameR7 && sameR8 && sameR9 // Check R4, R6-R9
     } else {
       false

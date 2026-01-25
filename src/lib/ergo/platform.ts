@@ -30,6 +30,7 @@ import { reputation_proof } from '$lib/common/store';
 import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
 import { batch_participations } from './actions/batch_participations';
+import { publish_solver_id } from './actions/publish_solver_id';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -246,7 +247,7 @@ export class ErgoPlatform implements Platform {
         // In case don't need more votes to reach the threshold, use a single transaction
         if (judgeVoteDataInputs.length >= requiredVotes) {
             const tx_id = await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
-            return [tx_id];
+            return tx_id ? [tx_id] : null;
         }
         // Current judge's vote will reach threshold - use chained transaction
         // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
@@ -426,6 +427,17 @@ export class ErgoPlatform implements Platform {
             console.error("Error in platform method submitCreatorOpinion:", error);
             if (error instanceof Error) throw new Error(`Failed to submit creator opinion: ${error.message}`);
             throw new Error("An unknown error occurred while submitting creator opinion.");
+        }
+    }
+
+    async publishSolverId(solverId: string): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected.");
+        try {
+            return await publish_solver_id(solverId);
+        } catch (error) {
+            console.error("Error in platform method publishSolverId:", error);
+            if (error instanceof Error) throw new Error(`Failed to publish solver ID: ${error.message}`);
+            throw new Error("An unknown error occurred while publishing solver ID.");
         }
     }
 

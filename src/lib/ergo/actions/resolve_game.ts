@@ -90,6 +90,7 @@ export async function resolve_game(
     let maxScore = -1n;
     let winnerCandidateCommitment: string | null = null;
     let winnerCandidateBox: Box<Amount> | null = null;
+    let winnerCandidateSolverIdBox: Box<Amount> | null = null;
 
     const participationErgoTree = getGopParticipationErgoTreeHex();
     const participationErgoTreeBytes = hexToBytes(participationErgoTree);
@@ -131,26 +132,11 @@ export async function resolve_game(
         const pBoxCreationHeight = pBox.creationHeight;
         const effectiveScore = calculateEffectiveScore(actualScore, game.deadlineBlock, pBoxCreationHeight, Number(game.timeWeight));
 
-        // Si la participación es válida, se considera para determinar al ganador.
-        // Usamos effectiveScore para comparar.
-        // En caso de empate en effectiveScore, preferimos el que se envió antes (menor altura).
-        // Si tienen misma altura y mismo effectiveScore (mismo rawScore), es indiferente, nos quedamos con el primero o actualizamos.
-        // Aquí usamos > para actualizar solo si es estrictamente mejor.
-        // Pero espera, si effectiveScore es igual, y height es menor, effectiveScore debería ser mayor?
-        // No necesariamente. S1 * (D - H1) vs S2 * (D - H2).
-        // Si H1 < H2, entonces (D - H1) > (D - H2).
-        // Para que sean iguales, S1 debe ser menor que S2.
-        // Ejemplo: D=100.
-        // A: S=10, H=90. Eff = 10 * 10 = 100.
-        // B: S=20, H=95. Eff = 20 * 5 = 100.
-        // Empate en Eff. A se envió antes (H=90). Preferimos A?
-        // El contrato dice: if (new > current || (new == current && newHeight < currentHeight))
-        // Si implementamos la misma lógica:
-
         if (effectiveScore > maxScore || (effectiveScore === maxScore && pBoxCreationHeight < (winnerCandidateBox ? parseBox(winnerCandidateBox).creationHeight : Infinity))) {
             maxScore = effectiveScore;
             winnerCandidateCommitment = p.commitmentC_Hex;
             winnerCandidateBox = p.box;
+            winnerCandidateSolverIdBox = p.solverIdBox;
         }
     }
 
@@ -251,7 +237,13 @@ export async function resolve_game(
 
     // --- 4. Construir y Enviar la Transacción ---    
 
-    const dataInputs = winnerCandidateBox ? [...judgeProofBoxes, winnerCandidateBox] : judgeProofBoxes;
+    let dataInputs = judgeProofBoxes;
+    if (winnerCandidateBox) {
+        if (!winnerCandidateSolverIdBox) {
+            throw new Error("Winner candidate selected but no solver ID box found.");
+        }
+        dataInputs = [...judgeProofBoxes, winnerCandidateBox, winnerCandidateSolverIdBox];
+    }
 
     try {
         const unsignedTransaction = new TransactionBuilder(currentHeight)

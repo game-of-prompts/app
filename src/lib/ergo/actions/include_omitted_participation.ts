@@ -2,14 +2,16 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    type InputBox
+    type Box
 } from '@fleet-sdk/core';
 import { SColl, SByte, SPair, SLong, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox, pkHexToBase58Address } from '$lib/ergo/utils';
-import { type GameResolution, type ValidParticipation, type ValidParticipation } from '$lib/common/game';
+import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { getGopGameResolutionErgoTreeHex } from '../contract';
 import { prependHexPrefix } from '$lib/utils';
 import { stringToBytes } from '@scure/base';
+
+declare const ergo: any;
 
 /**
  * Permite a cualquier usuario incluir una participación que fue omitida
@@ -80,10 +82,15 @@ export async function include_omitted_participation(
 
     // --- 4. Construir y Enviar la Transacción ---
     const userAddress = pkHexToBase58Address(newResolverPkHex);
-    const utxos: InputBox[] = await ergo.get_utxos();
+    const utxos: Box<any>[] = await ergo.get_utxos();
 
     const inputs = [parseBox(game.box), ...utxos];
-    const dataInputs = currentWinnerParticipation ? [parseBox(currentWinnerParticipation.box), pBox] : [pBox];
+    if (!omittedParticipation.solverIdBox) {
+        throw new Error("Omitted participation does not have a solver ID box.");
+    }
+    const solverIdBox = omittedParticipation.solverIdBox;
+
+    const dataInputs = currentWinnerParticipation ? [parseBox(currentWinnerParticipation.box), pBox, solverIdBox] : [pBox, solverIdBox];
 
     const unsignedTransaction = new TransactionBuilder(currentHeight)
         .from(inputs)

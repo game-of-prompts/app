@@ -163,12 +163,9 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
         if (gameState !== 0) throw new Error("R4 indicates incorrect game state (not 0).");
 
-        // R5: seed (Seed, Ceremony deadline)
-        const r5Value = JSON.parse(box.additionalRegisters.R5?.renderedValue.replace(/\[([a-f0-9]+)(,.*)/, '["$1"$2'));
-        if (!Array.isArray(r5Value) || r5Value.length < 2) throw new Error("R5 is not a valid tuple (Seed, Ceremony deadline).");
-        const seed = parseCollByteToHex(r5Value[0]);
-        const ceremonyDeadline = Number(r5Value[1]); // R5[1] is Long
-        if (!seed || isNaN(ceremonyDeadline)) throw new Error("Could not parse R5 (seed, ceremonyDeadline).");
+        // R5: seed (Coll[Byte])
+        const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
+        if (!seed) throw new Error("Could not parse R5 (seed).");
 
         // R6: secretHash
         const secretHash = parseCollByteToHex(box.additionalRegisters.R6?.renderedValue);
@@ -222,7 +219,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             reputation: 0,
             constants: getGameConstants(),
             seed: seed,
-            ceremonyDeadline: ceremonyDeadline,
+            ceremonyDeadline: Number(deadlineBlock) - getGameConstants().PARTICIPATION_TIME_WINDOW,
         };
 
         console.log("REPUTATION OPINIONS")
@@ -678,7 +675,9 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             rawJsonString: "{}",
             title: "Unknown",
             description: "Unknown",
-            serviceId: ""
+            serviceId: "",
+            imageURL: "",
+            soundtrackURL: ""
         };
         let judges: string[] = [];
 
@@ -742,6 +741,34 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
 // =================================================================
 
 
+
+export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | null> {
+    const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
+    try {
+        // Search for boxes where R4 == solverId
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                registers: {
+                    R4: solverId
+                }
+            }),
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const items: Box[] = data.items || [];
+
+        // Return the first one found. 
+        return items.length > 0 ? items[0] : null;
+    } catch (error) {
+        console.error("Error fetching solver ID box:", error);
+        return null;
+    }
+}
+
 async function _parseParticipationBox(box: any, participationTokenId: string): Promise<ParticipationBase | null> {
     try {
         const playerScript_Hex = box.additionalRegisters.R4?.renderedValue;
@@ -775,7 +802,8 @@ async function _parseParticipationBox(box: any, participationTokenId: string): P
             solverId_String: solverId_RawBytesHex,
             hashLogs_Hex,
             scoreList,
-            reputationOpinions: await fetchReputationOpinionsForTarget("participation", commitmentC_Hex)
+            reputationOpinions: await fetchReputationOpinionsForTarget("participation", commitmentC_Hex),
+            solverIdBox: await fetchSolverIdBox(solverId_RawBytesHex)
         };
         return participationBase;
 
@@ -834,6 +862,9 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                     const expired = box.creationHeight >= gameDeadline;
                     const max_scores_exceeded = p_base.scoreList.length > 10;
 
+                    const solverDeadline = gameDeadline - game.constants.PARTICIPATION_TIME_WINDOW - game.constants.SEED_MARGIN;
+                    const invalid_solver = !p_base.solverIdBox || p_base.solverIdBox.creationHeight >= solverDeadline;
+
                     const wrong_commitment = (game.status == GameState.Resolution || game.status == GameState.Finalized) && resolve_participation_commitment(p_base as AnyParticipation, (game as GameResolution).revealedS_Hex, (game as GameResolution).seed) === null;
                     if (wrong_commitment) {
                         console.log("Wrong commitment");
@@ -843,9 +874,9 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                         console.log("Seed ", (game as GameResolution).seed);
                     }
 
-                    const malformed = expired || wrong_commitment || max_scores_exceeded;
+                    const malformed = expired || wrong_commitment || max_scores_exceeded || invalid_solver;
                     const malformedReason: MalformedParticipationReason | undefined = malformed
-                        ? (expired ? "expired" : wrong_commitment ? "wrongcommitment" : max_scores_exceeded ? "maxscores" : "unknown")
+                        ? (expired ? "expired" : wrong_commitment ? "wrongcommitment" : max_scores_exceeded ? "maxscores" : invalid_solver ? "invalidsolver" : "unknown")
                         : undefined;
 
                     if (malformed) {
@@ -869,7 +900,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
                                     (opinion) => nominatedJudges.includes(opinion.token_id) && opinion.type.tokenId === PARTICIPATION_TYPE_NFT && opinion.is_locked === true && opinion.polarization === false
                                 );
                                 const invalidated = nominatedJudges.length > 0 && invalidationVotes.length > nominatedJudges.length / 2;
-                                
+
                                 const invalidationUnavailableVotes = p_base.reputationOpinions.filter(
                                     (opinion) => nominatedJudges.includes(opinion.token_id) && (opinion.type.tokenId === PARTICIPATION_UNAVAILABLE)
                                 );
@@ -1248,7 +1279,9 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 rawJsonString: "{}",
                 title: "Unknown",
                 description: "Unknown",
-                serviceId: ""
+                serviceId: "",
+                imageURL: "",
+                soundtrackURL: ""
             };
             try {
                 if (currentBox.additionalRegisters && currentBox.additionalRegisters.R9) {

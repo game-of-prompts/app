@@ -194,6 +194,7 @@ export interface ParticipationBase {
     hashLogs_Hex: string;
     scoreList: bigint[];
     reputationOpinions: RPBox[];
+    solverIdBox: Box<Amount> | null;
 }
 
 /**
@@ -205,7 +206,7 @@ export interface ValidParticipation extends ParticipationBase {
     spent: false;
 }
 
-export type MalformedParticipationReason = "expired" | "wrongcommitment" | "maxscores" | "unknown";
+export type MalformedParticipationReason = "expired" | "wrongcommitment" | "maxscores" | "invalidsolver" | "unknown";
 export interface MalformedParticipation extends ParticipationBase {
     status: 'Malformed';
     spent: boolean;
@@ -268,7 +269,7 @@ export async function isGameDrainingAllowed(game: AnyGame): Promise<boolean> {
     const currentHeight = await platform.get_current_height();
     const unlocked = currentHeight >= game.unlockHeight;
 
-    const stakeToDrain = BigInt(game.currentStakeAmount);
+    const stakeToDrain = BigInt(game.resolverStakeAmount);
     const stakePortionToClaim = stakeToDrain / BigInt(game.constants.STAKE_DENOMINATOR);
     const remainingStake = game.participationTokenId !== "" || (stakeToDrain - stakePortionToClaim) >= SAFE_MIN_BOX_VALUE;
 

@@ -33,6 +33,7 @@
         fetchParticipations,
         fetch_token_details,
         fetchParticipationBatches,
+        fetchSolverIdBox,
     } from "$lib/ergo/fetch";
     import { remove_opinion } from "reputation-system";
     // UI COMPONENTS
@@ -409,6 +410,7 @@
     // Modal State
     let showActionModal = false;
     let showParticipantGuide = true;
+    let showSolverIdStep = false;
     let showJudgeGuide = true;
     let currentActionType:
         | "submit_score"
@@ -530,6 +532,9 @@
     // Form Inputs
     let commitmentC_input = "";
     let solverId_input = "";
+    let solverId_box_found = false;
+    let solverId_check_loading = false;
+    let solverId_check_error: string | null = null;
     let hashLogs_input = "";
     let user_score: number | null = null;
     let scores_list: number[] = [];
@@ -705,6 +710,59 @@
         } catch (e) {
             console.error("Dev Generation Error", e);
             alert("Error generating participation: " + e);
+        }
+    }
+
+    async function checkSolverIdBox() {
+        if (!solverId_input) {
+            solverId_check_error = "Please enter a Solver ID.";
+            return;
+        }
+        solverId_check_loading = true;
+        solverId_check_error = null;
+        try {
+            const box = await fetchSolverIdBox(solverId_input);
+            if (box) {
+                solverId_box_found = true;
+            } else {
+                solverId_box_found = false;
+                solverId_check_error =
+                    "Solver ID box not found. Please publish it first.";
+            }
+        } catch (e) {
+            console.error("Error checking solver ID box:", e);
+            solverId_check_error = "Error checking solver ID box.";
+        } finally {
+            solverId_check_loading = false;
+        }
+    }
+
+    async function handlePublishSolverId() {
+        if (!solverId_input) {
+            // Generate random if empty? No, better force user to have one or generate one explicitly.
+            // Let's generate one if empty for convenience
+            const randomBytes = new Uint8Array(32);
+            window.crypto.getRandomValues(randomBytes);
+            solverId_input = uint8ArrayToHex(randomBytes);
+        }
+
+        isSubmitting = true;
+        errorMessage = null;
+        try {
+            const txId = await platform.publishSolverId(solverId_input);
+            if (txId) {
+                transactionId = txId;
+                // Optimistically assume it will be found (or user can wait)
+                // We can't immediately find it until it's in mempool/mined and explorer sees it.
+                // For now, let's just show success and let user click "Continue" which checks again.
+                // Or we can set a flag "solverIdPublished" to allow proceeding?
+                // The checkSolverIdBox might fail if explorer is slow.
+                // Let's just show the txId and tell user to wait a bit.
+            }
+        } catch (e: any) {
+            errorMessage = e.message;
+        } finally {
+            isSubmitting = false;
         }
     }
 
@@ -4816,11 +4874,171 @@
                                         <Button
                                             size="lg"
                                             class="gap-2"
-                                            on:click={() =>
-                                                (showParticipantGuide = false)}
+                                            on:click={() => {
+                                                showParticipantGuide = false;
+                                                showSolverIdStep = true;
+                                            }}
                                         >
                                             I have my Bot implemented
-                                            <ArrowRight class="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            {:else if showSolverIdStep}
+                                <div
+                                    class="space-y-6 max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
+                                >
+                                    <div class="text-center mb-8">
+                                        <h3 class="text-2xl font-bold mb-2">
+                                            Publish Solver ID
+                                        </h3>
+                                        <p class="text-muted-foreground">
+                                            You need a unique Solver ID
+                                            published on-chain to participate.
+                                        </p>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="space-y-2">
+                                            <Label for="solver_id_step"
+                                                >Solver ID (Hex)</Label
+                                            >
+                                            <div class="flex gap-2">
+                                                <Input
+                                                    id="solver_id_step"
+                                                    bind:value={solverId_input}
+                                                    placeholder="e.g., a1b2..."
+                                                    class="font-mono"
+                                                />
+                                                <Button
+                                                    variant="outline"
+                                                    on:click={() => {
+                                                        const randomBytes =
+                                                            new Uint8Array(32);
+                                                        window.crypto.getRandomValues(
+                                                            randomBytes,
+                                                        );
+                                                        solverId_input =
+                                                            uint8ArrayToHex(
+                                                                randomBytes,
+                                                            );
+                                                    }}
+                                                    title="Generate Random"
+                                                >
+                                                    <Wand2 class="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <p
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                This ID identifies your bot. It
+                                                must be unique and published
+                                                before the deadline.
+                                            </p>
+                                        </div>
+
+                                        {#if solverId_check_error}
+                                            <div
+                                                class="p-3 rounded-lg bg-red-500/10 text-red-500 text-sm"
+                                            >
+                                                {solverId_check_error}
+                                            </div>
+                                        {/if}
+
+                                        {#if transactionId}
+                                            <div
+                                                class="p-3 rounded-lg bg-green-500/10 text-green-500 text-sm break-all"
+                                            >
+                                                <strong
+                                                    >Transaction Submitted:</strong
+                                                ><br />
+                                                <a
+                                                    href={$web_explorer_uri_tx +
+                                                        transactionId}
+                                                    target="_blank"
+                                                    class="underline"
+                                                    >{transactionId}</a
+                                                >
+                                                <p
+                                                    class="mt-1 text-xs text-green-600 dark:text-green-400"
+                                                >
+                                                    Please wait for the
+                                                    transaction to be confirmed
+                                                    before continuing.
+                                                </p>
+                                            </div>
+                                        {/if}
+
+                                        {#if solverId_box_found}
+                                            <div
+                                                class="p-3 rounded-lg bg-green-500/10 text-green-500 text-sm flex items-center gap-2"
+                                            >
+                                                <CheckCircle class="h-4 w-4" />
+                                                Solver ID Box Found!
+                                            </div>
+                                        {/if}
+
+                                        <div class="flex gap-3 pt-4">
+                                            <Button
+                                                variant="outline"
+                                                class="flex-1"
+                                                on:click={checkSolverIdBox}
+                                                disabled={solverId_check_loading}
+                                            >
+                                                {#if solverId_check_loading}
+                                                    Checking...
+                                                {:else}
+                                                    Check Existing
+                                                {/if}
+                                            </Button>
+                                            <Button
+                                                class="flex-1"
+                                                on:click={handlePublishSolverId}
+                                                disabled={isSubmitting ||
+                                                    solverId_box_found}
+                                            >
+                                                {#if isSubmitting}
+                                                    Publishing...
+                                                {:else}
+                                                    Publish New
+                                                {/if}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700"
+                                    >
+                                        <Button
+                                            variant="ghost"
+                                            on:click={() => {
+                                                showSolverIdStep = false;
+                                                showParticipantGuide = true;
+                                            }}
+                                        >
+                                            Back
+                                        </Button>
+                                        <Button
+                                            on:click={() => {
+                                                if (solverId_box_found) {
+                                                    showSolverIdStep = false;
+                                                } else {
+                                                    checkSolverIdBox().then(
+                                                        () => {
+                                                            if (
+                                                                solverId_box_found
+                                                            ) {
+                                                                showSolverIdStep = false;
+                                                            }
+                                                        },
+                                                    );
+                                                }
+                                            }}
+                                            disabled={!solverId_box_found &&
+                                                !transactionId}
+                                        >
+                                            Continue <ArrowRight
+                                                class="ml-2 h-4 w-4"
+                                            />
                                         </Button>
                                     </div>
                                 </div>
