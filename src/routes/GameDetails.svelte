@@ -1344,7 +1344,6 @@
             transactionId = await platform.judgesInvalidate(
                 game,
                 winner_participation as ValidParticipation,
-                otherParticipations,
                 judgeInvalidVotesDataInputsBoxes,
             );
         } catch (e: any) {
@@ -1399,7 +1398,6 @@
             transactionId = await platform.judgesInvalidateUnavailable(
                 game,
                 winner_participation as ValidParticipation,
-                otherParticipations,
                 judgeUnavailableVotesDataInputsBoxes,
             );
         } catch (e: any) {

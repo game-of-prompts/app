@@ -237,7 +237,6 @@ export class ErgoPlatform implements Platform {
     async judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string[] | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -246,14 +245,14 @@ export class ErgoPlatform implements Platform {
 
         // In case don't need more votes to reach the threshold, use a single transaction
         if (judgeVoteDataInputs.length >= requiredVotes) {
-            const tx_id = await judges_invalidate(game, invalidatedParticipation, participations, judgeVoteDataInputs);
+            const tx_id = await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
             return tx_id ? [tx_id] : null;
         }
         // Current judge's vote will reach threshold - use chained transaction
         // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
         else if (judgeVoteDataInputs.length + 1 >= requiredVotes && USE_CHAINED_TRANSACTIONS) {
             return await judges_invalidation_chained(
-                game, invalidatedParticipation, participations, judgeVoteDataInputs
+                game, invalidatedParticipation, judgeVoteDataInputs
             );
         } else {
             // Not enough votes yet - just create the opinion
@@ -271,7 +270,6 @@ export class ErgoPlatform implements Platform {
     async judgesInvalidateUnavailable(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
@@ -281,7 +279,7 @@ export class ErgoPlatform implements Platform {
         // For unavailable marking, we always use a single transaction since no penalty to creator
         console.log("Judge vote data inputs ", judgeVoteDataInputs)
         if (judgeVoteDataInputs.length >= requiredVotes) {
-            const tx_id = await judges_invalidate_unavailable(game, invalidatedParticipation, participations, judgeVoteDataInputs);
+            const tx_id = await judges_invalidate_unavailable(game, invalidatedParticipation, judgeVoteDataInputs);
             return tx_id;
         } else {
             // Not enough votes yet - just create the opinion (unlocked)

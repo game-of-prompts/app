@@ -31,14 +31,12 @@ const JUDGE_PERIOD_MARGIN = 10;
  *
  * @param game The current GameResolution object.
  * @param invalidatedParticipation The participation box of the candidate to be invalidated.
- * @param participations All valid participations in the game.
  * @param judgeVoteDataInputs The judges' existing "vote" boxes (excluding the current judge's vote).
  * @returns A promise that resolves with an array of transaction IDs [txA_id, txB_id].
  */
 export async function judges_invalidation_chained(
     game: GameResolution,
     invalidatedParticipation: ValidParticipation,
-    participations: ValidParticipation[],
     judgeVoteDataInputs: Box<Amount>[]
 ): Promise<string[]> {
 
@@ -103,83 +101,6 @@ export async function judges_invalidation_chained(
         );
     }
 
-    // --- 3. Determine the next winner candidate (off-chain logic) ---
-    let maxScore = -1n;
-    let nextWinnerCandidateCommitment: string | null = null;
-    let nextWinnerCandidatePBox: Box<Amount> | null = null;
-    const participationErgoTree = getGopParticipationErgoTreeHex();
-    const participationErgoTreeBytes = hexToBytes(participationErgoTree);
-    if (!participationErgoTreeBytes) {
-        throw new Error("The ErgoTree of the participation script is invalid.");
-    }
-    const participationScriptHash = uint8ArrayToHex(fleetBlake2b256(participationErgoTreeBytes));
-
-    for (const p of participations) {
-        // Skip the invalidated participation
-        if (p.commitmentC_Hex === invalidatedParticipation.commitmentC_Hex) continue;
-
-        const pBox = parseBox(p.box);
-
-        // Verification 1: Correct Participation Script
-        if (uint8ArrayToHex(fleetBlake2b256(hexToBytes(pBox.ergoTree) ?? "")) !== participationScriptHash) {
-            console.warn(`Participation ${p.boxId} has an incorrect script. It will be omitted.`);
-            continue;
-        }
-
-        // Verification 2: Reference to the Game NFT
-        if (p.gameNftId !== game.box.assets[0].tokenId) {
-            console.warn(`Participation ${p.boxId} does not point to this game's NFT. It will be omitted.`);
-            continue;
-        }
-
-        // Verification 3: Payment of the Participation Fee (Check Tokens or ERG)
-        const feeCheck = game.participationTokenId === ""
-            ? BigInt(pBox.value)
-            : BigInt(pBox.assets.find(t => t.tokenId === game.participationTokenId)?.amount || 0n);
-
-        if (feeCheck < game.participationFeeAmount) {
-            console.warn(`Participation ${p.boxId} does not meet the minimum fee. It will be omitted.`);
-            continue;
-        }
-
-        const secretS_bytes = hexToBytes(game.revealedS_Hex);
-        if (!secretS_bytes) throw new Error("Invalid secretS_hex format.");
-
-        // Score validation simulation
-        let scoreIsValid = false;
-        let actualScore = -1n;
-
-        for (const score of p.scoreList) {
-            const dataToHash = new Uint8Array([
-                ...hexToBytes(p.solverId_RawBytesHex)!,
-                ...bigintToLongByteArray(BigInt(score)),
-                ...hexToBytes(p.hashLogs_Hex)!,
-                ...hexToBytes(p.playerScript_Hex)!,
-                ...secretS_bytes
-            ]);
-            const testCommitment = fleetBlake2b256(dataToHash);
-            if (uint8ArrayToHex(testCommitment) === p.commitmentC_Hex) {
-                scoreIsValid = true;
-                actualScore = score;
-                break;
-            }
-        }
-
-        if (!scoreIsValid) {
-            console.warn(`Could not find a valid score for participation ${p.boxId}. It will be omitted.`);
-            continue;
-        }
-
-        // If valid, consider for next winner
-        if (actualScore > maxScore) {
-            maxScore = actualScore;
-            nextWinnerCandidateCommitment = p.commitmentC_Hex;
-            nextWinnerCandidatePBox = pBox;
-        }
-    }
-
-    console.log(`[judges_invalidation_chained] Next winner candidate determined with commitment: ${nextWinnerCandidateCommitment} and score: ${maxScore}`);
-
     // --- 4. Prepare data for Tx B (judges_invalidate) ---
     const newGameBoxValue = BigInt(game.box.value) + BigInt(invalidatedParticipation.box.value);
 
@@ -200,7 +121,7 @@ export async function judges_invalidation_chained(
             R5: SColl(SByte, hexToBytes(game.seed)!).toHex(),
             R6: SPair(
                 SColl(SByte, hexToBytes(game.revealedS_Hex)!),
-                SColl(SByte, nextWinnerCandidateCommitment ? hexToBytes(nextWinnerCandidateCommitment)! : [])
+                SColl(SByte, [])
             ).toHex(),
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
             R8: SColl(SLong, [
@@ -226,8 +147,7 @@ export async function judges_invalidation_chained(
 
     // Data inputs for Tx B: existing judge votes + next winner candidate participation
     const dataInputsForTxB = [
-        ...judgeVoteDataInputs.map(e => parseBox(e)),
-        ...(nextWinnerCandidatePBox ? [nextWinnerCandidatePBox] : [])
+        ...judgeVoteDataInputs.map(e => parseBox(e))
     ];
 
     const unsignedTransactions = await txABuilder

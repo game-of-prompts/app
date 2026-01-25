@@ -259,29 +259,7 @@
         val recreatedGameBox = recreatedGameBoxes(0)
 
         val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
-        val winnerCandidateValid = if (newCandidateCommitment == Coll[Byte]()) { true } 
-          else {
-            // Action executor can provide a new candidate, anyone will be able to change it.  // TODO Aqui no debería de agregar un nuevo candidato, mejor dejarlo vacío y que se agregue con omitted (se pueden hacer chained tx.)
-            val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ 
-              (box: Box) => 
-                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
-                box.R6[Coll[Byte]].get == gameNftId &&
-                box.R5[Coll[Byte]].get == newCandidateCommitment
-            })
-
-            if (winnerCandidateBoxes.size == 1) {
-              val winnerCandidateBox = winnerCandidateBoxes(0)
-              val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get
-
-              val validScoreExists = getScoreFromBox(winnerCandidateBox)._2
-
-              val correctParticipationFee = box_value(winnerCandidateBox) >= participationFee
-              val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
-
-              validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
-            }
-            else { false }
-          }
+        val winnerCandidateValid = newCandidateCommitment == Coll[Byte]()  // Another candidate can be provided using action 1.
           
         val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
         
@@ -352,29 +330,7 @@
         val recreatedGameBox = recreatedGameBoxes(0)
 
         val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
-        val winnerCandidateValid = if (newCandidateCommitment == Coll[Byte]()) { true } 
-          else {
-            // Action executor can provide a new candidate, the creator will have a grace period to change it.  // TODO Aqui no debería de agregar un nuevo candidato, mejor dejarlo vacío y que se agregue con omitted (se pueden hacer chained tx.)
-            val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ 
-              (box: Box) => 
-                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
-                box.R6[Coll[Byte]].get == gameNftId &&
-                box.R5[Coll[Byte]].get == newCandidateCommitment
-            })
-
-            if (winnerCandidateBoxes.size == 1) {
-              val winnerCandidateBox = winnerCandidateBoxes(0)
-              val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get
-
-              val validScoreExists = getScoreFromBox(winnerCandidateBox)._2
-
-              val correctParticipationFee = box_value(winnerCandidateBox) >= participationFee
-              val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
-
-              validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
-            }
-            else { false }
-          }
+        val winnerCandidateValid = newCandidateCommitment == Coll[Byte]()  // Another candidate can be provided using action 1.
           
         val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
         

@@ -67,12 +67,10 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
 
     let gameResolutionBox: Box;
     let invalidatedWinnerBox: Box;
-    let nextWinnerBox: Box;
     let judge1ReputationBox: Box;
     let judge2ReputationBox: Box;
 
     let invalidatedCommitment: Uint8Array;
-    let nextWinnerCommitment: Uint8Array;
     let judge1TokenId: string;
     let judge2TokenId: string;
     let judge3TokenId: string;
@@ -105,7 +103,6 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         const nextWinnerLogsHash = blake2b256(stringToBytes("utf8", "logs-next-winner"));
 
         invalidatedCommitment = createCommitment("solver-invalid", 230n, invalidatedLogsHash, prependHexPrefix(invalidatedWinner.address.getPublicKeys()[0]), secret);
-        nextWinnerCommitment = createCommitment("solver-next-winner", 100n, nextWinnerLogsHash, prependHexPrefix(nextWinner.address.getPublicKeys()[0]), secret);
 
         // 2. Crear tokens de reputación para los jueces
         judge1TokenId = Buffer.from(randomBytes(32)).toString("hex");
@@ -179,22 +176,6 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         });
         invalidatedWinnerBox = participationContract.utxos.toArray()[0];
 
-        participationContract.addUTxOs({ // Próximo candidato a ganador
-            ergoTree: participationErgoTree.toHex(),
-            value: 1_000_000n,
-            creationHeight: 700_000 - 30,
-            assets: [{ tokenId: USD_BASE_TOKEN, amount: 1_000_000n }], // participationFee
-            additionalRegisters: {
-                R4: SColl(SByte, prependHexPrefix(nextWinner.address.getPublicKeys()[0])).toHex(),
-                R5: SColl(SByte, nextWinnerCommitment).toHex(),
-                R6: SColl(SByte, hexToBytes(gameNftId) ?? new Uint8Array(0)).toHex(),
-                R7: SColl(SByte, stringToBytes("utf8", "solver-next-winner")).toHex(),
-                R8: SColl(SByte, nextWinnerLogsHash).toHex(),
-                R9: SColl(SLong, [100n, 200n, 30n, 1200n, 20n, 1n, 200n, 33n, 2000n]).toHex(),
-            }
-        });
-        nextWinnerBox = participationContract.utxos.toArray()[1];
-
         // 5. Crear cajas `reputation_proof` para los jueces (los votos)
         const unavailableTypeNftId = DefaultGameConstants.PARTICIPATION_UNAVAILABLE_TYPE_ID;
         reputationProofContract.addUTxOs(
@@ -263,7 +244,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                         // (revealedSecretS, winnerCandidateCommitment)
                         R6: SPair(
                             SColl(SByte, secret),
-                            SColl(SByte, nextWinnerCommitment)
+                            SColl(SByte, [])
                         ).toHex(),
 
                         // participatingJudges
@@ -280,7 +261,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                         ]).toHex()
                     })
             ])
-            .withDataFrom([judge1ReputationBox, judge2ReputationBox, nextWinnerBox]) // Los votos de los jueces y las participaciones no invalidadas
+            .withDataFrom([judge1ReputationBox, judge2ReputationBox]) // Los votos de los jueces y las participaciones no invalidadas
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -312,7 +293,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         // 5. Nuevo candidato a ganador
         expect(newGameBox.additionalRegisters.R6).to.equal(SPair(
             SColl(SByte, secret),
-            SColl(SByte, nextWinnerCommitment)
+            SColl(SByte, [])
         ).toHex());
 
         // 6. Jueces permanecen iguales

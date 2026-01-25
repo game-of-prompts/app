@@ -118,7 +118,6 @@ export interface Platform {
     judgesInvalidate(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<bigint>[]
     ): Promise<string[] | null>
 
@@ -129,7 +128,6 @@ export interface Platform {
     judgesInvalidateUnavailable(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        participations: ValidParticipation[],
         judgeVoteDataInputs: Box<bigint>[]
     ): Promise<string | null>
 
