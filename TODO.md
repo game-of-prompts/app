@@ -157,11 +157,11 @@ Teoricamente se permite un numero ilimitado de participaciones.
 [x] Agregar pantallas de guia para pasos off-chain - creador.
     - Agregar una primera pantalla en CreateGame que guie al usuario en que debe de diseñar un servicio juego y un paper. Para que una vez lo tenga pueda seguir al formulario.
 
-[] Agregar pantalla de guia para pasos off-chain - participante.
+[x] Agregar pantalla de guia para pasos off-chain - participante.
     - "nodo gop_judges_check <game_id>"  Comprobar reputación de los jueces nominados en una competición.
     - "nodo gop_create_bot <game_id>"   Guiar en la creación de un robot; permitir centrarse únicamente en el script del juego; integrar con LLMs externas. Posibilidad de dejar en segundo plano hasta que tenga que participar, y hasta que tenga que desvelar el robot.
 
-[] Agregar pantalla de guia para pasos off-chain - jueces.
+[x] Agregar pantalla de guia para pasos off-chain - jueces.
     - Comprobar validez de una participación.  "nodo gop_validate_participation <commitment>"
 
 -----

@@ -409,6 +409,7 @@
     // Modal State
     let showActionModal = false;
     let showParticipantGuide = true;
+    let showJudgeGuide = true;
     let currentActionType:
         | "submit_score"
         | "resolve_game"
@@ -1593,6 +1594,12 @@
         warningMessage = null;
         isSubmitting = false;
         transactionId = null;
+
+        // Reset guide states
+        if (type === "invalidate_winner" || type === "judge_unavailable") {
+            showJudgeGuide = true;
+        }
+
         showActionModal = true;
     }
 
@@ -5381,63 +5388,349 @@
                                 </Button>
                             </div>
                         {:else if currentActionType === "invalidate_winner"}
-                            <div class="space-y-4">
-                                <p
-                                    class="text-sm p-3 rounded-md {$mode ===
-                                    'dark'
-                                        ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30'
-                                        : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"
+                            {#if showJudgeGuide}
+                                <div
+                                    class="space-y-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
                                 >
-                                    <strong>Action: Judge Invalidation</strong
-                                    ><br />
-                                    As a judge, you are voting to invalidate the
-                                    current winner candidate. This requires a majority
-                                    of judges to perform the same action. If successful,
-                                    the resolution deadline will be extended.
-                                </p>
-                                <Button
-                                    on:click={handleJudgesInvalidate}
-                                    disabled={isSubmitting}
-                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
-                                    'dark'
-                                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                        : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting
-                                        ? "Processing..."
-                                        : "Confirm Invalidation Vote"}
-                                </Button>
-                            </div>
+                                    <div class="text-center mb-8">
+                                        <h3 class="text-2xl font-bold mb-2">
+                                            Validate the Winning Participation
+                                        </h3>
+                                        <p class="text-muted-foreground">
+                                            As a judge, validate the candidate
+                                            before voting.
+                                        </p>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <!-- Validation Step -->
+                                        <div
+                                            class="p-4 rounded-xl border bg-card text-card-foreground shadow-sm"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3 mb-3"
+                                            >
+                                                <div
+                                                    class="p-2 bg-blue-500/10 rounded-lg text-blue-500"
+                                                >
+                                                    <ShieldCheck
+                                                        class="w-6 h-6"
+                                                    />
+                                                </div>
+                                                <h4
+                                                    class="font-semibold text-lg"
+                                                >
+                                                    Validate Participation
+                                                </h4>
+                                            </div>
+                                            <p
+                                                class="text-sm text-muted-foreground mb-4"
+                                            >
+                                                Use the CLI to validate the
+                                                participation and verify its
+                                                correctness.
+                                            </p>
+                                            <div
+                                                class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                                                    on:click={() =>
+                                                        navigator.clipboard.writeText(
+                                                            `nodo gop_validate_participation ${game?.winnerCandidateCommitment || ""}`,
+                                                        )}
+                                                    title="Copy command"
+                                                >
+                                                    <Copy class="w-3.5 h-3.5" />
+                                                </button>
+                                                <span class="text-primary"
+                                                    >nodo</span
+                                                >
+                                                gop_validate_participation {(
+                                                    game?.winnerCandidateCommitment ||
+                                                    ""
+                                                ).slice(0, 20)}...
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-600 dark:text-blue-400"
+                                    >
+                                        <p class="font-semibold mb-2">
+                                            Your Role as Judge:
+                                        </p>
+                                        <ul
+                                            class="list-disc list-inside space-y-1.5 opacity-90"
+                                        >
+                                            <li>
+                                                Validate the participation to
+                                                ensure it can be reproduced
+                                                correctly.
+                                            </li>
+                                            <li>
+                                                If the participation is invalid
+                                                (cannot be reproduced or is
+                                                malicious), vote to <b
+                                                    >invalidate</b
+                                                >.
+                                            </li>
+                                            <li>
+                                                If the participation source is
+                                                unavailable, vote to <b
+                                                    >mark as unavailable</b
+                                                >.
+                                            </li>
+                                            <li>
+                                                A majority of judges is required
+                                                for any action to take effect.
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="flex justify-center pt-4">
+                                        <Button
+                                            size="lg"
+                                            class="gap-2 bg-yellow-600 hover:bg-yellow-700"
+                                            on:click={() =>
+                                                (showJudgeGuide = false)}
+                                        >
+                                            Continue to Vote
+                                            <ArrowRight class="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            {:else}
+                                <div class="space-y-4">
+                                    <!-- Back to Guide Button -->
+                                    <div class="flex justify-start">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={() =>
+                                                (showJudgeGuide = true)}
+                                            class="gap-2"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                ><path
+                                                    d="m15 18-6-6 6-6"
+                                                /></svg
+                                            >
+                                            Back to Judge Guide
+                                        </Button>
+                                    </div>
+
+                                    <p
+                                        class="text-sm p-3 rounded-md {$mode ===
+                                        'dark'
+                                            ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30'
+                                            : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}"
+                                    >
+                                        <strong
+                                            >Action: Judge Invalidation</strong
+                                        ><br />
+                                        As a judge, you are voting to invalidate
+                                        the current winner candidate. This requires
+                                        a majority of judges to perform the same
+                                        action. If successful, the resolution deadline
+                                        will be extended.
+                                    </p>
+                                    <Button
+                                        on:click={handleJudgesInvalidate}
+                                        disabled={isSubmitting}
+                                        class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
+                                        'dark'
+                                            ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                            : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmitting
+                                            ? "Processing..."
+                                            : "Confirm Invalidation Vote"}
+                                    </Button>
+                                </div>
+                            {/if}
                         {:else if currentActionType === "judge_unavailable"}
-                            <div class="space-y-4">
-                                <p
-                                    class="text-sm p-3 rounded-md {$mode ===
-                                    'dark'
-                                        ? 'bg-orange-600/20 text-orange-300 border border-orange-500/30'
-                                        : 'bg-orange-100 text-orange-700 border border-orange-200'}"
+                            {#if showJudgeGuide}
+                                <div
+                                    class="space-y-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
                                 >
-                                    <strong
-                                        >Action: Judge Mark Unavailable</strong
-                                    ><br />
-                                    As a judge, you are voting to mark the current
-                                    winner candidate as unavailable. This requires
-                                    a majority of judges to perform the same action.
-                                    Unlike invalidation, this does not penalize the
-                                    creator.
-                                </p>
-                                <Button
-                                    on:click={handleJudgesInvalidateUnavailable}
-                                    disabled={isSubmitting}
-                                    class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
-                                    'dark'
-                                        ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                                        : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting
-                                        ? "Processing..."
-                                        : "Confirm Unavailable Vote"}
-                                </Button>
-                            </div>
+                                    <div class="text-center mb-8">
+                                        <h3 class="text-2xl font-bold mb-2">
+                                            Validate the Winning Participation
+                                        </h3>
+                                        <p class="text-muted-foreground">
+                                            As a judge, validate the candidate
+                                            before voting.
+                                        </p>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <!-- Validation Step -->
+                                        <div
+                                            class="p-4 rounded-xl border bg-card text-card-foreground shadow-sm"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3 mb-3"
+                                            >
+                                                <div
+                                                    class="p-2 bg-blue-500/10 rounded-lg text-blue-500"
+                                                >
+                                                    <ShieldCheck
+                                                        class="w-6 h-6"
+                                                    />
+                                                </div>
+                                                <h4
+                                                    class="font-semibold text-lg"
+                                                >
+                                                    Validate Participation
+                                                </h4>
+                                            </div>
+                                            <p
+                                                class="text-sm text-muted-foreground mb-4"
+                                            >
+                                                Use the CLI to validate the
+                                                participation and verify its
+                                                correctness.
+                                            </p>
+                                            <div
+                                                class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                                                    on:click={() =>
+                                                        navigator.clipboard.writeText(
+                                                            `nodo gop_validate_participation ${game?.winnerCandidateCommitment || ""}`,
+                                                        )}
+                                                    title="Copy command"
+                                                >
+                                                    <Copy class="w-3.5 h-3.5" />
+                                                </button>
+                                                <span class="text-primary"
+                                                    >nodo</span
+                                                >
+                                                gop_validate_participation {(
+                                                    game?.winnerCandidateCommitment ||
+                                                    ""
+                                                ).slice(0, 20)}...
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-600 dark:text-blue-400"
+                                    >
+                                        <p class="font-semibold mb-2">
+                                            Your Role as Judge:
+                                        </p>
+                                        <ul
+                                            class="list-disc list-inside space-y-1.5 opacity-90"
+                                        >
+                                            <li>
+                                                Validate the participation to
+                                                ensure it can be reproduced
+                                                correctly.
+                                            </li>
+                                            <li>
+                                                If the participation is invalid
+                                                (cannot be reproduced or is
+                                                malicious), vote to <b
+                                                    >invalidate</b
+                                                >.
+                                            </li>
+                                            <li>
+                                                If the participation source is
+                                                unavailable, vote to <b
+                                                    >mark as unavailable</b
+                                                >.
+                                            </li>
+                                            <li>
+                                                A majority of judges is required
+                                                for any action to take effect.
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="flex justify-center pt-4">
+                                        <Button
+                                            size="lg"
+                                            class="gap-2 bg-orange-600 hover:bg-orange-700"
+                                            on:click={() =>
+                                                (showJudgeGuide = false)}
+                                        >
+                                            Continue to Vote
+                                            <ArrowRight class="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            {:else}
+                                <div class="space-y-4">
+                                    <!-- Back to Guide Button -->
+                                    <div class="flex justify-start">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={() =>
+                                                (showJudgeGuide = true)}
+                                            class="gap-2"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                ><path
+                                                    d="m15 18-6-6 6-6"
+                                                /></svg
+                                            >
+                                            Back to Judge Guide
+                                        </Button>
+                                    </div>
+
+                                    <p
+                                        class="text-sm p-3 rounded-md {$mode ===
+                                        'dark'
+                                            ? 'bg-orange-600/20 text-orange-300 border border-orange-500/30'
+                                            : 'bg-orange-100 text-orange-700 border border-orange-200'}"
+                                    >
+                                        <strong
+                                            >Action: Judge Mark Unavailable</strong
+                                        ><br />
+                                        As a judge, you are voting to mark the current
+                                        winner candidate as unavailable. This requires
+                                        a majority of judges to perform the same
+                                        action. Unlike invalidation, this does not
+                                        penalize the creator.
+                                    </p>
+                                    <Button
+                                        on:click={handleJudgesInvalidateUnavailable}
+                                        disabled={isSubmitting}
+                                        class="w-full md:w-auto md:min-w-[200px] mt-3 py-2.5 text-base {$mode ===
+                                        'dark'
+                                            ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                                            : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmitting
+                                            ? "Processing..."
+                                            : "Confirm Unavailable Vote"}
+                                    </Button>
+                                </div>
+                            {/if}
                         {:else if currentActionType === "remove_opinion"}
                             <div class="space-y-4">
                                 <p
