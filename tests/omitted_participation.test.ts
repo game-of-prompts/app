@@ -192,6 +192,29 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         });
         omittedParticipantBox = participationContract.utxos.toArray()[1];
 
+        // Create solver ID boxes for winner and omitted
+        const solverIdBoxCreationHeight = Number(game_deadline) - DefaultGameConstants.PARTICIPATION_TIME_WINDOW - DefaultGameConstants.SEED_MARGIN - 100;
+        const winnerSolverIdBox = {
+            creationHeight: solverIdBoxCreationHeight,
+            ergoTree: originalResolver.address.ergoTree,
+            assets: [],
+            value: RECOMMENDED_MIN_FEE_VALUE,
+            additionalRegisters: {
+                R4: SColl(SByte, stringToBytes("utf8", "solver-winner")).toHex()
+            }
+        };
+        const omittedSolverIdBox = {
+            creationHeight: solverIdBoxCreationHeight,
+            ergoTree: originalResolver.address.ergoTree,
+            assets: [],
+            value: RECOMMENDED_MIN_FEE_VALUE,
+            additionalRegisters: {
+                R4: SColl(SByte, stringToBytes("utf8", "solver-omitted")).toHex()
+            }
+        };
+        // Add them to originalResolver so they are available as data inputs
+        originalResolver.addUTxOs([winnerSolverIdBox, omittedSolverIdBox]);
+
         mockChain.newBlocks(newBlocks);
     };
 
@@ -230,7 +253,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -268,7 +291,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                             updatedNumericalParams[3],         // perJudgeCommissionPercent
                             updatedNumericalParams[4],         // resolverCommissionPercentage
                             BigInt(updatedNumericalParams[5]), // resolutionDeadline
-            0n                              // timeWeight
+                            0n                              // timeWeight
                         ]).toHex(),
                         R9: SColl(SColl(SByte), [
                             stringToBytes("utf8", "{}"),
@@ -277,7 +300,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -321,7 +344,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -369,7 +392,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -413,7 +436,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -457,7 +480,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([omittedParticipantBox])
+            .withDataFrom([omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -504,7 +527,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -554,7 +577,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -600,7 +623,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -708,7 +731,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -752,7 +775,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -812,7 +835,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, wrongGameParticipantBox])
+            .withDataFrom([currentWinnerBox, wrongGameParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -875,7 +898,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, inconsistentParticipantBox])
+            .withDataFrom([currentWinnerBox, inconsistentParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -919,7 +942,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -959,7 +982,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -1004,7 +1027,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -1053,7 +1076,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
                         ]).toHex()
                     })
             ])
-            .withDataFrom([currentWinnerBox, omittedParticipantBox])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
             .sendChangeTo(newResolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();

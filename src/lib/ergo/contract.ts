@@ -130,6 +130,8 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+PARTICIPATION_TYPE_ID\+`/g, constants.PARTICIPATION_TYPE_ID)
         .replace(/`\+PARTICIPATION_UNAVAILABLE_TYPE_ID\+`/g, constants.PARTICIPATION_UNAVAILABLE_TYPE_ID)
         .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
+        .replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString())
+        .replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString())
         .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
 
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
@@ -160,7 +162,8 @@ function ensureGameActiveCompiled(): void {
         .replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, constants.COOLDOWN_IN_BLOCKS.toString())
         .replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString())
         .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
-        .replace(/`\+OPEN_CEREMONY_BLOCKS\+`/g, constants.OPEN_CEREMONY_BLOCKS.toString());
+        .replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString())
+        .replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString());
 
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
 }

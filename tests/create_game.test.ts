@@ -111,10 +111,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
 
     // Registers
     const r4Hex = SInt(0).toHex();
-    const r5Hex = SPair(
-      SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")),
-      SLong(BigInt(deadlineBlock + 50))
-    ).toHex();
+    const r5Hex = SColl(SByte, stringToBytes("utf8", "seed-for-ceremony")).toHex();
     const r6Hex = SColl(SByte, hashedSecret).toHex();
     const r7Hex = SColl(SColl(SByte), []).toHex();
     const r8Hex = SColl(SLong, [
@@ -174,7 +171,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
       // R4: Game state (0: Active)
       R4: r4Hex,
 
-      // R5: (Seed, Ceremony deadline)
+      // R5: Seed (ceremony deadline is calculated as deadline - PARTICIPATION_TIME_WINDOW)
       R5: r5Hex,
 
       // R6: Hash of the secret 'S'

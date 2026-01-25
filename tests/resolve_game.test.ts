@@ -108,8 +108,8 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         // R4: Integer - Game state (0: Active)
         R4: SInt(0).toHex(),
 
-        // R5: (Coll[Byte], Long) - seed: (Seed, Ceremony deadline)
-        R5: SPair(SColl(SByte, hexToBytes(seed)!), SLong(BigInt(mockChain.height + 10))).toHex(),
+        // R5: Coll[Byte] - seed
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(),
 
         // R6: Coll[Byte] - secretHash
         R6: SColl(SByte, hashedSecret).toHex(),
@@ -202,6 +202,18 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
       additionalRegisters: participation1_registers
     });
 
+    // Create solver ID box
+    const solverIdBox = {
+      creationHeight: mockChain.height - 100, // Created before deadline
+      ergoTree: creator.address.ergoTree,
+      assets: [],
+      value: RECOMMENDED_MIN_FEE_VALUE,
+      additionalRegisters: {
+        R4: SColl(SByte, stringToBytes("utf8", "player1-solver")).toHex()
+      }
+    };
+    creator.addUTxOs(solverIdBox);
+
     mockChain.newBlocks(deadlineBlock - mockChain.height + 1);
   });
 
@@ -213,7 +225,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput])
-      .withDataFrom([participationContract.utxos.toArray()[0]])
+      .withDataFrom([participationContract.utxos.toArray()[0], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -248,7 +260,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput])
-      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .withDataFrom([participationContract.utxos.toArray()[1], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -286,7 +298,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput])
-      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .withDataFrom([participationContract.utxos.toArray()[1], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -319,7 +331,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         gameActiveContract.utxos.toArray()[0],
         ...creator.utxos.toArray()])
       .to([gameBoxOutput])
-      .withDataFrom([participationContract.utxos.toArray()[1]])
+      .withDataFrom([participationContract.utxos.toArray()[1], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -374,7 +386,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
             ]).toHex()
           })
       ])
-      .withDataFrom([participationContract.utxos.toArray()[0]])
+      .withDataFrom([participationContract.utxos.toArray()[0], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -467,7 +479,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
         ...creator.utxos.toArray()
       ])
       .to([gameBoxOutput])
-      .withDataFrom([participationContract.utxos.toArray()[1]]) // Use the new invalid box
+      .withDataFrom([participationContract.utxos.toArray()[1], creator.utxos.toArray()[creator.utxos.toArray().length - 1]]) // Use the new invalid box
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
@@ -519,7 +531,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
             creatorPkBytes           // Script de gasto del resolvedor
           ]).toHex()
         })])
-      .withDataFrom([participationContract.utxos.toArray()[0]])
+      .withDataFrom([participationContract.utxos.toArray()[0], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
       .sendChangeTo(creator.address)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
