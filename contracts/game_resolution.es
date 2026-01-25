@@ -105,10 +105,25 @@
         // TODO if (recreatedGameBoxes.size == 1) {
         val recreatedGameBox = OUTPUTS(0)
 
+        val botCreatedBeforeSeed = {
+                val pBoxSolverId = omittedWinnerBox.R7[Coll[Byte]].get
+
+                // Check datainput boxes where R4 is pBoxSolverId
+                val botHashBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+                  box.R4[Coll[Byte]].get == pBoxSolverId
+                })
+
+                // Check if any of these boxes were created before the game seed was set.
+                botHashBoxes.exists({ (box: Box) =>
+                  box.creationInfo._1 < deadline  // - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
+                })
+              }
+
         // Se verifica que la caja de participación enviada sea válida para este juego
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
                                 omittedWinnerBox.R6[Coll[Byte]].get == gameNftId &&
                                 omittedWinnerBox.creationInfo._1 < deadline &&
+                                botCreatedBeforeSeed &&
                                 box_value(omittedWinnerBox) >= participationFee &&
                                 omittedWinnerBox.R9[Coll[Long]].get.size <= MAX_SCORE_LIST
 
@@ -244,7 +259,7 @@
         val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
         val winnerCandidateValid = if (newCandidateCommitment == Coll[Byte]()) { true } 
           else {
-            // Action executor can provide a new candidate, anyone will be able to change it.
+            // Action executor can provide a new candidate, anyone will be able to change it.  // TODO Aqui no debería de agregar un nuevo candidato, mejor dejarlo vacío y que se agregue con omitted (se pueden hacer chained tx.)
             val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ 
               (box: Box) => 
                 blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 
@@ -337,7 +352,7 @@
         val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
         val winnerCandidateValid = if (newCandidateCommitment == Coll[Byte]()) { true } 
           else {
-            // Action executor can provide a new candidate, the creator will have a grace period to change it.
+            // Action executor can provide a new candidate, the creator will have a grace period to change it.  // TODO Aqui no debería de agregar un nuevo candidato, mejor dejarlo vacío y que se agregue con omitted (se pueden hacer chained tx.)
             val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ 
               (box: Box) => 
                 blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && 

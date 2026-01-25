@@ -46,7 +46,7 @@
   // R5: (Seed, Ceremony deadline)
   val seedInfo = SELF.R5[(Coll[Byte], Long)].get
   val gameSeed = seedInfo._1
-  val ceremonyDeadline = seedInfo._2
+  val ceremonyDeadline = seedInfo._2  // Will be DEADLINE - PARTICIPATION_TIME_WINDOW
 
   // R6: Hash del secreto 'S'
   val secretHash = SELF.R6[Coll[Byte]].get
@@ -136,7 +136,19 @@
                 }
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
-              validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
+              val botCreatedBeforeSeed = {
+                // Check datainput boxes where R4 is pBoxSolverId
+                val botHashBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+                  box.R4[Coll[Byte]].get == pBoxSolverId
+                })
+
+                // Check if any of these boxes were created before the game seed was set.
+                botHashBoxes.exists({ (box: Box) =>
+                  box.creationInfo._1 < ceremonyDeadline // - SEED_MARGIN
+                })
+              }
+
+              validScoreExists && correctParticipationFee && botCreatedBeforeSeed && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
             }
             else { false }
           }
