@@ -4777,8 +4777,8 @@
                                                 You must publish your bot hash <b
                                                     >before</b
                                                 >
-                                                the deadline. Publishing the
-                                                hash is <b>free</b> - no participation
+                                                the deadline. Publishing the hash
+                                                is <b>free</b> - no participation
                                                 fee required yet.
                                             </li>
                                             <li>
@@ -4812,13 +4812,73 @@
                                             on:click={() =>
                                                 (showParticipantGuide = false)}
                                         >
-                                            I have my Bot & Participation
+                                            I have my Bot implemented
                                             <ArrowRight class="w-4 h-4" />
                                         </Button>
                                     </div>
                                 </div>
                             {:else}
                                 <div class="space-y-6 max-w-3xl mx-auto">
+                                    <!-- Back to Guide Button -->
+                                    <div class="flex justify-start">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            on:click={() =>
+                                                (showParticipantGuide = true)}
+                                            class="gap-2"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                ><path
+                                                    d="m15 18-6-6 6-6"
+                                                /></svg
+                                            >
+                                            Back to Participant Guide
+                                        </Button>
+                                    </div>
+
+                                    <!-- Ceremony Phase Warning -->
+                                    {#if openCeremony}
+                                        <div
+                                            class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4"
+                                        >
+                                            <div class="flex items-start gap-3">
+                                                <AlertTriangle
+                                                    class="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5"
+                                                />
+                                                <div class="flex-1">
+                                                    <h4
+                                                        class="font-semibold text-sm text-yellow-700 dark:text-yellow-400 mb-1"
+                                                    >
+                                                        Ceremony Phase Active
+                                                    </h4>
+                                                    <p
+                                                        class="text-xs text-yellow-600 dark:text-yellow-500"
+                                                    >
+                                                        You cannot submit your
+                                                        score yet because the
+                                                        ceremony phase is still
+                                                        ongoing. The final seed
+                                                        has not been determined.
+                                                        Please wait until the
+                                                        ceremony phase ends to
+                                                        submit your
+                                                        participation.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {/if}
+
                                     <!-- JSON Upload -->
                                     <div>
                                         <Label
@@ -5023,7 +5083,8 @@
                                                     !commitmentC_input.trim() ||
                                                     !solverId_input.trim() ||
                                                     !hashLogs_input.trim() ||
-                                                    scores_list.length === 0}
+                                                    scores_list.length === 0 ||
+                                                    openCeremony}
                                                 class="w-full sm:w-auto min-w-[200px]"
                                                 variant="default"
                                             >
