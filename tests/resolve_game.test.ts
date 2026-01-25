@@ -204,7 +204,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     // Create solver ID box
     const solverIdBox = {
-      creationHeight: mockChain.height - 100, // Created before deadline
+      creationHeight: deadlineBlock - DefaultGameConstants.PARTICIPATION_TIME_WINDOW - DefaultGameConstants.SEED_MARGIN - 1, // Created before deadline
       ergoTree: creator.address.ergoTree,
       assets: [],
       value: RECOMMENDED_MIN_FEE_VALUE,

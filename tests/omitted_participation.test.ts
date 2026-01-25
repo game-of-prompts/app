@@ -193,7 +193,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         omittedParticipantBox = participationContract.utxos.toArray()[1];
 
         // Create solver ID boxes for winner and omitted
-        const solverIdBoxCreationHeight = Number(game_deadline) - DefaultGameConstants.PARTICIPATION_TIME_WINDOW - DefaultGameConstants.SEED_MARGIN - 100;
+        const solverIdBoxCreationHeight = Number(game_deadline) - DefaultGameConstants.PARTICIPATION_TIME_WINDOW - DefaultGameConstants.SEED_MARGIN - 1;
         const winnerSolverIdBox = {
             creationHeight: solverIdBoxCreationHeight,
             ergoTree: originalResolver.address.ergoTree,
