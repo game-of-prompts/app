@@ -978,7 +978,7 @@
                     // Grace Period
                     targetDate = await block_height_to_timestamp(
                         game.deadlineBlock +
-                            game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS,
+                            game.constants.PARTICIPATION_GRACE_PERIOD,
                         platform,
                     );
                     clockLabel = "Grace Period";
@@ -3962,7 +3962,7 @@
                                     currentHeight >
                                         game.deadlineBlock +
                                             game.constants
-                                                .PARTICIPATION_GRACE_PERIOD_IN_BLOCKS}
+                                                .PARTICIPATION_GRACE_PERIOD}
                                 {@const canReclaimAfterGrace =
                                     isGracePeriodOver &&
                                     isCurrentUserParticipant &&

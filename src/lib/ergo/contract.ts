@@ -93,7 +93,7 @@ function ensureParticipationCompiled(): void {
     const constants = getGameConstants();
 
     const finalSource = PARTICIPATION_SOURCE
-        .replace(/`\+GRACE_PERIOD_IN_BLOCKS\+`/g, constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS.toString());
+        .replace(/`\+GRACE_PERIOD\+`/g, constants.PARTICIPATION_GRACE_PERIOD.toString());
 
     _participation.ergoTree = compile(finalSource, { version: ergoTreeVersion });
 }

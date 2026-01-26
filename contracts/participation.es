@@ -7,7 +7,7 @@
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
   
   // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.
-  val GRACE_PERIOD_IN_BLOCKS = `+GRACE_PERIOD_IN_BLOCKS+`L // Aprox. 24 horas
+  val GRACE_PERIOD = `+GRACE_PERIOD+`L // Aprox. 24 horas
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
@@ -70,7 +70,7 @@
         
         if (isActive) {
           val gameDeadline = gameBoxInData.R8[Coll[Long]].get(2)
-          val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
+          val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD
 
           val signedByOwner = {
             val prefix = playerPK.slice(0, 3)

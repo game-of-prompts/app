@@ -15,7 +15,7 @@ import { getGopGameActiveErgoTree, getGopParticipationErgoTree } from "$lib/ergo
 import { hexToBytes } from "$lib/ergo/utils";
 
 
-const GRACE_PERIOD_IN_BLOCKS = DefaultGameConstants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS;
+const GRACE_PERIOD = DefaultGameConstants.PARTICIPATION_GRACE_PERIOD;
 
 const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
@@ -136,7 +136,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
   });
 
   it("should allow a participant to reclaim funds if the grace period has passed", () => {
-    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS;
+    const reclaimHeight = deadlineBlock + GRACE_PERIOD;
     mockChain.jumpTo(reclaimHeight);
     const participantInitialBalance = participant.balance.nanoergs;
 
@@ -159,10 +159,10 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
   });
 
   it("should FAIL to reclaim funds if the grace period has NOT passed", () => {
-    const reclaimHeight = deadlineBlock + GRACE_PERIOD_IN_BLOCKS - 10;  // Seems that the mockchain goes various blocks forward when executing the tx!
+    const reclaimHeight = deadlineBlock + GRACE_PERIOD - 10;  // Seems that the mockchain goes various blocks forward when executing the tx!
     mockChain.jumpTo(reclaimHeight);
 
-    console.log(deadlineBlock, GRACE_PERIOD_IN_BLOCKS, reclaimHeight);
+    console.log(deadlineBlock, GRACE_PERIOD, reclaimHeight);
     console.log("Current height:", mockChain.height);
 
     const reclaimValue = mode.token === ERG_BASE_TOKEN ? participationBox.value : RECOMMENDED_MIN_FEE_VALUE;

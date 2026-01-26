@@ -343,7 +343,7 @@ export class ErgoPlatform implements Platform {
             throw new Error("Solo se pueden reclamar participaciones no gastadas.");
         }
         const currentHeight = await this.get_current_height();
-        if (currentHeight <= game.deadlineBlock + game.constants.PARTICIPATION_GRACE_PERIOD_IN_BLOCKS) {
+        if (currentHeight <= game.deadlineBlock + game.constants.PARTICIPATION_GRACE_PERIOD) {
             throw new Error("El período de gracia aún no ha terminado.");
         }
         return await reclaim_after_grace(game, participation);
