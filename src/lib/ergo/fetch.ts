@@ -28,7 +28,8 @@ import {
     getGopParticipationErgoTreeHex,
     getGopGameActiveTemplateHash,
     getGopEndGameTemplateHash,
-    getGopParticipationBatchTemplateHash
+    getGopParticipationBatchTemplateHash,
+    getGopFalseTemplateHash
 } from "./contract"; // Assumes this file exports functions to get script hashes
 import {
     hexToUtf8,
@@ -789,6 +790,7 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                ergoTreeTemplateHash: getGopFalseTemplateHash(),
                 registers: {
                     R4: solverId
                 }

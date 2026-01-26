@@ -15,6 +15,7 @@ import PARTICIPATION_SOURCE from '../../../contracts/participation.es?raw';
 import PARTICIPATION_BATCH_SOURCE from '../../../contracts/participation_batch.es?raw';
 import END_GAME_SOURCE from '../../../contracts/end_game.es?raw';
 import MINT_IDT_SOURCE from '../../../contracts/mint_idt.es?raw';
+import FALSE_SOURCE from '../../../contracts/false.es?raw';
 import { reputation_proof_contract as REPUTATION_PROOF_SOURCE } from "reputation-system";
 import { digital_public_good as DIGITAL_PUBLIC_GOOD_SCRIPT } from "reputation-system";
 
@@ -32,6 +33,7 @@ let _participation: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: s
 let _participationBatch: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _endGame: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 let _mintIdt: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
+let _false: { ergoTree?: ErgoTree, templateHash?: string, scriptHash?: string } = {};
 
 // Subscribe to mode changes to invalidate cache
 isDevMode.subscribe(() => {
@@ -43,6 +45,7 @@ isDevMode.subscribe(() => {
     _participationBatch = {};
     _endGame = {};
     _mintIdt = {};
+    _false = {};
 });
 
 // =============================================================================
@@ -132,7 +135,7 @@ function ensureGameResolutionCompiled(): void {
         .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
         .replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString())
         .replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString())
-        .replace(/`\+FALSE_SCRIPT_HASH\+`/g, "7aa2b5db8610eebce9236e15c96dd154a5717341600462a5b1db7202b71ed326")
+        .replace(/`\+FALSE_SCRIPT_HASH\+`/g, getGopFalseScriptHash())
         .replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
 
     _gameResolution.ergoTree = compile(source, { version: ergoTreeVersion });
@@ -164,7 +167,7 @@ function ensureGameActiveCompiled(): void {
         .replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString())
         .replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString())
         .replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString())
-        .replace(/`\+FALSE_SCRIPT_HASH\+`/g, "7aa2b5db8610eebce9236e15c96dd154a5717341600462a5b1db7202b71ed326")
+        .replace(/`\+FALSE_SCRIPT_HASH\+`/g, getGopFalseScriptHash())
         .replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString());
 
     _gameActive.ergoTree = compile(source, { version: ergoTreeVersion });
@@ -190,6 +193,11 @@ function ensureMintIdtCompiled(): void {
         .replace(/`\+contract_bytes_hash\+`/g, gameActiveHash);
 
     _mintIdt.ergoTree = compile(source, { version: ergoTreeVersion });
+}
+
+function ensureFalseCompiled(): void {
+    if (_false.ergoTree) return;
+    _false.ergoTree = compile(FALSE_SOURCE, { version: ergoTreeVersion });
 }
 
 // =============================================================================
@@ -270,6 +278,13 @@ export const getGopMintIdtScriptHash = () => getScriptHash(_mintIdt, ensureMintI
 export function getGopMintIdtAddress(): Address { ensureMintIdtCompiled(); return _mintIdt.ergoTree!.toAddress(networkType); }
 export function getGopMintIdtErgoTreeHex(): string { ensureMintIdtCompiled(); return _mintIdt.ergoTree!.toHex(); }
 export function getGopMintIdtErgoTree(): ErgoTree { ensureMintIdtCompiled(); return _mintIdt.ergoTree!; }
+
+// --- False Script ---
+export const getGopFalseTemplateHash = () => getTemplateHash(_false, ensureFalseCompiled);
+export const getGopFalseScriptHash = () => getScriptHash(_false, ensureFalseCompiled);
+export function getGopFalseAddress(): Address { ensureFalseCompiled(); return _false.ergoTree!.toAddress(networkType); }
+export function getGopFalseErgoTreeHex(): string { ensureFalseCompiled(); return _false.ergoTree!.toHex(); }
+export function getGopFalseErgoTree(): ErgoTree { ensureFalseCompiled(); return _false.ergoTree!; }
 
 // =============================================================================
 // === DIGITAL PUBLIC GOOD & REPUTATION PROOF (alineado con la misma dinámica)

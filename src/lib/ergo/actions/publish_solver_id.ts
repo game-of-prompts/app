@@ -7,6 +7,8 @@ import {
 import { SColl, SByte } from '@fleet-sdk/serializer';
 import { hexToBytes } from '$lib/ergo/utils';
 
+import { getGopFalseErgoTreeHex } from '../contract';
+
 declare const ergo: any;
 
 /**
@@ -24,7 +26,7 @@ export async function publish_solver_id(solverId: string): Promise<string> {
 
     const outputBox = new OutputBuilder(
         SAFE_MIN_BOX_VALUE,
-        changeAddress  // TODO User a { false } script.
+        getGopFalseErgoTreeHex()
     )
         .setAdditionalRegisters({
             R4: SColl(SByte, solverIdBytes).toHex()
