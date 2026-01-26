@@ -88,7 +88,11 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
         R6: SColl(SByte, secret).toHex(), // El secreto revelado
         R7: SLong(creatorInitialStake).toHex(), // Stake actual
         R8: SLong(BigInt(mockChain.height)).toHex(), // originalDeadline (Long)
-        R9: SColl(SColl(SByte), [stringToBytes("utf8", "{}"), hexToBytes(mode.token) ?? ""]).toHex(),
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"),
+          hexToBytes(mode.token) ?? new Uint8Array(0),
+          prependHexPrefix(creator.address.getPublicKeys()[0], "0008cd")
+        ]).toHex(),
       }
     });
 
@@ -140,7 +144,7 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(tx, { signers: [player] });
+    const executionResult = mockChain.execute(tx, { signers: [player as any] });
 
     expect(executionResult).to.be.true;
   });
