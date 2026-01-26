@@ -119,6 +119,8 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
         // R8: Coll[Long] - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
         R8: SColl(SLong, [
+          1n, // createdAt
+          20n,                  // timeWeight
           BigInt(deadlineBlock),
           resolverStake,
           participationFee,
@@ -143,7 +145,16 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     winnerCandidateCommitment = commitment1Hex;
 
-    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [
+      1n, // createdAt
+      20n,                  // timeWeight
+      BigInt(deadlineBlock),
+      resolverStake,
+      participationFee,
+      perJudgeCommission,
+      resolver_commission_percentage,
+      resolutionDeadline
+    ];
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
@@ -205,7 +216,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     // Create solver ID box
     const solverIdBox = {
       creationHeight: deadlineBlock - DefaultGameConstants.PARTICIPATION_TIME_WINDOW - DefaultGameConstants.SEED_MARGIN - 1, // Created before deadline
-      ergoTree: creator.address.ergoTree,
+      ergoTree: "1906010100d17300",
       assets: [],
       value: RECOMMENDED_MIN_FEE_VALUE,
       additionalRegisters: {
@@ -346,7 +357,16 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const resolvedorPkBytes = creator.address.getPublicKeys()[0];
 
-    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [
+      1n, // createdAt
+      20n,                  // timeWeight
+      BigInt(deadlineBlock),
+      resolverStake,
+      participationFee,
+      perJudgeCommission,
+      resolver_commission_percentage,
+      resolutionDeadline
+    ];
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
@@ -401,7 +421,16 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const resolver_commission_percentage = 10n;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [
+      1n, // createdAt
+      20n, // timeWeight
+      BigInt(deadlineBlock),
+      resolverStake,
+      participationFee,
+      perJudgeCommission,
+      resolver_commission_percentage,
+      resolutionDeadline
+    ];
     const resolvedorPkBytes = creatorPkBytes;
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
@@ -492,7 +521,16 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
   it("should FAIL transition the game to the resolution phase if R9 is modified", () => {
     const currentHeight = mockChain.height;
     const creatorPkBytes = creator.address.getPublicKeys()[0];
-    const newNumericalParams = [BigInt(deadlineBlock), resolverStake, participationFee, perJudgeCommission, resolver_commission_percentage, resolutionDeadline];
+    const newNumericalParams = [
+      1n, // createdAt
+      20n, // timeWeight
+      BigInt(deadlineBlock),
+      resolverStake,
+      participationFee,
+      perJudgeCommission,
+      resolver_commission_percentage,
+      resolutionDeadline
+    ];
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [

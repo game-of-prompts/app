@@ -12,7 +12,8 @@
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")
 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
-  val ACCEPT_GAME_INVITATION_TYPE_ID = fromBase16("`+ACCEPT_GAME_INVITATION_TYPE_ID+`");
+  val ACCEPT_GAME_INVITATION_TYPE_ID = fromBase16("`+ACCEPT_GAME_INVITATION_TYPE_ID+`")
+  val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")
 
   // Constantes para la acción de cancelación.
   val STAKE_DENOMINATOR    = `+STAKE_DENOMINATOR+`L
@@ -80,24 +81,23 @@
     box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
   }
 
-  val getBotBox = { (participationBox: Box) =>
+  val getBotBoxHeight = { (participationBox: Box) =>
     val pBoxSolverId = participationBox.R7[Coll[Byte]].get
     val candidateBotBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+      box.R4[Coll[Byte]].isDefined &&
       box.R4[Coll[Byte]].get == pBoxSolverId &&
       blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH
     })
-    
-    val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
-      if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
-    })
 
-    oldestBox
-  }
-
-  val getBotBoxHeight = { (participationBox: Box) =>
-    val botBox = getBotBox(participationBox)
-    val realHeight = botBox.creationInfo._1
-    realHeight < createdAt ? createdAt : realHeight
+    if (candidateBotBoxes.size > 0) {
+      val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
+        if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
+      })
+      val realHeight = oldestBox.creationInfo._1
+      if (realHeight.toLong < createdAt) createdAt else realHeight.toLong
+    } else {
+      deadline // Igual al deadline para fallar la validación
+    }
   }
 
   // =================================================================
@@ -158,7 +158,7 @@
                 }
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
-              val botCreatedBeforeSeed = getBotBoxHeight(getBotBox(winnerCandidateBox)) < ceremonyDeadline - SEED_MARGIN
+              val botCreatedBeforeSeed = getBotBoxHeight(winnerCandidateBox) < ceremonyDeadline - SEED_MARGIN
 
               validScoreExists && correctParticipationFee && botCreatedBeforeSeed && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
             }
@@ -195,12 +195,14 @@
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
               resolutionBox.R5[Coll[Byte]].get == gameSeed &&
               resolutionBox.R7[Coll[Coll[Byte]]].get == invitedJudges &&
-              resolutionBox.R8[Coll[Long]].get(0) == deadline &&
-              resolutionBox.R8[Coll[Long]].get(1) == resolverStake &&
-              resolutionBox.R8[Coll[Long]].get(2) == participationFee &&
-              resolutionBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage &&
-              resolutionBox.R8[Coll[Long]].get(4) >= resolverCommissionPercentage &&
-              resolutionBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R8[Coll[Long]].get(0) == createdAt &&
+              resolutionBox.R8[Coll[Long]].get(1) == timeWeight &&
+              resolutionBox.R8[Coll[Long]].get(2) == deadline &&
+              resolutionBox.R8[Coll[Long]].get(3) == resolverStake &&
+              resolutionBox.R8[Coll[Long]].get(4) == participationFee &&
+              resolutionBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(6) >= resolverCommissionPercentage &&
+              resolutionBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId &&
               resolutionBox.R9[Coll[Coll[Byte]]].get.size == 3

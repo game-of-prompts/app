@@ -41,6 +41,7 @@
   val winnerCandidateCommitment = r6Tuple._2
   
   val participatingJudges = SELF.R7[Coll[Coll[Byte]]].get
+  val numericalParams = SELF.R8[Coll[Long]].get
   val createdAt = numericalParams(0)
   val timeWeight = numericalParams(1)
   val deadline = numericalParams(2)
@@ -82,24 +83,23 @@
     })
   }
 
-  val getBotBox = { (participationBox: Box) =>
+  val getBotBoxHeight = { (participationBox: Box) =>
     val pBoxSolverId = participationBox.R7[Coll[Byte]].get
     val candidateBotBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+      box.R4[Coll[Byte]].isDefined &&
       box.R4[Coll[Byte]].get == pBoxSolverId &&
       blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH
-    })89
-    
-    val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
-      if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
     })
 
-    oldestBox
-  }
-
-  val getBotBoxHeight = { (participationBox: Box) =>
-    val botBox = getBotBox(participationBox)
-    val realHeight = botBox.creationInfo._1
-    realHeight < createdAt ? createdAt : realHeight
+    if (candidateBotBoxes.size > 0) {
+      val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
+        if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
+      })
+      val realHeight = oldestBox.creationInfo._1
+      if (realHeight.toLong < createdAt) createdAt else realHeight.toLong
+    } else {
+      deadline // Igual al deadline para fallar la validaciónu
+    }
   }
 
 
@@ -124,8 +124,7 @@
         val omittedWinnerBox = omittedWinnerBoxes(0)
 
         val pBoxSolverId = omittedWinnerBox.R7[Coll[Byte]].get
-        val omittedWinnerBotBox = getBotBox(omittedWinnerBox)
-        val botCreatedBeforeSeed = omittedWinnerBotBox.creationInfo._1 < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
+        val botCreatedBeforeSeed = getBotBoxHeight(omittedWinnerBox) < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
 
         // Se verifica que la caja de participación enviada sea válida para este juego
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
@@ -168,14 +167,14 @@
                 val validCurrentCandidate = currentCandidateScoreTuple._2 && currentScore != -1L
 
                 if (validCurrentCandidate) {
-                  val currentCandidateBotBox = getBotBox(currentCandidateBox)
-
                   // Se determina el nuevo ganador comparando puntajes AJUSTADOS y alturas de bloque
                   // Formula: score = game_score * (TIME_WEIGHT + DEADLINE - HEIGHT)
-                  val newScoreAdjusted = newScore * (timeWeight + deadline - getBotBoxHeight(omittedWinnerBotBox).toLong)
-                  val currentScoreAdjusted = currentScore * (timeWeight + deadline - getBotBoxHeight(currentCandidateBotBox).toLong)
+                  val newBotHeight = getBotBoxHeight(omittedWinnerBox)
+                  val currentBotHeight = getBotBoxHeight(currentCandidateBox)
+                  val newScoreAdjusted = newScore * (timeWeight + deadline - newBotHeight)
+                  val currentScoreAdjusted = currentScore * (timeWeight + deadline - currentBotHeight)
 
-                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && getBotBoxHeight(omittedWinnerBotBox) < getBotBoxHeight(currentCandidateBotBox))) {
+                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && newBotHeight < currentBotHeight)) {
                     omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
                   } else {
                     Coll[Byte]() // El actual sigue siendo el mejor

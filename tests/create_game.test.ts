@@ -115,6 +115,8 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
     const r6Hex = SColl(SByte, hashedSecret).toHex();
     const r7Hex = SColl(SColl(SByte), []).toHex();
     const r8Hex = SColl(SLong, [
+      BigInt(mockChain.height), // createdAt
+      100000n,                  // timeWeight
       BigInt(deadlineBlock),
       resolverStake,
       participationFee,
