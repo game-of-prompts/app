@@ -69,7 +69,7 @@
         val isActive = gameBoxInData.R4[Int].get == 0
         
         if (isActive) {
-          val gameDeadline = gameBoxInData.R8[Coll[Long]].get(0)
+          val gameDeadline = gameBoxInData.R8[Coll[Long]].get(2)
           val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD_IN_BLOCKS
 
           val signedByOwner = {
@@ -98,7 +98,7 @@
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
       val isResolved = mainGameBox.R4[Int].get == 1
-      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(7)
 
       val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
       resolutionPeriodIsOver && isResolved
@@ -113,7 +113,7 @@
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
       val isResolved = mainGameBox.R4[Int].get == 1
-      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(7)
 
       val isBeforeDeadline = HEIGHT < resolutionDeadline
       val winnerCandidateCommitment = mainGameBox.R6[(Coll[Byte], Coll[Byte])].get._2

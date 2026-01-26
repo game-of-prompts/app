@@ -88,20 +88,21 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
         // R7: Invited judges (empty in this test)
         R7: SColl(SColl(SByte), []).toHex(),
 
-        // R8: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
+        // R8: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
         R8: SColl(SLong, [
+          BigInt(mockChain.height),
+          20n,
           BigInt(deadlineBlock),
           resolverStake,
           participationFee,
           500n,  // 5.00% comisión por juez
-          1000n  // 10.00% comisión del creador,
+          1000n  // 10.00% comisión del creador
         ]).toHex(),
-
-        // R9: (Detalles del juego, Script del creador)
+        // R9: [gameDetailsJsonHex, ParticipationTokenID, creatorErgoTree]
         R9: SColl(SColl(SByte), [
-          SColl(SByte, stringToBytes("utf8", "{}")),
-          hexToBytes(mode.token) ?? "",
-          SColl(SByte, creator.key.publicKey) // Script de gasto del creador (placeholder)
+          stringToBytes("utf8", "{}"),
+          hexToBytes(mode.token) ?? new Uint8Array(0),
+          prependHexPrefix(creator.address.getPublicKeys()[0], "0008cd")
         ]).toHex()
       },
     });
@@ -152,7 +153,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(reclaimTx, { signers: [participant] });
+    const executionResult = mockChain.execute(reclaimTx, { signers: [participant as any] });
 
     expect(executionResult).to.be.true;
   });
@@ -177,7 +178,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .build();
 
-    const executionResult = mockChain.execute(reclaimTx, { signers: [participant], throw: false });
+    const executionResult = mockChain.execute(reclaimTx, { signers: [participant as any], throw: false });
 
     expect(executionResult).to.be.false;
     expect(participationContract.utxos.length).to.equal(1);
