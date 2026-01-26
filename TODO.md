@@ -168,7 +168,7 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] Invalidación por no disponibilidad.
 
-[] La participación es valida si y solo si existe una caja cuyo R4 sea el id del servicio y su creación sea anterior a deadline - M. Donde M es una nueva constante llamada ROBOT_SUBMIT_DEADLINE o similar.
+[x] La participación es valida si y solo si existe una caja cuyo R4 sea el id del servicio y su creación sea anterior a deadline - M. Donde M es una nueva constante llamada ROBOT_SUBMIT_DEADLINE o similar.
 
 [] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
