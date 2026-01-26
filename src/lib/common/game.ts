@@ -83,6 +83,7 @@ export interface GameActive {
     reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
+    createdAt: number;
 }
 
 /**
@@ -115,8 +116,8 @@ export interface GameResolution {
     reputation: number;
     constants: GameConstants;
     isEndGame: boolean;
+    createdAt: number;
 }
-
 
 
 /**
@@ -164,6 +165,7 @@ export interface GameFinalized {
     winnerFinalizationDeadline: number;
     reputation: number;
     constants: GameConstants;
+    createdAt: number;
     seed: string;
     revealedS_Hex: string;
     winnerCandidateCommitment: string | null;

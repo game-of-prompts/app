@@ -208,9 +208,15 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             catch (e) { console.warn(`Could not JSON.parse R8 for ${box.boxId}: ${r8RenderedValue}`); }
         } else if (Array.isArray(r8RenderedValue)) { parsedR8Array = r8RenderedValue; }
         const numericalParams = parseLongColl(parsedR8Array);
-        // structure: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, timeWeight]
-        if (!numericalParams || numericalParams.length < 6) throw new Error("R8 does not contain the 6 expected numerical parameters.");
-        const [deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommissionPercentage, resolverCommissionPercentage, timeWeight] = numericalParams;
+        // structure: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
+        if (!numericalParams || numericalParams.length < 7) throw new Error("R8 does not contain the 7 expected numerical parameters.");
+        const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommissionPercentage, resolverCommissionPercentage] = numericalParams;
+
+        const created_at_token = await tokenCreationHeight(gameId);
+        if (created_at_token === null || createdAt < created_at_token - 5 || createdAt > created_at_token + 5) {
+            console.warn(`parseGameActiveBox: Box ${box.boxId} has inconsistent creation height in R8.`);
+            return null;
+        }
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
@@ -240,6 +246,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             perJudgeCommissionPercentage: perJudgeCommissionPercentage, // From R8
             timeWeight: timeWeight, // From R8
+            createdAt: Number(createdAt), // From R8
             reputation: 0,
             constants: getGameConstants(),
             seed: seed,
@@ -348,7 +355,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
         // R8: Coll[Long] -> [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
         const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         const numericalParams = parseLongColl(r8Array);
-        if (!numericalParams || numericalParams.length < 7) throw new Error("R8 does not contain the 7 expected numerical parameters.");
+        if (!numericalParams || numericalParams.length < 8) throw new Error("R8 does not contain the 8 expected numerical parameters.");
         const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline] = numericalParams;
 
         const created_at = await tokenCreationHeight(gameId);
@@ -396,7 +403,8 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             constants: getGameConstants(),
             seed: seed, // Added from R5
             reputation: 0,
-            isEndGame
+            isEndGame,
+            createdAt: Number(createdAt)
         };
 
         gameResolution.reputation = calculate_reputation(gameResolution);
@@ -754,7 +762,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             timeWeight: lastResolutionBox?.timeWeight || BigInt(0),
             resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
             resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
-            resolverCommission: lastResolutionBox?.resolverCommission || 0
+            resolverCommission: lastResolutionBox?.resolverCommission || 0,
+            createdAt: lastResolutionBox?.createdAt || (('createdAt' in lastBox) ? (lastBox as any).createdAt : 0)
         };
 
         finalized.reputation = calculate_reputation(finalized);
@@ -1288,7 +1297,8 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 timeWeight: lastResolutionBox?.timeWeight || BigInt(0),
                 resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
                 resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
-                resolverCommission: lastResolutionBox?.resolverCommission || 0
+                resolverCommission: lastResolutionBox?.resolverCommission || 0,
+                createdAt: lastResolutionBox?.createdAt || (('createdAt' in lastBox) ? (lastBox as any).createdAt : 0)
             };
 
             finalized.reputation = calculate_reputation(finalized);
@@ -1349,7 +1359,8 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 timeWeight: BigInt(0),
                 resolverPK_Hex: null,
                 resolverScript_Hex: "",
-                resolverCommission: 0
+                resolverCommission: 0,
+                createdAt: await tokenCreationHeight(id) || 0
             };
             minimal.reputation = calculate_reputation(minimal);
             return minimal;

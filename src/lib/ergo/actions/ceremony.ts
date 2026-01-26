@@ -11,6 +11,8 @@ import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { getGopGameActiveErgoTreeHex } from '../contract'; // Asume que esta función existe
 import { stringToBytes } from '@scure/base';
 
+declare const ergo: any;
+
 /**
  * Ejecuta la acción "Open Ceremony" (action3_openCeremony) para un juego activo.
  * * Esta acción permite a cualquiera "re-gastar" la caja del juego antes del
@@ -65,11 +67,8 @@ export async function contribute_to_ceremony(
     // R4: Sigue en estado 0 (Activo)
     const r4Hex = SInt(0).toHex();
 
-    // R5: (updated_seed, ceremonyDeadline)
-    const r5Hex = SPair(
-        SColl(SByte, updatedSeedBytes),
-        SLong(BigInt(game.ceremonyDeadline))
-    ).toHex();
+    // R5: updated_seed (Coll[Byte])
+    const r5Hex = SColl(SByte, updatedSeedBytes).toHex();
 
     // R6: secretHash (se mantiene)
     const r6Hex = SColl(SByte, hexToBytes(game.secretHash)!).toHex();
@@ -82,12 +81,13 @@ export async function contribute_to_ceremony(
 
     // R8: numericalParameters (se mantiene)
     const numericalParams = [
+        BigInt(game.createdAt),
+        game.timeWeight,
         BigInt(game.deadlineBlock),
         game.resolverStakeAmount,
         game.participationFeeAmount,
         game.perJudgeCommissionPercentage,
-        BigInt(game.commissionPercentage),
-        BigInt(game.timeWeight)
+        BigInt(game.commissionPercentage)
     ];
     const r8Hex = SColl(SLong, numericalParams).toHex();
 

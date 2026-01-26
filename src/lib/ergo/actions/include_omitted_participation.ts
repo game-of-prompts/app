@@ -63,15 +63,16 @@ export async function include_omitted_participation(
             // --- R7: participatingJudges: Coll[Coll[Byte]] ---
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
-            // --- R8: numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight] ---
+            // --- R8: numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline] ---
             R8: SColl(SLong, [
+                BigInt(game.createdAt),
+                BigInt(game.timeWeight),
                 BigInt(game.deadlineBlock),
                 BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
                 BigInt(game.perJudgeCommissionPercentage),
                 BigInt(game.resolverCommission),
-                BigInt(game.resolutionDeadline),
-                BigInt(game.timeWeight)
+                BigInt(game.resolutionDeadline)
             ]).toHex(),
 
             // --- R9: gameProvenance: Coll[Coll[Byte]] (Detalles del juego en JSON/Hex, Participation token id, Script de gasto del resolvedor) ---

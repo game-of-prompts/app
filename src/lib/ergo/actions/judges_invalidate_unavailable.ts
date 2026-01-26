@@ -2,7 +2,6 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    type InputBox,
     type Box,
     type Amount
 } from '@fleet-sdk/core';
@@ -13,6 +12,8 @@ import { getGopGameResolutionErgoTreeHex } from '../contract';
 import { stringToBytes } from '@scure/base';
 
 const JUDGE_PERIOD_MARGIN = 10;
+
+declare const ergo: any;
 
 /**
  * Allows a judge (or group of judges) to mark the current winner as unavailable.
@@ -50,8 +51,8 @@ export async function judges_invalidate_unavailable(
         console.log("Regs ", reg)
 
         // TODO CHECK.
-        const valid = reg.R4 === "0e20"+game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
-            reg.R5 === "0e20"+game.winnerCandidateCommitment;
+        const valid = reg.R4 === "0e20" + game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID &&
+            reg.R5 === "0e20" + game.winnerCandidateCommitment;
 
         if (!valid) {
             console.log(reg.R4)
@@ -106,15 +107,16 @@ export async function judges_invalidate_unavailable(
             // --- R7: participatingJudges: Coll[Coll[Byte]] ---
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
 
-            // R8: numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
+            // R8: numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
             R8: SColl(SLong, [
+                BigInt(game.createdAt),
+                BigInt(game.timeWeight),
                 BigInt(game.deadlineBlock),
                 BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
                 BigInt(game.perJudgeCommissionPercentage),
                 BigInt(game.resolverCommission),  // Resolver commission is NOT penalized in unavailable case
-                BigInt(newDeadline),
-                BigInt(game.timeWeight)
+                BigInt(newDeadline)
             ]).toHex(),
 
             // R9: gameProvenance: Coll[Coll[Byte]] -> [ rawJsonBytes, participationTokenId, resolverScriptBytes ]

@@ -108,13 +108,12 @@ export function estimateTotalBoxSizeFromInputs(
 
     // Build registers for Active state
     const r4Hex = SInt(0).toHex();
-    const r5Hex = SPair(
-        SColl(SByte, seedBytes),
-        SLong(BigInt(ceremonyDeadlineBlock))
-    ).toHex();
+    const r5Hex = SColl(SByte, seedBytes).toHex();
     const r6Hex = SColl(SByte, hashedSecretBytes).toHex();
     const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
     const r8Hex = SColl(SLong, [
+        0n, // Dummy createdAt
+        0n, // Dummy timeWeight
         BigInt(deadlineBlock),
         resolverStakeAmount,
         participationFeeAmount,
@@ -188,6 +187,8 @@ export function estimateTotalBoxSizeFromInputs(
         // Resolution R8: Config (6 elements in resolution vs 5 in active)
         // [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
         const resR8 = SColl(SLong, [
+            0n, // Dummy createdAt
+            0n, // Dummy timeWeight
             BigInt(deadlineBlock),
             resolverStakeAmount,
             participationFeeAmount,

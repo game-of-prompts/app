@@ -2,7 +2,6 @@ import {
     OutputBuilder,
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE,
-    type InputBox,
     type Box,
     type Amount
 } from '@fleet-sdk/core';
@@ -58,10 +57,10 @@ export async function judges_invalidation_chained(
     for (const p of judgeVoteDataInputs) {
         const reg = p.additionalRegisters;
 
-        const valid = reg.R4.renderedValue === game.constants.PARTICIPATION_TYPE_ID &&
-            reg.R5.renderedValue === game.winnerCandidateCommitment &&
-            reg.R6.renderedValue === "true" &&
-            reg.R8.renderedValue === "false";
+        const valid = reg.R4 === "0e20" + game.constants.PARTICIPATION_TYPE_ID &&
+            reg.R5 === "0e20" + game.winnerCandidateCommitment &&
+            reg.R6 === "01" && // true in SBoolean
+            reg.R8 === "00";   // false in SBoolean
 
         if (!valid) {
             throw new Error("Invalid judge vote [chained].")
@@ -125,13 +124,14 @@ export async function judges_invalidation_chained(
             ).toHex(),
             R7: SColl(SColl(SByte), game.judges.map((j) => hexToBytes(j)!)).toHex(),
             R8: SColl(SLong, [
+                BigInt(game.createdAt),
+                BigInt(game.timeWeight),
                 BigInt(game.deadlineBlock),
                 BigInt(game.resolverStakeAmount),
                 BigInt(game.participationFeeAmount),
                 BigInt(game.perJudgeCommissionPercentage) + BigInt(game.resolverCommission),
                 0n,  // resolver commission goes to judges
-                BigInt(newDeadline),
-                BigInt(game.timeWeight)
+                BigInt(newDeadline)
             ]).toHex(),
             R9: SColl(SColl(SByte), [
                 stringToBytes('utf8', game.content.rawJsonString),
@@ -141,7 +141,7 @@ export async function judges_invalidation_chained(
         });
 
     // --- 5. Build Chained Transaction ---
-    const utxos: InputBox[] = await ergo.get_utxos();
+    const utxos: Box<Amount>[] = await ergo.get_utxos();
     const parsedGameBox = parseBox(game.box);
     const parsedInvalidatedBox = parseBox(invalidatedParticipation.box);
 

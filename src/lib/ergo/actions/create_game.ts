@@ -161,17 +161,19 @@ export async function create_game(
     }
 
     // Registers preparation (using the same data as the calculator)
+    const creationHeight = await ergo.get_current_height();
     const r4Hex = SInt(0).toHex();
     const r5Hex = SColl(SByte, seedBytes).toHex();
     const r6Hex = SColl(SByte, hashedSecretBytes).toHex();
     const r7Hex = SColl(SColl(SByte), judgesColl).toHex();
     const r8Hex = SColl(SLong, [
+        BigInt(creationHeight),
+        timeWeight,
         BigInt(deadlineBlock),
         resolverStakeAmount,
         participationFeeAmount,
         BigInt(Math.round(perJudgeCommissionPercentage * 10000)),
-        BigInt(Math.round(commissionPercentage * 10000)),
-        timeWeight
+        BigInt(Math.round(commissionPercentage * 10000))
     ]).toHex();
     const r9Hex = SColl(SColl(SByte), [gameDetailsBytes, participationTokenIdBytes]).toHex();
 
@@ -184,7 +186,7 @@ export async function create_game(
         R9: r9Hex
     };
 
-    const creationHeight = await ergo.get_current_height();
+
 
     const gameTokens = [{
         tokenId: participationTokenId,

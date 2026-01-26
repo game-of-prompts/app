@@ -148,13 +148,14 @@ export async function resolve_game(
     const resolutionDeadline = BigInt(currentHeight + JUDGE_PERIOD);
 
     const newNumericalParams = [
+        BigInt(game.createdAt),
+        game.timeWeight,
         BigInt(game.deadlineBlock),
         game.resolverStakeAmount,
         game.participationFeeAmount,
         game.perJudgeCommissionPercentage,
         BigInt(game.commissionPercentage),
-        resolutionDeadline,
-        game.timeWeight
+        resolutionDeadline
     ];
 
     let winnerCommitmentBytes: Uint8Array;
