@@ -102,6 +102,72 @@
     }
   }
 
+  // ### Acciones 2 y 3: Invalidación por Jueces
+  val judgeInvalidationLogic = { (invalidate: Boolean) =>
+    
+    val voteTypeID = if (invalidate) PARTICIPATION_TYPE_ID else PARTICIPATION_UNAVAILABLE_TYPE_ID
+    val penalizeResolver = invalidate
+    val enforceStrictChecks = invalidate
+
+    if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
+      val judgeVotes = CONTEXT.dataInputs.filter({
+        (box: Box) => 
+          blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
+          box.tokens.size > 0 &&
+          box.R4[Coll[Byte]].get == voteTypeID &&
+          box.R5[Coll[Byte]].get == winnerCandidateCommitment &&
+          // Lógica condicional estricta sin usar if/else complejos que rompan el tipo
+          (if (enforceStrictChecks) (box.R6[Boolean].get && box.R8[Boolean].get == false) else true) && 
+          participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})
+      })
+
+      val allVotesAreUnique = {
+        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
+        judgeVoteTokens.indices.forall { (i: Int) =>
+            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) => otherToken == judgeVoteTokens(i) }))
+        }
+      }
+
+      // Cálculo seguro del quórum
+      val requiredVotes = if (participatingJudges.size == 0) 0 else participatingJudges.size / 2 + 1
+      val hasRequiredVotes = judgeVotes.size >= requiredVotes
+
+      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
+      
+      if (allVotesAreUnique && hasRequiredVotes && recreatedGameBoxes.size == 1) {
+        val recreatedGameBox = recreatedGameBoxes(0)
+        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
+        
+        // Verificamos que se haya reseteado el candidato (Coll[Byte]())
+        if (recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {
+          val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
+          
+          val expectedJudgeComm = perJudgeCommissionPercentage + (if (penalizeResolver) resolverCommissionPercentage else 0L)
+          val expectedResolverComm = if (penalizeResolver) 0L else resolverCommissionPercentage
+
+          val gameBoxIsRecreatedCorrectly = {
+            recreatedGameBox.tokens(0)._1 == gameNftId &&
+            recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
+            recreatedGameBox.R5[Coll[Byte]].get == seed &&
+            recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
+            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
+            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
+            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
+            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
+            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
+            recreatedGameBox.R8[Coll[Long]].get(5) == expectedJudgeComm &&
+            recreatedGameBox.R8[Coll[Long]].get(6) == expectedResolverComm &&
+            recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
+          }
+          
+          val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
+          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD
+          
+          fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
+        } else { false }
+      } else { false }
+    } else { false }
+  }
 
   // =================================================================
   // === ACCIONES DE GASTO
@@ -227,149 +293,11 @@
     } else { false }
   }
 
-  // ### Acción 2: Invalidación por Jueces
-  val action2_judgesInvalidate = {
-    if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
-      
-      val judgeVotes = CONTEXT.dataInputs.filter({
-        (box: Box) => 
-          blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
-          box.tokens.size > 0 &&
-          box.R4[Coll[Byte]].get == PARTICIPATION_TYPE_ID &&
-          box.R5[Coll[Byte]].get == winnerCandidateCommitment &&
-          box.R6[Boolean].get && // Is locked
-          box.R8[Boolean].get == false && // Negative vote, invalidates winner candidate
-          participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})  // Is nominated
-      })
+  // ### Acción 2: Invalidación por Jueces (Penalizando al Resolver)
+  val action2_judgesInvalidate = judgeInvalidationLogic(true)
 
-      // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
-      val allVotesAreUnique = {
-        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
-        judgeVoteTokens.indices.forall { (i: Int) =>
-            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
-                otherToken == judgeVoteTokens(i)
-            }))
-        }
-      }
-
-      val hasRequiredVotes = {
-        val requiredVotes =
-          if (participatingJudges.size == 0) 0
-          else participatingJudges.size / 2 + 1
-
-        judgeVotes.size >= requiredVotes
-      }
-
-      val votesAreValid = allVotesAreUnique && hasRequiredVotes
-
-      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
-      
-      if (votesAreValid && recreatedGameBoxes.size == 1) {
-        val recreatedGameBox = recreatedGameBoxes(0)
-
-        val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
-        val winnerCandidateValid = newCandidateCommitment == Coll[Byte]()  // Another candidate can be provided using action 1.
-          
-        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
-        
-        if (winnerCandidateValid && invalidatedCandidateBoxes.size == 1) {
-          val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
-
-          val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD
-
-          val gameBoxIsRecreatedCorrectly = {
-            recreatedGameBox.tokens(0)._1 == gameNftId &&
-            recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
-            recreatedGameBox.R5[Coll[Byte]].get == seed &&
-            recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
-            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
-            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
-            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
-            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
-            recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage + resolverCommissionPercentage &&
-            recreatedGameBox.R8[Coll[Long]].get(6) == 0 &&
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance  // Creator is penalized with full commission to judges, but their stake is not affected and still have RESOLVER_OMISSION_NO_PENALTY_PERIOD to include the correct new candidate. 
-          }
-          
-          fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
-        } else { false }
-      } else { false }
-    } else { false }
-  }
-
-  // TODO: Entre accion 2 y 3 tan solo cambia el tipo de NFT y la política de quien se queda la comisión del creador.  Debería refactorizarse.
-
-  // ### Acción 3: Imposibilidad de obtención del servicio determinado por Jueces
-  val action3_judgesInvalidateUnavailable = {
-    if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {
-      
-      val judgeVotes = CONTEXT.dataInputs.filter({
-        (box: Box) => 
-          blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&
-          box.tokens.size > 0 &&
-          box.R4[Coll[Byte]].get == PARTICIPATION_UNAVAILABLE_TYPE_ID &&
-          box.R5[Coll[Byte]].get == winnerCandidateCommitment &&
-          participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})  // Is nominated
-      })
-
-      // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.
-      val allVotesAreUnique = {
-        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})
-        judgeVoteTokens.indices.forall { (i: Int) =>
-            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>
-                otherToken == judgeVoteTokens(i)
-            }))
-        }
-      }
-
-      val hasRequiredVotes = {
-        val requiredVotes =
-          if (participatingJudges.size == 0) 0
-          else participatingJudges.size / 2 + 1
-
-        judgeVotes.size >= requiredVotes
-      }
-
-      val votesAreValid = allVotesAreUnique && hasRequiredVotes
-
-      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
-      
-      if (votesAreValid && recreatedGameBoxes.size == 1) {
-        val recreatedGameBox = recreatedGameBoxes(0)
-
-        val newCandidateCommitment = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
-        val winnerCandidateValid = newCandidateCommitment == Coll[Byte]()  // Another candidate can be provided using action 1.
-          
-        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
-        
-        if (winnerCandidateValid && invalidatedCandidateBoxes.size == 1) {
-          val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
-
-          val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD
-
-          val gameBoxIsRecreatedCorrectly = {
-            recreatedGameBox.tokens(0)._1 == gameNftId &&
-            recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
-            recreatedGameBox.R5[Coll[Byte]].get == seed &&
-            recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
-            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
-            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
-            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
-            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
-            recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&
-            recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&  // Creator is not penalized in this case, service participation unavailability is the unique case that creator can't control.
-            recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
-          }
-          
-          fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
-        } else { false }
-      } else { false }
-    } else { false }
-  }
+  // ### Acción 3: Invalidación por Jueces (Sin Penalización al Resolver)
+  val action3_judgesInvalidateUnavailable = judgeInvalidationLogic(false)
 
   // ### Acción 4: Finalización del Juego
   val action4_endGame = {
