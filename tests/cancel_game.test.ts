@@ -79,6 +79,8 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
                 R6: SColl(SByte, hashedSecret).toHex(),
                 R7: SColl(SColl(SByte), []).toHex(),
                 R8: SColl(SLong, [
+                    1n,
+                    20n,
                     BigInt(deadlineBlock),
                     resolverStake,
                     1_000_000n,
