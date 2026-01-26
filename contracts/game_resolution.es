@@ -15,6 +15,7 @@
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") 
   val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")
   val END_GAME_SCRIPT_HASH = fromBase16("`+END_GAME_SCRIPT_HASH+`")
+  val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")
 
 
   // =================================================================
@@ -25,7 +26,7 @@
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
-  // R8: Coll[Long]                 - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
+  // R8: Coll[Long]                 - numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
   // R9: Coll[Coll[Byte]]           - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, resolverErgoTree]
 
   // =================================================================
@@ -40,14 +41,14 @@
   val winnerCandidateCommitment = r6Tuple._2
   
   val participatingJudges = SELF.R7[Coll[Coll[Byte]]].get
-  val numericalParams = SELF.R8[Coll[Long]].get
-  val deadline = numericalParams(0)
-  val resolverStake = numericalParams(1)
-  val participationFee = numericalParams(2)
-  val perJudgeCommissionPercentage = numericalParams(3)
-  val resolverCommissionPercentage = numericalParams(4)
-  val resolutionDeadline = numericalParams(5)
-  val timeWeight = numericalParams(6)
+  val createdAt = numericalParams(0)
+  val timeWeight = numericalParams(1)
+  val deadline = numericalParams(2)
+  val resolverStake = numericalParams(3)
+  val participationFee = numericalParams(4)
+  val perJudgeCommissionPercentage = numericalParams(5)
+  val resolverCommissionPercentage = numericalParams(6)
+  val resolutionDeadline = numericalParams(7)
 
   val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get
   // gameProvenance(0) = gameDetailsJsonHex
@@ -81,6 +82,25 @@
     })
   }
 
+  val getBotBox = { (participationBox: Box) =>
+    val pBoxSolverId = participationBox.R7[Coll[Byte]].get
+    val candidateBotBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+      box.R4[Coll[Byte]].get == pBoxSolverId &&
+      blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH
+    })89
+    
+    val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
+      if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
+    })
+
+    oldestBox
+  }
+
+  val getBotBoxHeight = { (participationBox: Box) =>
+    val botBox = getBotBox(participationBox)
+    val realHeight = botBox.creationInfo._1
+    realHeight < createdAt ? createdAt : realHeight
+  }
 
 
   // =================================================================
@@ -102,24 +122,10 @@
       if (omittedWinnerBoxes.size == 1) {
 
         val omittedWinnerBox = omittedWinnerBoxes(0)
-        
-        // TODO val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
-        // TODO if (recreatedGameBoxes.size == 1) {
-        val recreatedGameBox = OUTPUTS(0)
 
-        val botCreatedBeforeSeed = {
-                val pBoxSolverId = omittedWinnerBox.R7[Coll[Byte]].get
-
-                // Check datainput boxes where R4 is pBoxSolverId
-                val botHashBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
-                  box.R4[Coll[Byte]].get == pBoxSolverId
-                })
-
-                // Check if any of these boxes were created before the game seed was set.
-                botHashBoxes.exists({ (box: Box) =>
-                  box.creationInfo._1 < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
-                })
-              }
+        val pBoxSolverId = omittedWinnerBox.R7[Coll[Byte]].get
+        val omittedWinnerBotBox = getBotBox(omittedWinnerBox)
+        val botCreatedBeforeSeed = omittedWinnerBotBox.creationInfo._1 < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN
 
         // Se verifica que la caja de participación enviada sea válida para este juego
         val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&
@@ -162,12 +168,14 @@
                 val validCurrentCandidate = currentCandidateScoreTuple._2 && currentScore != -1L
 
                 if (validCurrentCandidate) {
+                  val currentCandidateBotBox = getBotBox(currentCandidateBox)
+
                   // Se determina el nuevo ganador comparando puntajes AJUSTADOS y alturas de bloque
                   // Formula: score = game_score * (TIME_WEIGHT + DEADLINE - HEIGHT)
-                  val newScoreAdjusted = newScore * (timeWeight + deadline - omittedWinnerBox.creationInfo._1.toLong)
-                  val currentScoreAdjusted = currentScore * (timeWeight + deadline - currentCandidateBox.creationInfo._1.toLong)
+                  val newScoreAdjusted = newScore * (timeWeight + deadline - getBotBoxHeight(omittedWinnerBotBox).toLong)
+                  val currentScoreAdjusted = currentScore * (timeWeight + deadline - getBotBoxHeight(currentCandidateBotBox).toLong)
 
-                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && omittedWinnerBox.creationInfo._1 < currentCandidateBox.creationInfo._1)) {
+                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && getBotBoxHeight(omittedWinnerBotBox) < getBotBoxHeight(currentCandidateBotBox))) {
                     omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor
                   } else {
                     Coll[Byte]() // El actual sigue siendo el mejor
@@ -185,6 +193,7 @@
             if (newWinnerCandidate != Coll[Byte]() && newWinnerCandidate != winnerCandidateCommitment) {
 
               // Verificación de la recreación de la caja del juego
+              val recreatedGameBox = OUTPUTS(0)
               val gameBoxIsRecreatedCorrectly = {
                 box_value(recreatedGameBox) >= box_value(SELF) &&
                 recreatedGameBox.tokens(0)._1 == gameNftId &&

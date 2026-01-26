@@ -89,6 +89,30 @@ export async function fetch_token_details(id: string): Promise<TokenEIP4> {
     };
 }
 
+export async function tokenCreationHeight(tokenId: string): Promise<number | null> {
+    // https://api.ergoplatform.com/api/v1/tokens/{tokenId} and take boxId
+    const url = `${get(explorer_uri)}/api/v1/tokens/${tokenId}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`API response: ${response.status}`);
+        const data = await response.json();
+        const boxId = data?.boxId;
+
+        if (boxId) {
+            // Now fetch the box to get its creation height
+            const boxUrl = `${get(explorer_uri)}/api/v1/boxes/${boxId}`;
+            const boxResponse = await fetch(boxUrl);
+            if (!boxResponse.ok) throw new Error(`Box API response: ${boxResponse.status}`);
+            const boxData = await boxResponse.json();
+            return boxData?.creationHeight || null;
+        }
+    } catch (error) {
+        console.error(`Error fetching creation height for token ${tokenId}:`, error);
+        return null;
+    }
+    return null;
+}
+
 // =================================================================
 // === REPUTATION PROOF UTILITIES
 // =================================================================
@@ -321,11 +345,17 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             .map(parseCollByteToHex)
             .filter((judge): judge is string => judge !== null && judge !== undefined);
 
-        // R8: Coll[Long] -> [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight]
+        // R8: Coll[Long] -> [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
         const r8Array = getArrayFromValue(box.additionalRegisters.R8?.renderedValue);
         const numericalParams = parseLongColl(r8Array);
         if (!numericalParams || numericalParams.length < 7) throw new Error("R8 does not contain the 7 expected numerical parameters.");
-        const [deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline, timeWeight] = numericalParams;
+        const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline] = numericalParams;
+
+        const created_at = await tokenCreationHeight(gameId);
+        if (created_at === null || createdAt < created_at - 5 || createdAt > created_at + 5) {
+            console.warn(`parseGameResolutionBox: Box ${box.boxId} has inconsistent creation height in R8.`);
+            return null;
+        }
 
         // R9: (Coll[Byte], Coll[Byte], Coll[Byte]) -> gameDetailsHex, participationTokenId, resolverScript_Hex
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);

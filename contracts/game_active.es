@@ -32,7 +32,7 @@
   // R5: Coll[Byte]         - seed
   // R6: Coll[Byte]         - secretHash: Hash del secreto 'S' (blake2b256(S)).
   // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs
-  // R8: Coll[Long]         - numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, timeWeight].
+  // R8: Coll[Long]         - numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage].
   // R9: Coll[Coll[Byte]]   - gameDetailsJsonHex, ParticipationTokenID
 
 
@@ -55,12 +55,13 @@
 
   // R8: [deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage]
   val numericalParams = SELF.R8[Coll[Long]].get
-  val deadline = numericalParams(0)
-  val resolverStake = numericalParams(1)
-  val participationFee = numericalParams(2)
-  val perJudgeCommissionPercentage = numericalParams(3)
-  val resolverCommissionPercentage = numericalParams(4)
-  val timeWeight = numericalParams(5)
+  val createdAt = numericalParams(0)
+  val timeWeight = numericalParams(1)
+  val deadline = numericalParams(2)
+  val resolverStake = numericalParams(3)
+  val participationFee = numericalParams(4)
+  val perJudgeCommissionPercentage = numericalParams(5)
+  val resolverCommissionPercentage = numericalParams(6)
 
   val ceremonyDeadline = deadline - PARTICIPATION_TIME_WINDOW
 
@@ -77,6 +78,26 @@
 
   val box_value = { (box: Box) =>
     box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+  }
+
+  val getBotBox = { (participationBox: Box) =>
+    val pBoxSolverId = participationBox.R7[Coll[Byte]].get
+    val candidateBotBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
+      box.R4[Coll[Byte]].get == pBoxSolverId &&
+      blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH
+    })
+    
+    val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>
+      if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc
+    })
+
+    oldestBox
+  }
+
+  val getBotBoxHeight = { (participationBox: Box) =>
+    val botBox = getBotBox(participationBox)
+    val realHeight = botBox.creationInfo._1
+    realHeight < createdAt ? createdAt : realHeight
   }
 
   // =================================================================
@@ -137,17 +158,7 @@
                 }
               val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline
 
-              val botCreatedBeforeSeed = {
-                // Check datainput boxes where R4 is pBoxSolverId
-                val botHashBoxes = CONTEXT.dataInputs.filter({ (box: Box) =>
-                  box.R4[Coll[Byte]].get == pBoxSolverId
-                })
-
-                // Check if any of these boxes were created before the game seed was set.
-                botHashBoxes.exists({ (box: Box) =>
-                  box.creationInfo._1 < ceremonyDeadline - SEED_MARGIN
-                })
-              }
+              val botCreatedBeforeSeed = getBotBoxHeight(getBotBox(winnerCandidateBox)) < ceremonyDeadline - SEED_MARGIN
 
               validScoreExists && correctParticipationFee && botCreatedBeforeSeed && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST
             }
