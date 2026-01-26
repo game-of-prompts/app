@@ -22,6 +22,7 @@ import {
     getGopParticipationBatchErgoTree,
     getGopGameResolutionErgoTree
 } from "$lib/ergo/contract";
+import { DefaultGameConstants } from "$lib/common/constants";
 
 const ERG_BASE_TOKEN = "";
 const USD_BASE_TOKEN = "ebb40ecab7bb7d2a935024100806db04f44c62c33ae9756cf6fc4cb6b9aa2d12";
@@ -82,14 +83,13 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
             additionalRegisters: {
                 R4: SInt(1).toHex(), // Resolution state
                 R5: SColl(SByte, hexToBytes(seed) || new Uint8Array(0)).toHex(),
-                R6: SPair(SColl(SByte, secret), SColl(SByte, "00".repeat(32))).toHex(), // No winner candidate yet
+                R6: SPair(SColl(SByte, secret), SColl(SByte, new Uint8Array(32))).toHex(), // No winner candidate yet
                 R7: SColl(SColl(SByte), []).toHex(),
-                R8: SColl(SLong, [0n, 0n, participationFee, 0n, 0n, BigInt(mockChain.height + 1000)]).toHex(),
+                R8: SColl(SLong, [1n, 20n, BigInt(mockChain.height + 500), 2_000_000_000n, participationFee, 10000n, 200000n, BigInt(mockChain.height + 1000)]).toHex(),
                 R9: SColl(SColl(SByte), [
                     stringToBytes('utf8', "{}"),
                     mode.token !== ERG_BASE_TOKEN ? (hexToBytes(mode.token) || new Uint8Array(0)) : new Uint8Array(0),
-                    prependHexPrefix(resolver.address.getPublicKeys()[0], "0008cd"),
-                    prependHexPrefix(creator.address.getPublicKeys()[0], "0008cd")
+                    prependHexPrefix(resolver.address.getPublicKeys()[0], "0008cd")
                 ]).toHex()
             }
         });
@@ -160,7 +160,7 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        expect(mockChain.execute(tx, { signers: [resolver] })).to.be.true;
+        expect(mockChain.execute(tx, { signers: [resolver as any] })).to.be.true;
         expect(batchContract.utxos.length).toBe(1);
         expect(participationContract.utxos.length).toBe(0);
     });
@@ -193,7 +193,7 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        expect(mockChain.execute(tx, { signers: [resolver] })).to.be.true;
+        expect(mockChain.execute(tx, { signers: [resolver as any] })).to.be.true;
         expect(batchContract.utxos.length).toBe(1);
         expect(participationContract.utxos.length).toBe(0);
     });
@@ -226,7 +226,7 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        expect(() => mockChain.execute(tx, { signers: [resolver] })).to.throw();
+        expect(() => mockChain.execute(tx, { signers: [resolver as any] })).to.throw();
     });
 
     it("Should fail if output value is less than input value", () => {
@@ -256,6 +256,6 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
 
-        expect(() => mockChain.execute(tx, { signers: [resolver] })).to.throw();
+        expect(() => mockChain.execute(tx, { signers: [resolver as any] })).to.throw();
     });
 });

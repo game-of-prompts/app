@@ -119,7 +119,7 @@
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
       val isResolved = mainGameBox.R4[Int].get == 1
-      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(5)
+      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(7)
 
       val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
       resolutionPeriodIsOver && isResolved
