@@ -507,7 +507,19 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
         const resolverStakeAmount = BigInt(parseInt(box.additionalRegisters.R7?.renderedValue, 10))
 
         // R8: Original deadline (Long).
-        const originalDeadline = box.additionalRegisters.R8?.renderedValue ?? 0;
+        const r8Value = box.additionalRegisters.R8?.renderedValue;
+        let createdAt: number | undefined;
+        let originalDeadline = 0;
+        if (r8Value) {
+            const numericalParams = parseLongColl(getArrayFromValue(r8Value));
+            if (numericalParams && numericalParams.length >= 1) {
+                createdAt = Number(numericalParams[0]);
+                // In cancellation, R8 might just be the deadline or the full list.
+                // Based on the contract, it seems it's usually just the deadline if it's a single Long,
+                // but if it's a Coll[Long], it follows the same pattern as Active/Resolution.
+                originalDeadline = numericalParams.length > 2 ? Number(numericalParams[2]) : Number(numericalParams[0]);
+            }
+        }
 
         // R9: Coll[Coll[Byte]] -> [gameDetailsJSON, participationTokenId]
         const r9Value = getArrayFromValue(box.additionalRegisters.R9?.renderedValue);
@@ -543,7 +555,8 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             judges: [],
             deadlineBlock: originalDeadline,
             constants: getGameConstants(),
-            reputation: 0
+            reputation: 0,
+            createdAt: createdAt
         };
 
         gameCancelled.reputation = calculate_reputation(gameCancelled);

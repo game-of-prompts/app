@@ -142,6 +142,7 @@ export interface GameCancellation {
     judges: string[];
     reputation: number;
     constants: GameConstants;
+    createdAt?: number;
 }
 
 /**

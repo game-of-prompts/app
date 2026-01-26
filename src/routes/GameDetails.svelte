@@ -406,6 +406,7 @@
     let clockLabel: string = "TIME LEFT";
     let clockInformation: string = "Depends on game status";
     let clockCountdownInterval: ReturnType<typeof setInterval> | null = null;
+    let createdDateDisplay: string = "";
 
     // Modal State
     let showActionModal = false;
@@ -1014,6 +1015,17 @@
                 deadlineDateDisplay = `Stake unlocks ${formatDistanceToNow(new Date(targetDate), { addSuffix: true })}`;
             } else {
                 deadlineDateDisplay = "N/A";
+            }
+
+            if (game.createdAt) {
+                const createdTimestamp = await block_height_to_timestamp(
+                    game.createdAt,
+                    platform,
+                );
+                createdDateDisplay = format(
+                    new Date(createdTimestamp),
+                    "MMM d, yyyy",
+                );
             }
 
             acceptedJudgeNominations =
@@ -2026,6 +2038,13 @@
                                     </button></span
                                 >
                             </div>
+                            {#if createdDateDisplay}
+                                <div class="stat-block">
+                                    <Calendar class="stat-icon" />
+                                    <span>{createdDateDisplay}</span>
+                                    <span class="stat-label">Created At</span>
+                                </div>
+                            {/if}
                         </div>
                         <div class="stat-block mt-4">
                             <Calendar class="stat-icon" />
