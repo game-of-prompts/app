@@ -110,7 +110,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         judge3TokenId = Buffer.from(randomBytes(32)).toString("hex");
 
         // 3. Crear la caja `game_resolution`
-        const numericalParams: bigint[] = [700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline), 0n];
+        const numericalParams: bigint[] = [1n, 20n, 700_000n, 2_000_000_000n, 1_000_000n, 1n, 10n, BigInt(resolutionDeadline)];
         const judges = [judge1TokenId, judge2TokenId, judge3TokenId].map(id => Buffer.from(id, "hex"));
 
         gameResolutionContract.addUTxOs({
@@ -137,15 +137,16 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                 // participatingJudges
                 R7: SColl(SColl(SByte), judges).toHex(),
 
-                // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
+                // numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
                 R8: SColl(SLong, [
-                    BigInt(numericalParams[0]), // deadline
-                    numericalParams[1],         // resolverStake
-                    numericalParams[2],         // participationFee
-                    numericalParams[3],         // perJudgeCommissionPercent
-                    numericalParams[4],         // resolverCommissionPercentage
-                    BigInt(numericalParams[5]), // resolutionDeadline
-                    numericalParams[6]          // timeWeight
+                    numericalParams[0],         // createdAt
+                    numericalParams[1],         // timeWeight
+                    numericalParams[2],         // deadline
+                    numericalParams[3],         // resolverStake
+                    numericalParams[4],         // participationFee
+                    numericalParams[5],         // perJudgeCommissionPercentage
+                    numericalParams[6],         // resolverCommissionPercentage
+                    numericalParams[7]          // resolutionDeadline
                 ]).toHex(),
 
                 // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
@@ -219,13 +220,14 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
         const newFunds = gameResolutionBox.value + invalidatedWinnerBox.value;
         const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
         const newNumericalParams = [
-            BigInt(numericalParams[0]), // deadline
-            numericalParams[1],         // resolverStake
-            numericalParams[2],         // participationFee
-            numericalParams[3],         // perJudgeCommissionPercent unchanged
-            numericalParams[4],         // resolverCommissionPercentage unchanged
-            extendedDeadline, // resolutionDeadline
-            0n                // timeWeight
+            numericalParams[0],         // createdAt
+            numericalParams[1],         // timeWeight
+            numericalParams[2],         // deadline
+            numericalParams[3],         // resolverStake
+            numericalParams[4],         // participationFee
+            numericalParams[5],         // perJudgeCommissionPercentage
+            numericalParams[6],         // resolverCommissionPercentage
+            extendedDeadline            // resolutionDeadline
         ];
 
         const tx = new TransactionBuilder(mockChain.height)
@@ -250,7 +252,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
                         // participatingJudges
                         R7: SColl(SColl(SByte), judges).toHex(),
 
-                        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
+                        // numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercentage, resolverCommissionPercentage, resolutionDeadline]
                         R8: SColl(SLong, newNumericalParams).toHex(),
 
                         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos

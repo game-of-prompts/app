@@ -283,7 +283,7 @@
             recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-            recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
+            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
             recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
             recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
             recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
@@ -355,7 +355,7 @@
             recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-            recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
+            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
             recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
             recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
             recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
