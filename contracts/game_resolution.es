@@ -201,13 +201,14 @@
                 recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
                 recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == newWinnerCandidate &&
                 recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-                recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
-                recreatedGameBox.R8[Coll[Long]].get(1) == resolverStake &&
-                recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
-                recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage &&
-                recreatedGameBox.R8[Coll[Long]].get(4) == resolverCommissionPercentage &&
-                recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
-                recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
+                recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
+                recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
+                recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
+                recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
+                recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
+                recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&
+                recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&
+                recreatedGameBox.R8[Coll[Long]].get(7) == resolutionDeadline &&
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&
                 recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&
                 (
@@ -275,7 +276,7 @@
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
           val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD
+          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD
 
           val gameBoxIsRecreatedCorrectly = {
             recreatedGameBox.tokens(0)._1 == gameNftId &&
@@ -283,11 +284,12 @@
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
             recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
-            recreatedGameBox.R8[Coll[Long]].get(1) == resolverStake &&
-            recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
-            recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage + resolverCommissionPercentage &&
-            recreatedGameBox.R8[Coll[Long]].get(4) == 0 &&
-            recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
+            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
+            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
+            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
+            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
+            recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage + resolverCommissionPercentage &&
+            recreatedGameBox.R8[Coll[Long]].get(6) == 0 &&
             recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance  // Creator is penalized with full commission to judges, but their stake is not affected and still have RESOLVER_OMISSION_NO_PENALTY_PERIOD to include the correct new candidate. 
           }
           
@@ -346,7 +348,7 @@
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
 
           val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(5) >= HEIGHT + JUDGE_PERIOD
+          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(7) >= HEIGHT + JUDGE_PERIOD
 
           val gameBoxIsRecreatedCorrectly = {
             recreatedGameBox.tokens(0)._1 == gameNftId &&
@@ -354,11 +356,12 @@
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
             recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
-            recreatedGameBox.R8[Coll[Long]].get(1) == resolverStake &&
-            recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
-            recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage &&
-            recreatedGameBox.R8[Coll[Long]].get(4) == resolverCommissionPercentage &&  // Creator is not penalized in this case, service participation unavailability is the unique case that creator can't control.
-            recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
+            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
+            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
+            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
+            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
+            recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&
+            recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&  // Creator is not penalized in this case, service participation unavailability is the unique case that creator can't control.
             recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
           }
           
@@ -383,13 +386,14 @@
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == winnerCandidateCommitment &&
           recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
-          recreatedGameBox.R8[Coll[Long]].get(0) == deadline &&
-          recreatedGameBox.R8[Coll[Long]].get(1) == resolverStake &&
-          recreatedGameBox.R8[Coll[Long]].get(2) == participationFee &&
-          recreatedGameBox.R8[Coll[Long]].get(3) == perJudgeCommissionPercentage &&
-          recreatedGameBox.R8[Coll[Long]].get(4) == resolverCommissionPercentage &&
-          recreatedGameBox.R8[Coll[Long]].get(5) == resolutionDeadline &&
-          recreatedGameBox.R8[Coll[Long]].get(6) == timeWeight &&
+          recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&
+          recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&
+          recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&
+          recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&
+          recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&
+          recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&
+          recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&
+          recreatedGameBox.R8[Coll[Long]].get(7) == resolutionDeadline &&
           recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance
         }
 

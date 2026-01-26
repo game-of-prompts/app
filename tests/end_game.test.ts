@@ -218,13 +218,13 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         R7: SColl(SColl(SByte), []).toHex(),
 
         R8: SColl(SLong, [
+          1n, 20n,
           BigInt(deadline),
           resolverStake,
           participationFee,
           0n,                                       // perJudgeCommissionPercentage
           BigInt(resolverCommissionPercent),        // resolverCommissionPercentage
-          BigInt(resolutionDeadline),
-          1000n                                     // timeWeight
+          BigInt(resolutionDeadline)
         ]).toHex(),
 
         // gameProvenance: [Detalles del juego, TokenId (si aplica), Script del resolvedor]
@@ -441,13 +441,13 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         R7: SColl(SColl(SByte), []).toHex(),
 
         R8: SColl(SLong, [
+          1n, 20n,
           BigInt(deadline),
           resolverStake,
           participationFee,
           0n,        // perJudgeCommissionPercentage
           BigInt(resolverCommissionPercent), // resolverCommissionPercentage
-          BigInt(resolutionDeadline),
-          1000n                                     // timeWeight
+          BigInt(resolutionDeadline)
         ]).toHex(),
 
         // gameProvenance:
@@ -628,13 +628,13 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         R7: SColl(SColl(SByte), []).toHex(),
 
         R8: SColl(SLong, [
+          1n, 20n,
           BigInt(deadline),
           resolverStake,
           participationFee,
           0n,        // perJudgeCommissionPercentage
           BigInt(resolverCommissionPercent), // resolverCommissionPercentage
-          BigInt(resolutionDeadline),
-          1000n                                     // timeWeight
+          BigInt(resolutionDeadline)
         ]).toHex(),
 
         // gameProvenance:
@@ -821,13 +821,13 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
         // numericalParameters:
         R8: SColl(SLong, [
+          1n, 20n,
           BigInt(deadline),
           resolverStake,
           participationFee,
           0n,        // perJudgeCommissionPercentage
           BigInt(resolverCommissionPercent),        // resolverCommissionPercentage
-          BigInt(resolutionDeadline),
-          1000n                                     // timeWeight
+          BigInt(resolutionDeadline)
         ]).toHex(),
 
         R9: SColl(SColl(SByte), [
@@ -1192,15 +1192,15 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
         // participatingJudges (lista de tokens de reputación de los jueces)
         R7: SColl(SColl(SByte), judgesTokenIds).toHex(),
 
-        // numericalParameters: [deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
+        // numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommissionPercent, resolverCommissionPercentage, resolutionDeadline]
         R8: SColl(SLong, [
+          1n, 20n,
           BigInt(deadline),              // deadline
           resolverStake,                  // creator stake
           participationFee,              // participation fee
           perJudgeCommissionPercent,     // per-judge commission
           BigInt(resolverCommissionPercent),                            // resolverCommissionPercentage
           BigInt(resolutionDeadline),    // resolution deadline
-          1000n                           // timeWeight
         ]).toHex(),
 
         // gameProvenance (R9) corregido: Coll[Coll[Byte]] con elementos planos
