@@ -107,6 +107,7 @@ The following flowchart illustrates the lifecycle of a game and the interactions
 | +------------------+           +----------------------------------------------------------+ |
 | |  Ceremony Phase  | --------> |                   Participation Phase                    | |
 | | (Add Randomness) |           |              (Players submit participations)             | |
+| | (Register Solver)|           |                                                          | |
 | +------------------+           +----------------------------------------------------------+ |
 |           ^                                           ^                                     |
 |           | (Time < Ceremony Deadline)                | (Time < Game Deadline)              |
@@ -209,26 +210,28 @@ For a player to participate in a GoP game, they follow these steps:
       * The solver's objective is to implement logic that attempts to obtain the highest possible score according to the game's rules.
       * Once ready, the player packages their solver as a Celaut service and exports it to a file such as `<solver_id>.celaut.bee` or `<solver_tag>.celaut.bee`.
 
-3.  **Game Execution (to obtain participation data)**
+3.  **Solver Registration (Pre-commitment)**
 
-      * The Game Service (`<game_id>.celaut.bee`) is run on the player's Celaut node (or a trusted one), and the newly created Solver Service (`<solver_id>.celaut.bee`) is provided as input.
-      * The Game Service processes the interaction with the solver, evaluates its performance, and generates a set of crucial data. This information is what the player will need if they decide to compete formally:
-          * **For the `ParticipationBox` (data to be registered on-chain):**
-              * **Solver ID (`solverId`):** A unique identifier for the player's solver service (i.e., the hash of the Celaut service). It will be stored in `R7` of the `ParticipationBox`.
-              * **Score List (`scoreList`):** A collection of several scores, where one of them is the actual score obtained, and the others act as decoys to obfuscate the exact result. It will be stored in `R9` of the `ParticipationBox`.
-              * **Log Hash (`hashLogs`):** A cryptographic hash of significant game events and movements. It will be stored in `R8` of the `ParticipationBox`.
-              * **Cryptographic Commitment (`commitmentC`):** Calculated by the Game Service. It's a hash `blake2b256(solverId ++ longToByteArray(TRUE_SCORE) ++ hashLogs ++ S_game)`. This `commitmentC` links the solver's identity, its true score (present in `scoreList`), its game logs, and the game's secret `S`. It will be stored in `R5` of the `ParticipationBox`.
-          * **For the Player (reference and off-chain verification information):**
-              * **The True Score:** The player knows which of the scores in `scoreList` was actually achieved.
-              * **Complete Log File:** The detailed record of the game, which when hashed must match `hashLogs`.
-              * **Scenario Seed (optional, but highly recommended):** If the game uses procedural scenario generation, the seed would allow reproducing the exact same game instance for verification. In our Snake example, this means reproducing the same initial position of the snake and the same position of each apple.
-              * **Game Creator's Signature on the results (optional, good practice):** The Game Service should digitally sign the generated dataset (especially `commitmentC` and the score) with a private key associated with the creator. This provides an additional (off-chain) guarantee of the authenticity of their local game results before deciding to publish them.
+      * **Crucial Step:** To prevent players (probably the creator) from creating a "hardcoded" solver optimized for a specific game seed once it is known, the protocol requires a **pre-commitment**.
+      * The player must publish a **"Solver ID Box"** on the Ergo blockchain *before* the **Ceremony Phase** ends (i.e., before the game seed is fixed).
+      * This box is simple: it just needs to contain the **Solver ID** (hash of the solver service) in register `R4`.
+      * **Why?** This proves that the solver code existed and was committed to *before* the final randomness (seed) of the game was determined. When submitting the final participation, the protocol will verify that this box exists and was created within the valid timeframe (during the Ceremony Phase).
 
-4.  **Competition Participation**
+4.  **Game Execution (to obtain participation data)**
 
-      * If the player is satisfied with their score and wishes to compete for the prize, they use the data generated in the previous step (mainly `solverId`, `hashLogs`, `scoreList`, and `commitmentC`) to build and publish a transaction on the Ergo blockchain. This transaction creates a `ParticipationBox`.
-      * Creating this box requires the player to pay the `participationFee` in ERG, which is included in the value of the `ParticipationBox`.
-      * Once the `ParticipationBox` is mined on the blockchain before the `deadline`, the player is formally participating in the competition.
+      * Once the Ceremony Phase ends and the game seed is fixed, the player runs the Game Service (`<game_id>.celaut.bee`) on their Celaut node.
+      * The Game Service uses the **fixed seed** to generate the scenario.
+      * It executes the Solver Service (`<solver_id>.celaut.bee`), evaluates it, and generates the participation data:
+          * **For the `ParticipationBox`:** `solverId` (R7), `scoreList` (R9), `hashLogs` (R8), and `commitmentC` (R5).
+          * **For the Player:** True score, logs, etc.
+
+5.  **Competition Participation**
+
+      * If satisfied with the score, the player publishes the `ParticipationBox` transaction.
+      * **Requirement:** This transaction must include the **Solver ID Box** (created in step 3) as a **Data Input**. The on-chain contract will validate that:
+          1.  The `solverId` in the Data Input matches the `solverId` in the Participation Box (`R7`).
+          2.  The Solver ID Box was created **before** the game's `createdAt` block (plus the ceremony duration).
+      * This mechanism ensures that no one could have tailored their solver to the specific random seed of the game.
 
 -----
 
@@ -383,6 +386,7 @@ The game is open. The secret `S` must remain private.
 
 The creator has revealed the secret `S`, moving the game to this state. Scores are now verifiable.
 *   **Action: Invalidation of Candidate Participation**: If a Participation Box has an invalid commitment (fraudulent score), it can be consumed by the protocol if a **majority of the nominated judges** vote to invalidate it. This removes the fraudulent participation from the prize pool.
+*   **Action: Invalidation by Unavailable Robot**: Judges can also vote to invalidate a winner candidate if the **Solver Service** (robot) associated with the participation is **unavailable** (e.g., cannot be downloaded from the network). This enforces the requirement that winning strategies must be verifiable by the community.
 *   **Action: Include Omitted Participation**: If the creator failed to include a valid participation with a higher score in the resolution, any user can perform this action to force its inclusion and update the winner candidate, ensuring censorship resistance.
 *   **Action: Normal Game Finalization**: Once `HEIGHT >= resolutionDeadline`, the Main Game Box and valid Participation Boxes are spent together. Funds are distributed to the winner, the creator (commission), the developer (commission), and the judges.
     *   **Judges Payment**: A portion of the prize pool is sent to a contract (`judges_paid.es`) which ensures that each judge receives their fair share based on their reputation tokens.
@@ -392,6 +396,24 @@ The creator has revealed the secret `S`, moving the game to this state. Scores a
 This state is reached if the secret `S` is revealed prematurely (while the game should be ACTIVE). The game is considered invalid.
 *   **Creator Punishment**: The creator's stake is drained progressively (**1/5 every 30 blocks**), creating economic friction and public visibility of the failure. Anyone can execute this drainage action.
 *   **Action: Cancellation Refund**: Players can immediately spend their Participation Boxes to get a full refund.
+
+### 6.6. Game Box Registers
+
+The Main Game Box uses specific registers to store critical parameters. Notably:
+
+*   **`R4`**: Global Game State (0: Active, 1: Resolution, 2: Cancelled).
+*   **`R5`**: Game Seed (randomness).
+*   **`R8`**: A collection of numerical parameters (`Coll[Long]`) defining the game's configuration:
+    *   `[0] createdAt`: Block height when the game was created.
+    *   `[1] timeWeight`: Factor for time-weighted scoring.
+    *   `[2] deadline`: Block height for the participation deadline.
+    *   `[3] resolverStake`: Amount of ERG staked by the creator.
+    *   `[4] participationFee`: Cost to participate.
+    *   `[5] perJudgeCommissionPercentage`: Commission for judges.
+    *   `[6] resolverCommissionPercentage`: Commission for the creator.
+    *   `[7] resolutionDeadline` (Only in Resolution State).
+
+    > **Note on `createdAt`**: This value is critical for validating the **Solver ID Box**. The protocol checks that the Solver ID Box was created between `createdAt` and `createdAt + CEREMONY_WINDOW`.
 
 More details on the specific implementation of the contracts can be found in [STATES.md](STATES.md).
 
