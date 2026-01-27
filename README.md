@@ -97,6 +97,7 @@ The fundamental elements that constitute the Game of Prompts platform are:
 The following flowchart illustrates the lifecycle of a game and the interactions between the different states and actions:
 
 ```ascii
++---------------------+
                                      +---------------------+
                                      |     Create Game     |
                                      +----------+----------+
@@ -104,50 +105,50 @@ The following flowchart illustrates the lifecycle of a game and the interactions
                                                 v
 +---------------------------------------------------------------------------------------------+
 |                                       STATE 0: ACTIVE                                       |
-| +------------------+           +----------------------------------------------------------+ |
-| |  Ceremony Phase  | --------> |                   Participation Phase                    | |
-| | (Add Randomness) |           |              (Players submit participations)             | |
-| | (Register Solver)|           |                                                          | |
-| +------------------+           +----------------------------------------------------------+ |
-|           ^                                           ^                                     |
-|           | (Time < Ceremony Deadline)                | (Time < Game Deadline)              |
+|                                                                                             |
+|  +---------------------------------------------------------+         +--------------------+ |
+|  |                    Ceremony Phase                       |         |   Participation    | |
+|  |         (Long Duration: Setup & Randomness)             | ------> |       Phase        | |
+|  |         (Register Solver & High Security)               |         |  (Quick Submission)| |
+|  +---------------------------------------------------------+         +--------------------+ |
+|                ^                                                               ^            |
+|                | (Time < Ceremony Deadline)                                    |            |
 +---------------------------------------------------------------------------------------------+
-        |                                       |                                       |
-        | (Deadline Reached)                    | (Secret Revealed Early)               | (Stuck > Grace Period)
-        v                                       v                                       v
-+-----------------------+               +-----------------------+               +-----------------------+
-| Action: Transition    |               | Action: Transition    |               | Action: Refund        |
-| to RESOLUTION         |               | to CANCELLATION       |               | (Players Recover      |
-| (Creator reveals S)   |               | (Anyone can trigger)  |               |  Funds)               |
-+-----------------------+               +-----------------------+               +-----------------------+
-        |                                       |
-        v                                       v
-+-----------------------------------+   +-------------------------------------------------------+
-|        STATE 1: RESOLUTION        |   |                  STATE 2: CANCELLED                   |
-| (Secret 'S' revealed.             |   | (Game invalid. Creator punished.)                     |
-|  Scores verifiable.)              |   +---------------------------+---------------------------+
-+-----------------------------------+                               |
-        |           |                                               |
-        |           +-----------------------------+                 +--------------+
-        |           |                             |                 |              |
-        |           v                             v                 |              |
-        |    +---------------------+       +---------------------+  |              |
-        |    | Action: Include     |       | Action: Judges      |  |              |
-        |    | Omitted Particip.   |       | Invalidate Fraud    |  |              |
-        |    | (Anti-Censorship)   |       | (Penalizes Creator) |  |              |
-        |    +---------------------+       +---------------------+  |              |
-        |                                                           |              |
-        | (Resolution Deadline Reached)                             |              |
-        v                                                           v              v
-+-----------------------+                                     +-----------+ +---------------------+
-| Action: End Game      |                                     | Players   | | Creator Stake       |
-| (Distribute Prizes)   |                                     | Refund    | | Drained (Slowly)    |
-+-----------------------+                                     | (Immed.)  | | (1/5 per 30 blks)   |
-        |                                                     +-----------+ +---------------------+
-        v
-+-----------------------+
-|       FINALIZED       |
-+-----------------------+
+        |                                     | (Game Deadline Reached)         |
+        | (Secret Revealed Early)             |                                 | (Stuck > Grace Period)
+        v                                     v                                 v
++-----------------------+             +-----------------------+         +-----------------------+
+| Action: Transition    |             | Action: Transition    |         | Action: Refund        |
+| to CANCELLATION       |             | to RESOLUTION         |         | (Players Recover      |
+| (Anyone reveals S)    |             | (Creator reveals S)   |         |  Funds)               |
++-----------------------+             +-----------------------+         +-----------------------+
+        |                                     |
+        v                                     v
++-----------------------------------+     +-----------------------------------+
+|        STATE 2: CANCELLED         |     |        STATE 1: RESOLUTION        |
+| (Game invalid. Creator punished.) |     |    (Secret 'S' revealed.          |
++---------------------------+-------+     |     Scores verifiable.)           |
+                            |             +---------------------------+-------+
+            +---------------+                       |             |
+            |                                       |             +-----------------------+
+            v                                       v                                     v
++-----------------------+             +-----------------------+             +-----------------------+
+| Players Refund        |             | Action: Include       |             | Action: Judges        |
+| (Immediate)           |             | Omitted Particip.     |             | Invalidate Fraud      |
++-----------------------+             | (Anti-Censorship)     |             | (Penalizes Creator)   |
+            |                         +-----------------------+             +-----------------------+
+            v                                       |
++-----------------------+                           | (Resolution Deadline Reached)
+| Creator Stake         |                           v
+| Drained (Slowly)      |             +-----------------------+
+| (1/5 per 30 blks)     |             | Action: End Game      |
++-----------------------+             | (Distribute Prizes)   |
+                                      +-----------------------+
+                                                |
+                                                v
+                                      +-----------------------+
+                                      |       FINALIZED       |
+                                      +-----------------------+
 ```
 
 -----
@@ -227,11 +228,16 @@ For a player to participate in a GoP game, they follow these steps:
 
 5.  **Competition Participation**
 
-      * If satisfied with the score, the player publishes the `ParticipationBox` transaction.
-      * **Requirement:** This transaction must include the **Solver ID Box** (created in step 3) as a **Data Input**. The on-chain contract will validate that:
-          1.  The `solverId` in the Data Input matches the `solverId` in the Participation Box (`R7`).
-          2.  The Solver ID Box was created **before** the game's `createdAt` block (plus the ceremony duration).
-      * This mechanism ensures that no one could have tailored their solver to the specific random seed of the game.
+    To ensure a participation is valid and eligible for resolution, the player must publish the `ParticipationBox` transaction, adhering to the following technical requirements enforced by the on-chain contract:
+
+    * **Solver Binding (Anti-Cheating):** The transaction must include the **Solver ID Box** (created in Step 3) as a **Data Input**. The contract validates that the `solverId` in the Participation Box (`R7`) matches the ID in the Data Input.
+    * **Verification of Bot Integrity:** The system ensures the Solver ID Box uses the official script by verifying that its `propositionBytes` hash matches the predefined `FALSE_SCRIPT_HASH`.
+    * **Preparation Time Window (Seed Margin):** To prevent players from tailoring a solver to the specific game seed, the contract enforces a "Seed Margin". The creation height of the Solver ID Box must be earlier than the `ceremonyDeadline` minus the `SEED_MARGIN`.
+    * **Cryptographic Commitment (Score Validation):** The score is not just declared; it must be verified through a commitment in `R5`. The contract reconstructs the hash using: `pBoxSolverId ++ gameSeed ++ score ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS` to ensure the score is legitimate and linked to the revealed secret.
+    * **Strict Participation Constraints:**
+    * **Deadline:** The participation box must be created before the game's `deadline`.
+    * **Participation Fee:** The box must contain the required `participationFee` in the correct token.
+    * **Complexity Limit:** The number of scores submitted in `R9` cannot exceed `MAX_SCORE_LIST` to maintain computational efficiency during validation.
 
 -----
 
