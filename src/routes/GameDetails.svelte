@@ -1980,17 +1980,17 @@
 
                 <div class="relative z-10 p-4 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white">
                     {#if resolvedImageSrc}
-                        <div class="md:w-1/3 flex-shrink-0">
+                        <div class="w-full md:w-1/3 flex-shrink-0">
                             <img
                                 src={resolvedImageSrc}
                                 alt="{game.content.title} banner"
-                                class="w-full h-auto max-h-96 object-contain rounded-lg shadow-2xl border border-white/10"
+                                class="w-full h-auto max-h-64 md:max-h-96 object-contain rounded-lg shadow-2xl border border-white/10"
                             />
                         </div>
                     {/if}
                     
-                    <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
-                        <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-8 text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)] tracking-tight">
+                    <div class="flex-1 text-center md:text-left w-full mt-6 md:mt-0">
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-8 text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)] tracking-tight">
                             {game.content.title}
                         </h1>
 
@@ -2003,72 +2003,70 @@
                                 { label: 'Creator Stake', value: `${formatTokenBigInt(getDisplayStake(game), tokenDecimals)} ${tokenSymbol}`, icon: ShieldCheck, color: 'text-cyan-300', info: "Guarantee deposited by the creator..." },
                                 { label: 'Commission', value: `${game.status == "Active" ? (game.commissionPercentage / 10000).toFixed(2) : "N/A"}%`, icon: CheckSquare, color: 'text-pink-300', info: "Percentage of the Prize Pool..." }
                             ] as stat}
-                                <div class="group relative flex flex-col justify-between p-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] overflow-hidden">
-                                    <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                    
+                                <div class="group relative flex flex-col justify-between p-5 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:bg-white/20">
                                     <div class="relative z-10 flex items-center justify-between mb-3">
                                         <div class="flex items-center gap-2">
-                                            <svelte:component this={stat.icon} class="w-4 h-4 {stat.color} filter drop-shadow-sm" />
-                                            <span class="text-[10px] uppercase tracking-[0.2em] font-black text-white/80">{stat.label}</span>
+                                            <svelte:component this={stat.icon} class="w-5 h-5 md:w-4 md:h-4 {stat.color}" />
+                                            <span class="text-[11px] md:text-[10px] uppercase tracking-[0.2em] font-black text-white/90">{stat.label}</span>
                                         </div>
                                         {#if stat.info}
                                             <button 
                                                 type="button" 
-                                                class="text-white/40 hover:text-white transition-colors"
+                                                class="text-white/50 hover:text-white p-2 -mr-2 -mt-2 transition-colors"
                                                 on:click|stopPropagation={() => openDidacticModal(stat.label, stat.info)}
                                             >
-                                                <Info class="w-3.5 h-3.5" />
+                                                <Info class="w-5 h-5 md:w-4 md:h-4" />
                                             </button>
                                         {/if}
                                     </div>
-                                    <div class="relative z-10 text-xl font-bold text-white drop-shadow-md">
+                                    <div class="relative z-10 text-2xl md:text-xl font-bold text-white drop-shadow-md">
                                         {stat.value}
                                     </div>
                                 </div>
                             {/each}
 
                             {#if createdDateDisplay}
-                                <div class="flex flex-col justify-between p-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md">
+                                <div class="flex flex-col justify-between p-5 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md">
                                     <div class="flex items-center gap-2 mb-3">
-                                        <Calendar class="w-4 h-4 text-blue-300 opacity-90" />
-                                        <span class="text-[10px] uppercase tracking-[0.2em] font-black text-white/80">Created At</span>
+                                        <Calendar class="w-5 h-5 md:w-4 md:h-4 text-blue-300" />
+                                        <span class="text-[11px] md:text-[10px] uppercase tracking-[0.2em] font-black text-white/90">Created At</span>
                                     </div>
-                                    <div class="text-xl font-bold text-white drop-shadow-md">
+                                    <div class="text-2xl md:text-xl font-bold text-white">
                                         {createdDateDisplay}
                                     </div>
                                 </div>
                             {/if}
 
-                            <div class="flex flex-col justify-between p-4 rounded-xl border border-indigo-400/40 bg-indigo-500/10 backdrop-blur-md transition-all duration-300 hover:bg-indigo-500/20 group hover:shadow-[0_0_25px_rgba(99,102,241,0.2)]">
+                            <div class="flex flex-col justify-between p-5 rounded-xl border border-indigo-400/40 bg-indigo-500/10 backdrop-blur-md">
                                 <div class="flex items-center justify-between mb-3">
                                     <div class="flex items-center gap-2">
-                                        <Calendar class="w-4 h-4 text-indigo-300" />
-                                        <span class="text-[10px] uppercase tracking-[0.2em] font-black text-indigo-100/90">{clockLabel}</span>
+                                        <Calendar class="w-5 h-5 md:w-4 md:h-4 text-indigo-300" />
+                                        <span class="text-[11px] md:text-[10px] uppercase tracking-[0.2em] font-black text-indigo-100/90">{clockLabel}</span>
                                     </div>
                                     <button 
                                         type="button" 
-                                        class="text-indigo-300/40 hover:text-indigo-100 transition-colors"
+                                        class="text-indigo-300/40 hover:text-indigo-100 p-2 -mr-2 -mt-2"
                                         on:click|stopPropagation={() => openDidacticModal(clockLabel, clockInformation)}
                                     >
-                                        <Info class="w-3.5 h-3.5" />
+                                        <Info class="w-5 h-5 md:w-4 md:h-4" />
                                     </button>
                                 </div>
                                 <div class="flex flex-col">
-                                    <span class="text-xl font-bold text-white drop-shadow-md">
+                                    <span class="text-2xl md:text-xl font-bold text-white">
                                         {deadlineDateDisplay.split(" at ")[0]}
                                     </span>
-                                    <span class="text-[9px] font-mono text-indigo-200/60 mt-1 uppercase tracking-tighter">
+                                    <span class="text-[10px] md:text-[9px] font-mono text-indigo-200/60 mt-1 uppercase tracking-tighter">
                                         Block: {game.status == "Active" ? game.deadlineBlock : "N/A"}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
+                        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
                             {#if game.content.webLink}
-                                <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
-                                    <Button class="text-sm bg-white/10 hover:bg-white/20 text-white font-bold backdrop-blur-md border border-white/20 shadow-lg transition-all">
-                                        <ExternalLink class="mr-2 h-4 w-4" />
+                                <a href={game.content.webLink} target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto">
+                                    <Button class="w-full text-base bg-white/10 hover:bg-white/20 text-white font-bold backdrop-blur-md border border-white/20 py-6 px-8 transition-all">
+                                        <ExternalLink class="mr-2 h-5 w-5" />
                                         Visit Game Site
                                     </Button>
                                 </a>
@@ -2076,9 +2074,9 @@
 
                             <Button 
                                 on:click={shareGame} 
-                                class="text-sm text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-white/30 rounded-lg transition-all"
+                                class="w-full sm:w-auto text-base text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 py-6 px-8 transition-all"
                             >
-                                <Share2 class="mr-2 h-4 w-4" />
+                                <Share2 class="mr-2 h-5 w-5" />
                                 Share Game
                             </Button>
                         </div>
