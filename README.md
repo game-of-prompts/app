@@ -87,7 +87,7 @@ The fundamental elements that constitute the Game of Prompts platform are:
   * **Solver Service (`<solver_id>.celaut.bee`)**:
     This is also a Celaut service, but it's created by a player with the objective of interacting with and solving a particular Game Service. The solver implements the player's strategy or logic to maximize the score in the game. It's packaged and sent to the Game Service for evaluation.
 
-  * **GoP Web**:
+  * **GoP App**:
     Acts as the central community portal. Through this web interface (which could also be a general Celaut service: `web-gop.celaut.bee`, but with a connection to an Ergo explorer), users can discover and publish games, read their descriptions and rules, download Game Services to test or play them, and facilitate the process of publishing results (the `ParticipationBox`) on the Ergo blockchain.
 
 -----
