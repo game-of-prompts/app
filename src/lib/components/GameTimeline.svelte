@@ -23,18 +23,17 @@
     } from "lucide-svelte";
     import { formatDistanceToNow } from "date-fns";
     import { block_height_to_timestamp } from "$lib/common/countdown";
-    import { onMount } from "svelte";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { type AnyParticipation } from "$lib/common/game";
     import { type Box, type Amount } from "@fleet-sdk/core";
-    import { explorer_uri, web_explorer_uri } from "$lib/ergo/envs";
+    import { explorer_uri, web_explorer_uri_tx } from "$lib/ergo/envs";
     import { get } from "svelte/store";
 
     export let history: AnyGame[] = [];
     export let currentGame: AnyGame | null = null;
     export let currentHeight: number = 0;
     export let participations: AnyParticipation[] = [];
-    export let solverHistory: Box<Amount>[] = [];
+    export let solverHistory: Map<string, Box<Amount>[]> = new Map();
 
     let showBotEvents = false;
 
@@ -58,7 +57,6 @@
     }
 
     // Define timeline steps based on game state
-    // Define timeline steps based on game state
     interface TimelineStep {
         id: string;
         label: string;
@@ -79,7 +77,7 @@
         currentGame ||
         history.length > 0 ||
         participations.length > 0 ||
-        solverHistory.length > 0
+        solverHistory.size > 0
     ) {
         buildSteps(
             history,
@@ -99,7 +97,7 @@
         current: AnyGame | null,
         height: number,
         parts: AnyParticipation[],
-        solvers: Box<Amount>[],
+        solvers: Map<string, Box<Amount>[]>,
     ) {
         const newSteps: TimelineStep[] = [];
         const explorerUrl = get(explorer_uri);
@@ -125,6 +123,8 @@
                 });
                 if ("seed" in g) lastSeed = g.seed;
             } else {
+                const prevG = hist[i - 1];
+
                 if (
                     g.status === GameState.Active &&
                     "seed" in g &&
@@ -144,7 +144,7 @@
                     lastSeed = g.seed;
                 } else if (
                     g.status === GameState.Resolution &&
-                    hist[i - 1].status !== GameState.Resolution
+                    prevG.status !== GameState.Resolution
                 ) {
                     newSteps.push({
                         id: `resolution_started_${h}`,
@@ -158,25 +158,81 @@
                         color: "text-lime-500 border-lime-500",
                         txId: txId,
                     });
+                } else if (
+                    g.status === GameState.Resolution &&
+                    prevG.status === GameState.Resolution
+                ) {
+                    // Resolution -> Resolution transition
+                    const prevCandidate = (prevG as any)
+                        .winnerCandidateCommitment;
+                    const newCandidate = (g as any).winnerCandidateCommitment;
+                    const resolverCommission = (g as any).resolverCommission;
+
+                    let label = "Resolution Updated";
+                    let description = "The resolution state was updated.";
+                    let icon = Gavel;
+                    let color = "text-orange-500 border-orange-500";
+
+                    // Rule 1: Candidate Added -> Omitted Participation
+                    if (!prevCandidate && newCandidate) {
+                        label = "Candidate Selected";
+                        description = `Resolver selected candidate ${newCandidate.slice(0, 8)}... (Omitted Participation logic applied).`;
+                        icon = User;
+                        color = "text-blue-500 border-blue-500";
+                    }
+                    // Rule 2: Candidate Removed -> Invalidation
+                    else if (prevCandidate && !newCandidate) {
+                        // Check commission to determine type of invalidation
+                        if (resolverCommission === 0) {
+                            label = "Candidate Invalidated";
+                            description = `Judges invalidated candidate ${prevCandidate.slice(0, 8)}...`;
+                            icon = XCircle;
+                            color = "text-red-500 border-red-500";
+                        } else {
+                            label = "Candidate Unavailable";
+                            description = `Judges declared candidate ${prevCandidate.slice(0, 8)}... unavailable (Service/Bot not found).`;
+                            icon = EyeOff;
+                            color = "text-orange-600 border-orange-600";
+                        }
+                    }
+                    // Fallback for other changes (e.g. just commission change or candidate swap if possible)
+                    else if (prevCandidate !== newCandidate) {
+                        label = "Candidate Changed";
+                        description = `Candidate changed from ${prevCandidate?.slice(0, 8)}... to ${newCandidate?.slice(0, 8)}...`;
+                    }
+
+                    newSteps.push({
+                        id: `resolution_update_${h}`,
+                        label: label,
+                        description: description,
+                        status: "completed",
+                        date: await getDateString(h, true),
+                        icon: icon,
+                        height: h,
+                        color: color,
+                        txId: txId,
+                    });
                 }
             }
         }
 
-        // 2. Bot History (from solverHistory prop - usually service updates)
-        for (const s of solvers) {
-            const h = s.creationHeight;
-            newSteps.push({
-                id: `solver_${s.boxId}`,
-                label: "Service/Solver Updated",
-                description: `The game service/solver was updated.`,
-                status: "completed",
-                date: await getDateString(h, true),
-                icon: Bot,
-                height: h,
-                color: "text-amber-500 border-amber-500",
-                txId: s.transactionId,
-                isBotEvent: true,
-            });
+        // 2. Bot History (from solverHistory map)
+        for (const [solverId, history] of solvers.entries()) {
+            for (const s of history) {
+                const h = s.creationHeight;
+                newSteps.push({
+                    id: `solver_${s.boxId}`,
+                    label: "Service/Solver Updated",
+                    description: `Solver ${solverId.slice(0, 8)}... updated.`,
+                    status: "completed",
+                    date: await getDateString(h, true),
+                    icon: Bot,
+                    height: h,
+                    color: "text-amber-500 border-amber-500",
+                    txId: s.transactionId,
+                    isBotEvent: true,
+                });
+            }
         }
 
         // 3. Participations and their Bot Boxes
@@ -410,7 +466,7 @@
                             {/if}
                             {#if step.txId}
                                 <a
-                                    href="{$web_explorer_uri}en/transactions/{step.txId}"
+                                    href="{$web_explorer_uri_tx}{step.txId}"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="text-muted-foreground hover:text-primary transition-colors"
