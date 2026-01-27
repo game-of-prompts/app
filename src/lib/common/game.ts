@@ -239,12 +239,18 @@ export type AnyParticipation = ValidParticipation | MalformedParticipation | Par
  * Esto ocurre cuando el juego ya no está en estado 'Active'.
  */
 export async function isGameParticipationEnded(game: AnyGame): Promise<boolean> {
-    return game.status !== GameState.Active || game.deadlineBlock <= await game.platform.get_current_height();
+    const currentHeight = await (new ErgoPlatform).get_current_height();
+    return game.status !== GameState.Active || game.deadlineBlock <= currentHeight;
 }
 
 export async function isOpenCeremony(game: AnyGame): Promise<boolean> {
     const currentHeight = await (new ErgoPlatform).get_current_height();
     return game.status === "Active" && currentHeight < game.ceremonyDeadline
+}
+
+export async function isOpenSolverSubmit(game: AnyGame): Promise<boolean> {
+    const currentHeight = await (new ErgoPlatform).get_current_height();
+    return game.status === "Active" && currentHeight < game.ceremonyDeadline - game.constants.SEED_MARGIN;
 }
 
 /**

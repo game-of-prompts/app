@@ -13,6 +13,7 @@
         isOpenCeremony,
         resolve_participation_commitment,
         calculateEffectiveScore,
+        isOpenSolverSubmit,
     } from "$lib/common/game";
     import { marked } from "marked";
     import {
@@ -391,6 +392,7 @@
     let isJudge = false;
     let isNominatedJudge = false;
     let openCeremony = false;
+    let openSolverSubmit = false;
     let acceptedJudgeNominations: string[] = [];
     let isInvalidationMajorityReached = false;
 
@@ -804,6 +806,7 @@
         try {
             participationIsEnded = await isGameParticipationEnded(game);
             openCeremony = await isOpenCeremony(game);
+            openSolverSubmit = await isOpenSolverSubmit(game);
 
             soundtrackUrl = game.content.soundtrackURL;
 
@@ -968,12 +971,22 @@
             }
 
             if (game.status === "Active") {
-                if (openCeremony) {
+                if (openSolverSubmit) {
+                    targetDate = await block_height_to_timestamp(
+                        game.ceremonyDeadline - game.constants.SEED_MARGIN,
+                        platform,
+                    );
+                    clockLabel = "Solver Submit Deadline";
+                    clockInformation =
+                        "Block limit to implement your solution and submit your bot hash.";
+                } else if (openCeremony) {
                     targetDate = await block_height_to_timestamp(
                         game.ceremonyDeadline,
                         platform,
                     );
                     clockLabel = "Ceremony Deadline";
+                    clockInformation =
+                        "Block limit to add randomness to the game seed.";
                 } else if (currentHeight < game.deadlineBlock) {
                     targetDate = await block_height_to_timestamp(
                         game.deadlineBlock,
