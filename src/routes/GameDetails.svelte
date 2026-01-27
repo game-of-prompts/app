@@ -1964,12 +1964,9 @@
             ? 'bg-slate-900 text-gray-200'
             : 'bg-gray-50 text-gray-800'}"
     >
-        <div
-            class="game-container w-full md:max-w-[95%] mx-auto px-0 md:px-4 lg:px-8 py-0 md:py-8"
-        >
-            <section
-                class="hero-section relative md:rounded-xl md:shadow-2xl overflow-hidden mb-6 md:mb-12"
-            >
+
+        <div class="game-container w-full md:max-w-[95%] mx-auto px-0 md:px-4 lg:px-8 py-0 md:py-8">
+            <section class="hero-section relative md:rounded-xl md:shadow-2xl overflow-hidden mb-6 md:mb-12">
                 <div class="hero-bg-image">
                     {#if resolvedImageSrc}
                         <img
@@ -1978,212 +1975,108 @@
                             class="absolute inset-0 w-full h-full object-cover blur-md scale-110"
                         />
                     {/if}
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/60 to-transparent"
-                    ></div>
+                    <div class="absolute inset-0 bg-slate-900/40 backdrop-brightness-75"></div>
                 </div>
-                <div
-                    class="relative z-10 p-4 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white"
-                >
+
+                <div class="relative z-10 p-4 md:p-12 flex flex-col md:flex-row gap-8 items-center text-white">
                     {#if resolvedImageSrc}
                         <div class="md:w-1/3 flex-shrink-0">
                             <img
                                 src={resolvedImageSrc}
                                 alt="{game.content.title} banner"
-                                class="w-full h-auto max-h-96 object-contain rounded-lg shadow-lg"
+                                class="w-full h-auto max-h-96 object-contain rounded-lg shadow-2xl border border-white/10"
                             />
                         </div>
                     {/if}
-                    <div
-                        class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6"
-                    >
-                        <h1
-                            class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-3 text-white"
-                        >
+                    
+                    <div class="flex-1 text-center md:text-left mt-6 md:mt-0 ml-0 md:ml-6">
+                        <h1 class="text-4xl lg:text-5xl font-bold font-['Russo_One'] mb-8 text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)] tracking-tight">
                             {game.content.title}
                         </h1>
 
-                        <div
-                            class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4"
-                        >
-                            <div class="stat-block">
-                                <Users class="stat-icon" />
-                                <span>{game.reputation}</span>
-                                <span class="stat-label"
-                                    >Reputation<button
-                                        type="button"
-                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                        on:click|stopPropagation={() =>
-                                            openDidacticModal(
-                                                "Reputation",
-                                                "The game's reputation score based on the reputation of the winner and nominated judges.",
-                                            )}
-                                    >
-                                        <Info class="w-3.5 h-3.5" />
-                                    </button></span
-                                >
-                            </div>
-                            <div class="stat-block">
-                                <Edit class="stat-icon" />
-                                <span
-                                    >{formatTokenBigInt(
-                                        getParticipationFee(game),
-                                        tokenDecimals,
-                                    )}
-                                    {tokenSymbol}</span
-                                >
-                                <span class="stat-label"
-                                    >Entry Fee<button
-                                        type="button"
-                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                        on:click|stopPropagation={() =>
-                                            openDidacticModal(
-                                                "Entry Fee",
-                                                "The cost each player must pay to participate. This amount accumulates in the Prize Pool.",
-                                            )}
-                                    >
-                                        <Info class="w-3.5 h-3.5" />
-                                    </button></span
-                                >
-                            </div>
-                            <div class="stat-block">
-                                <Users class="stat-icon" />
-                                <span>{participations.length}</span>
-                                <span class="stat-label">Participants</span>
-                            </div>
-                            <div class="stat-block">
-                                <Trophy class="stat-icon" />
-                                <span>
-                                    {formatTokenBigInt(
-                                        getParticipationFee(game) *
-                                            BigInt(participations.length),
-                                        tokenDecimals,
-                                    )}
-                                    {tokenSymbol}</span
-                                >
-                                <span class="stat-label"
-                                    >Prize Pool<button
-                                        type="button"
-                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                        on:click|stopPropagation={() =>
-                                            openDidacticModal(
-                                                "Prize Pool",
-                                                "The accumulated participation fees. Distributed to the winner and commissions upon finalization.",
-                                            )}
-                                    >
-                                        <Info class="w-3.5 h-3.5" />
-                                    </button></span
-                                >
-                            </div>
-                            <div class="stat-block">
-                                <ShieldCheck class="stat-icon" />
-                                <span
-                                    >{formatTokenBigInt(
-                                        getDisplayStake(game),
-                                        tokenDecimals,
-                                    )}
-                                    {tokenSymbol}</span
-                                >
-                                <span class="stat-label"
-                                    >Creator Stake<button
-                                        type="button"
-                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                        on:click|stopPropagation={() =>
-                                            openDidacticModal(
-                                                "Creator Stake",
-                                                "Guarantee deposited by the creator. Lost if the secret is revealed or discovered prematurely, incentivizing the creator to keep it safe.",
-                                            )}
-                                    >
-                                        <Info class="w-3.5 h-3.5" />
-                                    </button></span
-                                >
-                            </div>
-                            <div class="stat-block">
-                                <CheckSquare class="stat-icon" />
-                                <span
-                                    >{game.status == "Active"
-                                        ? (
-                                              game.commissionPercentage / 10000
-                                          ).toFixed(4)
-                                        : game.status == "Resolution" ||
-                                            game.status == "EndGame"
-                                          ? (
-                                                game.resolverCommission / 10000
-                                            ).toFixed(4)
-                                          : "N/A"}%</span
-                                >
-                                <span class="stat-label"
-                                    >Commission<button
-                                        type="button"
-                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                        on:click|stopPropagation={() =>
-                                            openDidacticModal(
-                                                "Commission",
-                                                "Percentage of the Prize Pool received by the creator (or resolver) upon successful game finalization.",
-                                            )}
-                                    >
-                                        <Info class="w-3.5 h-3.5" />
-                                    </button></span
-                                >
-                            </div>
+                        <div class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+                            {#each [
+                                { label: 'Reputation', value: game.reputation, icon: Users, color: 'text-blue-300', info: "The game's reputation score..." },
+                                { label: 'Entry Fee', value: `${formatTokenBigInt(getParticipationFee(game), tokenDecimals)} ${tokenSymbol}`, icon: Edit, color: 'text-emerald-300', info: "The cost each player must pay..." },
+                                { label: 'Participants', value: participations.length, icon: Users, color: 'text-purple-300' },
+                                { label: 'Prize Pool', value: `${formatTokenBigInt(getParticipationFee(game) * BigInt(participations.length), tokenDecimals)} ${tokenSymbol}`, icon: Trophy, color: 'text-yellow-300', info: "The accumulated participation fees..." },
+                                { label: 'Creator Stake', value: `${formatTokenBigInt(getDisplayStake(game), tokenDecimals)} ${tokenSymbol}`, icon: ShieldCheck, color: 'text-cyan-300', info: "Guarantee deposited by the creator..." },
+                                { label: 'Commission', value: `${game.status == "Active" ? (game.commissionPercentage / 10000).toFixed(2) : "N/A"}%`, icon: CheckSquare, color: 'text-pink-300', info: "Percentage of the Prize Pool..." }
+                            ] as stat}
+                                <div class="group relative flex flex-col justify-between p-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] overflow-hidden">
+                                    <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    
+                                    <div class="relative z-10 flex items-center justify-between mb-3">
+                                        <div class="flex items-center gap-2">
+                                            <svelte:component this={stat.icon} class="w-4 h-4 {stat.color} filter drop-shadow-sm" />
+                                            <span class="text-[10px] uppercase tracking-[0.2em] font-black text-white/80">{stat.label}</span>
+                                        </div>
+                                        {#if stat.info}
+                                            <button 
+                                                type="button" 
+                                                class="text-white/40 hover:text-white transition-colors"
+                                                on:click|stopPropagation={() => openDidacticModal(stat.label, stat.info)}
+                                            >
+                                                <Info class="w-3.5 h-3.5" />
+                                            </button>
+                                        {/if}
+                                    </div>
+                                    <div class="relative z-10 text-xl font-bold text-white drop-shadow-md">
+                                        {stat.value}
+                                    </div>
+                                </div>
+                            {/each}
+
                             {#if createdDateDisplay}
-                                <div class="stat-block">
-                                    <Calendar class="stat-icon" />
-                                    <span>{createdDateDisplay}</span>
-                                    <span class="stat-label">Created At</span>
+                                <div class="flex flex-col justify-between p-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <Calendar class="w-4 h-4 text-blue-300 opacity-90" />
+                                        <span class="text-[10px] uppercase tracking-[0.2em] font-black text-white/80">Created At</span>
+                                    </div>
+                                    <div class="text-xl font-bold text-white drop-shadow-md">
+                                        {createdDateDisplay}
+                                    </div>
                                 </div>
                             {/if}
-                        </div>
-                        <div class="stat-block mt-4">
-                            <Calendar class="stat-icon" />
-                            <span>{deadlineDateDisplay.split(" at ")[0]}</span>
-                            <!-- svelte-ignore a11y-missing-attribute -->
-                            <a
-                                >b.{game.status == "Active"
-                                    ? game.deadlineBlock
-                                    : game.status == "Resolution" ||
-                                        game.status == "EndGame"
-                                      ? game.resolutionDeadline
-                                      : game.status == "Cancelled_Draining"
-                                        ? game.unlockHeight
-                                        : "N/A"}</a
-                            >
-                            <span class="stat-label"
-                                >{clockLabel}<button
-                                    type="button"
-                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                    on:click|stopPropagation={() =>
-                                        openDidacticModal(
-                                            clockLabel,
-                                            clockInformation,
-                                        )}
-                                >
-                                    <Info class="w-3.5 h-3.5" />
-                                </button></span
-                            >
+
+                            <div class="flex flex-col justify-between p-4 rounded-xl border border-indigo-400/40 bg-indigo-500/10 backdrop-blur-md transition-all duration-300 hover:bg-indigo-500/20 group hover:shadow-[0_0_25px_rgba(99,102,241,0.2)]">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <Calendar class="w-4 h-4 text-indigo-300" />
+                                        <span class="text-[10px] uppercase tracking-[0.2em] font-black text-indigo-100/90">{clockLabel}</span>
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        class="text-indigo-300/40 hover:text-indigo-100 transition-colors"
+                                        on:click|stopPropagation={() => openDidacticModal(clockLabel, clockInformation)}
+                                    >
+                                        <Info class="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-xl font-bold text-white drop-shadow-md">
+                                        {deadlineDateDisplay.split(" at ")[0]}
+                                    </span>
+                                    <span class="text-[9px] font-mono text-indigo-200/60 mt-1 uppercase tracking-tighter">
+                                        Block: {game.status == "Active" ? game.deadlineBlock : "N/A"}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div
-                            class="mt-8 flex items-center justify-center md:justify-start gap-3"
-                        >
+                        <div class="mt-8 flex items-center justify-center md:justify-start gap-3">
                             {#if game.content.webLink}
-                                <a
-                                    href={game.content.webLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    <Button
-                                        class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                    >
+                                <a href={game.content.webLink} target="_blank" rel="noopener noreferrer">
+                                    <Button class="text-sm bg-white/10 hover:bg-white/20 text-white font-bold backdrop-blur-md border border-white/20 shadow-lg transition-all">
                                         <ExternalLink class="mr-2 h-4 w-4" />
                                         Visit Game Site
                                     </Button>
                                 </a>
                             {/if}
 
-                            <Button
-                                on:click={shareGame}
-                                class="text-sm text-white bg-white/10 backdrop-blur-sm border-none hover:bg-white/20 rounded-lg"
+                            <Button 
+                                on:click={shareGame} 
+                                class="text-sm text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-white/30 rounded-lg transition-all"
                             >
                                 <Share2 class="mr-2 h-4 w-4" />
                                 Share Game
