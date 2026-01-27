@@ -170,25 +170,13 @@ Teoricamente se permite un numero ilimitado de participaciones.
 
 [x] La participación es valida si y solo si existe una caja cuyo R4 sea el id del servicio y su creación sea anterior a deadline.
 
-[] Actualizar README y KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
+[x] Actualizar README
 
 ---
 
 [] Obtener datos de mem-pool [implementar como libreria ¿?]
 
 [x] Chained tx.
-
-====
-
-
-Para usar Bene, se podría utilizar la librería de Bene, que contiene todas las acciones de Bene y dos componentes de svelte:
-- Un formulario, por ejemplo para darle a "Subir juego mediante fundraissing"
-- Tarjeta de campañas ... de forma que muestre los juegos de GoP que todavía no han empezado porque se activarán si la campaña de recaudación es satisfactoria. En este caso si se da a visualizar se abrirá una pestaña nueva a la web de Bene o ejecutará el servicio de Bene en caso de Celaut.
-
-De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
-
-> A partir de esta idea consideramos que: Todas las aplicaciones poseen 1. Lógica de negocio TS, 2. Componentes svelte reutilizables y 3. Aplicacion completa. De forma que 1. y 2. se distribuyen como paquetes y se pueden reutiliar.
-
 
 ===========
 
@@ -207,7 +195,6 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 [] Limited resources
 
 
-
 #### Servicio para supervisar jueces
 
 [] Comprobar si el historico de las validaciones e invalidaciones de los jueces son correctas. (ejecutando el robot en caso de que el servicio siga accesible, y comprobando si los logs eran coincidentes o no lo eran).
@@ -217,10 +204,24 @@ De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
 [] La reputación de un juez en un juego debe de reducirse en caso de que el juego, aun pudiendo invalidar la participación, no lo terminara haciendo.
 > Esto permite incentivar a los jueces a que alguno de ellos termine actualizando la caja del juego ... uno de ellos debe de realizar la acción, aunque esta no tenga un beneficio para él personalmente y beneficie a todo el grupo por igual. De otra forma, el sistema de incentivos sería erroneo (incentivar a los jueces a ser los ultimos si el que realiza la acción recibe recompensa y/o extraer para la recompensa parte de la participacion invalidada ya que se reduciría del vote principal y tampoco es deseado).
 
-----
+
+============
+============
 
 # Otros
+
+[] KyA (implementar KyA siguiendo el formato propuesto para Sigmaverse)
 
 [] ¿Ceremonia de secreto del servicio juego?
 
 [] Explorar "Participación no interactiva" Basada en pagos a servicios y contratos de participación por terceros.
+
+====
+
+Para usar Bene, se podría utilizar la librería de Bene, que contiene todas las acciones de Bene y dos componentes de svelte:
+- Un formulario, por ejemplo para darle a "Subir juego mediante fundraissing"
+- Tarjeta de campañas ... de forma que muestre los juegos de GoP que todavía no han empezado porque se activarán si la campaña de recaudación es satisfactoria. En este caso si se da a visualizar se abrirá una pestaña nueva a la web de Bene o ejecutará el servicio de Bene en caso de Celaut.
+
+De esta forma la librería de Bene tan solo posee componentes de Svelte simples.
+
+> A partir de esta idea consideramos que: Todas las aplicaciones poseen 1. Lógica de negocio TS, 2. Componentes svelte reutilizables y 3. Aplicacion completa. De forma que 1. y 2. se distribuyen como paquetes y se pueden reutiliar.
