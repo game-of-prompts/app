@@ -35,6 +35,8 @@
         fetch_token_details,
         fetchParticipationBatches,
         fetchSolverIdBox,
+        fetchGameHistory,
+        fetchSolverHistory,
     } from "$lib/ergo/fetch";
     import { remove_opinion } from "reputation-system";
     // UI COMPONENTS
@@ -114,6 +116,7 @@
     import { GAME, PARTICIPATION } from "$lib/ergo/reputation/types";
     import { Forum } from "forum-application";
     import ShareModal from "./ShareModal.svelte";
+    import GameTimeline from "$lib/components/GameTimeline.svelte";
 
     const strictMode = true;
 
@@ -373,6 +376,8 @@
     let candidateParticipationUnavailableVotes: string[] = [];
     let currentHeight: number = 0;
     let participationBatches: Box<Amount>[] = [];
+    let gameHistory: AnyGame[] = [];
+    let solverHistory: Box<Amount>[] = [];
 
     // UI State
     let transactionId: string | null = null;
@@ -777,7 +782,7 @@
     }
 
     // Tabs State
-    let activeTab: "participations" | "forum" = "participations";
+    let activeTab: "history" | "participations" | "forum" = "history";
 
     // --- LOGIC ---
     const unsubscribeGameDetail = game_detail.subscribe((value) => {
@@ -798,6 +803,59 @@
         }
 
         currentHeight = await platform.get_current_height();
+
+        // Fetch history
+        fetchGameHistory(game.gameId).then((history) => {
+            gameHistory = history;
+        });
+        if (game.content.serviceId) {
+            fetchSolverHistory(game.content.serviceId).then((history) => {
+                solverHistory = history;
+            });
+        }
+
+        if (game.status === "Active") {
+            const seedMargin = game.constants.SEED_MARGIN;
+            const hashDeadline = game.ceremonyDeadline - seedMargin;
+
+            if (currentHeight < hashDeadline) {
+                targetDate = await block_height_to_timestamp(
+                    hashDeadline,
+                    platform,
+                );
+                clockLabel = "HASH SUBMISSION DEADLINE";
+                clockInformation = "Submit your bot's hash before this time.";
+            } else if (currentHeight < game.ceremonyDeadline) {
+                targetDate = await block_height_to_timestamp(
+                    game.ceremonyDeadline,
+                    platform,
+                );
+                clockLabel = "SEED RANDOMNESS DEADLINE";
+                clockInformation =
+                    "Add randomness to the seed before this time.";
+            } else {
+                targetDate = await block_height_to_timestamp(
+                    game.deadlineBlock,
+                    platform,
+                );
+                clockLabel = "GAME EXECUTION DEADLINE";
+                clockInformation =
+                    "Run the game and submit results before this time.";
+            }
+        } else if (game.status === "Resolution") {
+            targetDate = await block_height_to_timestamp(
+                game.resolutionDeadline,
+                platform,
+            );
+            clockLabel = "RESOLUTION DEADLINE";
+            clockInformation = "Judges must resolve the game before this time.";
+        } else {
+            targetDate = 0;
+            clockLabel = "GAME ENDED";
+            clockInformation = "This game has finished.";
+        }
+
+        createdDateDisplay = formatDistanceToNow(new Date(game.createdAt));
 
         isSubmitting = false;
         transactionId = null;
@@ -3955,6 +4013,13 @@
                 <div class="filter-menu">
                     <button
                         class="filter-badge"
+                        class:active={activeTab === "history"}
+                        on:click={() => (activeTab = "history")}
+                    >
+                        History
+                    </button>
+                    <button
+                        class="filter-badge"
                         class:active={activeTab === "participations"}
                         on:click={() => (activeTab = "participations")}
                     >
@@ -3969,7 +4034,17 @@
                     </button>
                 </div>
 
-                {#if activeTab === "participations"}
+                {#if activeTab === "history"}
+                    <div class="space-y-8">
+                        <GameTimeline
+                            history={gameHistory}
+                            currentGame={game}
+                            {currentHeight}
+                            {participations}
+                            {solverHistory}
+                        />
+                    </div>
+                {:else if activeTab === "participations"}
                     {#if participations && participations.length > 0}
                         <div class="flex flex-col gap-6">
                             {#each participations as p (p.boxId)}

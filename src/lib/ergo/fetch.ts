@@ -788,6 +788,85 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
     return games;
 }
 
+// =================================================================
+// === HISTORY FETCHING
+// =================================================================
+
+/**
+ * Fetches the full history of a game by retrieving all boxes associated with its NFT.
+ * @param gameId The ID of the game (NFT Token ID).
+ * @returns A promise that resolves to an array of AnyGame objects representing the game's history, sorted by creation height.
+ */
+export async function fetchGameHistory(gameId: string): Promise<AnyGame[]> {
+    const history: AnyGame[] = [];
+    const templateHashes = [
+        getGopGameActiveTemplateHash(),
+        getGopGameResolutionTemplateHash(),
+        getGopEndGameTemplateHash(),
+        getGopGameCancellationTemplateHash()
+    ];
+
+    // We need to fetch all boxes that contain the game NFT and match one of the contract templates.
+    // Since the explorer API for /boxes/search allows filtering by assets, we use that.
+    // However, we also want to filter by template hash to avoid random user boxes if possible,
+    // but /boxes/search might not support ANDing template hash with assets efficiently or at all in one go if we want ANY of the templates.
+    // Actually, searching by asset (tokenId) is usually specific enough for the game NFT, as it should only be in contract boxes or the winner's wallet.
+    // We will fetch all boxes with the token and then parse them.
+
+    let offset = 0;
+    const limit = 100;
+    let more = true;
+
+    while (more) {
+        // Search for boxes containing the game NFT
+        const url = `${get(explorer_uri)}/api/v1/boxes/byTokenId/${gameId}?offset=${offset}&limit=${limit}`;
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) throw new Error(`API response: ${response.status}`);
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+
+            for (const box of items) {
+                let game: AnyGame | null = null;
+                // Try to parse as Active
+                if (box.ergoTree === getGopGameActiveErgoTreeHex()) {
+                    game = await parseGameActiveBox(box);
+                }
+                // Try to parse as Resolution
+                else if (box.ergoTree === getGopGameResolutionErgoTreeHex()) {
+                    game = await parseGameResolutionBox(box);
+                }
+                // Try to parse as EndGame (Resolution but different script)
+                else if (box.ergoTree === getGopEndGameErgoTreeHex()) {
+                    game = await parseGameResolutionBox(box);
+                }
+                // Try to parse as Cancellation
+                else if (box.ergoTree === getGopGameCancellationErgoTreeHex()) {
+                    game = await parseGameCancellationBox(box);
+                }
+
+                if (game) {
+                    history.push(game);
+                }
+            }
+
+            offset += items.length;
+            more = items.length === limit;
+
+        } catch (error) {
+            console.error("Error fetching game history:", error);
+            more = false;
+        }
+    }
+
+    // Sort by creation height (ascending)
+    history.sort((a, b) => a.box.creationHeight - b.box.creationHeight);
+
+    return history;
+}
+
 
 // =================================================================
 // === STATE: PARTICIPATION SUBMITTED & RESOLVED
@@ -821,6 +900,46 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
         console.error("Error fetching solver ID box:", error);
         return null;
     }
+}
+
+/**
+ * Fetches all historical boxes for a given solver ID.
+ */
+export async function fetchSolverHistory(solverId: string): Promise<Box[]> {
+    const history: Box[] = [];
+    let offset = 0;
+    const limit = 100;
+    let more = true;
+
+    while (more) {
+        const url = `${get(explorer_uri)}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ergoTreeTemplateHash: getGopFalseTemplateHash(),
+                    registers: {
+                        R4: solverId
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error(`API response: ${response.status}`);
+
+            const data = await response.json();
+            const items: Box[] = data.items || [];
+            history.push(...items);
+
+            offset += items.length;
+            more = items.length === limit;
+        } catch (error) {
+            console.error("Error fetching solver history:", error);
+            more = false;
+        }
+    }
+
+    return history;
 }
 
 async function _parseParticipationBox(box: any, participationTokenId: string): Promise<ParticipationBase | null> {
