@@ -231,10 +231,25 @@ export class ErgoPlatform implements Platform {
 
     /**
      * Permite a un juez votar para invalidar al candidato a ganador actual.
-     * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
-     * Cuando el voto actual alcanza el umbral, se usa una transacción encadenada.
+     * Solo crea o actualiza la opinión de reputación.
      */
-    async judgesInvalidate(
+    async judgesInvalidateVote(
+        invalidatedParticipation: ValidParticipation
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+
+        // Just create the opinion
+        const txId = await createOrUpdateOpinion(
+            PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null, true
+        );
+        return txId;
+    }
+
+    /**
+     * Ejecuta la invalidación definitiva en el contrato.
+     * Requiere que ya exista una mayoría de votos.
+     */
+    async judgesInvalidateExecute(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
         judgeVoteDataInputs: Box<Amount>[]
@@ -243,31 +258,43 @@ export class ErgoPlatform implements Platform {
 
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
 
-        // In case don't need more votes to reach the threshold, use a single transaction
         if (judgeVoteDataInputs.length >= requiredVotes) {
             const tx_id = await judges_invalidate(game, invalidatedParticipation, judgeVoteDataInputs);
             return tx_id ? [tx_id] : null;
-        }
-        // Current judge's vote will reach threshold - use chained transaction
-        // (judgeVoteDataInputs contains existing votes, +1 for current judge's vote)
-        else if (judgeVoteDataInputs.length + 1 >= requiredVotes && USE_CHAINED_TRANSACTIONS) {
+        } else if (judgeVoteDataInputs.length + 1 >= requiredVotes && USE_CHAINED_TRANSACTIONS) {
+            // This case might still be useful if the current user is the last vote needed
+            // but for now we follow the "split" logic where execution is separate.
+            // However, to maintain compatibility with chained txs if desired:
             return await judges_invalidation_chained(
                 game, invalidatedParticipation, judgeVoteDataInputs
             );
         } else {
-            // Not enough votes yet - just create the opinion
-            const txId = await createOrUpdateOpinion(
-                PARTICIPATION, invalidatedParticipation.commitmentC_Hex, false, null, true
-            );
-            return txId ? [txId] : null;
+            throw new Error("No hay suficientes votos para ejecutar la invalidación.");
         }
     }
 
     /**
      * Permite a un juez votar para marcar al candidato a ganador actual como no disponible.
-     * Similar a la invalidación pero no penaliza al creador. La opinión no necesita ser locked.
+     * Solo crea o actualiza la opinión de reputación.
      */
-    async judgesInvalidateUnavailable(
+    async judgesInvalidateUnavailableVote(
+        game: GameResolution,
+        invalidatedParticipation: ValidParticipation
+    ): Promise<string | null> {
+        if (!ergo) throw new Error("Wallet not connected");
+
+        // Just create the opinion (unlocked)
+        const txId = await createOrUpdateOpinion(
+            game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID, invalidatedParticipation.commitmentC_Hex, false, null, false
+        );
+        return txId;
+    }
+
+    /**
+     * Ejecuta la marca de indisponibilidad definitiva en el contrato.
+     * Requiere que ya exista una mayoría de votos.
+     */
+    async judgesInvalidateUnavailableExecute(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
         judgeVoteDataInputs: Box<Amount>[]
@@ -276,17 +303,11 @@ export class ErgoPlatform implements Platform {
 
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
 
-        // For unavailable marking, we always use a single transaction since no penalty to creator
-        console.log("Judge vote data inputs ", judgeVoteDataInputs)
         if (judgeVoteDataInputs.length >= requiredVotes) {
             const tx_id = await judges_invalidate_unavailable(game, invalidatedParticipation, judgeVoteDataInputs);
             return tx_id;
         } else {
-            // Not enough votes yet - just create the opinion (unlocked)
-            const txId = await createOrUpdateOpinion(
-                game.constants.PARTICIPATION_UNAVAILABLE_TYPE_ID, invalidatedParticipation.commitmentC_Hex, false, null, false
-            );
-            return txId;
+            throw new Error("No hay suficientes votos para marcar como no disponible.");
         }
     }
 

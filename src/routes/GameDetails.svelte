@@ -1021,6 +1021,9 @@
                     isInvalidationMajorityReached =
                         candidateParticipationInvalidVotes.length >=
                         requiredVotes;
+                    isUnavailableMajorityReached =
+                        candidateParticipationUnavailableVotes.length >=
+                        requiredVotes;
                 }
             } else if (game.status === GameState.Cancelled_Draining) {
                 participations = await fetchParticipations(game);
@@ -1399,43 +1402,46 @@
                 (p) => game.winnerCandidateCommitment === p.commitmentC_Hex,
             )[0];
 
-            let judgeInvalidVotesDataInputsBoxes: Box<Amount>[] = [];
-            const winnerVotes = participationVotes.get(
-                game.winnerCandidateCommitment,
-            );
-            if (winnerVotes) {
-                const judgeInvalidVotesDataInputs = Array.from(
-                    winnerVotes.entries(),
-                ).filter(([key, value]) => {
-                    return candidateParticipationInvalidVotes.includes(key);
-                });
-
-                judgeInvalidVotesDataInputsBoxes =
-                    judgeInvalidVotesDataInputs.map(([Key, value]) => {
-                        return value.current_boxes.filter((box) => {
-                            return (
-                                box.polarization === false &&
-                                box.object_pointer ===
-                                    game.winnerCandidateCommitment &&
-                                box.type.tokenId === PARTICIPATION
-                            );
-                        })[0].box;
+            if (isInvalidationMajorityReached) {
+                // Execute Invalidation
+                let judgeInvalidVotesDataInputsBoxes: Box<Amount>[] = [];
+                const winnerVotes = participationVotes.get(
+                    game.winnerCandidateCommitment,
+                );
+                if (winnerVotes) {
+                    const judgeInvalidVotesDataInputs = Array.from(
+                        winnerVotes.entries(),
+                    ).filter(([key, value]) => {
+                        return candidateParticipationInvalidVotes.includes(key);
                     });
+
+                    judgeInvalidVotesDataInputsBoxes =
+                        judgeInvalidVotesDataInputs.map(([Key, value]) => {
+                            return value.current_boxes.filter((box) => {
+                                return (
+                                    box.polarization === false &&
+                                    box.object_pointer ===
+                                        game.winnerCandidateCommitment &&
+                                    box.type.tokenId === PARTICIPATION
+                                );
+                            })[0].box;
+                        });
+                }
+
+                transactionId =
+                    (
+                        await platform.judgesInvalidateExecute(
+                            game,
+                            winner_participation as ValidParticipation,
+                            judgeInvalidVotesDataInputsBoxes,
+                        )
+                    )?.join(", ") || null;
+            } else {
+                // Vote to Invalidate
+                transactionId = await platform.judgesInvalidateVote(
+                    winner_participation as ValidParticipation,
+                );
             }
-
-            const otherParticipations: ValidParticipation[] =
-                participations.filter(
-                    (p) =>
-                        p.commitmentC_Hex !==
-                            winner_participation.commitmentC_Hex &&
-                        p.status === "Submitted",
-                ) as ValidParticipation[];
-
-            transactionId = await platform.judgesInvalidate(
-                game,
-                winner_participation as ValidParticipation,
-                judgeInvalidVotesDataInputsBoxes,
-            );
         } catch (e: any) {
             errorMessage = e.message;
         } finally {
@@ -1452,44 +1458,48 @@
                 (p) => game.winnerCandidateCommitment === p.commitmentC_Hex,
             )[0];
 
-            let judgeUnavailableVotesDataInputsBoxes: Box<Amount>[] = [];
-            const winnerVotes = participationUnavailableVotes.get(
-                game.winnerCandidateCommitment,
-            );
-            if (winnerVotes) {
-                const judgeUnavailableVotesDataInputs = Array.from(
-                    winnerVotes.entries(),
-                ).filter(([key, value]) => {
-                    return candidateParticipationUnavailableVotes.includes(key);
-                });
-
-                judgeUnavailableVotesDataInputsBoxes =
-                    judgeUnavailableVotesDataInputs.map(([Key, value]) => {
-                        return value.current_boxes.filter((box) => {
-                            return (
-                                box.object_pointer ===
-                                    game.winnerCandidateCommitment &&
-                                box.type.tokenId ===
-                                    game.constants
-                                        .PARTICIPATION_UNAVAILABLE_TYPE_ID
-                            );
-                        })[0].box;
+            if (isUnavailableMajorityReached) {
+                // Execute Mark Unavailable
+                let judgeUnavailableVotesDataInputsBoxes: Box<Amount>[] = [];
+                const winnerVotes = participationUnavailableVotes.get(
+                    game.winnerCandidateCommitment,
+                );
+                if (winnerVotes) {
+                    const judgeUnavailableVotesDataInputs = Array.from(
+                        winnerVotes.entries(),
+                    ).filter(([key, value]) => {
+                        return candidateParticipationUnavailableVotes.includes(
+                            key,
+                        );
                     });
+
+                    judgeUnavailableVotesDataInputsBoxes =
+                        judgeUnavailableVotesDataInputs.map(([Key, value]) => {
+                            return value.current_boxes.filter((box) => {
+                                return (
+                                    box.object_pointer ===
+                                        game.winnerCandidateCommitment &&
+                                    box.type.tokenId ===
+                                        game.constants
+                                            .PARTICIPATION_UNAVAILABLE_TYPE_ID
+                                );
+                            })[0].box;
+                        });
+                }
+
+                transactionId =
+                    await platform.judgesInvalidateUnavailableExecute(
+                        game,
+                        winner_participation as ValidParticipation,
+                        judgeUnavailableVotesDataInputsBoxes,
+                    );
+            } else {
+                // Vote as Unavailable
+                transactionId = await platform.judgesInvalidateUnavailableVote(
+                    game,
+                    winner_participation as ValidParticipation,
+                );
             }
-
-            const otherParticipations: ValidParticipation[] =
-                participations.filter(
-                    (p) =>
-                        p.commitmentC_Hex !==
-                            winner_participation.commitmentC_Hex &&
-                        p.status === "Submitted",
-                ) as ValidParticipation[];
-
-            transactionId = await platform.judgesInvalidateUnavailable(
-                game,
-                winner_participation as ValidParticipation,
-                judgeUnavailableVotesDataInputsBoxes,
-            );
         } catch (e: any) {
             errorMessage = e.message;
         } finally {
@@ -5896,9 +5906,13 @@
                                             ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                                             : 'bg-yellow-500 hover:bg-yellow-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isSubmitting
-                                            ? "Processing..."
-                                            : "Confirm Invalidation Vote"}
+                                        {#if isSubmitting}
+                                            Processing...
+                                        {:else if isInvalidationMajorityReached}
+                                            Execute Invalidation
+                                        {:else}
+                                            Confirm Invalidation Vote
+                                        {/if}
                                     </Button>
                                 </div>
                             {/if}
@@ -6068,9 +6082,13 @@
                                             ? 'bg-orange-600 hover:bg-orange-700 text-white'
                                             : 'bg-orange-500 hover:bg-orange-600 text-white'} font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isSubmitting
-                                            ? "Processing..."
-                                            : "Confirm Unavailable Vote"}
+                                        {#if isSubmitting}
+                                            Processing...
+                                        {:else if isUnavailableMajorityReached}
+                                            Execute Mark Unavailable
+                                        {:else}
+                                            Confirm Unavailable Vote
+                                        {/if}
                                     </Button>
                                 </div>
                             {/if}

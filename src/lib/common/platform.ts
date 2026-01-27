@@ -7,7 +7,7 @@ import type {
     ValidParticipation,
     AnyGame
 } from "$lib/common/game";
-import { type Box } from "@fleet-sdk/core";
+import { type Amount, type Box } from "@fleet-sdk/core";
 
 export interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -112,24 +112,40 @@ export interface Platform {
 
     /**
      * Permite a un juez votar para invalidar al candidato a ganador actual.
-     * Si suficientes jueces votan, se elige un nuevo candidato y se extiende el plazo.
-     * Cuando el voto actual alcanza el umbral, retorna array con IDs de transacciones encadenadas.
+     * Solo crea o actualiza la opinión de reputación.
      */
-    judgesInvalidate(
+    judgesInvalidateVote(
+        invalidatedParticipation: ValidParticipation
+    ): Promise<string | null>;
+
+    /**
+     * Ejecuta la invalidación definitiva en el contrato.
+     * Requiere que ya exista una mayoría de votos.
+     */
+    judgesInvalidateExecute(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        judgeVoteDataInputs: Box<bigint>[]
-    ): Promise<string[] | null>
+        judgeVoteDataInputs: Box<Amount>[]
+    ): Promise<string[] | null>;
 
     /**
      * Permite a un juez votar para marcar al candidato a ganador actual como no disponible.
-     * Similar a la invalidación pero no penaliza al creador. La opinión no necesita ser locked.
+     * Solo crea o actualiza la opinión de reputación.
      */
-    judgesInvalidateUnavailable(
+    judgesInvalidateUnavailableVote(
+        game: GameResolution,
+        invalidatedParticipation: ValidParticipation
+    ): Promise<string | null>;
+
+    /**
+     * Ejecuta la marca de indisponibilidad definitiva en el contrato.
+     * Requiere que ya exista una mayoría de votos.
+     */
+    judgesInvalidateUnavailableExecute(
         game: GameResolution,
         invalidatedParticipation: ValidParticipation,
-        judgeVoteDataInputs: Box<bigint>[]
-    ): Promise<string | null>
+        judgeVoteDataInputs: Box<Amount>[]
+    ): Promise<string | null>;
 
     /**
      * Permite a cualquier usuario incluir las participaciones que fueron omitidas en la fase de resolución.
