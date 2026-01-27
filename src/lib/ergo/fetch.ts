@@ -124,6 +124,10 @@ function calculate_reputation(game: AnyGame): number {
         const proof = get(judgesStore).data.get(token);
         return acc + (proof ? calculate_reputation_proof(proof) : 0);
     }, 0);
+    if (game.content.creatorTokenId) {
+        const proof = get(judgesStore).data.get(game.content.creatorTokenId);
+        reputation += (proof ? calculate_reputation_proof(proof) : 0);
+    }
     return reputation;
 }
 
