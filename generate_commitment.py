@@ -79,9 +79,13 @@ def main():
     parser.add_argument("--seed", type=str, default=None, help="Custom seed for the player (text or hex).")
     parser.add_argument("--secret", type=str, default=CONSTANT_SECRET_S_HEX, help="Secret S (hex).")
     parser.add_argument("--no-fetch", action="store_true", help="Do not query the Explorer even if --address is provided.")
+    parser.add_argument("--solver", type=str, default=None, help="Solver ID (hex).")
     args = parser.parse_args()
 
-    solver_id_hex = os.urandom(32).hex()
+    if args.solver:
+        solver_id_hex = args.solver
+    else:
+        solver_id_hex = os.urandom(32).hex()
     hash_logs_hex = os.urandom(32).hex()
     ergotree_hex_to_use = CONSTANT_ERGOTREE_HEX
 

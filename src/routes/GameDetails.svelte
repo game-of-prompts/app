@@ -145,7 +145,6 @@
         if (!game) return null;
 
         if (game.status === "Active") {
-            if (openCeremony) return "open_ceremony";
             if (!participationIsEnded) return "submit_score";
             return "resolve_game";
         }
@@ -215,6 +214,14 @@
                     id: "accept_judge_nomination",
                     label: "Accept Judge Nomination",
                     icon: Gavel,
+                    variant: "outline",
+                });
+            }
+            if (openCeremony) {
+                actions.push({
+                    id: "open_ceremony",
+                    label: "Add Seed Randomness",
+                    icon: Sparkles,
                     variant: "outline",
                 });
             }
@@ -3119,9 +3126,9 @@
                                               : 'text-red-600 dark:text-red-400'}"
                                 >
                                     {#if game.status === "Active" && openCeremony}
-                                        SEED CEREMONY
-                                    {:else if game.status === "Active" && !participationIsEnded}
                                         PLAYING
+                                    {:else if game.status === "Active" && !participationIsEnded}
+                                        PARTICIPATIONS MUST BE SUBMITED
                                     {:else if game.status === "Active" && participationIsEnded}
                                         AWAITING RESOLUTION
                                     {:else if game.status === "Resolution"}
@@ -3144,9 +3151,12 @@
                                     {#if game.status === "Active" && openCeremony}
                                         Seed ceremony is open. Collaborate to
                                         ensure a random seed.
+                                        <br />
+                                        The competition is live. Implement and submit
+                                        your solution.
                                     {:else if game.status === "Active" && !participationIsEnded}
-                                        The competition is live. Solvers can
-                                        submit their scores until the deadline.
+                                        A seed has been agreed upon. Execute and
+                                        publish your results.
                                     {:else if game.status === "Active" && participationIsEnded}
                                         Time is up. The creator must now resolve
                                         the competition.
@@ -3228,6 +3238,16 @@
                                             >
                                                 <span
                                                     class="font-medium text-gray-900 dark:text-gray-100"
+                                                    >Players:</span
+                                                >
+                                                Join the competition and submit bot
+                                                hash.
+                                            </li>
+                                            <li
+                                                class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
+                                            >
+                                                <span
+                                                    class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Anyone:</span
                                                 >
                                                 Cancel the competition (if secret
@@ -3242,7 +3262,7 @@
                                                     class="font-medium text-gray-900 dark:text-gray-100"
                                                     >Players:</span
                                                 >
-                                                Join the competition and submit scores.
+                                                Submit scores.
                                             </li>
                                             <li
                                                 class="text-sm flex items-start gap-2 text-gray-600 dark:text-gray-300"
