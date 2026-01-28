@@ -457,6 +457,18 @@
                         color: "text-emerald-500 border-emerald-500",
                     });
                 }
+
+                newSteps.push({
+                    id: "future_resolution",
+                    label: "Resolution & Judging",
+                    description:
+                        "After the deadline, judges will reproduce the winning robot to verify creator honesty.",
+                    status: "pending",
+                    date: undefined,
+                    icon: Gavel,
+                    height: 9999999,
+                    color: "text-lime-500 border-lime-500",
+                });
             }
 
             // Resolution & Finalization
