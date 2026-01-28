@@ -289,23 +289,23 @@
                             const opH = (opinion as any).creationHeight;
 
                             let label = "Judge Voted";
-                            let description = `Judge ${opinion.token_id.slice(0, 8)}... voted.`;
+                            let description = `Judge ${opinion.token_id.slice(0, 8)}... voted on participation ${p.commitmentC_Hex.slice(0, 8)}...`;
                             let icon = Gavel;
                             let color = "text-blue-400 border-blue-400";
 
                             if (isUnavailable) {
                                 label = "Participation Unavailable";
-                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as unavailable.`;
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation ${p.commitmentC_Hex.slice(0, 8)}... as unavailable.`;
                                 icon = EyeOff;
                                 color = "text-orange-500 border-orange-500";
                             } else if (opinion.polarization === false) {
                                 label = "Participation Invalid";
-                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as invalid.`;
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation ${p.commitmentC_Hex.slice(0, 8)}... as invalid.`;
                                 icon = XCircle;
                                 color = "text-red-500 border-red-500";
                             } else {
                                 label = "Participation Valid";
-                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as valid.`;
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation ${p.commitmentC_Hex.slice(0, 8)}... as valid.`;
                                 icon = CheckCircle;
                                 color = "text-green-500 border-green-500";
                             }
