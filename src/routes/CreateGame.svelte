@@ -423,22 +423,49 @@
     $: totalBlocks = registrationBlocks + lockdownBlocks + solvingBlocks;
 
     let registrationEndDateText = "";
-    let resolutionStartDateText = "";
+    let lockdownStartDateText = "";
+    let lockdownEndDateText = "";
+    let executionEndDateText = "";
+
+    // Helper function to format block duration into days, hours, and minutes
+    function formatBlockDuration(blocks: number): string {
+        const minutes = blocks * 2; // Each block is ~2 minutes
+        const days = Math.floor(minutes / (24 * 60));
+        const hours = Math.floor((minutes % (24 * 60)) / 60);
+        const mins = Math.floor(minutes % 60);
+
+        const parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
+
+        return parts.join(" ");
+    }
 
     $: {
         if (deadlineBlock) {
             const regEndBlock = deadlineBlock - solvingBlocks - lockdownBlocks;
-            const resStartBlock = deadlineBlock - solvingBlocks;
+            const lockdownStartBlock = regEndBlock;
+            const lockdownEndBlock = deadlineBlock - solvingBlocks;
+            const executionEndBlock = deadlineBlock;
 
             block_to_date(regEndBlock, platform).then(
                 (date) => (registrationEndDateText = date),
             );
-            block_to_date(resStartBlock, platform).then(
-                (date) => (resolutionStartDateText = date),
+            block_to_date(lockdownStartBlock, platform).then(
+                (date) => (lockdownStartDateText = date),
+            );
+            block_to_date(lockdownEndBlock, platform).then(
+                (date) => (lockdownEndDateText = date),
+            );
+            block_to_date(executionEndBlock, platform).then(
+                (date) => (executionEndDateText = date),
             );
         } else {
             registrationEndDateText = "";
-            resolutionStartDateText = "";
+            lockdownStartDateText = "";
+            lockdownEndDateText = "";
+            executionEndDateText = "";
         }
     }
 
@@ -1361,11 +1388,9 @@
                                                     <span
                                                         class="text-foreground"
                                                         >{registrationBlocks} blocks
-                                                        (approx. {Math.round(
-                                                            (registrationBlocks *
-                                                                2) /
-                                                                60,
-                                                        )}h)</span
+                                                        ({formatBlockDuration(
+                                                            registrationBlocks,
+                                                        )})</span
                                                     >
                                                     <p
                                                         class="text-[10px] text-foreground mt-1"
@@ -1395,8 +1420,26 @@
                                                     <span
                                                         class="text-foreground"
                                                         >{lockdownBlocks} blocks
-                                                        (fixed)</span
+                                                        ({formatBlockDuration(
+                                                            lockdownBlocks,
+                                                        )})</span
                                                     >
+                                                    <p
+                                                        class="text-[10px] text-foreground mt-1"
+                                                    >
+                                                        Starts: <span
+                                                            class="text-amber-300 font-semibold"
+                                                            >{lockdownStartDateText}</span
+                                                        >
+                                                    </p>
+                                                    <p
+                                                        class="text-[10px] text-foreground mt-1"
+                                                    >
+                                                        Ends: <span
+                                                            class="text-amber-300 font-semibold"
+                                                            >{lockdownEndDateText}</span
+                                                        >
+                                                    </p>
                                                     <p
                                                         class="text-[10px] text-muted-foreground italic mt-1"
                                                     >
@@ -1415,14 +1458,24 @@
                                                     >
                                                     <span
                                                         class="text-foreground"
-                                                        >{solvingBlocks} blocks (fixed)</span
+                                                        >{solvingBlocks} blocks ({formatBlockDuration(
+                                                            solvingBlocks,
+                                                        )})</span
                                                     >
+                                                    <p
+                                                        class="text-[10px] text-foreground mt-1"
+                                                    >
+                                                        Starts: <span
+                                                            class="text-emerald-300 font-semibold"
+                                                            >{lockdownEndDateText}</span
+                                                        >
+                                                    </p>
                                                     <p
                                                         class="text-[10px] text-foreground mt-1"
                                                     >
                                                         Participation closes on: <span
                                                             class="text-emerald-300 font-semibold"
-                                                            >{resolutionStartDateText}</span
+                                                            >{executionEndDateText}</span
                                                         >
                                                     </p>
                                                     <p
