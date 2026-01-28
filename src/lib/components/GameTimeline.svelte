@@ -20,6 +20,7 @@
         ExternalLink,
         Eye,
         EyeOff,
+        Info,
     } from "lucide-svelte";
     import { formatDistanceToNow } from "date-fns";
     import { block_height_to_timestamp } from "$lib/common/countdown";
@@ -74,6 +75,18 @@
         color: string;
         txId?: string;
         isBotEvent?: boolean;
+        details?: Record<string, string | number | bigint>;
+    }
+
+    let expandedSteps = new Set<string>();
+
+    function toggleStep(id: string) {
+        if (expandedSteps.has(id)) {
+            expandedSteps.delete(id);
+        } else {
+            expandedSteps.add(id);
+        }
+        expandedSteps = expandedSteps; // Trigger reactivity
     }
 
     let steps: TimelineStep[] = [];
@@ -126,6 +139,13 @@
                     height: h,
                     color: "text-blue-500 border-blue-500",
                     txId: txId,
+                    details: {
+                        "Box ID": g.boxId,
+                        "Transaction ID": txId,
+                        Height: h,
+                        "Game ID": g.gameId,
+                        "Creator Token": g.content.creatorTokenId || "None",
+                    },
                 });
                 if ("seed" in g) lastSeed = g.seed;
             } else {
@@ -146,6 +166,12 @@
                         height: h,
                         color: "text-purple-500 border-purple-500",
                         txId: txId,
+                        details: {
+                            "Box ID": g.boxId,
+                            "Transaction ID": txId,
+                            Height: h,
+                            "New Seed": g.seed,
+                        },
                     });
                     lastSeed = g.seed;
                 } else if (
@@ -163,6 +189,12 @@
                         height: h,
                         color: "text-lime-500 border-lime-500",
                         txId: txId,
+                        details: {
+                            "Box ID": g.boxId,
+                            "Transaction ID": txId,
+                            Height: h,
+                            "Revealed S": (g as any).revealedS_Hex,
+                        },
                     });
                 } else if (
                     g.status === GameState.Resolution &&
@@ -217,6 +249,13 @@
                         height: h,
                         color: color,
                         txId: txId,
+                        details: {
+                            "Box ID": g.boxId,
+                            "Transaction ID": txId,
+                            Height: h,
+                            "Candidate Commitment": newCandidate || "None",
+                            "Resolver Commission": resolverCommission,
+                        },
                     });
                 }
             }
@@ -237,6 +276,12 @@
                     color: "text-amber-500 border-amber-500",
                     txId: s.transactionId,
                     isBotEvent: true,
+                    details: {
+                        "Box ID": s.boxId,
+                        "Transaction ID": s.transactionId,
+                        Height: h,
+                        "Solver ID": solverId,
+                    },
                 });
             }
         }
@@ -256,6 +301,14 @@
                 height: h,
                 color: "text-emerald-500 border-emerald-500",
                 txId: p.transactionId,
+                details: {
+                    "Box ID": p.boxId,
+                    "Transaction ID": p.transactionId,
+                    Height: h,
+                    "Player PK": p.playerPK_Hex || "Unknown",
+                    Commitment: p.commitmentC_Hex,
+                    "Solver ID": p.solverId_RawBytesHex,
+                },
             });
 
             // Bot Box Event (if available)
@@ -272,6 +325,12 @@
                     color: "text-amber-500 border-amber-500",
                     txId: p.solverIdBox.transactionId,
                     isBotEvent: true,
+                    details: {
+                        "Box ID": p.solverIdBox.boxId,
+                        "Transaction ID": p.solverIdBox.transactionId,
+                        Height: botH,
+                        "Solver ID": p.solverId_RawBytesHex,
+                    },
                 });
             }
 
@@ -320,6 +379,15 @@
                                 height: opH,
                                 color: color,
                                 txId: opinion.box_id,
+                                details: {
+                                    "Opinion Box ID": opinion.box_id,
+                                    "Judge Token": opinion.token_id,
+                                    Height: opH,
+                                    Polarization: opinion.polarization
+                                        ? "Positive"
+                                        : "Negative",
+                                    "Target Commitment": p.commitmentC_Hex,
+                                },
                             });
                         }
                     }
@@ -352,6 +420,12 @@
                         height: opH,
                         color: "text-indigo-500 border-indigo-500",
                         txId: opinion.box_id,
+                        details: {
+                            "Opinion Box ID": opinion.box_id,
+                            "Judge Token": opinion.token_id,
+                            Height: opH,
+                            "Game ID": gameToCheck.gameId,
+                        },
                     });
                 }
             }
@@ -562,11 +636,39 @@
                                     <ExternalLink class="w-4 h-4" />
                                 </a>
                             {/if}
+                            {#if step.details}
+                                <button
+                                    class="text-muted-foreground hover:text-primary transition-colors"
+                                    on:click={() => toggleStep(step.id)}
+                                    title="Show Details"
+                                >
+                                    <Info class="w-4 h-4" />
+                                </button>
+                            {/if}
                         </div>
                     </div>
                     <p class="text-sm text-muted-foreground">
                         {step.description}
                     </p>
+
+                    {#if step.details && expandedSteps.has(step.id)}
+                        <div
+                            class="mt-3 p-3 rounded bg-muted/30 border border-border/50 text-xs font-mono space-y-1.5 overflow-x-auto"
+                        >
+                            {#each Object.entries(step.details) as [key, value]}
+                                <div class="flex gap-2">
+                                    <span
+                                        class="text-muted-foreground whitespace-nowrap"
+                                        >{key}:</span
+                                    >
+                                    <span class="text-foreground break-all"
+                                        >{value}</span
+                                    >
+                                </div>
+                            {/each}
+                        </div>
+                    {/if}
+
                     {#if step.date}
                         <div
                             class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mt-2 pt-2 border-t border-border/30"
