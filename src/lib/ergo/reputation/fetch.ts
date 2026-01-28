@@ -91,7 +91,11 @@ export async function fetchOpinionsAbout(
         if (!boxes || boxes.length === 0) {
             return [];
         }
-        return boxes.map((b: ApiBox) => convertToRPBox(b, b.assets[0].tokenId, types));
+        return boxes.map((b: ApiBox) => {
+            const rpBox = convertToRPBox(b, b.assets[0].tokenId, types);
+            (rpBox as any).creationHeight = b.creationHeight;
+            return rpBox;
+        });
     } catch (e) {
         console.error("Error fetching opinions about:", e);
         return [];

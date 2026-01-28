@@ -28,6 +28,12 @@
     import { type Box, type Amount } from "@fleet-sdk/core";
     import { explorer_uri, web_explorer_uri_tx } from "$lib/ergo/envs";
     import { get } from "svelte/store";
+    import { type RPBox } from "reputation-system";
+    import {
+        GAME,
+        PARTICIPATION,
+        PARTICIPATION_UNAVAILABLE,
+    } from "$lib/ergo/reputation/types";
 
     export let history: AnyGame[] = [];
     export let currentGame: AnyGame | null = null;
@@ -267,6 +273,87 @@
                     txId: p.solverIdBox.transactionId,
                     isBotEvent: true,
                 });
+            }
+
+            // Judge Opinions on Participation
+            if (p.reputationOpinions && current && "judges" in current) {
+                for (const opinion of p.reputationOpinions) {
+                    // Check if opinion is from a nominated judge
+                    if (current.judges.includes(opinion.token_id)) {
+                        const isUnavailable =
+                            opinion.type.tokenId === PARTICIPATION_UNAVAILABLE;
+                        const isParticipation =
+                            opinion.type.tokenId === PARTICIPATION;
+
+                        if (isParticipation || isUnavailable) {
+                            const opH = (opinion as any).creationHeight;
+
+                            let label = "Judge Voted";
+                            let description = `Judge ${opinion.token_id.slice(0, 8)}... voted.`;
+                            let icon = Gavel;
+                            let color = "text-blue-400 border-blue-400";
+
+                            if (isUnavailable) {
+                                label = "Participation Unavailable";
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as unavailable.`;
+                                icon = EyeOff;
+                                color = "text-orange-500 border-orange-500";
+                            } else if (opinion.polarization === false) {
+                                label = "Participation Invalid";
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as invalid.`;
+                                icon = XCircle;
+                                color = "text-red-500 border-red-500";
+                            } else {
+                                label = "Participation Valid";
+                                description = `Judge ${opinion.token_id.slice(0, 8)}... marked participation as valid.`;
+                                icon = CheckCircle;
+                                color = "text-green-500 border-green-500";
+                            }
+
+                            newSteps.push({
+                                id: `op_part_${opinion.box_id}`,
+                                label: label,
+                                description: description,
+                                status: "completed",
+                                date: await getDateString(opH, true),
+                                icon: icon,
+                                height: opH,
+                                color: color,
+                                txId: opinion.box_id,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Judge Game Acceptance (from current game or history)
+        // We look at the latest game state to get the list of judges and opinions
+        const gameToCheck =
+            current || (hist.length > 0 ? hist[hist.length - 1] : null);
+        if (
+            gameToCheck &&
+            "reputationOpinions" in gameToCheck &&
+            "judges" in gameToCheck
+        ) {
+            for (const opinion of gameToCheck.reputationOpinions) {
+                if (
+                    gameToCheck.judges.includes(opinion.token_id) &&
+                    opinion.type.tokenId === GAME
+                ) {
+                    const opH = (opinion as any).creationHeight;
+                    newSteps.push({
+                        id: `op_game_${opinion.box_id}`,
+                        label: "Judge Accepted",
+                        description: `Judge ${opinion.token_id.slice(0, 8)}... accepted the game.`,
+                        status: "completed",
+                        date: await getDateString(opH, true),
+                        icon: Gavel,
+                        height: opH,
+                        color: "text-indigo-500 border-indigo-500",
+                        txId: opinion.box_id,
+                    });
+                }
             }
         }
 
