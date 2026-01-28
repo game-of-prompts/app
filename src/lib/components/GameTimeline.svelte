@@ -465,12 +465,8 @@
                         newSteps.push({
                             id: "future_seed",
                             label: "Seed Randomness",
-                            description:
-                                height < hashDeadline
-                                    ? "Pending ceremony start."
-                                    : "Currently accepting randomness.",
-                            status:
-                                height < hashDeadline ? "pending" : "active",
+                            description: "Currently accepting randomness.",
+                            status: "active",
                             date: `Ends in ~${formatDistanceToNow(new Date(await block_height_to_timestamp(seedDeadline, new ErgoPlatform())))}`,
                             icon: RefreshCw,
                             height: seedDeadline,
@@ -489,7 +485,7 @@
                         label: "Game Execution",
                         description: isExecOpen
                             ? "Currently accepting game results."
-                            : "Pending ceremony end.",
+                            : "Waiting for seed to submit results.",
                         status: isExecOpen ? "active" : "pending",
                         date: `Ends in ~${formatDistanceToNow(new Date(await block_height_to_timestamp(execDeadline, new ErgoPlatform())))}`,
                         icon: Sparkles,
