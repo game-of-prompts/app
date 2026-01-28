@@ -1336,9 +1336,19 @@
 
                                     {#if deadlineValue > 0}
                                         <div class="space-y-3 mt-6">
-                                            <Label class="text-sm font-semibold"
-                                                >Active Game Timeline Breakdown</Label
-                                            >
+                                            <div>
+                                                <Label
+                                                    class="text-sm font-semibold"
+                                                    >Active Game Timeline
+                                                    Breakdown</Label
+                                                >
+                                                <p
+                                                    class="text-[10px] text-muted-foreground mt-0.5"
+                                                >
+                                                    * Time estimations based on
+                                                    ~2 min block time
+                                                </p>
+                                            </div>
 
                                             <div
                                                 class="h-5 w-full flex rounded-md overflow-hidden bg-muted border border-border shadow-inner"
