@@ -256,12 +256,9 @@
                     id: "judge_unavailable",
                     label: "Mark Winner Service Unavailable",
                     icon: AlertTriangle,
-                    variant: "outline",
+                    variant: "destructive",
                 });
-                if (
-                    candidateParticipationInvalidVotes.includes(address) ||
-                    candidateParticipationUnavailableVotes.includes(address)
-                ) {
+                if (candidateParticipationUnavailableVotes.includes(address)) {
                     actions.push({
                         id: "remove_opinion",
                         label: "Mark Winner Service Available",

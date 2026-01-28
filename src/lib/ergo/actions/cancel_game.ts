@@ -37,6 +37,7 @@ export async function cancel_game(
     
     // --- 1. Obtener datos y realizar pre-chequeos ---
     const currentHeight = await ergo.get_current_height();
+
     if (currentHeight >= game.deadlineBlock) {
         throw new Error("La cancelación del juego solo es posible antes de la fecha límite.");
     }
@@ -54,7 +55,7 @@ export async function cancel_game(
     }
 
     // --- 2. Calcular valores para la nueva caja de cancelación y la penalización ---
-    let stakePortionToClaim = game.resolverStakeAmount / STAKE_DENOMINATOR;
+    let stakePortionToClaim = game.resolverStakeAmount / BigInt(game.constants.STAKE_DENOMINATOR);
     const newValue = game.value - stakePortionToClaim;
     let newResolverStake = game.resolverStakeAmount - stakePortionToClaim;
 
@@ -81,7 +82,7 @@ export async function cancel_game(
     
     // La dirección/ErgoTree de la nueva caja será la del script de cancelación.
     const cancellationContractErgoTree = getGopGameCancellationErgoTreeHex();
-    const newUnlockHeight = BigInt(currentHeight + COOLDOWN_IN_BLOCKS);
+    const newUnlockHeight = BigInt(currentHeight + game.constants.COOLDOWN_IN_BLOCKS);
 
     // SALIDA(0): La nueva caja de cancelación (`game_cancellation.es`)
     const cancellationBoxOutput = new OutputBuilder(
