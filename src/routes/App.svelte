@@ -80,7 +80,7 @@
     const footerMessages = [
         "Direct P2P to your node. No central servers. Powered by Ergo Blockchain.",
         "Package your solution. Compete in a verifiable environment. Based on the Celaut paradigm.",
-        "This web page is the public gateway to GoP. Transparently hosted on GitHub. Or run it yourself for full P2P sovereignty.",
+        "This web app is the public gateway to GoP. Transparently hosted on GitHub. Or run it yourself for full P2P sovereignty.",
     ];
     let activeMessageIndex = 0;
     let scrollingTextElement: HTMLElement;
