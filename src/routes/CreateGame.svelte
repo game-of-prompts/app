@@ -35,7 +35,6 @@
         Info,
         ArrowLeft,
         CheckCircle2,
-        Music,
     } from "lucide-svelte";
     import { fetch_token_details } from "$lib/ergo/fetch";
     import * as Card from "$lib/components/ui/card";
@@ -48,11 +47,14 @@
         Code2,
     } from "lucide-svelte";
 
-    import { reputation_proof } from "$lib/common/store";
+    import { reputation_proof, current_height } from "$lib/common/store";
     import {
         FileSourceCreation,
         fetchFileSourcesByHash,
     } from "source-application";
+
+    import { getGameConstants } from "$lib/common/constants";
+    const constants = getGameConstants();
 
     let platform = new ErgoPlatform();
 
@@ -406,6 +408,40 @@
         }
     }
 
+    $: solvingBlocks = constants.PARTICIPATION_TIME_WINDOW; // Phase 3
+    $: lockdownBlocks = constants.SEED_MARGIN; // Phase 2
+    $: registrationBlocks =
+        deadlineBlock && $current_height
+            ? Math.max(
+                  0,
+                  deadlineBlock -
+                      $current_height -
+                      solvingBlocks -
+                      lockdownBlocks,
+              )
+            : 0; // Phase 1
+    $: totalBlocks = registrationBlocks + lockdownBlocks + solvingBlocks;
+
+    let registrationEndDateText = "";
+    let resolutionStartDateText = "";
+
+    $: {
+        if (deadlineBlock) {
+            const regEndBlock = deadlineBlock - solvingBlocks - lockdownBlocks;
+            const resStartBlock = deadlineBlock - solvingBlocks;
+
+            block_to_date(regEndBlock, platform).then(
+                (date) => (registrationEndDateText = date),
+            );
+            block_to_date(resStartBlock, platform).then(
+                (date) => (resolutionStartDateText = date),
+            );
+        } else {
+            registrationEndDateText = "";
+            resolutionStartDateText = "";
+        }
+    }
+
     async function calculateBlockLimit(
         value: number,
         unit: "days" | "minutes",
@@ -416,8 +452,11 @@
             return;
         }
         try {
+            // User enters registration time (Phase 1)
+            // We add SEED_MARGIN and PARTICIPATION_TIME_WINDOW to get the total deadlin
             let target_date = new Date();
             let milliseconds;
+
             if (unit === "days") {
                 milliseconds = value * 24 * 60 * 60 * 1000;
             } else {
@@ -425,10 +464,19 @@
                 milliseconds = value * 60 * 1000;
             }
             target_date.setTime(target_date.getTime() + milliseconds);
-            deadlineBlock = await time_to_block(
+
+            // Calculate registration end block
+            const registrationEndBlock = await time_to_block(
                 target_date.getTime(),
                 platform,
             );
+
+            // Add the two constants to get the final deadline
+            deadlineBlock =
+                registrationEndBlock +
+                constants.SEED_MARGIN +
+                constants.PARTICIPATION_TIME_WINDOW;
+
             deadlineBlockDateText = await block_to_date(
                 deadlineBlock,
                 platform,
@@ -1212,18 +1260,18 @@
                             <div
                                 class="form-grid grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-6"
                             >
-                                <div class="form-group lg:col-span-2">
+                                <div class="form-group lg:col-span-4">
                                     <div class="flex items-center gap-2 mb-1.5">
                                         <Label for="deadlineValue" class="mb-0"
-                                            >Participation Deadline</Label
+                                            >Game Time</Label
                                         >
                                         <div class="group relative">
                                             <button
                                                 type="button"
                                                 on:click={() =>
                                                     openDidacticModal(
-                                                        "Participation Deadline",
-                                                        "When the game stops accepting new entries.",
+                                                        "Game Time",
+                                                        "The time players have to analyze the challenge and upload their robot solutions. After this period, a Seed Lockdown phase and an Execution phase will follow automatically. A Judge Period comes after to ensure creator honesty.",
                                                     )}
                                             >
                                                 <Info
@@ -1238,7 +1286,7 @@
                                             type="number"
                                             bind:value={deadlineValue}
                                             min="1"
-                                            placeholder="Time until deadline"
+                                            placeholder="Time for robot upload"
                                             autocomplete="off"
                                         />
                                         <select
@@ -1251,16 +1299,175 @@
                                             >
                                         </select>
                                     </div>
-                                    {#if deadlineBlock && deadlineBlockDateText}
-                                        <p
-                                            class="text-xs mt-1 text-muted-foreground"
-                                        >
-                                            Ends on block: {deadlineBlock} (approx.
-                                            {deadlineBlockDateText})
-                                        </p>
+                                    <p
+                                        class="text-[10px] text-muted-foreground mt-1"
+                                    >
+                                        * Additional fixed phases (Seed Lockdown
+                                        + Execution) and a Judge Period will
+                                        follow.
+                                    </p>
+
+                                    {#if deadlineValue > 0}
+                                        <div class="space-y-3 mt-6">
+                                            <Label class="text-sm font-semibold"
+                                                >Active Game Timeline Breakdown</Label
+                                            >
+
+                                            <div
+                                                class="h-5 w-full flex rounded-md overflow-hidden bg-muted border border-border shadow-inner"
+                                            >
+                                                <div
+                                                    class="h-full bg-indigo-500 transition-all duration-500"
+                                                    style="width: {totalBlocks >
+                                                    0
+                                                        ? (registrationBlocks /
+                                                              totalBlocks) *
+                                                          100
+                                                        : 0}%"
+                                                    title="Registration Phase"
+                                                ></div>
+                                                <div
+                                                    class="h-full bg-amber-500 transition-all duration-500"
+                                                    style="width: {totalBlocks >
+                                                    0
+                                                        ? (lockdownBlocks /
+                                                              totalBlocks) *
+                                                          100
+                                                        : 0}%"
+                                                    title="Seed Lockdown Phase"
+                                                ></div>
+                                                <div
+                                                    class="h-full bg-emerald-500 transition-all duration-500"
+                                                    style="width: {totalBlocks >
+                                                    0
+                                                        ? (solvingBlocks /
+                                                              totalBlocks) *
+                                                          100
+                                                        : 0}%"
+                                                    title="Participation & Execution Phase"
+                                                ></div>
+                                            </div>
+
+                                            <div
+                                                class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs"
+                                            >
+                                                <div
+                                                    class="flex flex-col gap-1 p-2 rounded bg-card border-l-2 border-indigo-500"
+                                                >
+                                                    <span
+                                                        class="font-bold text-indigo-400 uppercase"
+                                                        >1. Strategy & Upload</span
+                                                    >
+                                                    <span
+                                                        class="text-foreground"
+                                                        >{registrationBlocks} blocks
+                                                        (approx. {Math.round(
+                                                            (registrationBlocks *
+                                                                2) /
+                                                                60,
+                                                        )}h)</span
+                                                    >
+                                                    <p
+                                                        class="text-[10px] text-foreground mt-1"
+                                                    >
+                                                        Robot registration
+                                                        closes on: <span
+                                                            class="text-indigo-300 font-semibold"
+                                                            >{registrationEndDateText}</span
+                                                        >
+                                                    </p>
+                                                    <p
+                                                        class="text-[10px] text-muted-foreground italic mt-1"
+                                                    >
+                                                        Players analyze the
+                                                        paper and upload their
+                                                        robot services.
+                                                    </p>
+                                                </div>
+
+                                                <div
+                                                    class="flex flex-col gap-1 p-2 rounded bg-card border-l-2 border-amber-500"
+                                                >
+                                                    <span
+                                                        class="font-bold text-amber-400 uppercase"
+                                                        >2. Seed Lockdown</span
+                                                    >
+                                                    <span
+                                                        class="text-foreground"
+                                                        >{lockdownBlocks} blocks
+                                                        (fixed)</span
+                                                    >
+                                                    <p
+                                                        class="text-[10px] text-muted-foreground italic mt-1"
+                                                    >
+                                                        No more robots can be
+                                                        uploaded. Last chance to
+                                                        modify the seed.
+                                                    </p>
+                                                </div>
+
+                                                <div
+                                                    class="flex flex-col gap-1 p-2 rounded bg-card border-l-2 border-emerald-500"
+                                                >
+                                                    <span
+                                                        class="font-bold text-emerald-400 uppercase"
+                                                        >3. Execution</span
+                                                    >
+                                                    <span
+                                                        class="text-foreground"
+                                                        >{solvingBlocks} blocks (fixed)</span
+                                                    >
+                                                    <p
+                                                        class="text-[10px] text-foreground mt-1"
+                                                    >
+                                                        Participation closes on: <span
+                                                            class="text-emerald-300 font-semibold"
+                                                            >{resolutionStartDateText}</span
+                                                        >
+                                                    </p>
+                                                    <p
+                                                        class="text-[10px] text-muted-foreground italic mt-1"
+                                                    >
+                                                        Participants run their
+                                                        robots and submit their
+                                                        results to the
+                                                        blockchain.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {#if registrationBlocks < 30}
+                                                <div
+                                                    class="p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs flex items-start gap-2"
+                                                >
+                                                    <Info
+                                                        class="w-4 h-4 mt-0.5 flex-shrink-0"
+                                                    />
+                                                    <p>
+                                                        <strong>Warning:</strong
+                                                        >
+                                                        The selected deadline is
+                                                        very short. Players will
+                                                        only have {registrationBlocks}
+                                                        blocks (approx. {Math.round(
+                                                            registrationBlocks *
+                                                                2,
+                                                        )} min) to upload their solutions.
+                                                    </p>
+                                                </div>
+                                            {/if}
+                                        </div>
                                     {/if}
                                 </div>
-                                <div class="form-group lg:col-span-2">
+                                {#if deadlineBlock && deadlineBlockDateText}
+                                    <p
+                                        class="text-xs mt-1 text-muted-foreground"
+                                    >
+                                        Ends on block: {deadlineBlock} (approx.
+                                        {deadlineBlockDateText})
+                                    </p>
+                                {/if}
+                                <div class="form-group lg:col-span-4">
                                     <Label class="mb-1.5 block"
                                         >Token for Stake & Fee</Label
                                     >

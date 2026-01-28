@@ -11,6 +11,7 @@
         audio_element,
         muted,
         user_volume,
+        current_height,
     } from "$lib/common/store";
     import CreateGame from "./CreateGame.svelte";
     import Demo from "./Demo.svelte";
@@ -88,7 +89,6 @@
         activeMessageIndex = (activeMessageIndex + 1) % footerMessages.length;
     }
 
-    let current_height: number | null = null;
     // let balanceUpdateInterval: number;
 
     onMount(() => {
@@ -238,7 +238,8 @@
     async function updateWalletInfo() {
         try {
             await walletManager.refreshBalance();
-            current_height = await platform.get_current_height();
+            const height = await platform.get_current_height();
+            current_height.set(height);
 
             const types = await fetchTypeNfts();
             const profiles = await fetchAllUserProfiles(
@@ -257,7 +258,8 @@
 
     async function getCurrentHeight() {
         try {
-            current_height = await platform.get_current_height();
+            const height = await platform.get_current_height();
+            current_height.set(height);
         } catch (error) {
             console.error("Error fetching current height:", error);
         }
@@ -566,8 +568,8 @@
                 fill="currentColor"
             ></path></svg
         >
-        {#if current_height}
-            <span>{current_height}</span>
+        {#if $current_height}
+            <span>{$current_height}</span>
         {/if}
     </div>
 </footer>

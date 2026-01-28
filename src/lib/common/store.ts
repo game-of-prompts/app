@@ -27,3 +27,4 @@ export const isLoadingGames = writable<boolean>(false);
 export const muted = writable<boolean>(true);
 export const user_volume = writable<number>(0.1);
 export const audio_element = writable<HTMLAudioElement | null>(null);
+export const current_height = writable<number | null>(null);
