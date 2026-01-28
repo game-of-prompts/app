@@ -40,7 +40,6 @@
     export let currentGame: AnyGame | null = null;
     export let currentHeight: number = 0;
     export let participations: AnyParticipation[] = [];
-    export let solverHistory: Map<string, Box<Amount>[]> = new Map();
 
     let showBotEvents = false;
 
@@ -92,21 +91,12 @@
     let steps: TimelineStep[] = [];
     let filteredSteps: TimelineStep[] = [];
 
-    $: if (
-        currentGame ||
-        history.length > 0 ||
-        participations.length > 0 ||
-        solverHistory.size > 0
-    ) {
-        buildSteps(
-            history,
-            currentGame,
-            currentHeight,
-            participations,
-            solverHistory,
-        ).then((s) => {
-            steps = s;
-        });
+    $: if (currentGame || history.length > 0 || participations.length > 0) {
+        buildSteps(history, currentGame, currentHeight, participations).then(
+            (s) => {
+                steps = s;
+            },
+        );
     }
 
     $: filteredSteps = steps.filter((s) => showBotEvents || !s.isBotEvent);
@@ -116,7 +106,6 @@
         current: AnyGame | null,
         height: number,
         parts: AnyParticipation[],
-        solvers: Map<string, Box<Amount>[]>,
     ) {
         const newSteps: TimelineStep[] = [];
         const explorerUrl = get(explorer_uri);
@@ -261,32 +250,7 @@
             }
         }
 
-        // 2. Bot History (from solverHistory map)
-        for (const [solverId, history] of solvers.entries()) {
-            for (const s of history) {
-                const h = s.creationHeight;
-                newSteps.push({
-                    id: `solver_${s.boxId}`,
-                    label: "Service/Solver Updated",
-                    description: `Solver ${solverId.slice(0, 8)}... updated.`,
-                    status: "completed",
-                    date: await getDateString(h, true),
-                    icon: Bot,
-                    height: h,
-                    color: "text-amber-500 border-amber-500",
-                    txId: s.transactionId,
-                    isBotEvent: true,
-                    details: {
-                        "Box ID": s.boxId,
-                        "Transaction ID": s.transactionId,
-                        Height: h,
-                        "Solver ID": solverId,
-                    },
-                });
-            }
-        }
-
-        // 3. Participations and their Bot Boxes
+        // 2. Participations and their Bot Boxes
         for (const p of parts) {
             const h = p.creationHeight;
 

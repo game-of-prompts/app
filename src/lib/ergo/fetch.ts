@@ -906,45 +906,7 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
     }
 }
 
-/**
- * Fetches all historical boxes for a given solver ID.
- */
-export async function fetchSolverHistory(solverId: string): Promise<Box[]> {
-    const history: Box[] = [];
-    let offset = 0;
-    const limit = 100;
-    let more = true;
 
-    while (more) {
-        const url = `${get(explorer_uri)}/api/v1/boxes/search?offset=${offset}&limit=${limit}`;
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ergoTreeTemplateHash: getGopFalseTemplateHash(),
-                    registers: {
-                        R4: solverId
-                    }
-                }),
-            });
-
-            if (!response.ok) throw new Error(`API response: ${response.status}`);
-
-            const data = await response.json();
-            const items: Box[] = data.items || [];
-            history.push(...items);
-
-            offset += items.length;
-            more = items.length === limit;
-        } catch (error) {
-            console.error("Error fetching solver history:", error);
-            more = false;
-        }
-    }
-
-    return history;
-}
 
 async function _parseParticipationBox(box: any, participationTokenId: string): Promise<ParticipationBase | null> {
     try {

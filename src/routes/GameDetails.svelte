@@ -36,7 +36,6 @@
         fetchParticipationBatches,
         fetchSolverIdBox,
         fetchGameHistory,
-        fetchSolverHistory,
     } from "$lib/ergo/fetch";
     import { remove_opinion } from "reputation-system";
     // UI COMPONENTS
@@ -374,7 +373,6 @@
     let currentHeight: number = 0;
     let participationBatches: Box<Amount>[] = [];
     let gameHistory: AnyGame[] = [];
-    let solverHistory: Map<string, Box<Amount>[]> = new Map();
 
     // UI State
     let transactionId: string | null = null;
@@ -805,25 +803,6 @@
         fetchGameHistory(game.gameId).then((history) => {
             gameHistory = history;
         });
-        if (game.content.serviceId) {
-            // Fetch history for the main service (if any)
-            fetchSolverHistory(game.content.serviceId).then((history) => {
-                solverHistory.set(game!.content.serviceId, history);
-                solverHistory = solverHistory; // Trigger reactivity
-            });
-        }
-
-        // Fetch solver history for each participation
-        if (participations.length > 0) {
-            participations.forEach((p) => {
-                if (p.solverId_String) {
-                    fetchSolverHistory(p.solverId_String).then((history) => {
-                        solverHistory.set(p.solverId_String!, history);
-                        solverHistory = solverHistory; // Trigger reactivity
-                    });
-                }
-            });
-        }
 
         if (game.status === "Active") {
             const seedMargin = game.constants.SEED_MARGIN;
@@ -4014,7 +3993,6 @@
                             currentGame={game}
                             {currentHeight}
                             {participations}
-                            {solverHistory}
                         />
                     </div>
                 {:else if activeTab === "participations"}
