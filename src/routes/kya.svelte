@@ -142,6 +142,7 @@
         <li>There is no guarantee against errors, bugs, or the loss of data or digital assets.</li>
         <li>Game creators are responsible for the fairness and proper functioning of their games. Game of Prompts does not exhaustively verify the internal logic of each game.</li>
         <li>You are solely responsible for the security of your keys, wallets, and any digital assets associated with your participation.</li>
+        <li>Some competitions display fees and stakes as ERG in the UI, but may actually settle in Wrapped ERG (WERG) through the <code>ergo-basics/wrapped-erg</code> bank contract.</li>
         <li>Blockchain interactions are irreversible.</li>
       </ul>
 

@@ -17,6 +17,11 @@
         getUsagePercentage,
         type GameDetails,
     } from "$lib/ergo/utils/box-size-calculator";
+    import {
+        WRAPPED_ERG_OPTION_ID,
+        getDefaultWrappedErgBank,
+    } from "$lib/ergo/wrapped-erg";
+    import type { WrappedErgBankSummary } from "wrapped-erg";
 
     // UI COMPONENTS
     import { Label } from "$lib/components/ui/label/index.js";
@@ -48,7 +53,12 @@
     import * as Card from "$lib/components/ui/card";
     import { FileText, ArrowRight, BookOpen, Code2 } from "lucide-svelte";
 
-    import { reputation_proof, judges as judgesStore } from "$lib/common/store";
+    import {
+        reputation_proof,
+        judges as judgesStore,
+        connected,
+        address,
+    } from "$lib/common/store";
     import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
     import {
         FileSourceCreation,
@@ -171,8 +181,12 @@
         balance: number;
         decimals: number;
         isHardcoded: boolean;
+        isWrappedErgOption?: boolean;
     }[] = [];
     let isLoadingTokens = false;
+    let wrappedErgBank: WrappedErgBankSummary | null = null;
+    let wrappedErgSelectionRequest = 0;
+    let lastLoadedWalletAddress = "";
 
     const HARDCODED_TOKENS = [
         {
@@ -190,6 +204,7 @@
     ];
 
     async function loadUserTokens() {
+        const ergo = (globalThis as any).ergo;
         if (typeof ergo === "undefined") {
             console.warn("Ergo wallet not found");
             return;
@@ -252,7 +267,24 @@
                 return a.title.localeCompare(b.title);
             });
 
-            availableTokens = tokensWithDetails;
+            availableTokens = [
+                {
+                    tokenId: WRAPPED_ERG_OPTION_ID,
+                    title: "ERG",
+                    decimals: 9,
+                    balance: 0,
+                    isHardcoded: true,
+                    isWrappedErgOption: true,
+                },
+                ...tokensWithDetails,
+            ];
+
+            if (!selectedTokenOption) {
+                selectedTokenOption = {
+                    value: WRAPPED_ERG_OPTION_ID,
+                    label: "ERG",
+                };
+            }
         } catch (e) {
             console.error("Error loading user tokens", e);
             tokenSelectionError =
@@ -289,6 +321,11 @@
         }
 
     });
+
+    $: if ($connected && $address && $address !== lastLoadedWalletAddress) {
+        lastLoadedWalletAddress = $address;
+        loadUserTokens();
+    }
 
     $: activeCreatorProfileTokenId = (($reputation_proof as any)?.token_id ??
         "") as string;
@@ -626,22 +663,66 @@
 
     $: {
         if (selectedTokenId) {
-            const token = availableTokens.find(
-                (t) => t.tokenId === selectedTokenId,
-            );
+            const requestId = ++wrappedErgSelectionRequest;
 
-            if (token) {
-                participationTokenId = token.tokenId;
-                participationTokenDecimals = token.decimals;
-                participationTokenName = token.title;
-                tokenSelectionError = null;
-            } else {
+            if (selectedTokenId === WRAPPED_ERG_OPTION_ID) {
+                wrappedErgBank = null;
                 participationTokenId = "";
-                participationTokenName = "";
-                tokenSelectionError =
-                    "Selected token not found in available wallet tokens.";
+                participationTokenDecimals = 9;
+                participationTokenName = "ERG";
+                tokenSelectionError = null;
+
+                (async () => {
+                    try {
+                        const bank = await getDefaultWrappedErgBank();
+                        if (
+                            requestId !== wrappedErgSelectionRequest ||
+                            selectedTokenId !== WRAPPED_ERG_OPTION_ID
+                        ) {
+                            return;
+                        }
+
+                        if (!bank) {
+                            tokenSelectionError =
+                                "No valid Wrapped ERG bank was found on-chain for the ERG option.";
+                            return;
+                        }
+
+                        wrappedErgBank = bank;
+                        participationTokenId = bank.wergTokenId;
+                    } catch (error) {
+                        console.error("Error resolving Wrapped ERG bank", error);
+                        if (
+                            requestId !== wrappedErgSelectionRequest ||
+                            selectedTokenId !== WRAPPED_ERG_OPTION_ID
+                        ) {
+                            return;
+                        }
+
+                        tokenSelectionError =
+                            "Could not load a valid Wrapped ERG bank. Please retry in a moment.";
+                    }
+                })();
+            } else {
+                wrappedErgBank = null;
+                const token = availableTokens.find(
+                    (t) => t.tokenId === selectedTokenId,
+                );
+
+                if (token) {
+                    participationTokenId = token.tokenId;
+                    participationTokenDecimals = token.decimals;
+                    participationTokenName = token.title;
+                    tokenSelectionError = null;
+                } else {
+                    participationTokenId = "";
+                    participationTokenName = "";
+                    tokenSelectionError =
+                        "Selected token not found in available wallet tokens.";
+                }
             }
         } else {
+            wrappedErgBank = null;
             tokenSelectionError = null;
         }
     }
@@ -728,6 +809,7 @@
             !gameSecret.trim() ||
             !gameTitle.trim() ||
             !deadlineBlock ||
+            !selectedTokenId ||
             resolverStakeAmount === undefined ||
             participationFeeAmount === undefined ||
             commissionPercentage === undefined ||
@@ -761,6 +843,19 @@
         // Paper ID is now mandatory
         if (!gamePaperHash || !gamePaperHash.trim()) {
             errorMessage = "Game Paper Hash is required.";
+            isSubmitting = false;
+            return;
+        }
+
+        if (tokenSelectionError) {
+            errorMessage = tokenSelectionError;
+            isSubmitting = false;
+            return;
+        }
+
+        if (selectedTokenId === WRAPPED_ERG_OPTION_ID && !wrappedErgBank) {
+            errorMessage =
+                "The ERG option requires a valid Wrapped ERG bank, and none could be resolved.";
             isSubmitting = false;
             return;
         }
@@ -1090,6 +1185,14 @@
                                             >{participationTokenName}</span
                                         >
                                     </div>
+                                    {#if selectedTokenId === WRAPPED_ERG_OPTION_ID}
+                                        <p class="text-xs text-muted-foreground pt-2">
+                                            Displayed as ERG for users, settled
+                                            as Wrapped ERG through the
+                                            <code>wrapped-erg</code> bank
+                                            contract.
+                                        </p>
+                                    {/if}
                                     <div
                                         class="flex justify-between text-sm border-b border-border/50 pb-1"
                                     >
@@ -1732,7 +1835,7 @@
                                 {/if}
                                 <div class="form-group lg:col-span-4">
                                     <Label class="mb-1.5 block"
-                                        >Token for Stake & Fee</Label
+                                        >Asset for Stake & Fee</Label
                                     >
                                     {#if isLoadingTokens && availableTokens.length === 0}
                                         <p
@@ -1757,7 +1860,9 @@
                                                         label={token.title}
                                                         class="cyber-select-item"
                                                     >
-                                                        {token.title}
+                                                        {token.title}{token.isWrappedErgOption
+                                                            ? " (auto-wrap)"
+                                                            : ""}
                                                     </SelectItem>
                                                 {/each}
                                             </SelectContent>
@@ -1765,6 +1870,16 @@
                                         {#if tokenSelectionError}
                                             <p class="text-xs text-red-500 mt-2">
                                                 {tokenSelectionError}
+                                            </p>
+                                        {:else if selectedTokenId === WRAPPED_ERG_OPTION_ID}
+                                            <p class="text-xs text-muted-foreground mt-2">
+                                                Amounts are shown as ERG, but this
+                                                option uses Wrapped ERG from an
+                                                on-chain bank discovered via
+                                                <code>wrapped-erg</code>. Game
+                                                creation will wrap the resolver
+                                                stake and continue in a chained
+                                                flow.
                                             </p>
                                         {/if}
                                     {/if}
@@ -2525,11 +2640,13 @@
                                     !gameSecret.trim() ||
                                     !gameTitle.trim() ||
                                     !deadlineBlock ||
+                                    !selectedTokenId ||
                                     resolverStakeAmount === undefined ||
                                     participationFeeAmount === undefined ||
                                     commissionPercentage === undefined ||
                                     overAllocated > 0 ||
-                                    contentTooLarge}
+                                    contentTooLarge ||
+                                    !!tokenSelectionError}
                                 class="w-full text-lg font-bold py-6 shadow-lg shadow-primary/20"
                             >
                                 {isSubmitting

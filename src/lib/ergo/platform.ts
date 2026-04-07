@@ -8,15 +8,19 @@ import {
 } from '../common/game';
 declare const ergo: any;
 import { create_game } from './actions/create_game';
+import { create_game_wrapped_erg_chained } from './actions/create_game_wrapped_erg_chained';
 import { explorer_uri, USE_CHAINED_TRANSACTIONS } from './envs';
 import { submit_score } from './actions/submit_score';
+import { submit_score_wrapped_erg_chained } from './actions/submit_score_wrapped_erg_chained';
 import { resolve_game } from './actions/resolve_game';
 import { type Platform } from '$lib/common/platform';
 import { cancel_game } from './actions/cancel_game';
 import { drain_cancelled_game_stake } from './actions/drain_cancelled_game_stake';
 import { end_game } from './actions/end_game';
+import { end_game_wrapped_erg } from './actions/end_game_wrapped_erg';
 import { to_end_game } from './actions/to_end_game';
 import { end_game_chained } from './actions/end_game_chained';
+import { end_game_wrapped_erg_chained } from './actions/end_game_wrapped_erg_chained';
 import { judges_invalidate } from './actions/judges_invalidate';
 import { judges_invalidate_unavailable } from './actions/judges_invalidate_unavailable';
 import { judges_invalidation_chained } from './actions/judges_invalidation_chained';
@@ -33,6 +37,7 @@ import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
 import { batch_participations } from './actions/batch_participations';
 import { publish_solver_id } from './actions/publish_solver_id';
+import { resolveWrappedErgBankByTokenId } from './wrapped-erg';
 
 interface CreateGoPGamePlatformParams {
     gameServiceId: string;
@@ -127,6 +132,28 @@ export class ErgoPlatform implements Platform {
         if (!ergo) throw new Error("Wallet not connected");
 
         try {
+            const wrappedErgBank = params.participationTokenId
+                ? await resolveWrappedErgBankByTokenId(params.participationTokenId)
+                : null;
+
+            if (wrappedErgBank) {
+                return await create_game_wrapped_erg_chained(
+                    params.gameServiceId,
+                    params.hashedSecret,
+                    params.deadlineBlock,
+                    params.resolverStakeAmount as bigint,
+                    params.participationFeeAmount as bigint,
+                    params.commissionPercentage,
+                    params.judges,
+                    params.gameDetailsJson,
+                    params.perJudgeCommissionPercentage,
+                    params.participationTokenId || "",
+                    params.timeWeight,
+                    params.eip4ImageHash,
+                    params.eip4ImageLink
+                );
+            }
+
             return await create_game(
                 params.gameServiceId,
                 params.hashedSecret,
@@ -157,6 +184,22 @@ export class ErgoPlatform implements Platform {
         hashLogs_hex: string
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
+
+        const wrappedErgBank = game.participationTokenId
+            ? await resolveWrappedErgBankByTokenId(game.participationTokenId)
+            : null;
+
+        if (wrappedErgBank) {
+            return await submit_score_wrapped_erg_chained(
+                game.gameId,
+                scoreList,
+                game.participationFeeAmount,
+                game.participationTokenId,
+                commitmentC_hex,
+                solverId_string,
+                hashLogs_hex
+            );
+        }
 
         return await submit_score(
             game.gameId,
@@ -208,6 +251,12 @@ export class ErgoPlatform implements Platform {
         participations: ValidParticipation[]
     ): Promise<string | null> {
         if (!ergo) throw new Error("Wallet not connected");
+        const wrappedErgBank = game.participationTokenId
+            ? await resolveWrappedErgBankByTokenId(game.participationTokenId)
+            : null;
+        if (wrappedErgBank) {
+            return await end_game_wrapped_erg(game, participations);
+        }
         return await end_game(game, participations);
     }
 
@@ -233,6 +282,14 @@ export class ErgoPlatform implements Platform {
         participations: ValidParticipation[]
     ): Promise<string[] | null> {
         if (!ergo) throw new Error("Wallet not connected");
+        const wrappedErgBank = game.participationTokenId
+            ? await resolveWrappedErgBankByTokenId(game.participationTokenId)
+            : null;
+
+        if (wrappedErgBank) {
+            return await end_game_wrapped_erg_chained(game, participations);
+        }
+
         return await end_game_chained(game, participations);
     }
 

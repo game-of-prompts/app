@@ -131,11 +131,15 @@
         type FormatOptions,
     } from "$lib/utils/error-messages";
     import {
+        resolveWrappedErgBankByTokenId,
+    } from "$lib/ergo/wrapped-erg";
+    import {
         fetchJudges,
         fetchReputationProofByTokenId,
     } from "$lib/ergo/reputation/fetch";
     import { type RPBox, type ReputationProof } from "reputation-system";
     import { Forum } from "forum-application";
+    import type { WrappedErgBankSummary } from "wrapped-erg";
     import ShareModal from "./ShareModal.svelte";
     import SolverSourceModal from "./SolverSourceModal.svelte";
     import GameTimeline from "$lib/components/GameTimeline.svelte";
@@ -1322,6 +1326,8 @@
 
     let tokenSymbol = "N/A";
     let tokenDecimals = 0;
+    let wrappedErgBank: WrappedErgBankSummary | null = null;
+    let isWrappedErgCompetition = false;
 
     $: prizePoolValue = getPrizePool(game, participations);
 
@@ -1821,12 +1827,32 @@
             }
 
             // 6. Token details
-            if (game.participationTokenId) {
-                const tokenDetails = await fetch_token_details(
-                    game.participationTokenId,
+            try {
+                wrappedErgBank = game.participationTokenId
+                    ? await resolveWrappedErgBankByTokenId(
+                          game.participationTokenId,
+                      )
+                    : null;
+            } catch (error) {
+                console.warn(
+                    "Failed to resolve Wrapped ERG bank for game",
+                    error,
                 );
-                tokenSymbol = tokenDetails.name;
-                tokenDecimals = tokenDetails.decimals;
+                wrappedErgBank = null;
+            }
+            isWrappedErgCompetition = !!wrappedErgBank;
+
+            if (game.participationTokenId) {
+                if (isWrappedErgCompetition) {
+                    tokenSymbol = "ERG";
+                    tokenDecimals = 9;
+                } else {
+                    const tokenDetails = await fetch_token_details(
+                        game.participationTokenId,
+                    );
+                    tokenSymbol = tokenDetails.name;
+                    tokenDecimals = tokenDetails.decimals;
+                }
             } else {
                 tokenSymbol = "ERG";
                 tokenDecimals = 9;
@@ -2065,6 +2091,7 @@
     async function handleSubmitScore() {
         if (game?.status !== "Active") return;
         errorMessage = null;
+        warningMessage = null;
         isSubmitting = true;
         try {
             const parsedScores = scores_list.map((s) => BigInt(s));
@@ -2194,7 +2221,7 @@
                 ) as ValidParticipation[];
 
                 if (!game.isEndGame) {
-                    if (USE_CHAINED_TRANSACTIONS) {
+                    if (USE_CHAINED_TRANSACTIONS || isWrappedErgCompetition) {
                         // Use chained transaction: Resolution -> EndGame -> Finalize
                         const txIds = await platform.toEndGameChained(
                             game,
@@ -6307,18 +6334,29 @@
                                         <div
                                             class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4"
                                         >
-                                            <p
-                                                class="text-sm text-muted-foreground"
-                                            >
-                                                Fee: <span
-                                                    class="font-medium text-foreground"
-                                                    >{formatTokenBigInt(
-                                                        game.participationFeeAmount,
-                                                        tokenDecimals,
-                                                    )}
-                                                    {tokenSymbol}</span
-                                                >
-                                            </p>
+                                            <div class="text-sm text-muted-foreground">
+                                                <p>
+                                                    Fee: <span
+                                                        class="font-medium text-foreground"
+                                                        >{formatTokenBigInt(
+                                                            game.participationFeeAmount,
+                                                            tokenDecimals,
+                                                        )}
+                                                        {tokenSymbol}</span
+                                                    >
+                                                </p>
+                                                {#if isWrappedErgCompetition}
+                                                    <p class="text-xs mt-1">
+                                                        Displayed as ERG, settled
+                                                        as Wrapped ERG. This
+                                                        action wraps the fee and
+                                                        submits the participation
+                                                        in a chained flow, so the
+                                                        wallet may ask for more
+                                                        than one signature.
+                                                    </p>
+                                                {/if}
+                                            </div>
                                             <Button
                                                 on:click={handleSubmitScore}
                                                 disabled={isSubmitting ||
@@ -6609,7 +6647,7 @@
                                     prize pool to the winner, your resolver fee,
                                     and other commissions. This action is irreversible.
                                 </p>
-                                {#if !game.isEndGame && !USE_CHAINED_TRANSACTIONS}
+                                {#if !game.isEndGame && !USE_CHAINED_TRANSACTIONS && !isWrappedErgCompetition}
                                     <p
                                         class="text-sm p-3 rounded-md {$mode ===
                                         'dark'
@@ -6622,6 +6660,18 @@
                                         intermediate state. You will need to
                                         execute this action again to finalize
                                         the game definitively.
+                                    </p>
+                                {:else if isWrappedErgCompetition}
+                                    <p
+                                        class="text-sm p-3 rounded-md {$mode ===
+                                        'dark'
+                                            ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                                            : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}"
+                                    >
+                                        Wrapped ERG competitions finalize in a
+                                        chained flow. The executor payout is
+                                        converted back to ERG, while the other
+                                        distributions remain in WERG.
                                     </p>
                                 {/if}
                                 <Button
@@ -7319,9 +7369,7 @@
                                 </p>
                                 <div>
                                     <Label class="mb-2 block"
-                                        >Donation Amount ({game?.participationTokenId
-                                            ? "Token"
-                                            : "ERG"})</Label
+                                        >Donation Amount ({tokenSymbol})</Label
                                     >
                                     <div class="flex gap-2">
                                         <Input
