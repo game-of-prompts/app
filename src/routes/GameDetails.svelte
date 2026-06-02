@@ -4585,7 +4585,7 @@
                         on:click={() => (showProgressDetails = !showProgressDetails)}
                         class="self-start"
                     >
-                        {showProgressDetails ? "Hide Details" : "Detalles"}
+                        {showProgressDetails ? "Hide Details" : "Details"}
                         <ChevronDown
                             class={`ml-2 h-4 w-4 transition-transform ${showProgressDetails ? "rotate-180" : ""}`}
                         />
