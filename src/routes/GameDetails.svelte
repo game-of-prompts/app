@@ -6240,22 +6240,21 @@
                         </p>
                     {/if}
                 {:else if activeTab === "forum"}
-                    {#if $reputation_proof}
-                        <div class="forum-container">
-                            <Forum
-                                forum_explorer_url={$forum_explorer_url}
-                                showTopicInput={false}
-                                topic_id={game.gameId}
-                                {web_explorer_uri_tx}
-                                {web_explorer_uri_addr}
-                                {web_explorer_uri_tkn}
-                                {explorer_uri}
-                                maxWidth="100%"
-                                profile={$reputation_proof}
-                                connected={$connected}
-                            />
-                        </div>
-                    {/if}
+                    <div class="forum-container">
+                        <Forum
+                            forum_explorer_url={$forum_explorer_url}
+                            showTopicInput={false}
+                            topic_id={game.gameId}
+                            {web_explorer_uri_tx}
+                            {web_explorer_uri_addr}
+                            {web_explorer_uri_tkn}
+                            {explorer_uri}
+                            maxWidth="100%"
+                            profile={$reputation_proof}
+                            connected={$connected}
+                            connect_executed={$connected}
+                        />
+                    </div>
                 {/if}
             </section>
         </div>
