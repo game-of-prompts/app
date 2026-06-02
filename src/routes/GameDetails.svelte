@@ -214,6 +214,7 @@
     let serviceSourcesOpen = false;
     let paperSourcesOpen = false;
     let soundtrackSourcesOpen = false;
+    let showProgressDetails = false;
 
     $: isBeforeDeadline = targetDate
         ? new Date().getTime() < targetDate
@@ -3631,7 +3632,7 @@
 
                                     <div class="relative">
                                         <div
-                                            class="prose prose-sm {$mode ===
+                                            class="paper-prose prose prose-sm {$mode ===
                                             'dark'
                                                 ? 'prose-invert'
                                                 : ''} max-w-none transition-all duration-500 ease-in-out {isPaperExpanded
@@ -3762,7 +3763,7 @@
 
                                     <div class="relative">
                                         <div
-                                            class="prose prose-sm {$mode === 'dark' ? 'prose-invert' : ''} max-w-none transition-all duration-500 ease-in-out {isRobotGuideExpanded ? '' : 'max-h-96 overflow-hidden'}"
+                                            class="guide-prose prose prose-sm {$mode === 'dark' ? 'prose-invert' : ''} max-w-none transition-all duration-500 ease-in-out {isRobotGuideExpanded ? '' : 'max-h-96 overflow-hidden'}"
                                         >
                                             {#if isRobotGuideExpanded && robotGuideToc.length > 0}
                                                 <div
@@ -4571,8 +4572,24 @@
             <section
                 class="game-status status-actions-panel mb-12 p-6 md:p-8 shadow-lg rounded-xl bg-card border border-border/50"
             >
-                <div class="mb-6">
-                    <h2 class="text-2xl font-semibold">Game Progress</h2>
+                <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-semibold">Game Progress</h2>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            Start with the essentials, then open details when you want the deeper technical view.
+                        </p>
+                    </div>
+                    <Button
+                        variant={showProgressDetails ? "secondary" : "outline"}
+                        size="sm"
+                        on:click={() => (showProgressDetails = !showProgressDetails)}
+                        class="self-start"
+                    >
+                        {showProgressDetails ? "Hide Details" : "Detalles"}
+                        <ChevronDown
+                            class={`ml-2 h-4 w-4 transition-transform ${showProgressDetails ? "rotate-180" : ""}`}
+                        />
+                    </Button>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -4731,6 +4748,7 @@
                             </div>
                         </div>
 
+                        {#if showProgressDetails}
                         <div
                             class="rounded-2xl border {$mode === 'dark'
                                 ? 'border-slate-700 bg-slate-900/40'
@@ -4827,11 +4845,13 @@
                                 {/each}
                             </div>
                         </div>
+                        {/if}
                     </div>
 
                     <div
                         class="actions-side space-y-5"
                     >
+                        {#if showProgressDetails}
                         <div
                             class="rounded-2xl border {$mode === 'dark'
                                 ? 'border-slate-700 bg-slate-900/40'
@@ -4981,7 +5001,9 @@
                                 </div>
                             {/if}
                         </div>
+                        {/if}
 
+                        {#if showProgressDetails}
                         <div
                             class="status-description rounded-xl border bg-card overflow-hidden {$mode ===
                         'dark'
@@ -5054,6 +5076,7 @@
                         </div>
 
                         </div>
+                        {/if}
 
                         <div
                             class="rounded-2xl border {$mode === 'dark'
@@ -5061,7 +5084,7 @@
                                 : 'border-gray-200 bg-white'} p-5 md:p-6"
                         >
                             <h2 class="text-xl font-semibold mb-5">
-                                Trust & Security
+                                {showProgressDetails ? "Trust & Security" : "Trust Snapshot"}
                             </h2>
 
                             <div class="grid grid-cols-1 gap-y-6">
@@ -8682,6 +8705,65 @@
     .prose :global(p) {
         margin-bottom: 0.75em;
     }
+    .paper-prose :global(h1) {
+        @apply text-3xl md:text-4xl font-bold tracking-tight mb-6 mt-2;
+    }
+    .paper-prose :global(h2) {
+        @apply text-2xl md:text-3xl font-semibold mt-10 mb-4 pb-2 border-b border-border;
+    }
+    .paper-prose :global(h3) {
+        @apply text-xl md:text-2xl font-semibold mt-8 mb-3;
+    }
+    .paper-prose :global(h4) {
+        @apply text-lg font-semibold mt-6 mb-2;
+    }
+    .paper-prose :global(p) {
+        @apply leading-8 mb-5;
+    }
+    .paper-prose :global(ul),
+    .paper-prose :global(ol) {
+        @apply my-5 pl-6;
+        list-style-position: outside;
+    }
+    .paper-prose :global(ul) {
+        list-style-type: disc;
+    }
+    .paper-prose :global(ol) {
+        list-style-type: decimal;
+    }
+    .paper-prose :global(li) {
+        @apply mb-2 leading-8;
+    }
+    .paper-prose :global(blockquote) {
+        @apply my-6 border-l-4 border-amber-500/50 bg-amber-500/10 px-4 py-3 italic rounded-r-lg;
+    }
+    .paper-prose :global(pre) {
+        @apply my-6 overflow-x-auto rounded-xl border border-border bg-slate-950/95 p-4 text-sm shadow-inner;
+    }
+    .paper-prose :global(code) {
+        @apply rounded bg-muted px-1.5 py-0.5 text-[0.9em];
+    }
+    .paper-prose :global(pre code) {
+        @apply bg-transparent p-0 text-inherit;
+    }
+    .paper-prose :global(hr) {
+        @apply my-8 border-border;
+    }
+    .paper-prose :global(table) {
+        @apply my-6 w-full border-collapse text-sm;
+    }
+    .paper-prose :global(th) {
+        @apply border border-border bg-muted/60 px-3 py-2 text-left font-semibold;
+    }
+    .paper-prose :global(td) {
+        @apply border border-border px-3 py-2 align-top;
+    }
+    .paper-prose :global(tbody tr:nth-child(even)) {
+        @apply bg-muted/30;
+    }
+    .paper-prose :global(a) {
+        @apply text-blue-500 underline decoration-blue-500/40 underline-offset-4 transition-colors hover:text-blue-400;
+    }
     .guide-prose :global(h1) {
         @apply text-3xl md:text-4xl font-bold tracking-tight mb-6 mt-2;
     }
@@ -8700,6 +8782,13 @@
     .guide-prose :global(ul),
     .guide-prose :global(ol) {
         @apply my-5 pl-6;
+        list-style-position: outside;
+    }
+    .guide-prose :global(ul) {
+        list-style-type: disc;
+    }
+    .guide-prose :global(ol) {
+        list-style-type: decimal;
     }
     .guide-prose :global(li) {
         @apply mb-2 leading-8;
@@ -8727,6 +8816,9 @@
     }
     .guide-prose :global(td) {
         @apply border border-border px-3 py-2 align-top;
+    }
+    .guide-prose :global(tbody tr:nth-child(even)) {
+        @apply bg-muted/30;
     }
     .guide-prose :global(a) {
         @apply text-blue-500 underline decoration-blue-500/40 underline-offset-4 transition-colors hover:text-blue-400;
