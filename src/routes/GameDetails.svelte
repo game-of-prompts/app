@@ -207,6 +207,7 @@
     let isLoaded = false;
     let hasHydrated = false;
     let primaryAction: string | null = null;
+    let technicalBundleOpen = false;
     let technicalDetailsOpen = false;
     let imageSourcesOpen = false;
     let serviceSourcesOpen = false;
@@ -218,6 +219,13 @@
         ? new Date().getTime() < targetDate
         : false;
     $: showLoadingScreen = !hasHydrated || (game ? !isLoaded : false);
+    $: if (!technicalBundleOpen) {
+        technicalDetailsOpen = false;
+        imageSourcesOpen = false;
+        serviceSourcesOpen = false;
+        paperSourcesOpen = false;
+        soundtrackSourcesOpen = false;
+    }
     $: primaryAction = getPrimaryAction(
         game,
         openCeremony,
@@ -3963,12 +3971,10 @@
 
                         </div>
 
-                        <div
-                            class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
-                        >
+                        <div class="col-span-1 md:col-span-2 lg:col-span-3 mt-4">
                             <details
-                                bind:open={technicalDetailsOpen}
-                                use:hoverCornersWhenClosed={technicalDetailsOpen}
+                                bind:open={technicalBundleOpen}
+                                use:hoverCornersWhenClosed={technicalBundleOpen}
                                 class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
                                 'dark'
                                     ? 'border-slate-700'
@@ -3978,591 +3984,535 @@
                                     class="flex justify-between items-center font-medium cursor-pointer list-none"
                                 >
                                     <div class="flex items-center gap-2">
-                                        <Settings
-                                            class="w-5 h-5 text-gray-500"
-                                        />
-                                        <span>Technical Details</span>
+                                        <Settings class="w-5 h-5 text-gray-500" />
+                                        <span>Technical Data & Sources</span>
                                     </div>
-                                    <span
-                                        class="transition group-open:rotate-180"
-                                    >
+                                    <span class="transition group-open:rotate-180">
                                         <ChevronDown class="w-5 h-5" />
                                     </span>
                                 </summary>
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 text-sm"
-                                >
-                                    <div
-                                        class="info-block col-span-1 md:col-span-2"
+
+                                <div class="mt-4 space-y-4">
+                                    <p class="text-sm text-muted-foreground">
+                                        Open this section to inspect the raw game data and the community-verified sources behind each file.
+                                    </p>
+
+                                    <details
+                                        bind:open={technicalDetailsOpen}
+                                        use:hoverCornersWhenClosed={technicalDetailsOpen}
+                                        class="group p-4 rounded-lg border bg-background/60 shadow-sm {$mode ===
+                                        'dark'
+                                            ? 'border-slate-700'
+                                            : 'border-gray-200'}"
                                     >
-                                        <span class="info-label"
-                                            >Creator Reputation Token ID {isOwner
-                                                ? "(You)"
-                                                : ""}</span
+                                        <summary
+                                            class="flex justify-between items-center font-medium cursor-pointer list-none"
                                         >
-                                        {#if game.content.creatorTokenId}
-                                            <a
-                                                href={$web_explorer_uri_tkn +
-                                                    game.content.creatorTokenId}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="info-value font-mono text-xs break-all hover:underline"
-                                                title={game.content
-                                                    .creatorTokenId}
+                                            <div class="flex items-center gap-2">
+                                                <Settings class="w-5 h-5 text-gray-500" />
+                                                <span>Technical Details</span>
+                                            </div>
+                                            <span class="transition group-open:rotate-180">
+                                                <ChevronDown class="w-5 h-5" />
+                                            </span>
+                                        </summary>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 text-sm">
+                                            <div class="info-block col-span-1 md:col-span-2">
+                                                <span class="info-label"
+                                                    >Creator Reputation Token ID {isOwner
+                                                        ? "(You)"
+                                                        : ""}</span
+                                                >
+                                                {#if game.content.creatorTokenId}
+                                                    <a
+                                                        href={$web_explorer_uri_tkn +
+                                                            game.content.creatorTokenId}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="info-value font-mono text-xs break-all hover:underline"
+                                                        title={game.content
+                                                            .creatorTokenId}
+                                                    >
+                                                        {game.content.creatorTokenId}
+                                                    </a>
+                                                {:else}
+                                                    <span class="info-value">N/A</span>
+                                                {/if}
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Competition ID (NFT)<button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                        on:click|stopPropagation={() =>
+                                                            openDidacticModal(
+                                                                "Competition ID (NFT)",
+                                                                "Unique token identifying this game on the blockchain. Tracks the game's history and is awarded to the winner as a trophy.",
+                                                            )}
+                                                    >
+                                                        <Info class="w-3.5 h-3.5" />
+                                                    </button></span
+                                                >
+                                                <a
+                                                    href={$web_explorer_uri_tkn +
+                                                        game.gameId}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="info-value font-mono text-xs break-all hover:underline"
+                                                    title={game.gameId}
+                                                >
+                                                    {game.gameId}
+                                                </a>
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Service ID<button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                        on:click|stopPropagation={() =>
+                                                            openDidacticModal(
+                                                                "Service ID",
+                                                                "Hash of the Celaut service running the game. Players must execute it on their own computer to play and can verify they use the same game.",
+                                                            )}
+                                                    >
+                                                        <Info class="w-3.5 h-3.5" />
+                                                    </button></span
+                                                >
+                                                <span
+                                                    class="info-value font-mono text-xs break-all"
+                                                    title={game.content.serviceId}
+                                                >
+                                                    {game.content.serviceId}
+                                                </span>
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Creator Splash Ratio</span
+                                                >
+                                                <span class="info-value font-mono">
+                                                    {clampPct(creatorSlashRatioPct).toFixed(
+                                                        0,
+                                                    )}%
+                                                </span>
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Verification Runs<button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                        on:click|stopPropagation={() =>
+                                                            openDidacticModal(
+                                                                "Verification Runs",
+                                                                "Number of times judges will test your participation to verify if it reproduces your game logs. If judges cannot reproduce the logs, the participation is invalidated.",
+                                                            )}
+                                                    >
+                                                        <Info class="w-3.5 h-3.5" />
+                                                    </button></span
+                                                >
+                                                <span
+                                                    class="info-value font-mono text-xs break-all"
+                                                >
+                                                    {game.content.indetermismIndex}
+                                                </span>
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Time Factor<button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                        on:click|stopPropagation={() =>
+                                                            openDidacticModal(
+                                                                "Time Factor",
+                                                                "Weight used to reward earlier submissions when computing effective score. A higher value increases the advantage of uploading sooner.",
+                                                            )}
+                                                    >
+                                                        <Info class="w-3.5 h-3.5" />
+                                                    </button></span
+                                                >
+                                                <span
+                                                    class="info-value font-mono text-xs break-all"
+                                                >
+                                                    {game.timeWeight?.toString() ?? "0"}
+                                                </span>
+                                            </div>
+
+                                            <div class="info-block">
+                                                <span class="info-label"
+                                                    >Seed<button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                        on:click|stopPropagation={() =>
+                                                            openDidacticModal(
+                                                                "Seed",
+                                                                "Random seed determining the game scenario. Generated during the initial ceremony where anyone can participate.",
+                                                            )}
+                                                    >
+                                                        <Info class="w-3.5 h-3.5" />
+                                                    </button></span
+                                                >
+                                                <span
+                                                    class="info-value font-mono text-xs break-all"
+                                                >
+                                                    {game.seed ?? "N/A"}
+                                                </span>
+                                            </div>
+
+                                            {#if game.winnerCandidateCommitment}
+                                                <div class="info-block md:col-span-2">
+                                                    <span class="info-label"
+                                                        >Winner Candidate<button
+                                                            type="button"
+                                                            class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                            on:click|stopPropagation={() =>
+                                                                openDidacticModal(
+                                                                    "Winner Candidate",
+                                                                    "The commitment of the participation currently considered the winner candidate.",
+                                                                )}
+                                                        >
+                                                            <Info class="w-3.5 h-3.5" />
+                                                        </button></span
+                                                    >
+                                                    <span
+                                                        class="info-value font-mono text-xs break-all"
+                                                    >
+                                                        {game.winnerCandidateCommitment}
+                                                    </span>
+                                                </div>
+                                            {/if}
+
+                                            {#if game.status === "Resolution" && game.revealedS_Hex}
+                                                <div class="info-block md:col-span-2">
+                                                    <span class="info-label"
+                                                        >Revealed Secret (S)<button
+                                                            type="button"
+                                                            class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                            on:click|stopPropagation={() =>
+                                                                openDidacticModal(
+                                                                    "Revealed Secret (S)",
+                                                                    "The creator's secret, revealed when resolving the game. Allows validation of all participation scores.",
+                                                                )}
+                                                        >
+                                                            <Info class="w-3.5 h-3.5" />
+                                                        </button></span
+                                                    >
+                                                    <span
+                                                        class="info-value font-mono text-xs break-all"
+                                                    >
+                                                        {game.revealedS_Hex}
+                                                    </span>
+                                                </div>
+                                            {/if}
+
+                                            {#if game.status === "Resolution"}
+                                                <div class="info-block md:col-span-2">
+                                                    <span class="info-label"
+                                                        >Resolver Script<button
+                                                            type="button"
+                                                            class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
+                                                            on:click|stopPropagation={() =>
+                                                                openDidacticModal(
+                                                                    "Resolver Script",
+                                                                    "The script that enforces the game rules during the resolution phase.",
+                                                                )}
+                                                        >
+                                                            <Info class="w-3.5 h-3.5" />
+                                                        </button></span
+                                                    >
+                                                    <span
+                                                        class="info-value font-mono text-xs break-all"
+                                                    >
+                                                        {game.resolverScript_Hex}
+                                                    </span>
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    </details>
+
+                                    <div class="space-y-4">
+                                        {#if game.content.image && game.content.image.length === 64}
+                                            <details
+                                                bind:open={imageSourcesOpen}
+                                                use:hoverCornersWhenClosed={imageSourcesOpen}
+                                                class="group p-4 rounded-lg border bg-background/60 shadow-sm {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
                                             >
-                                                {game.content.creatorTokenId}
-                                            </a>
-                                        {:else}
-                                            <span class="info-value">N/A</span>
+                                                <summary
+                                                    class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                                >
+                                                    <div class="flex items-center gap-2">
+                                                        <Sparkles class="w-5 h-5 text-blue-500" />
+                                                        <span>Game Image Sources</span>
+                                                    </div>
+                                                    <span class="transition group-open:rotate-180">
+                                                        <ChevronDown class="w-5 h-5" />
+                                                    </span>
+                                                </summary>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <p class="text-sm text-muted-foreground">
+                                                        Community-verified download sources for the game image file (hash: <span
+                                                            class="font-mono text-xs">{game.content.image.slice(
+                                                                0,
+                                                                16,
+                                                            )}...</span
+                                                        >)
+                                                    </p>
+
+                                                    {#if $reputation_proof}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            on:click={() =>
+                                                                openFileSourceModal(
+                                                                    game.content.image,
+                                                                    "image",
+                                                                )}
+                                                            class="w-full"
+                                                        >
+                                                            Add Download Source
+                                                        </Button>
+                                                    {:else}
+                                                        <p class="text-xs text-muted-foreground italic">
+                                                            Create a reputation profile to add or manage download sources
+                                                        </p>
+                                                    {/if}
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                                        <FileCard
+                                                            class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
+                                                            profile={$reputation_proof}
+                                                            fileHash={game.content.image}
+                                                            sources={imageSources}
+                                                            explorerUri={$explorer_uri}
+                                                            source_explorer_url={$source_explorer_url}
+                                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                                        />
+                                                    </div>
+
+                                                    {#if imageSources.length === 0}
+                                                        <p class="text-xs text-muted-foreground italic text-center py-4">
+                                                            No sources found for this file.
+                                                        </p>
+                                                    {/if}
+                                                </div>
+                                            </details>
+                                        {/if}
+
+                                        {#if game.content.serviceId && game.content.serviceId.length === 64}
+                                            <details
+                                                bind:open={serviceSourcesOpen}
+                                                use:hoverCornersWhenClosed={serviceSourcesOpen}
+                                                class="group p-4 rounded-lg border bg-background/60 shadow-sm {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
+                                            >
+                                                <summary
+                                                    class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                                >
+                                                    <div class="flex items-center gap-2">
+                                                        <Cpu class="w-5 h-5 text-green-500" />
+                                                        <span>Game Service Sources</span>
+                                                    </div>
+                                                    <span class="transition group-open:rotate-180">
+                                                        <ChevronDown class="w-5 h-5" />
+                                                    </span>
+                                                </summary>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <p class="text-sm text-muted-foreground">
+                                                        Community-verified download sources for the game service executable (hash: <span
+                                                            class="font-mono text-xs">{game.content.serviceId.slice(
+                                                                0,
+                                                                16,
+                                                            )}...</span
+                                                        >)
+                                                    </p>
+
+                                                    {#if $reputation_proof}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            on:click={() =>
+                                                                openFileSourceModal(
+                                                                    game.content.serviceId,
+                                                                    "service",
+                                                                )}
+                                                            class="w-full"
+                                                        >
+                                                            Add Download Source
+                                                        </Button>
+                                                    {:else}
+                                                        <p class="text-xs text-muted-foreground italic">
+                                                            Create a reputation profile to add or manage download sources
+                                                        </p>
+                                                    {/if}
+
+                                                    <!-- service-purple: override source-application's hardcoded green with purple -->
+                                                    <div class="service-file-card-wrapper">
+                                                        <FileCard
+                                                            profile={$reputation_proof}
+                                                            fileHash={game.content.serviceId}
+                                                            sources={serviceSources}
+                                                            explorerUri={$explorer_uri}
+                                                            source_explorer_url={$source_explorer_url}
+                                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        {/if}
+
+                                        {#if game.content.paper && game.content.paper.length === 64}
+                                            <details
+                                                bind:open={paperSourcesOpen}
+                                                use:hoverCornersWhenClosed={paperSourcesOpen}
+                                                class="group p-4 rounded-lg border bg-background/60 shadow-sm {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
+                                            >
+                                                <summary
+                                                    class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                                >
+                                                    <div class="flex items-center gap-2">
+                                                        <FileText class="w-5 h-5 text-amber-500" />
+                                                        <span>Game Paper Sources</span>
+                                                    </div>
+                                                    <span class="transition group-open:rotate-180">
+                                                        <ChevronDown class="w-5 h-5" />
+                                                    </span>
+                                                </summary>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <p class="text-sm text-muted-foreground">
+                                                        Community-verified download sources for the detailed game documentation markdown file (hash: <span
+                                                            class="font-mono text-xs">{game.content.paper.slice(
+                                                                0,
+                                                                16,
+                                                            )}...</span
+                                                        >)
+                                                    </p>
+
+                                                    {#if $reputation_proof}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            on:click={() =>
+                                                                openFileSourceModal(
+                                                                    game?.content.paper ??
+                                                                        "",
+                                                                    "paper",
+                                                                )}
+                                                            class="w-full"
+                                                        >
+                                                            Add Download Source
+                                                        </Button>
+                                                    {:else}
+                                                        <p class="text-xs text-muted-foreground italic">
+                                                            Create a reputation profile to add or manage download sources
+                                                        </p>
+                                                    {/if}
+
+                                                    <div class="service-file-card-wrapper">
+                                                        <FileCard
+                                                            profile={$reputation_proof}
+                                                            fileHash={game.content.paper}
+                                                            sources={paperSources}
+                                                            explorerUri={$explorer_uri}
+                                                            source_explorer_url={$source_explorer_url}
+                                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                                        />
+                                                    </div>
+
+                                                    {#if paperContentStatus === "missing-sources"}
+                                                        <p class="text-xs text-muted-foreground italic text-center py-2">
+                                                            The paper hash exists, but no downloadable source has been published yet, so its content cannot be inspected here.
+                                                        </p>
+                                                    {:else if paperContentStatus === "fetch-error"}
+                                                        <p class="text-xs text-muted-foreground italic text-center py-2">
+                                                            A paper source was found, but its markdown could not be loaded for inline inspection.
+                                                        </p>
+                                                    {/if}
+                                                </div>
+                                            </details>
+                                        {/if}
+
+                                        {#if game.content.soundtrack && game.content.soundtrack.length === 64}
+                                            <details
+                                                bind:open={soundtrackSourcesOpen}
+                                                use:hoverCornersWhenClosed={soundtrackSourcesOpen}
+                                                class="group p-4 rounded-lg border bg-background/60 shadow-sm {$mode ===
+                                                'dark'
+                                                    ? 'border-slate-700'
+                                                    : 'border-gray-200'}"
+                                            >
+                                                <summary
+                                                    class="flex justify-between items-center font-medium cursor-pointer list-none"
+                                                >
+                                                    <div class="flex items-center gap-2">
+                                                        <Music class="w-5 h-5 text-red-500" />
+                                                        <span>Game Soundtrack Sources</span>
+                                                    </div>
+                                                    <span class="transition group-open:rotate-180">
+                                                        <ChevronDown class="w-5 h-5" />
+                                                    </span>
+                                                </summary>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <p class="text-sm text-muted-foreground">
+                                                        Community-verified download sources for the game soundtrack audio file (hash: <span
+                                                            class="font-mono text-xs">{game.content.soundtrack.slice(
+                                                                0,
+                                                                16,
+                                                            )}...</span
+                                                        >)
+                                                    </p>
+
+                                                    {#if $reputation_proof}
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            on:click={() =>
+                                                                openFileSourceModal(
+                                                                    game?.content
+                                                                        .soundtrack ?? "",
+                                                                    "soundtrack",
+                                                                )}
+                                                            class="w-full"
+                                                        >
+                                                            Add Download Source
+                                                        </Button>
+                                                    {:else}
+                                                        <p class="text-xs text-muted-foreground italic">
+                                                            Create a reputation profile to add or manage download sources
+                                                        </p>
+                                                    {/if}
+
+                                                    <div class="service-file-card-wrapper">
+                                                        <FileCard
+                                                            profile={$reputation_proof}
+                                                            fileHash={game.content.soundtrack}
+                                                            sources={soundtrackSources}
+                                                            explorerUri={$explorer_uri}
+                                                            source_explorer_url={$source_explorer_url}
+                                                            webExplorerUriTkn={$web_explorer_uri_tkn}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </details>
                                         {/if}
                                     </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Competition ID (NFT)<button
-                                                type="button"
-                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                on:click|stopPropagation={() =>
-                                                    openDidacticModal(
-                                                        "Competition ID (NFT)",
-                                                        "Unique token identifying this game on the blockchain. Tracks the game's history and is awarded to the winner as a trophy.",
-                                                    )}
-                                            >
-                                                <Info class="w-3.5 h-3.5" />
-                                            </button></span
-                                        >
-                                        <a
-                                            href={$web_explorer_uri_tkn +
-                                                game.gameId}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="info-value font-mono text-xs break-all hover:underline"
-                                            title={game.gameId}
-                                        >
-                                            {game.gameId}
-                                        </a>
-                                    </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Service ID<button
-                                                type="button"
-                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                on:click|stopPropagation={() =>
-                                                    openDidacticModal(
-                                                        "Service ID",
-                                                        "Hash of the Celaut service running the game. Players must execute it on their own computer to play and can verify they use the same game.",
-                                                    )}
-                                            >
-                                                <Info class="w-3.5 h-3.5" />
-                                            </button></span
-                                        >
-                                        <span
-                                            class="info-value font-mono text-xs break-all"
-                                            title={game.content.serviceId}
-                                        >
-                                            {game.content.serviceId}
-                                        </span>
-                                    </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Creator Splash Ratio</span
-                                        >
-                                        <span class="info-value font-mono">
-                                            {clampPct(creatorSlashRatioPct).toFixed(
-                                                0,
-                                            )}%
-                                        </span>
-                                    </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Verification Runs<button
-                                                type="button"
-                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                on:click|stopPropagation={() =>
-                                                    openDidacticModal(
-                                                        "Verification Runs",
-                                                        "Number of times judges will test your participation to verify if it reproduces your game logs. If judges cannot reproduce the logs, the participation is invalidated.",
-                                                    )}
-                                            >
-                                                <Info class="w-3.5 h-3.5" />
-                                            </button></span
-                                        >
-                                        <span
-                                            class="info-value font-mono text-xs break-all"
-                                        >
-                                            {game.content.indetermismIndex}
-                                        </span>
-                                    </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Time Factor<button
-                                                type="button"
-                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                on:click|stopPropagation={() =>
-                                                    openDidacticModal(
-                                                        "Time Factor",
-                                                        "Weight used to reward earlier submissions when computing effective score. A higher value increases the advantage of uploading sooner.",
-                                                    )}
-                                            >
-                                                <Info class="w-3.5 h-3.5" />
-                                            </button></span
-                                        >
-                                        <span
-                                            class="info-value font-mono text-xs break-all"
-                                        >
-                                            {game.timeWeight?.toString() ?? "0"}
-                                        </span>
-                                    </div>
-
-                                    <div class="info-block">
-                                        <span class="info-label"
-                                            >Seed<button
-                                                type="button"
-                                                class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                on:click|stopPropagation={() =>
-                                                    openDidacticModal(
-                                                        "Seed",
-                                                        "Random seed determining the game scenario. Generated during the initial ceremony where anyone can participate.",
-                                                    )}
-                                            >
-                                                <Info class="w-3.5 h-3.5" />
-                                            </button></span
-                                        >
-                                        <span
-                                            class="info-value font-mono text-xs break-all"
-                                        >
-                                            {game.seed ?? "N/A"}
-                                        </span>
-                                    </div>
-
-                                    {#if game.winnerCandidateCommitment}
-                                        <div class="info-block md:col-span-2">
-                                            <span class="info-label"
-                                                >Winner Candidate<button
-                                                    type="button"
-                                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                    on:click|stopPropagation={() =>
-                                                        openDidacticModal(
-                                                            "Winner Candidate",
-                                                            "The commitment of the participation currently considered the winner candidate.",
-                                                        )}
-                                                >
-                                                    <Info class="w-3.5 h-3.5" />
-                                                </button></span
-                                            >
-                                            <span
-                                                class="info-value font-mono text-xs break-all"
-                                            >
-                                                {game.winnerCandidateCommitment}
-                                            </span>
-                                        </div>
-                                    {/if}
-
-                                    {#if game.status === "Resolution" && game.revealedS_Hex}
-                                        <div class="info-block md:col-span-2">
-                                            <span class="info-label"
-                                                >Revealed Secret (S)<button
-                                                    type="button"
-                                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                    on:click|stopPropagation={() =>
-                                                        openDidacticModal(
-                                                            "Revealed Secret (S)",
-                                                            "The creator's secret, revealed when resolving the game. Allows validation of all participation scores.",
-                                                        )}
-                                                >
-                                                    <Info class="w-3.5 h-3.5" />
-                                                </button></span
-                                            >
-                                            <span
-                                                class="info-value font-mono text-xs break-all"
-                                            >
-                                                {game.revealedS_Hex}
-                                            </span>
-                                        </div>
-                                    {/if}
-
-                                    {#if game.status === "Resolution"}
-                                        <div class="info-block md:col-span-2">
-                                            <span class="info-label"
-                                                >Resolver Script<button
-                                                    type="button"
-                                                    class="inline-flex items-center justify-center ml-1 p-0.5 text-gray-400 hover:text-white transition-colors"
-                                                    on:click|stopPropagation={() =>
-                                                        openDidacticModal(
-                                                            "Resolver Script",
-                                                            "The script that enforces the game rules during the resolution phase.",
-                                                        )}
-                                                >
-                                                    <Info class="w-3.5 h-3.5" />
-                                                </button></span
-                                            >
-                                            <span
-                                                class="info-value font-mono text-xs break-all"
-                                            >
-                                                {game.resolverScript_Hex}
-                                            </span>
-                                        </div>
-                                    {/if}
                                 </div>
                             </details>
                         </div>
-
-                        <!-- FILE SOURCES SECTIONS -->
-                        {#if game.content.image && game.content.image.length === 64}
-                            <div
-                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
-                            >
-                                <details
-                                    bind:open={imageSourcesOpen}
-                                    use:hoverCornersWhenClosed={imageSourcesOpen}
-                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
-                                >
-                                    <summary
-                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <Sparkles
-                                                class="w-5 h-5 text-blue-500"
-                                            />
-                                            <span>Game Image Sources</span>
-                                        </div>
-                                        <span
-                                            class="transition group-open:rotate-180"
-                                        >
-                                            <ChevronDown class="w-5 h-5" />
-                                        </span>
-                                    </summary>
-
-                                    <div class="mt-4 space-y-4">
-                                        <p
-                                            class="text-sm text-muted-foreground"
-                                        >
-                                            Community-verified download sources
-                                            for the game image file (hash: <span
-                                                class="font-mono text-xs"
-                                                >{game.content.image.slice(
-                                                    0,
-                                                    16,
-                                                )}...</span
-                                            >)
-                                        </p>
-
-                                        {#if $reputation_proof}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                on:click={() =>
-                                                    openFileSourceModal(
-                                                        game.content.image,
-                                                        "image",
-                                                    )}
-                                                class="w-full"
-                                            >
-                                                Add Download Source
-                                            </Button>
-                                        {:else}
-                                            <p
-                                                class="text-xs text-muted-foreground italic"
-                                            >
-                                                Create a reputation profile to
-                                                add or manage download sources
-                                            </p>
-                                        {/if}
-
-                                        <div
-                                            class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
-                                        >
-                                            <FileCard
-                                                class="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6"
-                                                profile={$reputation_proof}
-                                                fileHash={game.content.image}
-                                                sources={imageSources}
-                                                explorerUri={$explorer_uri}
-                                                source_explorer_url={$source_explorer_url}
-                                                webExplorerUriTkn={$web_explorer_uri_tkn}
-                                            />
-                                        </div>
-
-                                        {#if imageSources.length === 0}
-                                            <p
-                                                class="text-xs text-muted-foreground italic text-center py-4"
-                                            >
-                                                No sources found for this file.
-                                            </p>
-                                        {/if}
-                                    </div>
-                                </details>
-                            </div>
-                        {/if}
-
-                        {#if game.content.serviceId && game.content.serviceId.length === 64}
-                            <div
-                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
-                            >
-                                <details
-                                    bind:open={serviceSourcesOpen}
-                                    use:hoverCornersWhenClosed={serviceSourcesOpen}
-                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
-                                >
-                                    <summary
-                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <Cpu
-                                                class="w-5 h-5 text-green-500"
-                                            />
-                                            <span>Game Service Sources</span>
-                                        </div>
-                                        <span
-                                            class="transition group-open:rotate-180"
-                                        >
-                                            <ChevronDown class="w-5 h-5" />
-                                        </span>
-                                    </summary>
-
-                                    <div class="mt-4 space-y-4">
-                                        <p
-                                            class="text-sm text-muted-foreground"
-                                        >
-                                            Community-verified download sources
-                                            for the game service executable
-                                            (hash: <span
-                                                class="font-mono text-xs"
-                                                >{game.content.serviceId.slice(
-                                                    0,
-                                                    16,
-                                                )}...</span
-                                            >)
-                                        </p>
-
-                                        {#if $reputation_proof}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                on:click={() =>
-                                                    openFileSourceModal(
-                                                        game.content.serviceId,
-                                                        "service",
-                                                    )}
-                                                class="w-full"
-                                            >
-                                                Add Download Source
-                                            </Button>
-                                        {:else}
-                                            <p
-                                                class="text-xs text-muted-foreground italic"
-                                            >
-                                                Create a reputation profile to
-                                                add or manage download sources
-                                            </p>
-                                        {/if}
-
-                                        <!-- service-purple: override source-application's hardcoded green with purple -->
-                                        <div class="service-file-card-wrapper">
-                                            <FileCard
-                                                profile={$reputation_proof}
-                                                fileHash={game.content.serviceId}
-                                                sources={serviceSources}
-                                                explorerUri={$explorer_uri}
-                                                source_explorer_url={$source_explorer_url}
-                                                webExplorerUriTkn={$web_explorer_uri_tkn}
-                                            />
-                                        </div>
-                                    </div>
-                                </details>
-                            </div>
-                        {/if}
-
-                        {#if game.content.paper && game.content.paper.length === 64}
-                            <div
-                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
-                            >
-                                <details
-                                    bind:open={paperSourcesOpen}
-                                    use:hoverCornersWhenClosed={paperSourcesOpen}
-                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
-                                >
-                                    <summary
-                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <FileText
-                                                class="w-5 h-5 text-amber-500"
-                                            />
-                                            <span>Game Paper Sources</span>
-                                        </div>
-                                        <span
-                                            class="transition group-open:rotate-180"
-                                        >
-                                            <ChevronDown class="w-5 h-5" />
-                                        </span>
-                                    </summary>
-
-                                    <div class="mt-4 space-y-4">
-                                        <p
-                                            class="text-sm text-muted-foreground"
-                                        >
-                                            Community-verified download sources
-                                            for the detailed game documentation
-                                            markdown file (hash: <span
-                                                class="font-mono text-xs"
-                                                >{game.content.paper.slice(
-                                                    0,
-                                                    16,
-                                                )}...</span
-                                            >)
-                                        </p>
-
-                                        {#if $reputation_proof}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                on:click={() =>
-                                                    openFileSourceModal(
-                                                        game?.content.paper ??
-                                                            "",
-                                                        "paper",
-                                                    )}
-                                                class="w-full"
-                                            >
-                                                Add Download Source
-                                            </Button>
-                                        {:else}
-                                            <p
-                                                class="text-xs text-muted-foreground italic"
-                                            >
-                                                Create a reputation profile to
-                                                add or manage download sources
-                                            </p>
-                                        {/if}
-
-                                        <div class="service-file-card-wrapper">
-                                            <FileCard
-                                                profile={$reputation_proof}
-                                                fileHash={game.content.paper}
-                                                sources={paperSources}
-                                                explorerUri={$explorer_uri}
-                                                source_explorer_url={$source_explorer_url}
-                                                webExplorerUriTkn={$web_explorer_uri_tkn}
-                                            />
-                                        </div>
-
-                                        {#if paperContentStatus === "missing-sources"}
-                                            <p
-                                                class="text-xs text-muted-foreground italic text-center py-2"
-                                            >
-                                                The paper hash exists, but no
-                                                downloadable source has been
-                                                published yet, so its content
-                                                cannot be inspected here.
-                                            </p>
-                                        {:else if paperContentStatus === "fetch-error"}
-                                            <p
-                                                class="text-xs text-muted-foreground italic text-center py-2"
-                                            >
-                                                A paper source was found, but
-                                                its markdown could not be loaded
-                                                for inline inspection.
-                                            </p>
-                                        {/if}
-                                    </div>
-                                </details>
-                            </div>
-                        {/if}
-
-                        {#if game.content.soundtrack && game.content.soundtrack.length === 64}
-                            <div
-                                class="col-span-1 md:col-span-2 lg:col-span-3 mt-4"
-                            >
-                                <details
-                                    bind:open={soundtrackSourcesOpen}
-                                    use:hoverCornersWhenClosed={soundtrackSourcesOpen}
-                                    class="group p-4 rounded-lg border bg-card shadow-sm {$mode ===
-                                    'dark'
-                                        ? 'border-slate-700'
-                                        : 'border-gray-200'}"
-                                >
-                                    <summary
-                                        class="flex justify-between items-center font-medium cursor-pointer list-none"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <Music
-                                                class="w-5 h-5 text-red-500"
-                                            />
-                                            <span>Game Soundtrack Sources</span>
-                                        </div>
-                                        <span
-                                            class="transition group-open:rotate-180"
-                                        >
-                                            <ChevronDown class="w-5 h-5" />
-                                        </span>
-                                    </summary>
-
-                                    <div class="mt-4 space-y-4">
-                                        <p
-                                            class="text-sm text-muted-foreground"
-                                        >
-                                            Community-verified download sources
-                                            for the game soundtrack audio file
-                                            (hash: <span
-                                                class="font-mono text-xs"
-                                                >{game.content.soundtrack.slice(
-                                                    0,
-                                                    16,
-                                                )}...</span
-                                            >)
-                                        </p>
-
-                                        {#if $reputation_proof}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                on:click={() =>
-                                                    openFileSourceModal(
-                                                        game?.content
-                                                            .soundtrack ?? "",
-                                                        "soundtrack",
-                                                    )}
-                                                class="w-full"
-                                            >
-                                                Add Download Source
-                                            </Button>
-                                        {:else}
-                                            <p
-                                                class="text-xs text-muted-foreground italic"
-                                            >
-                                                Create a reputation profile to
-                                                add or manage download sources
-                                            </p>
-                                        {/if}
-
-                                        <div class="service-file-card-wrapper">
-                                            <FileCard
-                                                profile={$reputation_proof}
-                                                fileHash={game.content.soundtrack}
-                                                sources={soundtrackSources}
-                                                explorerUri={$explorer_uri}
-                                                source_explorer_url={$source_explorer_url}
-                                                webExplorerUriTkn={$web_explorer_uri_tkn}
-                                            />
-                                        </div>
-                                    </div>
-                                </details>
-                            </div>
-                        {/if}
                     </div>
                 {/if}
             </section>
