@@ -33,8 +33,7 @@
         reputation_proof,
         muted,
         audio_element,
-        user_volume,
-        current_height,
+        user_volume
     } from "$lib/common/store";
     import { ErgoPlatform } from "$lib/ergo/platform";
     import { onDestroy, onMount, tick } from "svelte";
@@ -89,7 +88,6 @@
         Lock as LockIcon,
         Wand2,
         Music,
-        VolumeX,
         Terminal,
         ArrowRight,
         Copy,
@@ -6641,17 +6639,30 @@
                                             <p class="text-sm text-muted-foreground mb-3">
                                                 Run your participation. The checksum serves to validate the integrity of both the seed and your ErgoTree.
                                             </p>
-                                            <div class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group">
-                                                <button
-                                                    type="button"
-                                                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
-                                                    on:click={() => navigator.clipboard.writeText(`nodo execute ${game?.content.serviceId} -e seed ${game?.seed} -e ergotree ${walletErgoTreeHex} -e checksum ${participationChecksum}`)}
-                                                    title="Copy command"
-                                                >
-                                                    <Copy class="w-3.5 h-3.5" />
-                                                </button>
-                                                <span class="text-primary">nodo</span> execute {game?.content.serviceId} -e seed {game?.seed} -e ergotree {walletErgoTreeHex} -e checksum {participationChecksum}
-                                            </div>
+                                            {#if !$connected}
+                                                <div class="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20 flex items-start gap-3 mb-3">
+                                                    <AlertTriangle class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                    <div class="text-sm text-amber-600">
+                                                        <p class="font-semibold mb-1">Connect Your Wallet</p>
+                                                        <p>You need to connect your wallet to execute this command.</p>
+                                                    </div>
+                                                </div>
+                                                <div class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all opacity-50">
+                                                    <span class="text-primary">nodo</span> execute {game?.content.serviceId} -e seed {game?.seed} -e ergotree "your_ergotree" -e checksum "checksum"
+                                                </div>
+                                            {:else}
+                                                <div class="bg-muted/50 p-3 rounded-lg font-mono text-xs break-all relative group">
+                                                    <button
+                                                        type="button"
+                                                        class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                                                        on:click={() => navigator.clipboard.writeText(`nodo execute ${game?.content.serviceId} -e seed ${game?.seed} -e ergotree ${walletErgoTreeHex} -e checksum ${participationChecksum}`)}
+                                                        title="Copy command"
+                                                    >
+                                                        <Copy class="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <span class="text-primary">nodo</span> execute {game?.content.serviceId} -e seed {game?.seed} -e ergotree {walletErgoTreeHex} -e checksum {participationChecksum}
+                                                </div>
+                                            {/if}
                                         </div>
                                         
                                         <!-- Step 3 -->
