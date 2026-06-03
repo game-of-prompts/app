@@ -954,7 +954,18 @@ export async function fetchGameHistory(gameId: string): Promise<AnyGame[]> {
 // === STATE: PARTICIPATION SUBMITTED & RESOLVED
 // =================================================================
 
+function getOldestBox<T extends { creationHeight?: number }>(
+    boxes: T[],
+): T | null {
+    if (boxes.length === 0) return null;
 
+    return boxes.reduce((oldest, current) =>
+        (current.creationHeight ?? Number.MAX_SAFE_INTEGER) <
+        (oldest.creationHeight ?? Number.MAX_SAFE_INTEGER)
+            ? current
+            : oldest,
+    );
+}
 
 export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | null> {
     const normalizedSolverId = solverId.trim();
@@ -978,9 +989,11 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
                 
     if (response.ok) {
         const data = await response.json();
-        const items = data.items || [];
-        if (items.length > 0) {
-            return items[0] as Box<Amount>;
+        const items = (data.items || []) as Box<Amount>[];
+
+        const oldestBox = getOldestBox(items);
+        if (oldestBox) {
+            return oldestBox;
         }
     }
 
@@ -1015,7 +1028,7 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
             }
         }
 
-        return uniqueBoxes.values().next().value ?? null;
+        return getOldestBox(Array.from(uniqueBoxes.values()));
     } catch (error) {
         console.error("Error fetching solver ID box:", error);
         return null;
