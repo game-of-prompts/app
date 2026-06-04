@@ -5571,7 +5571,7 @@
                                     {#if isCurrentParticipationWinner}
                                         <div class="winner-badge">
                                             <Trophy class="w-4 h-4 mr-2" />
-                                            <span>WINNER CANDIDATE</span>
+                                            <span>{game.status === GameState.Finalized ? 'WINNER' : 'WINNER CANDIDATE'}</span>
                                         </div>
                                     {/if}
 
