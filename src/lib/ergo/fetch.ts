@@ -972,36 +972,31 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
     if (!normalizedSolverId) return null;
 
     const url = `${get(explorer_uri)}/api/v1/boxes/search`;
-    // TODO A problem here is that standard explorer requires ergoTreeTemplateHash for searching, so we can't search any box on the blockchain.
+    
+    const uniqueBoxes = new Map<string, Box<Amount>>();
 
-    // Check on Reputation proof boxes.
-
-    const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        ergoTreeTemplateHash: getReputationProofTemplateHash(),
-                        registers: {
-                            R5: normalizedSolverId,
-                        },
-                    }),
-                });
-                
-    if (response.ok) {
-        const data = await response.json();
-        const items = (data.items || []) as Box<Amount>[];
-
-        const oldestBox = getOldestBox(items);
-        if (oldestBox) {
-            return oldestBox;
-        }
-    }
-
-    // Check on False boxes.
-
-    const registerKeys = ["R4", "R5", "R6", "R7", "R8", "R9"] as const;
     try {
-        const responses = await Promise.all(
+        const reputationResponse = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ergoTreeTemplateHash: getReputationProofTemplateHash(),
+                registers: {
+                    R5: normalizedSolverId,
+                },
+            }),
+        });
+
+        if (reputationResponse.ok) {
+            const data = await reputationResponse.json();
+            const items = (data.items || []) as Box<Amount>[];
+            for (const item of items) {
+                uniqueBoxes.set(item.boxId, item);
+            }
+        }
+
+        const registerKeys = ["R4", "R5", "R6", "R7", "R8", "R9"] as const;
+        const falseResponses = await Promise.all(
             registerKeys.map(async (registerKey) => {
                 const response = await fetch(url, {
                     method: "POST",
@@ -1017,25 +1012,23 @@ export async function fetchSolverIdBox(solverId: string): Promise<Box<Amount> | 
                 if (!response.ok) return [];
 
                 const data = await response.json();
-                return (data.items || []) as Box[];
+                return (data.items || []) as Box<Amount>[];
             }),
         );
 
-        const uniqueBoxes = new Map<string, Box<Amount>>();
-        for (const items of responses) {
+        for (const items of falseResponses) {
             for (const item of items) {
                 uniqueBoxes.set(item.boxId, item);
             }
         }
 
         return getOldestBox(Array.from(uniqueBoxes.values()));
+
     } catch (error) {
         console.error("Error fetching solver ID box:", error);
         return null;
     }
 }
-
-
 
 async function _parseParticipationBox(box: any, participationTokenId: string): Promise<ParticipationBase | null> {
     try {
