@@ -187,6 +187,7 @@ export interface GameFinalized {
     resolverPK_Hex: string | null;
     resolverScript_Hex: string;
     resolverCommission: number;
+    devCommission: number;
 }
 
 /**

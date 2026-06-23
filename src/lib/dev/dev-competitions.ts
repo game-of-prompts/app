@@ -678,6 +678,7 @@ function buildScenarioState(
         resolverPK_Hex: DEFAULT_PLAYER_PK_HEX,
         resolverScript_Hex: `0008cd${DEFAULT_PLAYER_PK_HEX}`,
         resolverCommission,
+        devCommission,
     });
 
     switch (definition.key) {
