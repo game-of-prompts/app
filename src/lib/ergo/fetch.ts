@@ -1526,10 +1526,19 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
         // Prize pool is derived from the HISTORICAL record, not the live box. `currentBox`
         // (the box now holding the NFT) is a winner/resolver wallet box that no longer
         // carries the participation tokens, so `currentBox.value` / `lastBox.box.value`
-        // would report a near-zero prize pool. The last resolution/end-game contract box
-        // (spent by the finalize tx) still carries the participation-token balance, which
-        // is the final prize pool consumed by getPrizePool().
-        const finalPrizeValue = lastResolutionBox?.value ?? lastBox.value;
+        // would report a near-zero prize pool. The contract box that still carries the
+        // full pot (participation balance + stake) right before the finalize tx is the
+        // one with the LARGEST value across the historical record. Selecting the max is
+        // robust even when no Resolution box is present (e.g. games finalized straight
+        // from an end-game/timeout box) — the previous `lastResolutionBox?.value ??
+        // lastBox.value` fell back to a near-zero box in that case, yielding prize pool 0.
+        const maxHistValue = histBoxes.reduce(
+            (max, b) => (BigInt(b.value ?? 0n) > max ? BigInt(b.value ?? 0n) : max),
+            0n,
+        );
+        const finalPrizeValue =
+            lastResolutionBox?.value ??
+            (maxHistValue > 0n ? maxHistValue : lastBox.value);
 
         // build finalized object
         try {
