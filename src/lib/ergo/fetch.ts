@@ -829,6 +829,13 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
         const winnerFinalizationGracePeriod = getGameConstants().END_GAME_AUTH_GRACE_PERIOD;
 
+        // Prize pool is derived from the HISTORICAL record, not the live box: once a
+        // game is finalized the NFT sits in a non-contract box (winner/resolver wallet)
+        // that no longer holds the participation tokens, so the live box reports 0.
+        // The last resolution/end-game contract box (the one spent by the finalize tx)
+        // still carries the participation-token balance, i.e. the final prize pool.
+        const finalPrizeValue = lastResolutionBox?.value ?? lastBox.value;
+
         const finalized: GameFinalized = {
             boxId: lastResolutionBox?.boxId || currentBox.boxId, // Use resolution box ID if available
             box: lastResolutionBox?.box || currentBox, // Use resolution box if available
@@ -837,7 +844,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             deadlineBlock: lastBox.deadlineBlock,
             gameId,
             content: lastBox.content,
-            value: lastBox.value,
+            value: finalPrizeValue,
             participationTokenId: lastBox.participationTokenId,
             participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0),
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
@@ -855,6 +862,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
             resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
             resolverCommission: lastResolutionBox?.resolverCommission || 0,
+            devCommission: lastResolutionBox?.devCommission || 0,
             createdAt: lastResolutionBox?.createdAt || (('createdAt' in lastBox) ? (lastBox as any).createdAt : 0)
         };
 
@@ -1446,8 +1454,10 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
         console.error(`fetchGame: error parsing current box for ${id}:`, e);
     }
 
-    // 4) If we reached here we need to collect historical contract boxes for this token id
-    const templateHashes = [activeTemplate, resolutionTemplate, cancellationTemplate];
+    // 4) If we reached here we need to collect historical contract boxes for this token id.
+    //    endGameTemplate must be included: the end-game box is the contract box spent by
+    //    the finalize tx and the one that still carries the participation-token prize pool.
+    const templateHashes = [activeTemplate, resolutionTemplate, endGameTemplate, cancellationTemplate];
     const histBoxes: AnyGame[] = [];
 
     const limit = 100;
@@ -1513,6 +1523,14 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
         const winnerFinalizationGracePeriod = 64800; // 90 days (as in fetchFinalizedGames) - TODO: take from contract constants if available
 
+        // Prize pool is derived from the HISTORICAL record, not the live box. `currentBox`
+        // (the box now holding the NFT) is a winner/resolver wallet box that no longer
+        // carries the participation tokens, so `currentBox.value` / `lastBox.box.value`
+        // would report a near-zero prize pool. The last resolution/end-game contract box
+        // (spent by the finalize tx) still carries the participation-token balance, which
+        // is the final prize pool consumed by getPrizePool().
+        const finalPrizeValue = lastResolutionBox?.value ?? lastBox.value;
+
         // build finalized object
         try {
             const finalized: GameFinalized = {
@@ -1523,7 +1541,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 deadlineBlock: lastBox.deadlineBlock,
                 gameId: id,
                 content: lastBox.content,
-                value: BigInt(lastBox.box.value),
+                value: finalPrizeValue,
                 participationFeeAmount: BigInt(lastBox.participationFeeAmount || 0),
                 participationTokenId: lastBox.participationTokenId,
                 reputationOpinions: await fetchReputationOpinionsForTarget("game", id),
@@ -1542,6 +1560,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 resolverPK_Hex: lastResolutionBox?.resolverPK_Hex || null,
                 resolverScript_Hex: lastResolutionBox?.resolverScript_Hex || "",
                 resolverCommission: lastResolutionBox?.resolverCommission || 0,
+                devCommission: lastResolutionBox?.devCommission || 0,
                 createdAt: lastResolutionBox?.createdAt || (('createdAt' in lastBox) ? (lastBox as any).createdAt : 0)
             };
 
@@ -1604,6 +1623,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 resolverPK_Hex: null,
                 resolverScript_Hex: "",
                 resolverCommission: 0,
+                devCommission: 0,
                 createdAt: await tokenCreationHeight(id) || 0
             };
             minimal.reputation = calculate_reputation(minimal);
