@@ -1910,8 +1910,9 @@
             platform = game.platform;
 
             // 2. Commission integration (unified logic)
-            // Only compute breakdown if the status exposes commissions
-            if (game.status === "Active" || game.status === "Resolution") {
+            // Compute breakdown for Active, Resolution, and Finalized games —
+            // all three statuses expose resolverCommission, devCommission, and perJudgeCommission.
+            if (game.status === "Active" || game.status === "Resolution" || game.status === "Finalized") {
                 const denominator = game.constants.COMMISSION_DENOMINATOR / 100;
                 resolverPct =
                     Number(game.resolverCommission ?? 0) / denominator;
@@ -1921,7 +1922,7 @@
                     denominator;
                 developersPct = Number(game.devCommission ?? 0) / denominator;
                 creatorSlashRatioPct =
-                    Number(game.creatorSlashRatio ?? 0) / denominator;
+                    Number((game as any).creatorSlashRatio ?? 0) / denominator;
                 totalPct = resolverPct + judgesTotalPct + developersPct;
                 winnerPct = Math.max(0, 100 - totalPct);
                 overAllocated =
