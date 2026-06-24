@@ -15,6 +15,14 @@ type FlyAndScaleParams = {
 	duration?: number;
 };
 
+export const formatReputation = (reputation: number) => {
+  const value = reputation / 1e9;
+
+  return value
+    .toFixed(4)
+    .replace(/\.?0+$/, '');
+};
+
 export const flyAndScale = (
 	node: Element,
 	params: FlyAndScaleParams = { y: -8, x: 0, start: 0.95, duration: 150 }

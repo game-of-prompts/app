@@ -30,8 +30,6 @@ import {
     getGopEndGameTemplateHash,
     getGopParticipationBatchTemplateHash,
     getGopMintIdtErgoTreeHex,
-    getGopFalseScriptHash,
-    getReputationProofScriptHash,
     getReputationProofTemplateHash,
     getGopFalseTemplateHash
 } from "./contract"; // Assumes this file exports functions to get script hashes
@@ -189,7 +187,7 @@ function calculate_reputation(game: AnyGame): number {
         const proof = get(judgesStore).data.get(game.content.creatorTokenId);
         reputation += (proof ? calculate_reputation_proof(proof) : 0);
     }
-    return reputation / 1e9;
+    return reputation;
 }
 
 /**

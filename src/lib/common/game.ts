@@ -467,6 +467,8 @@ export function calculateEffectiveScore(
  * @returns The calculated prize pool as a bigint.
  */
 export function getPrizePool(game: AnyGame | null, participations: AnyParticipation[] | null): bigint {
+    console.log("Calculating prize pool for game:", game?.gameId);
+    console.log("Participations count:", participations?.length ?? 0);
     if (!game) return 0n;
 
     // A. Contract Balance (donations, invalidated participations and stake)
@@ -474,7 +476,7 @@ export function getPrizePool(game: AnyGame | null, participations: AnyParticipat
 
     // B. Unbatched Participations
     const totalParticipationsValue = (participations || [])
-        .filter((p) => p && p.spent === false)
+        .filter((p) => p && p.spent === false || game.status === GameState.Finalized) // Only consider spent participations if the game is finalized
         .reduce((acc, p) => {
             return acc + BigInt(p.value ?? 0n);
         }, 0n);

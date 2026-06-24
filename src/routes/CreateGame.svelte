@@ -59,6 +59,7 @@
     import { fetchJudges } from "$lib/ergo/reputation/fetch";
 
     import { getGameConstants } from "$lib/common/constants";
+    import { formatReputation } from "$lib/utils";
     const constants = getGameConstants();
     declare const ergo: any;
 
@@ -705,7 +706,7 @@
             reputation += proof ? calculate_reputation_proof(proof) : 0;
         }
 
-        return reputation / 1e9;
+        return reputation;
     })();
 
     // Calculate breakdown for display
@@ -727,9 +728,9 @@
         }
 
         return {
-            judgesRep: judgesRep / 1e9,
-            creatorRep: creatorRep / 1e9,
-            total: (judgesRep + creatorRep) / 1e9,
+            judgesRep: judgesRep,
+            creatorRep: creatorRep,
+            total: (judgesRep + creatorRep),
         };
     })();
 
@@ -1200,7 +1201,7 @@
                                         <span
                                             class="text-2xl font-bold text-primary"
                                         >
-                                            {estimatedReputation.toFixed(4)}
+                                            {formatReputation(estimatedReputation)}
                                         </span>
                                         <span
                                             class="text-xs text-muted-foreground"
@@ -1214,9 +1215,7 @@
                                         >
                                             <span>From Judges:</span>
                                             <span class="font-mono"
-                                                >{reputationBreakdown.judgesRep.toFixed(
-                                                    4,
-                                                )} ERG</span
+                                                >{formatReputation(reputationBreakdown.judgesRep)} ERG</span
                                             >
                                         </div>
                                         <div
@@ -1224,9 +1223,7 @@
                                         >
                                             <span>From Creator:</span>
                                             <span class="font-mono"
-                                                >{reputationBreakdown.creatorRep.toFixed(
-                                                    4,
-                                                )} ERG</span
+                                                >{formatReputation(reputationBreakdown.creatorRep)} ERG</span
                                             >
                                         </div>
                                     </div>
@@ -2147,9 +2144,7 @@
                                             >
                                             <span
                                                 class="text-xl font-bold text-primary"
-                                                >{estimatedReputation.toFixed(
-                                                    4,
-                                                )}</span
+                                                >{formatReputation(estimatedReputation)}</span
                                             >
                                         </div>
                                         <div
@@ -2163,9 +2158,7 @@
                                                     >From Judges:</span
                                                 >
                                                 <span class="font-mono"
-                                                    >{reputationBreakdown.judgesRep.toFixed(
-                                                        4,
-                                                    )} ERG</span
+                                                    >{formatReputation(reputationBreakdown.judgesRep)}</span
                                                 >
                                             </div>
                                             <div
