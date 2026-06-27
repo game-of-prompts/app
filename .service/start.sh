@@ -4,4 +4,4 @@
 # packer. Bind the MCP (Streamable HTTP) + REST server on 0.0.0.0:8080 (PORT
 # defaults to 8080 inside server-http.mjs). GOP_EXPLORER_API defaults to Ergo
 # mainnet; GOP_SIGNER_MODE defaults to 'unsigned' (no key in the VM).
-exec node /app/server-http.mjs
+exec node /app/service/server-http.mjs

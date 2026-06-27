@@ -16,6 +16,12 @@
  * Reads + pure helpers come from core.mjs; writes from writes.mjs. Both the MCP
  * and REST layers call the SAME core/writes functions, so they never diverge.
  *
+ * The shared registry lives ONCE in ../mcp (no duplicated copies in .service).
+ * The Dockerfile preserves this sibling layout under /app (/app/service +
+ * /app/mcp) so `../mcp` resolves identically in local dev and in the sealed
+ * microVM, and the prebuilt mcp/_generated/lib.bundle.mjs (the reused src reads +
+ * contract compilation) ships with it — no build toolchain needed in the VM.
+ *
  * Data source: Ergo Explorer mainnet (override via GOP_EXPLORER_API).
  */
 import { createServer } from 'node:http';
@@ -23,10 +29,10 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import { TOOLS, HANDLERS } from './tools.mjs';
-import * as core from './core.mjs';
-import * as writes from './writes.mjs';
-import { signerMode, EXPLORER_API } from './lib.mjs';
+import { TOOLS, HANDLERS } from '../mcp/tools.mjs';
+import * as core from '../mcp/core.mjs';
+import * as writes from '../mcp/writes.mjs';
+import { signerMode, EXPLORER_API } from '../mcp/lib.mjs';
 
 // ── MCP server factory (stateless: one per request) ─────────────────────────
 function makeServer() {

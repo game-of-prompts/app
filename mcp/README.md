@@ -7,9 +7,33 @@ signer. It is the local/dev twin of the sealed Celaut microVM in
 [`../.service`](../.service) (both share `core.mjs` / `lib.mjs` / `writes.mjs` /
 `tools.mjs`, so the transports never drift).
 
-Built following the template recipe in
-`ergo-basics-template/MCP.md` and mirroring `source-application/mcp` +
-`forum-application/mcp`. **Additive only** — no theme/UI/`src` files were touched.
+Mirrors `source-application/mcp` + `forum-application/mcp`. **DRY** — the read +
+contract-compilation logic is **not** re-implemented here; it is the library's own
+`src/lib/{ergo,common}/*`, bundled once by `npm run build:mcp` (see Build).
+**Additive only** — no theme/UI/`src` files were touched.
+
+## Build
+
+The reads + the `contracts/*.es` compilation live ONCE in `src/`. `mcp/build.mjs`
+runs esbuild over `_entry.mjs` (which re-exports the real `src` symbols) and emits
+a single Node-loadable ESM module, **`mcp/_generated/lib.bundle.mjs`** (committed):
+
+```sh
+npm install
+npm run build:mcp   # regenerate _generated/lib.bundle.mjs from src/
+```
+
+Re-run after changing any read/contract code under `src/lib/{ergo,common}/`.
+`core.mjs` is a thin adapter over the bundle. esbuild:
+
+- inlines the `.es` ErgoScript sources via a `text` loader (so no `contracts/`
+  copy is needed in `mcp/` or `.service/`);
+- keeps `reputation-system/node` and the `@fleet-sdk/*` packages **external**, so
+  reads resolve the SAME installed packages the writes use at runtime (no drift,
+  no multi-MB compiler inlined);
+- aliases the browser-only edges to inert `_stubs/*` (`$lib/ergo/platform`,
+  `$lib/dev/dev-competitions`, the bare `reputation-system` Svelte entry,
+  `$app/paths`, the sibling `source-application`/`forum-application` packages).
 
 ## Run
 
@@ -18,7 +42,9 @@ npm install
 npm run mcp        # stdio MCP server (node server.mjs)
 ```
 
-Point any MCP client at `node mcp/server.mjs`.
+Point any MCP client at `node mcp/server.mjs`. (`_generated/lib.bundle.mjs` is
+committed, so a fresh clone runs without a build step; rebuild only when `src/`
+read/contract code changes.)
 
 ## Signer modes (writes)
 
@@ -84,11 +110,13 @@ single `*_with_signer` call. Two adjacent reputation writes are also browser-onl
 
 ## Notes
 
-- `core.mjs` is a Svelte-free port of the read surface of `src/lib/ergo/**` +
-  `src/lib/common/**`. It compiles the same `contracts/*.es` with the same
-  dependency-injection order as `src/lib/ergo/contract.ts`, and imports the
-  reputation-proof + digital-public-good ErgoTrees pre-compiled from
-  `reputation-system/node` (their derived hashes are identical to the app's).
+- `core.mjs` is a **thin adapter** over `_generated/lib.bundle.mjs` — it points
+  the library's `explorer_uri` store at `GOP_EXPLORER_API`, re-exports the pure
+  helpers/constants, and shapes the rich `src` results to JSON (Map → array,
+  BigInt → string, the inert `platform` stub stripped). There is no second copy
+  of the read or contract logic: `get_contracts_info` calls the SAME
+  `src/lib/ergo/contract.ts` getters the web app uses (verified byte-identical
+  addresses/hashes for all 11 contracts, incl. reputation-proof + dpg).
 - `reputation-system` is pinned to the canonical upstream
   `github:reputation-systems/reputation-system` (has the `./node` entry, the
   committed `dist/`, and the `@scure` derivation). Never a fork feature branch.

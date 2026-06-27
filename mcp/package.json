@@ -7,7 +7,8 @@
   "main": "server.mjs",
   "scripts": {
     "mcp": "node server.mjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "build:mcp": "node build.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -17,6 +18,10 @@
     "@fleet-sdk/core": "^0.12.0",
     "@fleet-sdk/crypto": "^0.11.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "reputation-system": "github:reputation-systems/reputation-system"
+    "reputation-system": "github:reputation-systems/reputation-system",
+    "@fleet-sdk/serializer": "^0.11.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.18.20"
   }
 }
