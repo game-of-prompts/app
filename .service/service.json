@@ -1,0 +1,30 @@
+{
+  "tag": ["game-of-prompts-mcp", "mcp+rest", "v0.1.0"],
+  "architecture": "linux/amd64",
+  "init": {
+    "entry_path": ["app", "start.sh"]
+  },
+  "api": [
+    {
+      "port": 8080,
+      "transport": ["tcp"],
+      "protocol": ["http"]
+    }
+  ],
+  "resources": {
+    "at_init": {
+      "mem_limit": 134217728,
+      "disk_space": 2147483648
+    },
+    "at_most": {
+      "mem_limit": 402653184,
+      "disk_space": 4294967296
+    }
+  },
+  "network": [
+    {
+      "tags": ["api.ergoplatform.com", "ipv4", "public"],
+      "prose": "Outbound HTTPS to the Ergo Explorer API (api.ergoplatform.com) for on-chain Game of Prompts reads (games, participations, reputation, tokens) and for building reputation-opinion transactions. The node restricts the sealed VM to this host only. In seed mode an additional Ergo node host (GOP_NODE_URI) is contacted for tx submission; in the default unsigned mode no node is needed (unsigned txs are returned to the caller)."
+    }
+  ]
+}

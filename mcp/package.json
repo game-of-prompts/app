@@ -1,0 +1,27 @@
+{
+  "name": "game-of-prompts-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Full-surface MCP server (stdio) for the Game of Prompts on-chain competition registry — game/participation/reputation reads, contract info, phase + commitment helpers, and signer-backed reputation-opinion writes.",
+  "main": "server.mjs",
+  "scripts": {
+    "mcp": "node server.mjs",
+    "start": "node server.mjs",
+    "build:mcp": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fleet-sdk/compiler": "^0.12.0",
+    "@fleet-sdk/core": "^0.12.0",
+    "@fleet-sdk/crypto": "^0.11.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "reputation-system": "github:reputation-systems/reputation-system",
+    "@fleet-sdk/serializer": "^0.11.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.18.20"
+  }
+}
