@@ -48,8 +48,13 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: {}, additionalProperties: false }
   },
   {
+    name: 'fetch_finalized_games',
+    description: 'All games that already completed their lifecycle (FINALIZED): the game NFT no longer sits in a game contract box. Reconstructed from the spent-box history. Slower than the other game reads.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }
+  },
+  {
     name: 'fetch_all_games',
-    description: 'All games across the active + resolution + cancellation states.',
+    description: 'All games across the active + resolution + cancellation + finalized states.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false }
   },
   {
@@ -227,6 +232,7 @@ export const HANDLERS = {
   fetch_active_games: async () => core.fetchActiveGames(),
   fetch_resolution_games: async () => core.fetchResolutionGames(),
   fetch_cancellation_games: async () => core.fetchCancellationGames(),
+  fetch_finalized_games: async () => core.fetchFinalizedGames(),
   fetch_all_games: async () => core.fetchAllGames(),
   fetch_game: async ({ gameId }) => core.fetchGame(gameId),
   load_game_by_id: async ({ gameId }) => core.fetchGame(gameId),

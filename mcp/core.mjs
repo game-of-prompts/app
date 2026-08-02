@@ -95,15 +95,18 @@ export const fetchActiveGames = async () => jsonSafe(await lib.fetchActiveGames(
 export const fetchResolutionGames = async () => jsonSafe(await lib.fetchResolutionGames());
 export const fetchCancellationGames = async () => jsonSafe(await lib.fetchCancellationGames());
 
-/** All games across active + resolution + cancellation (deduped by gameId). */
+export const fetchFinalizedGames = async () => jsonSafe(await lib.fetchFinalizedGames());
+
+/** All games across active + resolution + cancellation + finalized (deduped by gameId). */
 export async function fetchAllGames() {
-  const [active, resolution, cancellation] = await Promise.all([
+  const [active, resolution, cancellation, finalized] = await Promise.all([
     lib.fetchActiveGames(),
     lib.fetchResolutionGames(),
-    lib.fetchCancellationGames()
+    lib.fetchCancellationGames(),
+    lib.fetchFinalizedGames()
   ]);
   const map = new Map();
-  for (const g of [...active.values(), ...resolution.values(), ...cancellation.values()]) {
+  for (const g of [...active.values(), ...resolution.values(), ...cancellation.values(), ...finalized.values()]) {
     map.set(g.gameId, g);
   }
   return jsonSafe([...map.values()]);
