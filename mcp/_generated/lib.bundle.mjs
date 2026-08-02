@@ -17,6 +17,98 @@ import {
 // _stubs/app-paths.mjs
 var base = "";
 
+// _stubs/sibling-apps.mjs
+import { searchBoxes, getTimestampFromBlockId } from "reputation-system/node";
+var FILE_SOURCE_TYPE_NFT_ID = "8299d98e15ebee7fa39ad716de7c8bb191790a1bf4b7c3f91af35a0e36187706";
+function hexToUtf8(hex2) {
+  if (!hex2 || typeof hex2 !== "string")
+    return null;
+  try {
+    return Buffer.from(hex2, "hex").toString("utf8");
+  } catch {
+    return null;
+  }
+}
+function deserializeSourceEntry(content) {
+  const empty = { hashFunctionId: "", contentFormat: "", contentHash: "", rawFormat: "", urlLink: "" };
+  if (!content || content.trim() === "")
+    return empty;
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const tuple = parsed[0];
+      if (Array.isArray(tuple) && tuple.length >= 5) {
+        return {
+          hashFunctionId: tuple[0] || "",
+          contentFormat: tuple[1] || "",
+          contentHash: tuple[2] || "",
+          rawFormat: tuple[3] || "",
+          urlLink: tuple[4] || "",
+          isChunked: tuple[5] === true
+        };
+      }
+      if (typeof tuple === "object" && tuple !== null && !Array.isArray(tuple)) {
+        return {
+          hashFunctionId: tuple.hashFunctionId || "",
+          contentFormat: tuple.contentFormat || tuple.contentFormatNftId || "",
+          contentHash: tuple.contentHash || "",
+          rawFormat: tuple.rawFormat || tuple.rawFormatNftId || "",
+          urlLink: tuple.urlLink || "",
+          isChunked: tuple.isChunked === true
+        };
+      }
+    }
+  } catch {
+  }
+  return { hashFunctionId: "", contentFormat: "", contentHash: "", rawFormat: "", urlLink: content, isChunked: false };
+}
+async function collectBoxes(generator) {
+  const boxes = [];
+  for await (const batch of generator)
+    boxes.push(...batch);
+  return boxes;
+}
+async function fetchFileSourcesByHash(fileHash, explorerUri) {
+  const generator = searchBoxes(
+    explorerUri,
+    void 0,
+    FILE_SOURCE_TYPE_NFT_ID,
+    fileHash,
+    void 0,
+    void 0,
+    void 0,
+    void 0,
+    void 0,
+    void 0
+  );
+  const boxes = await collectBoxes(generator);
+  const sources = [];
+  for (const box of boxes) {
+    if (!box.assets?.length)
+      continue;
+    if (box.additionalRegisters.R6?.renderedValue !== "false")
+      continue;
+    if (!box.additionalRegisters.R9?.renderedValue)
+      continue;
+    const sourceEntry = deserializeSourceEntry(
+      hexToUtf8(box.additionalRegisters.R9.renderedValue) ?? ""
+    );
+    sources.push({
+      id: box.boxId,
+      fileHash,
+      hashFunctionId: sourceEntry.hashFunctionId || "",
+      source: sourceEntry,
+      ownerTokenId: box.assets[0].tokenId,
+      reputationAmount: Number(box.assets[0].amount),
+      timestamp: await getTimestampFromBlockId(explorerUri, box.blockId),
+      isLocked: false,
+      transactionId: box.transactionId
+    });
+  }
+  sources.sort((a, b) => b.timestamp - a.timestamp);
+  return sources;
+}
+
 // ../node_modules/svelte/src/runtime/internal/utils.js
 function noop() {
 }
@@ -486,7 +578,7 @@ var CACHE_DURATION_MS = 1e4;
 var isDevMode = writable(false);
 
 // ../src/lib/ergo/utils.ts
-function hexToUtf8(hexString) {
+function hexToUtf82(hexString) {
   try {
     if (hexString.length % 2 !== 0) {
       return null;
@@ -607,6 +699,20 @@ function parseGameContent(rawJsonDetails, gameBoxId, nft) {
   }
   return content;
 }
+async function fetchServiceDownloadUrl(serviceId) {
+  const sources = await fetchFileSourcesByHash(serviceId, get_store_value(explorer_uri));
+  if (sources.length === 0) {
+    console.warn(`No sources found for serviceId ${serviceId}`);
+    return "N/A";
+  }
+  const primaryUrl = sources[0].source.urlLink;
+  if (!primaryUrl) {
+    console.warn(`No URL found in sources for serviceId ${serviceId}`);
+    return "N/A";
+  }
+  const serviceDownloadUrl = primaryUrl.startsWith("http") ? primaryUrl : `https://${primaryUrl}`;
+  return serviceDownloadUrl;
+}
 function getArrayFromValue(value) {
   if (Array.isArray(value))
     return value;
@@ -654,7 +760,7 @@ var false_default = "{\n  sigmaProp(false)\n}\n";
 
 // _stubs/reputation-system.mjs
 import {
-  searchBoxes,
+  searchBoxes as searchBoxes2,
   fetchAllProfiles,
   fetchTypeNfts,
   convertToRPBox
@@ -1883,7 +1989,7 @@ async function fetchJudges(force = false) {
 }
 async function fetchOpinionsAbout(objectPointer, typeNftId) {
   try {
-    const boxGenerator = searchBoxes(
+    const boxGenerator = searchBoxes2(
       get_store_value(explorer_uri),
       void 0,
       // tokenId (issuer)
@@ -2095,7 +2201,7 @@ async function parseGameActiveBox(box) {
     const devScript = parseCollByteToHex(r9Value[2]);
     if (!devScript)
       throw new Error("Could not parse devScript from R9.");
-    const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
+    const gameDetailsJson = hexToUtf82(gameDetailsHex || "");
     const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
     const gameActive = {
       platform: new ErgoPlatform(),
@@ -2220,7 +2326,7 @@ async function parseGameResolutionBox(box) {
     const resolverScript_Hex = parseCollByteToHex(r9Value[3]);
     if (!gameDetailsHex || !resolverScript_Hex || !devScript)
       throw new Error("Could not parse R9.");
-    const content = parseGameContent(hexToUtf8(gameDetailsHex), box.boxId, box.assets[0]);
+    const content = parseGameContent(hexToUtf82(gameDetailsHex), box.boxId, box.assets[0]);
     const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null;
     const gameResolution = {
       platform: new ErgoPlatform(),
@@ -2340,7 +2446,7 @@ async function parseGameCancellationBox(box) {
     }
     const gameDetailsHex = parseCollByteToHex(r9Value[0]);
     const participationTokenId = parseCollByteToHex(r9Value[1]);
-    const gameDetailsJson = hexToUtf8(gameDetailsHex || "");
+    const gameDetailsJson = hexToUtf82(gameDetailsHex || "");
     const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
     if (isNaN(unlockHeight) || !revealedS_Hex || portionToClaim === void 0) {
       throw new Error("Invalid or missing registers R5, R6, or R7.");
@@ -3081,7 +3187,7 @@ async function fetchGame(id) {
       try {
         if (currentBox.additionalRegisters && currentBox.additionalRegisters.R9) {
           const hex2 = parseCollByteToHex(currentBox.additionalRegisters.R9?.renderedValue);
-          const json = hexToUtf8(hex2 || "");
+          const json = hexToUtf82(hex2 || "");
           content = parseGameContent(json, currentBox.boxId, currentBox.assets?.[0]);
         }
       } catch (e) {
@@ -3321,6 +3427,7 @@ export {
   fetchParticipationBatches,
   fetchParticipations,
   fetchResolutionGames,
+  fetchServiceDownloadUrl,
   fetchSolverIdBox,
   fetchTypeNfts2 as fetchTypeNfts,
   fetch_token_details,
@@ -3372,7 +3479,7 @@ export {
   getReputationProofScriptHash,
   getReputationProofTemplateHash,
   hexToBytes,
-  hexToUtf8,
+  hexToUtf82 as hexToUtf8,
   isDevMode,
   parseCollByteToHex,
   resolve_participation_commitment,

@@ -137,6 +137,22 @@ export async function fetchParticipationBatches(gameId) {
 
 export const fetchSolverIdBox = async (solverId) => jsonSafe(await lib.fetchSolverIdBox(solverId));
 
+// ── Reads: service sources (src/lib/ergo/utils.ts:fetchServiceDownloadUrl) ─────
+// Resolve a Celaut service hash to a download URL via the source-application
+// FILE_SOURCE registry. Returns "N/A" when no source box publishes the hash.
+export const fetchServiceDownloadUrl = async (serviceId) => lib.fetchServiceDownloadUrl(serviceId);
+
+// Convenience: fetch a game by id and resolve its competition game-service in one
+// call. `serviceId` comes from the game box's R9 game-details JSON.
+export async function getGameService(gameId) {
+  const game = await lib.fetchGame(gameId);
+  if (!game) return { gameId, serviceId: '', downloadUrl: 'N/A', title: null };
+  const serviceId = game.content?.serviceId || '';
+  const title = game.content?.title ?? null;
+  if (!serviceId) return { gameId, serviceId: '', downloadUrl: 'N/A', title };
+  return { gameId, serviceId, downloadUrl: await lib.fetchServiceDownloadUrl(serviceId), title };
+}
+
 // ── Reads: reputation / tokens / chain ──────────────────────────────────────
 export const fetchOpinionsAbout = async (objectPointer, typeNftId) =>
   jsonSafe(await lib.fetchOpinionsAbout(objectPointer, typeNftId));

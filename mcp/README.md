@@ -59,7 +59,7 @@ Reads need no signer. Writes pick one from the environment (default `unsigned`):
 SeedSigner derives with `@scure` (standard BIP-39/32), so it signs from the same
 address Nautilus would — it is reused from `reputation-system/node`, never re-rolled.
 
-## Tools (26)
+## Tools (28)
 
 **Info:** `get_gop_config`, `get_contracts_info` (every game/reputation contract's
 address + ErgoTree template hash + script hash, compiled from `contracts/*.es`),
@@ -71,6 +71,12 @@ address + ErgoTree template hash + script hash, compiled from `contracts/*.es`),
 
 **Participation reads:** `fetch_participations`, `fetch_participation_batches`,
 `fetch_solver_id_box`.
+
+**Service sources:** `fetch_service_download_url` (resolve a Celaut service hash —
+a game's `serviceId` — to a download URL via the source-application FILE_SOURCE
+registry), `get_game_service` (fetch a game by id and resolve its
+`{ serviceId, downloadUrl }` in one call, so an agent can obtain a competition's
+game service without being handed it).
 
 **Reputation / token / chain reads:** `fetch_opinions_about`,
 `fetch_token_details`, `token_creation_height`, `get_current_height`.
