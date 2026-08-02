@@ -59,15 +59,15 @@ Reads need no signer. Writes pick one from the environment (default `unsigned`):
 SeedSigner derives with `@scure` (standard BIP-39/32), so it signs from the same
 address Nautilus would — it is reused from `reputation-system/node`, never re-rolled.
 
-## Tools (28)
+## Tools (29)
 
 **Info:** `get_gop_config`, `get_contracts_info` (every game/reputation contract's
 address + ErgoTree template hash + script hash, compiled from `contracts/*.es`),
 `list_browser_only_actions`.
 
 **Game reads:** `fetch_active_games`, `fetch_resolution_games`,
-`fetch_cancellation_games`, `fetch_all_games`, `fetch_game`, `load_game_by_id`,
-`fetch_game_history`, `get_game_phase`.
+`fetch_cancellation_games`, `fetch_finalized_games`, `fetch_all_games`,
+`fetch_game`, `load_game_by_id`, `fetch_game_history`, `get_game_phase`.
 
 **Participation reads:** `fetch_participations`, `fetch_participation_batches`,
 `fetch_solver_id_box`.
@@ -87,6 +87,36 @@ game service without being handed it).
 **Writes (reputation opinions; signer per `GOP_SIGNER_MODE`):**
 `create_reputation_profile`, `create_opinion`, `submit_creator_opinion`,
 `judge_invalidate_vote`, `judge_invalidate_unavailable_vote`.
+
+## Resource — the whitepaper (`context.mjs`)
+
+The tools say what an agent can *call*; they never said what Game of Prompts
+*is*. `gop://whitepaper` closes that gap: the concept, the Celaut/Ergo
+foundations, the role FAQs, the lifecycle flows, the protocol spec (`R4` states,
+box registers, block constants) and the trust model.
+
+It is **not vendored**. Each read fetches the org profile README
+([`game-of-prompts/.github`](https://github.com/game-of-prompts/.github/blob/main/profile/README.md)),
+which is the canonical text — improve it there and every MCP client sees it
+immediately, with no copy-paste step and no chance of the two drifting.
+In-process cache, `GOP_OVERVIEW_TTL_MS` (default 10 min);
+`GOP_OVERVIEW_URL` overrides the source.
+
+## Prompts (5)
+
+Role-oriented workflows that chain the tools in the right order and point at the
+whitepaper for the reasoning behind them:
+
+| Prompt | Arguments | Purpose |
+|---|---|---|
+| `explain_gop` | `role?` (participant/creator/judge/protocol) | Explain the platform. Embeds the whitepaper in the reply. |
+| `participate_in_game` | `gameId?` | Enter a competition: pick a game, verify its game-service, build a solver, submit. |
+| `create_game` | — | Publish a competition: service + paper refs, secret `S`, judges, parameters, stake. |
+| `judge_game` | `gameId?` | Accept a nomination, verify a winner candidate, vote to invalidate. |
+| `inspect_game` | `gameId` (required) | Audit one game: history, phase, participations, reputation signals. |
+
+The workflow prompts name the browser-only boundary explicitly, so an agent
+takes the user up to it instead of pretending it can publish the transaction.
 
 ## Wired vs browser-only writes (honest scope)
 

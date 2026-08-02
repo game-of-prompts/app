@@ -17,6 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { TOOLS, HANDLERS } from './tools.mjs';
+import { wireContext } from './context.mjs';
 
 // The reputation library logs verbosely via console.log; on stdio that stream
 // IS the JSON-RPC channel, so route all console output to stderr to keep the
@@ -25,9 +26,13 @@ console.log = (...a) => process.stderr.write(a.map(String).join(' ') + '\n');
 console.info = console.log;
 console.warn = console.log;
 
-const server = new Server({ name: 'game-of-prompts', version: '0.1.0' }, { capabilities: { tools: {} } });
+const server = new Server(
+  { name: 'game-of-prompts', version: '0.1.0' },
+  { capabilities: { tools: {}, resources: {}, prompts: {} } }
+);
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+wireContext(server);
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args = {} } = req.params;
