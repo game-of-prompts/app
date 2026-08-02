@@ -30,14 +30,19 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { TOOLS, HANDLERS } from '../mcp/tools.mjs';
+import { wireContext } from '../mcp/context.mjs';
 import * as core from '../mcp/core.mjs';
 import * as writes from '../mcp/writes.mjs';
 import { signerMode, EXPLORER_API } from '../mcp/lib.mjs';
 
 // ── MCP server factory (stateless: one per request) ─────────────────────────
 function makeServer() {
-  const server = new Server({ name: 'game-of-prompts', version: '0.1.0' }, { capabilities: { tools: {} } });
+  const server = new Server(
+    { name: 'game-of-prompts', version: '0.1.0' },
+    { capabilities: { tools: {}, resources: {}, prompts: {} } }
+  );
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+  wireContext(server);
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
     const handler = HANDLERS[name];
