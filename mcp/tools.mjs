@@ -90,6 +90,18 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: { solverId: { type: 'string' } }, required: ['solverId'], additionalProperties: false }
   },
 
+  // ── Reads: service sources ──────────────────────────────────────────────────
+  {
+    name: 'fetch_service_download_url',
+    description: 'Resolve a Celaut service hash (a game\'s serviceId) to a download URL from its newest FILE_SOURCE box in the source-application registry. Returns "N/A" if no source publishes the hash.',
+    inputSchema: { type: 'object', properties: { serviceId: { type: 'string' } }, required: ['serviceId'], additionalProperties: false }
+  },
+  {
+    name: 'get_game_service',
+    description: 'Fetch a game by NFT id and resolve its competition game-service in one call: returns { serviceId, downloadUrl, title }. Convenience over fetch_game + fetch_service_download_url — the agent needs no game service passed to it.',
+    inputSchema: { type: 'object', properties: { gameId: { type: 'string' } }, required: ['gameId'], additionalProperties: false }
+  },
+
   // ── Reads: reputation / tokens / chain ──────────────────────────────────────
   {
     name: 'fetch_opinions_about',
@@ -225,6 +237,10 @@ export const HANDLERS = {
   fetch_participations: async ({ gameId, participationTokenId }) => core.fetchParticipations(gameId, participationTokenId),
   fetch_participation_batches: async ({ gameId }) => core.fetchParticipationBatches(gameId),
   fetch_solver_id_box: async ({ solverId }) => core.fetchSolverIdBox(solverId),
+
+  // reads: service sources
+  fetch_service_download_url: async ({ serviceId }) => ({ serviceId, downloadUrl: await core.fetchServiceDownloadUrl(serviceId) }),
+  get_game_service: async ({ gameId }) => core.getGameService(gameId),
 
   // reads: reputation / tokens / chain
   fetch_opinions_about: async ({ objectPointer, typeNftId }) => core.fetchOpinionsAbout(objectPointer, typeNftId),

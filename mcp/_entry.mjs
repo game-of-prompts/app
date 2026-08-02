@@ -120,3 +120,11 @@ export { explorer_uri, REPUTATION_PROOF_TOTAL_SUPPLY, isDevMode } from '../src/l
 
 // ── Byte/hex + parsing helpers — src/lib/ergo/utils.ts ────────────────────────
 export { hexToUtf8, hexToBytes, uint8ArrayToHex, parseCollByteToHex } from '../src/lib/ergo/utils.ts';
+
+// ── Service source resolution — src/lib/ergo/utils.ts ─────────────────────────
+// Resolves a Celaut service hash (a game's `serviceId`) to a download URL via the
+// source-application FILE_SOURCE registry. Exported here so esbuild does not
+// tree-shake it (it has no other caller in the bundled read graph); the
+// `source-application` import it pulls in is aliased to the Node adapter in
+// mcp/_stubs/sibling-apps.mjs by mcp/build.mjs.
+export { fetchServiceDownloadUrl } from '../src/lib/ergo/utils.ts';
