@@ -157,8 +157,10 @@
         val recreatedGameBox = recreatedGameBoxes(0)
         val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
         
-        // Verificamos que se haya reseteado el candidato (Coll[Byte]())
-        if (recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {
+        // Verificamos que se haya reseteado el candidato (Coll[Byte]()) y que se mantenga el secreto revelado:
+        // con otro S ninguna participación podría validarse y el juego terminaría sin ganador.
+        val recreatedR6 = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get
+        if (recreatedR6._1 == revealedS && recreatedR6._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
           
           val resolverPenalization = if (penalizeResolver) resolverCommissionPercentage * creatorSlashRatio / COMMISSION_DENOMINATOR else 0L
