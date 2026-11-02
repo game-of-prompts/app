@@ -282,6 +282,7 @@
               // Verificación de la recreación de la caja del juego
               val recreatedGameBox = OUTPUTS(0)
               val gameBoxIsRecreatedCorrectly = {
+                recreatedGameBox.propositionBytes == SELF.propositionBytes &&
                 box_value(recreatedGameBox) >= box_value(SELF) &&
                 recreatedGameBox.tokens(0)._1 == gameNftId &&
                 recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
