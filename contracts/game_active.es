@@ -31,6 +31,11 @@
   // is therefore never enough to impersonate a game box.
   val GAME_NFT_AMOUNT = 2L
 
+  // resolutionDeadline must land in [HEIGHT + JUDGE_PERIOD, HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN].
+  // Without an upper bound it could be set so far ahead that the game never ends and every fund stays locked.
+  // The margin covers the blocks the off-chain code adds so the tx is still valid if it's mined a bit later.
+  val RESOLUTION_DEADLINE_MARGIN = 20L
+
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
   // =================================================================
@@ -222,6 +227,7 @@
               resolutionBox.R8[Coll[Long]].get(7) == devCommissionPercentage &&
               resolutionBox.R8[Coll[Long]].get(8) == creatorSlashRatio &&
               resolutionBox.R8[Coll[Long]].get(9) >= HEIGHT + JUDGE_PERIOD &&
+              resolutionBox.R8[Coll[Long]].get(9) <= HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId &&
               resolutionBox.R9[Coll[Coll[Byte]]].get(2) == devScript &&
