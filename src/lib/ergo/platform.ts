@@ -28,6 +28,7 @@ import { GAME, PARTICIPATION } from '$lib/ergo/reputation/types';
 import { current_height, reputation_proof } from '$lib/common/store';
 // the reputation proof contract address is obtained via our compiled script when needed (see $lib/ergo/contract)
 import { accept_judge_nomination } from './actions/accept_judge_nomination';
+import { CURRENT_CONTRACT_VERSION } from '$lib/common/constants';
 import { get } from 'svelte/store';
 import { contribute_to_ceremony } from './actions/ceremony';
 import { batch_participations } from './actions/batch_participations';
@@ -47,6 +48,14 @@ function requireWallet(): ErgoWalletApi {
         throw new Error("Wallet not connected");
     }
     return wallet;
+}
+
+// Transactions are always built for the current contracts, so games created with an older
+// contract version can only be viewed.
+function requireCurrentContracts(game: AnyGame): void {
+    if (game.contractVersion !== CURRENT_CONTRACT_VERSION) {
+        throw new Error(`This competition uses ${game.contractVersion} contracts and is read-only.`);
+    }
 }
 
 interface CreateGoPGamePlatformParams {
@@ -174,6 +183,7 @@ export class ErgoPlatform implements Platform {
         solverId_string: string,
         hashLogs_hex: string
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         return await submit_score(
@@ -193,6 +203,7 @@ export class ErgoPlatform implements Platform {
         secretS_hex: string,
         acceptedJudgeNominations: string[]
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         return await resolve_game(game, participations, secretS_hex, acceptedJudgeNominations);
@@ -203,6 +214,7 @@ export class ErgoPlatform implements Platform {
         secretS_hex: string,
         claimerAddressString: string
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         return await cancel_game(game, secretS_hex, claimerAddressString);
@@ -212,6 +224,7 @@ export class ErgoPlatform implements Platform {
         game: GameCancellation, // Tipo específico: el juego debe estar en estado de cancelación.
         claimerAddressString: string
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         return await drain_cancelled_game_stake(game, claimerAddressString);
@@ -225,6 +238,7 @@ export class ErgoPlatform implements Platform {
         game: GameResolution,
         participations: ValidParticipation[]
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         return await end_game(game, participations);
     }
@@ -238,6 +252,7 @@ export class ErgoPlatform implements Platform {
     async toEndGame(
         game: GameResolution
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         return await to_end_game(game);
     }
@@ -250,6 +265,7 @@ export class ErgoPlatform implements Platform {
         game: GameResolution,
         participations: ValidParticipation[]
     ): Promise<string[] | null> {
+        requireCurrentContracts(game);
         requireWallet();
         return await end_game_chained(game, participations);
     }
@@ -279,6 +295,7 @@ export class ErgoPlatform implements Platform {
         invalidatedParticipation: ValidParticipation,
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string[] | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
@@ -324,6 +341,7 @@ export class ErgoPlatform implements Platform {
         invalidatedParticipation: ValidParticipation,
         judgeVoteDataInputs: Box<Amount>[]
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
 
         const requiredVotes = Math.floor(game.judges.length / 2) + 1;
@@ -346,6 +364,7 @@ export class ErgoPlatform implements Platform {
         currentResolved: ValidParticipation | null,
         newResolverPkHex: string
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         return await include_omitted_participation(game, omittedParticipation, currentResolved, newResolverPkHex);
     }
@@ -361,6 +380,7 @@ export class ErgoPlatform implements Platform {
         game: GameCancellation,
         participation: ValidParticipation
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         if (game.status !== 'Cancelled_Draining') {
             throw new Error("El juego no está en un estado que permita reembolsos.");
@@ -381,6 +401,7 @@ export class ErgoPlatform implements Platform {
         game: GameActive,
         participation: ValidParticipation
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         if (game.status !== 'Active') {
             throw new Error("El juego no está en estado activo.");
@@ -412,6 +433,7 @@ export class ErgoPlatform implements Platform {
             ergoTree_hex: string;
         }
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         if (game.status !== 'Active') {
             throw new Error("The game is not in an active state.");
@@ -439,6 +461,7 @@ export class ErgoPlatform implements Platform {
      * @returns The transaction ID if successful.
      */
     async contribute_to_ceremony(game: GameActive, donation?: bigint): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         if (game.status !== 'Active') {
             throw new Error("The game is not in an active state.");
@@ -458,6 +481,7 @@ export class ErgoPlatform implements Platform {
         participations: ValidParticipation[],
         batches: Box<Amount>[]
     ): Promise<string | null> {
+        requireCurrentContracts(game);
         requireWallet();
         if (game.status !== 'Resolution') {
             throw new Error("Game must be in Resolution state to batch participations.");

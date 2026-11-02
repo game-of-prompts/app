@@ -1,7 +1,7 @@
 import { base } from "$app/paths";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import type { Amount, Box } from "@fleet-sdk/core";
-import { GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
+import { CURRENT_CONTRACT_VERSION, GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
 import type {
     AnyGame,
     AnyParticipation,
@@ -549,6 +549,7 @@ function buildScenarioState(
         reputationOpinions: [],
         reputation: 0,
         constants,
+        contractVersion: CURRENT_CONTRACT_VERSION,
         createdAt,
         devScript: DEV_SCRIPT,
         devCommission,
@@ -597,6 +598,7 @@ function buildScenarioState(
         reputationOpinions: [],
         reputation: 0,
         constants,
+        contractVersion: CURRENT_CONTRACT_VERSION,
         isEndGame: params.isEndGame,
         createdAt,
     });
@@ -632,6 +634,7 @@ function buildScenarioState(
         judges: [],
         reputation: 0,
         constants,
+        contractVersion: CURRENT_CONTRACT_VERSION,
         createdAt,
         timeWeight: 3n,
     });
@@ -668,6 +671,7 @@ function buildScenarioState(
         winnerFinalizationDeadline: params.winnerFinalizationDeadline,
         reputation: 0,
         constants,
+        contractVersion: CURRENT_CONTRACT_VERSION,
         createdAt,
         seed: seedHex,
         revealedS_Hex: secretHex,

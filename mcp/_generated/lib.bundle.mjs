@@ -755,6 +755,30 @@ var end_game_default = '{\n  // ================================================
 // es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/mint_idt.es
 var mint_idt_default = "{\n/*\n    The function of the following contract is to ensure that the minted token can be spent exclusively \n    in the contract corresponding to the constant 'contract_bytes_hash'.\n*/\n\n    val contractBox = OUTPUTS(0)\n\n    val correctSpend = {\n        val isIDT = SELF.tokens(0)._1 == contractBox.tokens(0)._1\n        val spendAll = SELF.tokens(0)._2 == contractBox.tokens(0)._2\n\n        isIDT && spendAll\n    }\n\n    val correctContract = {\n        fromBase16(\"`+contract_bytes_hash+`\") == blake2b256(contractBox.propositionBytes)\n    }\n\n    sigmaProp(allOf(Coll(\n        correctSpend,\n        correctContract\n    )))\n}\n";
 
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/game_active.es
+var game_active_default2 = '{\n  // =================================================================\n  // === CONSTANTES Y HASHES DE SCRIPTS\n  // =================================================================\n\n  // Hashes de los scripts a los que esta caja puede transicionar.\n  // Estos valores deben ser reemplazados por los hashes reales de los scripts compilados.\n  val GAME_RESOLUTION_SCRIPT_HASH = fromBase16("`+GAME_RESOLUTION_SCRIPT_HASH+`") \n  val GAME_CANCELLATION_SCRIPT_HASH = fromBase16("`+GAME_CANCELLATION_SCRIPT_HASH+`")\n  \n  // Hash del script de las participaciones.\n  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")\n\n  val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")\n  val ACCEPT_GAME_INVITATION_TYPE_ID = fromBase16("`+ACCEPT_GAME_INVITATION_TYPE_ID+`")\n  val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")\n\n  // Constantes para la acci\xF3n de cancelaci\xF3n.\n  val STAKE_DENOMINATOR    = `+STAKE_DENOMINATOR+`L\n  val COOLDOWN_IN_BLOCKS   = `+COOLDOWN_IN_BLOCKS+`L\n  val JUDGE_PERIOD         = `+JUDGE_PERIOD+`L\n  val MAX_SCORE_LIST       = `+MAX_SCORE_LIST+`L\n  val PARTICIPATION_TIME_WINDOW = `+PARTICIPATION_TIME_WINDOW+`L\n  val SEED_MARGIN          = `+SEED_MARGIN+`L\n\n  // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.\n  val GRACE_PERIOD = `+GRACE_PERIOD+`L\n\n  // =================================================================\n  // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)\n  // =================================================================\n\n  // R4: Integer            - Game state (0: Active, 1: Resolved, 2: Cancelled).\n  // R5: Coll[Byte]         - seed\n  // R6: Coll[Byte]         - secretHash: Hash del secreto \'S\' (blake2b256(S)).\n  // R7: Coll[Coll[Byte]]   - invitedJudgesReputationProofs\n  // R8: Coll[Long]         - numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommission, resolverCommission, devCommissionPercentage, creatorSlashRatio].\n  // R9: Coll[Coll[Byte]]   - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, devScript]\n\n\n  // Note: The game seed that must be used to reproduce the random scenario for all participants is first added by the creator, and the action3_open_ceremony allows anyone to add entropy to it making updated_seed = blake2b256(old_seed ++ INPUTS(0).id).\n\n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val gameState = SELF.R4[Int].get\n  \n  // R5: Seed\n  val gameSeed = SELF.R5[Coll[Byte]].get\n\n  // R6: Hash del secreto \'S\'\n  val secretHash = SELF.R6[Coll[Byte]].get\n  \n  // R7: Jueces invitados\n  val invitedJudges = SELF.R7[Coll[Coll[Byte]]].get\n\n  // R8: [deadline, resolverStake, participationFee, perJudgeCommission, resolverCommission]\n  val numericalParams = SELF.R8[Coll[Long]].get\n  val createdAt = numericalParams(0)\n  val timeWeight = numericalParams(1)\n  val deadline = numericalParams(2)\n  val resolverStake = numericalParams(3)\n  val participationFee = numericalParams(4)\n  val perJudgeCommissionPercentage = numericalParams(5)\n  val resolverCommissionPercentage = numericalParams(6)\n  val devCommissionPercentage = numericalParams(7)\n  val creatorSlashRatio = numericalParams(8)\n\n  val ceremonyDeadline = deadline - PARTICIPATION_TIME_WINDOW\n\n  // R9: [gameDetailsJsonHex, ParticipationTokenID]\n  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get\n  val gameDetailsJsonHex = gameProvenance(0)\n  val participationTokenId = gameProvenance(1)\n  val devScript = gameProvenance(2)\n  \n  val gameNft = SELF.tokens(0)\n  val gameNftId = gameNft._1\n\n  val isAfterDeadline = HEIGHT >= deadline\n  val isBeforeDeadline = HEIGHT < deadline\n  val gracePeriodIsNotOver = HEIGHT < deadline + GRACE_PERIOD\n\n  val box_value = { (box: Box) =>\n    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })\n  }\n\n  val getBotBoxHeight = { (participationBox: Box) =>\n    val pBoxSolverId = participationBox.R7[Coll[Byte]].get\n    val candidateBotBoxes = CONTEXT.dataInputs.filter { (box: Box) =>\n      if (blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH) {\n        box.R4[Coll[Byte]].isDefined &&\n        box.R4[Coll[Byte]].get == pBoxSolverId\n      } else if (blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH) {\n        box.R5[Coll[Byte]].isDefined &&\n        box.R5[Coll[Byte]].get == pBoxSolverId\n      } else {\n        false\n      }\n    }\n\n    if (candidateBotBoxes.size > 0) {\n      val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>\n        if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc\n      })\n      val realHeight = oldestBox.creationInfo._1\n      if (realHeight.toLong < createdAt) createdAt else realHeight.toLong\n    } else {\n      deadline // Igual al deadline para fallar la validaci\xF3n\n    }\n  }\n\n  // =================================================================\n  // === ACCI\xD3N 1: TRANSICI\xD3N A RESOLUCI\xD3N\n  // =================================================================\n  // Se ejecuta despu\xE9s de la fecha l\xEDmite para iniciar la fase de resoluci\xF3n.\n  // Consume esta caja y todas las participaciones, y lee las pruebas de los jueces como dataInputs.\n\n  val action1_transitionToResolution = {\n    if (isAfterDeadline && gracePeriodIsNotOver) {\n      val resolutionBoxes = OUTPUTS.filter({ (box: Box) => \n        blake2b256(box.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH \n      })\n      \n      if (resolutionBoxes.size == 1) {\n        val resolutionBox = resolutionBoxes(0)\n        \n        // La estructura de la nueva caja de resoluci\xF3n es (Coll[Byte], Coll[Byte])\n        val r6Tuple = resolutionBox.R6[(Coll[Byte], Coll[Byte])].get\n        val revealedS = r6Tuple._1\n        val winnerCandidateCommitment = r6Tuple._2\n\n        val sIsCorrectlyRevealed = blake2b256(revealedS) == secretHash\n        val transitionsToResolutionScript = blake2b256(resolutionBox.propositionBytes) == GAME_RESOLUTION_SCRIPT_HASH\n        \n        val winnerCandidateValid = if (winnerCandidateCommitment == Coll[Byte]()) { true } \n          else {\n            val winnerCandidateBoxes = CONTEXT.dataInputs.filter({ \n              (box: Box) => \n                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && \n                box.R6[Coll[Byte]].get == gameNftId &&\n                box.R5[Coll[Byte]].get == winnerCandidateCommitment\n            })\n\n            if (winnerCandidateBoxes.size == 1) {\n              val winnerCandidateBox = winnerCandidateBoxes(0)\n\n              val pBoxErgotree = winnerCandidateBox.R4[Coll[Byte]].get\n              val pBoxScoreList = winnerCandidateBox.R9[Coll[Long]].get\n              val pBoxCommitment = winnerCandidateBox.R5[Coll[Byte]].get\n              val pBoxSolverId = winnerCandidateBox.R7[Coll[Byte]].get\n              val pBoxLogsHash = winnerCandidateBox.R8[Coll[Byte]].get\n\n              val validScoreExists = pBoxScoreList.fold(false, { (scoreAcc: Boolean, score: Long) =>\n                if (scoreAcc) { scoreAcc } else {\n                  val testCommitment = blake2b256(pBoxSolverId ++ gameSeed ++ longToByteArray(score) ++ pBoxLogsHash ++ pBoxErgotree ++ revealedS)\n                  if (testCommitment == pBoxCommitment) { true } else { scoreAcc }\n                }\n              })\n\n              val correctParticipationFee = if (participationTokenId == Coll[Byte]()) {\n                  winnerCandidateBox.value >= participationFee\n                } else {\n                  winnerCandidateBox.tokens.exists { (pair: (Coll[Byte], Long)) => \n                      pair._1 == participationTokenId &&\n                      pair._2 >= participationFee\n                  }\n                }\n              val createdBeforeDeadline = winnerCandidateBox.creationInfo._1 < deadline\n\n              val botCreatedBeforeSeed = getBotBoxHeight(winnerCandidateBox) < ceremonyDeadline - SEED_MARGIN\n\n              validScoreExists && correctParticipationFee && botCreatedBeforeSeed && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST\n            }\n            else { false }\n          }\n\n        if (sIsCorrectlyRevealed && transitionsToResolutionScript && winnerCandidateValid) {\n          \n          // --- Judge validation ---          \n          val judgeProofDataInputs = CONTEXT.dataInputs\n            .filter({(box: Box) =>\n              blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH && \n              box.tokens.size > 0 &&\n              box.R4[Coll[Byte]].get == ACCEPT_GAME_INVITATION_TYPE_ID &&\n              box.R5[Coll[Byte]].get == gameNftId &&\n              box.R8[Boolean].get && // Positive vote, judge accepts the game invitation\n              box.R9[Coll[Coll[Byte]]].isDefined && // R9 must contain judge reference participation data\n              invitedJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})  // Is nominated\n            })\n\n          // Reputation proof does not show repeated boxes (of the same R4-R5 pair), so this point must be ensured.\n          val allVotesAreUnique = {\n            val judgeVoteTokens = judgeProofDataInputs.map({(box: Box) => box.tokens(0)._1})\n            judgeVoteTokens.indices.forall { (i: Int) =>\n                !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) =>\n                    otherToken == judgeVoteTokens(i)\n                }))\n            }\n          }\n\n          val resolutionBoxIsValid = {\n              box_value(resolutionBox) >= box_value(SELF) &&\n              resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&\n              resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)\n              resolutionBox.R5[Coll[Byte]].get == gameSeed &&\n              resolutionBox.R7[Coll[Coll[Byte]]].get == invitedJudges &&\n              resolutionBox.R8[Coll[Long]].get(0) == createdAt &&\n              resolutionBox.R8[Coll[Long]].get(1) == timeWeight &&\n              resolutionBox.R8[Coll[Long]].get(2) == deadline &&\n              resolutionBox.R8[Coll[Long]].get(3) == resolverStake &&\n              resolutionBox.R8[Coll[Long]].get(4) == participationFee &&\n              resolutionBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&\n              resolutionBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&\n              resolutionBox.R8[Coll[Long]].get(7) == devCommissionPercentage &&\n              resolutionBox.R8[Coll[Long]].get(8) == creatorSlashRatio &&\n              resolutionBox.R8[Coll[Long]].get(9) >= HEIGHT + JUDGE_PERIOD &&\n              resolutionBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&\n              resolutionBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId &&\n              resolutionBox.R9[Coll[Coll[Byte]]].get(2) == devScript &&\n              resolutionBox.R9[Coll[Coll[Byte]]].get.size == 4\n            }\n\n          // Verify judge reference participations: each judge\'s R9 contains\n          // [commitment, preimage] where blake2b256(preimage ++ revealedS) == commitment.\n          // This ensures: 1. the game-service\'s blake2b256 commitment engine is correct,\n          // and 2. all judges have the capability to execute and test the game.\n          val allJudgeCommitmentsValid = judgeProofDataInputs.forall({(box: Box) =>\n            val judgeRefData = box.R9[Coll[Coll[Byte]]].get\n            val judgeCommitment = judgeRefData(0)\n            val judgePreimage = judgeRefData(1)\n            blake2b256(judgePreimage ++ revealedS) == judgeCommitment\n          })\n\n          resolutionBoxIsValid && allVotesAreUnique && allJudgeCommitmentsValid\n        } else { false }  // Invalid revealed secret, invalid transition script or invalid participation boxes.\n      } else { false }  // There should be exactly one resolution box.\n    } else { false }  // Deadline not reached.\n  }\n\n  // =================================================================\n  // === ACCI\xD3N 2: TRANSICI\xD3N A CANCELACI\xD3N\n  // =================================================================\n  // Se ejecuta antes de la fecha l\xEDmite si alguien revela el secreto para penalizar al creador.\n\n  val action2_transitionToCancellation = {\n    val outs = OUTPUTS.filter({ (box: Box) => \n      blake2b256(box.propositionBytes) == GAME_CANCELLATION_SCRIPT_HASH \n    })\n\n    if (isBeforeDeadline && outs.size == 1) {\n      val cancellationBox = outs(0)\n\n      // Calcular los valores iniciales.\n      val portionToClaim = resolverStake / STAKE_DENOMINATOR\n      val remainingValue = box_value(SELF) - portionToClaim\n\n      val cancellationBoxIsValid = {\n          box_value(cancellationBox) >= remainingValue &&\n          cancellationBox.tokens(0)._1 == gameNftId &&\n          cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)\n          cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&\n          blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&\n          cancellationBox.R7[Long].get == portionToClaim &&\n          cancellationBox.R8[Long].get == deadline &&\n          cancellationBox.R9[Coll[Coll[Byte]]].get.size == 2 &&\n          cancellationBox.R9[Coll[Coll[Byte]]].get(0) == gameDetailsJsonHex &&\n          cancellationBox.R9[Coll[Coll[Byte]]].get(1) == participationTokenId\n      }\n\n      // R7 Pasa a ser el valor restante (el cual puede ser mayor al stake original si hab\xEDa donaciones).  La raz\xF3n por la que no se calcula el initialStakePortionToClaim en base al valor total aqui es para evitar que, en caso de que el valor total sea STAKE_DENOMINATOR veces mayor al stake original, el creador est\xE9 incentivado a cancelar el juego en lugar de proseguirlo.\n      \n      // Quien cancela el juego puede agregar mas valor del que reclama, lo cual crear\xE1 una diferencia entre el valor del contrato y el valor R7, esto permitir\xE1 al siguiente reclamante obtener esa diferencia. Aunque esto no es un problema, ni tiene l\xF3gica desde el punto de vista de incentivos.\n\n      cancellationBoxIsValid\n\n    } else { \n      false \n    }\n  }\n\n  // =================================================================\n  // === ACCI\xD3N 3: ADD RANDOMNESS TO GAME SEED (Reproducci\xF3n temprana con nueva semilla)\n  // =================================================================\n  //\n  // Esta acci\xF3n permite reproducir el contrato dentro del per\xEDodo inicial (hasta ceremonyDeadline)\n  // desde la creaci\xF3n, para agregar entrop\xEDa adicional al \'seed\'.\n  //\n  // Condiciones:\n  //   - Debe ocurrir antes de \'ceremonyDeadline\'\n  //   - Se mantiene todo igual salvo el registro R5 (la semilla actualizada)\n  //   - updated_seed = blake2b256(old_seed ++ INPUTS(0).id)\n  //   - El script de salida debe ser id\xE9ntico (SELF mismo script)\n  //   - El NFT debe preservarse\n  //   - El valor de la caja debe mantenerse o aumentarse\n  //   - La cantidad de ERG no se controla, pues \xFAnicamente debe ser suficiente para pagar las tarifas de la red.\n  //\n  val action3_add_randomness = {\n    // Usa ceremonyDeadline calculado\n    val ceremonyActive = HEIGHT < ceremonyDeadline\n\n    val outs = OUTPUTS.filter({ (box: Box) => \n      blake2b256(box.propositionBytes) == blake2b256(SELF.propositionBytes)\n    })\n\n    if (ceremonyActive && outs.size == 1) {\n      // La caja de salida debe ser una copia del contrato actual, excepto R5\n\n      val out = outs(0)\n      \n      // El NFT debe preservarse\n      val sameNFT = out.tokens(0)._1 == gameNftId\n\n      // El valor de la caja debe mantenerse o aumentarse - permitiendo donaciones siempre se continue agregando entrop\xEDa al seed del juego.\n      val sameOrAddedValue = box_value(out) >= box_value(SELF)\n\n      // Calculamos la nueva semilla (gameSeed es R5._1)\n      val updated_seed = blake2b256(gameSeed ++ SELF.id)\n\n      // Validar que R5 del output sea igual al updated_seed\n      val outR5 = out.R5[Coll[Byte]].get\n      val validUpdatedSeed = outR5 == updated_seed\n\n      // Todos los dem\xE1s registros deben permanecer iguales\n      val sameR4 = out.R4[Int].get == gameState\n      val sameR6 = out.R6[Coll[Byte]].get == secretHash\n      val sameR7 = out.R7[Coll[Coll[Byte]]].get == invitedJudges\n      val sameR8 = out.R8[Coll[Long]].get == numericalParams\n      val sameR9 = out.R9[Coll[Coll[Byte]]].get == gameProvenance\n    \n      sameNFT &&\n      sameOrAddedValue &&\n      validUpdatedSeed &&\n      sameR4 && sameR6 && sameR7 && sameR8 && sameR9 // Check R4, R6-R9\n    } else {\n      false\n    }\n  }\n\n  val game_active = gameState == 0\n  val actions = action1_transitionToResolution || action2_transitionToCancellation || action3_add_randomness\n  sigmaProp(game_active && actions)\n}';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/game_resolution.es
+var game_resolution_default2 = '{\n  // =================================================================\n  // === CONSTANTES Y HASHES DE SCRIPTS\n  // =================================================================\n\n  val JUDGE_PERIOD = `+JUDGE_PERIOD+`L\n  val RESOLVER_OMISSION_NO_PENALTY_PERIOD = `+RESOLVER_OMISSION_NO_PENALTY_PERIOD+`L\n\n  val PARTICIPATION_TYPE_ID = fromBase16("`+PARTICIPATION_TYPE_ID+`")\n  val PARTICIPATION_UNAVAILABLE_TYPE_ID = fromBase16("`+PARTICIPATION_UNAVAILABLE_TYPE_ID+`")\n  val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L\n  val PARTICIPATION_TIME_WINDOW = `+PARTICIPATION_TIME_WINDOW+`L\n  val SEED_MARGIN = `+SEED_MARGIN+`L\n  val MIN_TIME_WEIGHT_MARGIN = `+MIN_TIME_WEIGHT_MARGIN+`L\n\n  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") \n  val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")\n  val END_GAME_SCRIPT_HASH = fromBase16("`+END_GAME_SCRIPT_HASH+`")\n  val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")\n  val COMMISSION_DENOMINATOR = `+COMMISSION_DENOMINATOR+`L\n\n\n  // =================================================================\n  // === DEFINICIONES DE REGISTROS\n  // =================================================================\n\n  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).\n  // R5: Coll[Byte]                 - Seed\n  // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.\n  // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputaci\xF3n de los jueces.\n  // R8: Coll[Long]                 - numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommission, resolverCommission, devCommissionPercentage, creatorSlashRatio, resolutionDeadline]\n  // R9: Coll[Coll[Byte]]           - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, devScript, resolverErgoTree]\n\n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val gameState = SELF.R4[Int].get\n  val seed = SELF.R5[Coll[Byte]].get\n\n  val r6Tuple = SELF.R6[(Coll[Byte], Coll[Byte])].get\n  val revealedS = r6Tuple._1\n  val winnerCandidateCommitment = r6Tuple._2\n  \n  val participatingJudges = SELF.R7[Coll[Coll[Byte]]].get\n  val numericalParams = SELF.R8[Coll[Long]].get\n  val createdAt = numericalParams(0)\n  val timeWeight = numericalParams(1)\n  val deadline = numericalParams(2)\n  val resolverStake = numericalParams(3)\n  val participationFee = numericalParams(4)\n  val perJudgeCommissionPercentage = numericalParams(5)\n  val resolverCommissionPercentage = numericalParams(6)\n  val devCommissionPercentage = numericalParams(7)\n  val creatorSlashRatio = numericalParams(8)\n  val resolutionDeadline = numericalParams(9)\n\n  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get\n  // gameProvenance(0) = gameDetailsJsonHex\n  val participationTokenId = gameProvenance(1)\n  val devScript = gameProvenance(2)\n  val resolverPK = gameProvenance(3)\n  \n  val gameNft = SELF.tokens(0)\n  val gameNftId = gameNft._1\n\n  val isAfterResolutionDeadline = HEIGHT >= resolutionDeadline\n  val isBeforeResolutionDeadline = HEIGHT < resolutionDeadline\n\n  val box_value = { (box: Box) =>\n    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })\n  }\n\n  val getScoreFromBox = { (box: Box) =>\n    val scoreList = box.R9[Coll[Long]].get\n    val solverId = box.R7[Coll[Byte]].get\n    val logsHash = box.R8[Coll[Byte]].get\n    val ergotree = box.R4[Coll[Byte]].get\n    val commitment = box.R5[Coll[Byte]].get\n    \n    scoreList.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>\n      if (acc._2) { acc } else {\n        val testCommitment = blake2b256(solverId ++ seed ++ longToByteArray(score) ++ logsHash ++ ergotree ++ revealedS)\n        if (testCommitment == commitment) { (score, true) } else { acc }\n      }\n    })\n  }\n\n  val getBotBoxHeight = { (participationBox: Box) =>\n    val pBoxSolverId = participationBox.R7[Coll[Byte]].get\n    val candidateBotBoxes = CONTEXT.dataInputs.filter { (box: Box) =>\n      if (blake2b256(box.propositionBytes) == FALSE_SCRIPT_HASH) {\n        box.R4[Coll[Byte]].isDefined &&\n        box.R4[Coll[Byte]].get == pBoxSolverId\n      } else if (blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH) {\n        box.R5[Coll[Byte]].isDefined &&\n        box.R5[Coll[Byte]].get == pBoxSolverId\n      } else {\n        false\n      }\n    }\n\n    if (candidateBotBoxes.size > 0) {\n      val oldestBox = candidateBotBoxes.fold(candidateBotBoxes(0), { (acc: Box, curr: Box) =>\n        if (curr.creationInfo._1 < acc.creationInfo._1) curr else acc\n      })\n      val realHeight = oldestBox.creationInfo._1\n      val minimum = createdAt + MIN_TIME_WEIGHT_MARGIN\n      if (realHeight.toLong < minimum) minimum else realHeight.toLong\n    } else {\n      deadline // Igual al deadline para fallar la validaci\xF3n\n    }\n  }\n\n  // ### Acciones 2 y 3: Invalidaci\xF3n por Jueces\n  val judgeInvalidationLogic = { (invalidate: Boolean) =>\n    \n    val voteTypeID = if (invalidate) PARTICIPATION_TYPE_ID else PARTICIPATION_UNAVAILABLE_TYPE_ID\n    val penalizeResolver = invalidate\n    val enforceStrictChecks = invalidate\n\n    if (isBeforeResolutionDeadline && CONTEXT.dataInputs.size > 0) {\n      val judgeVotes = CONTEXT.dataInputs.filter({\n        (box: Box) => \n          blake2b256(box.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&\n          box.tokens.size > 0 &&\n          box.R4[Coll[Byte]].get == voteTypeID &&\n          box.R5[Coll[Byte]].get == winnerCandidateCommitment &&\n          // L\xF3gica condicional estricta sin usar if/else complejos que rompan el tipo\n          (if (enforceStrictChecks) (box.R6[Boolean].get && box.R8[Boolean].get == false) else true) && \n          participatingJudges.exists({(tokenId: Coll[Byte]) => tokenId == box.tokens(0)._1})\n      })\n\n      val allVotesAreUnique = {\n        val judgeVoteTokens = judgeVotes.map({(box: Box) => box.tokens(0)._1})\n        judgeVoteTokens.indices.forall { (i: Int) =>\n            !(judgeVoteTokens.slice(i + 1, judgeVoteTokens.size).exists({ (otherToken: Coll[Byte]) => otherToken == judgeVoteTokens(i) }))\n        }\n      }\n\n      // C\xE1lculo seguro del qu\xF3rum\n      val requiredVotes = if (participatingJudges.size == 0) 0 else participatingJudges.size / 2 + 1\n      val hasRequiredVotes = judgeVotes.size >= requiredVotes\n\n      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})\n      \n      if (allVotesAreUnique && hasRequiredVotes && recreatedGameBoxes.size == 1) {\n        val recreatedGameBox = recreatedGameBoxes(0)\n        val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})\n        \n        // Verificamos que se haya reseteado el candidato (Coll[Byte]())\n        if (recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {\n          val invalidatedCandidateBox = invalidatedCandidateBoxes(0)\n          \n          val resolverPenalization = if (penalizeResolver) resolverCommissionPercentage * creatorSlashRatio / COMMISSION_DENOMINATOR else 0L\n          val expectedJudgeComm = perJudgeCommissionPercentage + resolverPenalization\n          val expectedResolverComm = resolverCommissionPercentage - resolverPenalization\n\n          val gameBoxIsRecreatedCorrectly = {\n            recreatedGameBox.tokens(0)._1 == gameNftId &&\n            recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&\n            recreatedGameBox.R5[Coll[Byte]].get == seed &&\n            recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&\n            recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&\n            recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&\n            recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&\n            recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&\n            recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&\n            recreatedGameBox.R8[Coll[Long]].get(5) == expectedJudgeComm &&\n            recreatedGameBox.R8[Coll[Long]].get(6) == expectedResolverComm &&\n            recreatedGameBox.R8[Coll[Long]].get(7) == devCommissionPercentage &&\n            recreatedGameBox.R8[Coll[Long]].get(8) == creatorSlashRatio &&\n            recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance\n          }\n          \n          val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)\n          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(9) >= HEIGHT + JUDGE_PERIOD\n          \n          fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly\n        } else { false }\n      } else { false }\n    } else { false }\n  }\n\n  // =================================================================\n  // === ACCIONES DE GASTO\n  // =================================================================\n\n  // ### Acci\xF3n 1: Incluir Participaci\xF3n Omitida\n  val action1_includeOmittedParticipation = {\n    // Verificaciones iniciales de la estructura de la transacci\xF3n\n    if (isBeforeResolutionDeadline && INPUTS.size > 1 && OUTPUTS.size > 1) {\n      \n      val omittedWinnerBoxes = CONTEXT.dataInputs.filter({ \n              (box: Box) => \n                blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && \n                box.R6[Coll[Byte]].get == gameNftId &&\n                box.R5[Coll[Byte]].get != winnerCandidateCommitment\n            })\n      \n      if (omittedWinnerBoxes.size == 1) {\n\n        val omittedWinnerBox = omittedWinnerBoxes(0)\n\n        val pBoxSolverId = omittedWinnerBox.R7[Coll[Byte]].get\n        val botCreatedBeforeSeed = getBotBoxHeight(omittedWinnerBox) < deadline - PARTICIPATION_TIME_WINDOW - SEED_MARGIN\n\n        // Se verifica que la caja de participaci\xF3n enviada sea v\xE1lida para este juego\n        val omittedBoxIsValid = blake2b256(omittedWinnerBox.propositionBytes) == PARTICIPATION_SCRIPT_HASH &&\n                                omittedWinnerBox.R6[Coll[Byte]].get == gameNftId &&\n                                omittedWinnerBox.creationInfo._1 < deadline &&\n                                botCreatedBeforeSeed &&\n                                box_value(omittedWinnerBox) >= participationFee &&\n                                omittedWinnerBox.R9[Coll[Long]].get.size <= MAX_SCORE_LIST\n\n        if (omittedBoxIsValid) {\n          // Se calcula el puntaje de la nueva participaci\xF3n revelando el secreto\n          val newScore = getScoreFromBox(omittedWinnerBox)._1\n\n          // Solo continuamos si el puntaje se pudo validar (es decir, no es -1)\n          val newScoreIsValid = newScore != -1L\n\n          if (newScoreIsValid) {\n            \n            val newWinnerCandidate = if (winnerCandidateCommitment == Coll[Byte]()) {\n              // CASO 1: No hay un candidato a ganador actual.\n              // La caja presentada se convierte en el nuevo candidato. No se necesita dataInput.\n              omittedWinnerBox.R5[Coll[Byte]].get\n            } else {\n              // CASO 2: Ya existe un candidato a ganador.\n              // Se busca la caja del candidato actual en los dataInputs.\n              val currentCandidateBoxes = CONTEXT.dataInputs.filter({\n                (b:Box) => \n                  blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && \n                  b.R5[Coll[Byte]].get == winnerCandidateCommitment &&\n                  b.R6[Coll[Byte]].get == gameNftId\n              })\n              \n              if (currentCandidateBoxes.size == 1) {\n                val currentCandidateBox = currentCandidateBoxes(0)\n                \n                // Se calcula el puntaje del candidato actual de forma segura\n                val currentCandidateScoreTuple = getScoreFromBox(currentCandidateBox)\n\n                val currentScore = currentCandidateScoreTuple._1\n                val validCurrentCandidate = currentCandidateScoreTuple._2 && currentScore != -1L\n\n                if (validCurrentCandidate) {\n                  // Se determina el nuevo ganador comparando puntajes AJUSTADOS y alturas de bloque\n                  val newHeight = omittedWinnerBox.creationInfo._1\n                  val currentHeight = currentCandidateBox.creationInfo._1\n                  val newScoreAdjusted = newScore * (1L + (timeWeight * (deadline - newHeight)))\n                  val currentScoreAdjusted = currentScore * (1L + (timeWeight * (deadline - currentHeight)))\n\n                  if (newScoreAdjusted > currentScoreAdjusted || (newScoreAdjusted == currentScoreAdjusted && newHeight < currentHeight)) {\n                    omittedWinnerBox.R5[Coll[Byte]].get // El nuevo es mejor\n                  } else {\n                    Coll[Byte]() // El actual sigue siendo el mejor\n                  }\n                } else {\n                  Coll[Byte]() // El candidato actual no es v\xE1lido, transacci\xF3n inv\xE1lida.\n                }\n\n              } else {\n                // Si hay un compromiso pero no se provee la caja en dataInputs (o hay m\xE1s de una), la transacci\xF3n es inv\xE1lida.\n                Coll[Byte]()\n              }\n            }\n\n            if (newWinnerCandidate != Coll[Byte]() && newWinnerCandidate != winnerCandidateCommitment) {\n\n              // Verificaci\xF3n de la recreaci\xF3n de la caja del juego\n              val recreatedGameBox = OUTPUTS(0)\n              val gameBoxIsRecreatedCorrectly = {\n                box_value(recreatedGameBox) >= box_value(SELF) &&\n                recreatedGameBox.tokens(0)._1 == gameNftId &&\n                recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&\n                recreatedGameBox.R5[Coll[Byte]].get == seed &&\n                recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&\n                recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == newWinnerCandidate &&\n                recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&\n                recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&\n                recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&\n                recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&\n                recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&\n                recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&\n                recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&\n                recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&\n                recreatedGameBox.R8[Coll[Long]].get(7) == devCommissionPercentage &&\n                recreatedGameBox.R8[Coll[Long]].get(8) == creatorSlashRatio &&\n                recreatedGameBox.R8[Coll[Long]].get(9) == resolutionDeadline &&\n                recreatedGameBox.R9[Coll[Coll[Byte]]].get(0) == gameProvenance(0) &&\n                recreatedGameBox.R9[Coll[Coll[Byte]]].get(1) == gameProvenance(1) &&\n                recreatedGameBox.R9[Coll[Coll[Byte]]].get(2) == devScript &&\n                (\n                  recreatedGameBox.R9[Coll[Coll[Byte]]].get(3) == resolverPK ||  // Allow the resolver to set a new candidate after a judge invalidation action.\n                  (resolutionDeadline - JUDGE_PERIOD) + RESOLVER_OMISSION_NO_PENALTY_PERIOD < HEIGHT  // New resolver can be set.\n                ) && \n                recreatedGameBox.R9[Coll[Coll[Byte]]].get.size == 4\n              }\n              \n              gameBoxIsRecreatedCorrectly && newScoreIsValid\n              \n            } else { false }\n          } else { false }\n        } else { false }\n      } else { false }\n    } else { false }\n  }\n\n  // ### Acci\xF3n 2: Invalidaci\xF3n por Jueces (Penalizando al Resolver)\n  val action2_judgesInvalidate = judgeInvalidationLogic(true)\n\n  // ### Acci\xF3n 3: Invalidaci\xF3n por Jueces (Sin Penalizaci\xF3n al Resolver)\n  val action3_judgesInvalidateUnavailable = judgeInvalidationLogic(false)\n\n  // ### Acci\xF3n 4: Finalizaci\xF3n del Juego\n  val action4_endGame = {\n    // La condici\xF3n principal no cambia: solo se puede finalizar despu\xE9s del deadline.\n    if (isAfterResolutionDeadline && OUTPUTS.size > 0) {\n      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == END_GAME_SCRIPT_HASH})\n      if (recreatedGameBoxes.size == 1) {\n        val recreatedGameBox = recreatedGameBoxes(0)\n        \n        val gameBoxIsRecreatedCorrectly = {\n          recreatedGameBox.tokens(0)._1 == gameNftId &&\n          recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&\n          recreatedGameBox.R5[Coll[Byte]].get == seed &&\n          recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&\n          recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == winnerCandidateCommitment &&\n          recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&\n          recreatedGameBox.R8[Coll[Long]].get(0) == createdAt &&\n          recreatedGameBox.R8[Coll[Long]].get(1) == timeWeight &&\n          recreatedGameBox.R8[Coll[Long]].get(2) == deadline &&\n          recreatedGameBox.R8[Coll[Long]].get(3) == resolverStake &&\n          recreatedGameBox.R8[Coll[Long]].get(4) == participationFee &&\n          recreatedGameBox.R8[Coll[Long]].get(5) == perJudgeCommissionPercentage &&\n          recreatedGameBox.R8[Coll[Long]].get(6) == resolverCommissionPercentage &&\n          recreatedGameBox.R8[Coll[Long]].get(7) == devCommissionPercentage &&\n          recreatedGameBox.R8[Coll[Long]].get(8) == creatorSlashRatio &&\n          recreatedGameBox.R8[Coll[Long]].get(9) == resolutionDeadline &&\n          recreatedGameBox.R9[Coll[Coll[Byte]]].get == gameProvenance\n        }\n\n        sigmaProp(gameBoxIsRecreatedCorrectly && box_value(recreatedGameBox) >= box_value(SELF))\n      } else { sigmaProp(false) }\n    } else {\n      sigmaProp(false)\n    }\n  }\n\n  val game_in_resolution = sigmaProp(gameState == 1)\n  val actions = sigmaProp(action1_includeOmittedParticipation) || sigmaProp(action2_judgesInvalidate) || sigmaProp(action3_judgesInvalidateUnavailable) || action4_endGame\n  game_in_resolution && actions\n}\n';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/judges_paid.es
+var judges_paid_default2 = '{\n  // =================================================================\n  // === CONSTANTES\n  // =================================================================\n  val REPUTATION_PROOF_SCRIPT_HASH = fromBase16("`+REPUTATION_PROOF_SCRIPT_HASH+`")\n  \n  // =================================================================\n  // === REGISTROS\n  // =================================================================\n  // R4: Coll[Coll[Byte]] - participatingJudges: Lista de IDs de tokens de reputaci\xF3n de los jueces.\n  // R5: Coll[Byte]       - participationTokenId: ID del token de participaci\xF3n (o vac\xEDo si es ERG).\n\n  val participatingJudges = SELF.R4[Coll[Coll[Byte]]].get\n  val participationTokenId = SELF.R5[Coll[Byte]].get\n\n  // =================================================================\n  // === FUNCIONES AUXILIARES\n  // =================================================================\n\n  val box_value = { (box: Box) =>\n    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })\n  }\n\n  // =================================================================\n  // === L\xD3GICA PRINCIPAL\n  // =================================================================\n\n  val judge_amount = participatingJudges.size\n  val total_funds = box_value(SELF)\n  \n  // Si no hay fondos o no hay jueces, permitimos gastar (aunque no deber\xEDa ocurrir si se crea correctamente)\n  if (total_funds > 0L && judge_amount > 0) {\n    \n    val perJudgeComission = total_funds / judge_amount\n\n    // 1) Filtramos una sola vez los judge boxes relevantes de los dataInputs\n    val judgeBoxes = CONTEXT.dataInputs.filter { (b: Box) =>\n      blake2b256(b.propositionBytes) == REPUTATION_PROOF_SCRIPT_HASH &&\n      b.tokens.size > 0 &&\n      participatingJudges.exists({ (tokenId: Coll[Byte]) => tokenId == b.tokens(0)._1 })\n    }\n\n    // 2) Extraemos pares (address, tokenId)\n    val judgeEntries = judgeBoxes.map { (b: Box) =>\n      (b.R7[Coll[Byte]].get, b.tokens(0)._1)\n    }\n\n    val judgeAddrs = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._1 }\n    val judgeTokenIds = judgeEntries.map { (e: (Coll[Byte], Coll[Byte])) => e._2 }\n\n    // 3) Comprobaciones estructurales m\xEDnimas\n    val uniqueTokensOk =\n      judgeTokenIds.forall { (id: Coll[Byte]) =>\n        judgeTokenIds.filter({ (x: Coll[Byte]) => x == id }).size == 1\n      }\n\n    val allJudgesFound = judgeBoxes.size == judge_amount && uniqueTokensOk\n\n    if (!uniqueTokensOk || !allJudgesFound) {\n      sigmaProp(false)\n    } else {\n      // 4) Para cada direcci\xF3n distinta: cu\xE1ntos judges apuntan a ella (occurrences)\n      val uniqueAddrs = \n        judgeAddrs.fold(Coll[Coll[Byte]](), { (acc: Coll[Coll[Byte]], addr: Coll[Byte]) =>\n          if (acc.exists({ (a: Coll[Byte]) => a == addr })) {\n            acc\n          } else {\n            acc ++ Coll(addr)\n          }\n        })\n\n      val addrChecks = uniqueAddrs.forall { (addr: Coll[Byte]) =>\n        // cu\xE1ntos judges usan esta misma direcci\xF3n\n        val occurrences = judgeAddrs.fold(0, { (acc: Int, a: Coll[Byte]) => if (a == addr) acc + 1 else acc })\n\n        // valor total entrante y saliente para esa direcci\xF3n\n        val inValue = INPUTS.filter({ (b: Box) => b.propositionBytes == addr })\n                            .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n        val outValue = OUTPUTS.filter({ (b: Box) => b.propositionBytes == addr })\n                              .fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n        val received = outValue - inValue\n\n        // recibir al menos perJudgeComission * occurrences\n        val amountOk = received >= (perJudgeComission * occurrences)\n\n        amountOk\n      }\n\n      // 5) comprobaci\xF3n total (opcional, por seguridad contable) \n      // En este contrato, SELF se consume, por lo que el total recibido por los jueces debe ser al menos el valor de SELF (menos posibles restos de divisi\xF3n si no es exacta, pero aqu\xED dividimos enteros)\n      // Nota: perJudgeComission * judge_amount puede ser <= total_funds debido al redondeo hacia abajo.\n      // El remanente se lo puede quedar el que ejecuta la tx (minero/ejecutor) o quemarse.\n      \n      sigmaProp(addrChecks)\n    }\n  } else {\n    sigmaProp(true)\n  }\n}\n';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/game_cancellation.es
+var game_cancellation_default2 = "{\n  // =================================================================\n  // === CONSTANTES\n  // =================================================================\n\n  // Per\xEDodo de enfriamiento en bloques entre cada acci\xF3n de drenaje.\n  val COOLDOWN_IN_BLOCKS = `+COOLDOWN_IN_BLOCKS+`L\n\n  // =================================================================\n  // === DEFINICIONES DE REGISTROS (ESTADO DE CANCELACI\xD3N)\n  // =================================================================\n\n  // R4: Integer           - Game state (0: Active, 1: Resolved, 2: Cancelled).\n  // R5: Long              - unlockHeight: Altura de bloque a partir de la cual se puede realizar el siguiente drenaje.\n  // R6: Coll[Byte]        - revealedSecret: El secreto 'S' del juego, ya revelado.\n  // R7: Long              - portionToClaim: La cantidad constante a drenar en cada acci\xF3n.\n  // R8  Long              - originalDeadline\n  // R9: Coll[Coll[Byte]]  - gameDetailsJsonHex, ParticipationTokenID\n\n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val gameState = SELF.R4[Int].get\n  val unlockHeight = SELF.R5[Long].get\n  val revealedSecret = SELF.R6[Coll[Byte]].get\n  val portionToClaim = SELF.R7[Long].get\n  val originalDeadline = SELF.R8[Long].get\n  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get\n  val gameDetailsJsonHex = gameProvenance(0)\n  val participationTokenId = gameProvenance(1)\n\n\n  // El ID del NFT original del juego se extrae de los tokens de la propia caja.\n  val gameNftId = SELF.tokens(0)._1\n  val gameIsCancelled = gameState == 2\n\n  // =================================================================\n  // === ACCIONES DE GASTO\n  // =================================================================\n\n  // ### Acci\xF3n 1: Drenar Stake (Bucle Principal)\n  // Permite a cualquiera reclamar una porci\xF3n del stake si ha pasado el cooldown\n  // y si queda suficiente stake para continuar el ciclo.\n  val action1_drainStake = {\n    val recreatedCancellationBoxes = OUTPUTS.filter { (box: Box) => \n      box.propositionBytes == SELF.propositionBytes\n    }\n\n    if (recreatedCancellationBoxes.size == 1 ) {\n      val recreatedCancellationBox = recreatedCancellationBoxes(0)\n    \n      // En caso de que el valor en el contrato sea mayor a R7, el ejecutor puede quedarse la diferencia sin problema; en este caso ya no hay problema, pues ya no tiene porque ser el creador, si no, posiblemente, quien mine el bloque (si el minero es inteligente...).\n\n      val cooldownIsOver = HEIGHT >= unlockHeight\n\n      val valueOf = { (box: Box) =>\n        val matchingTokens = box.tokens.filter { (token: (Coll[Byte], Long)) => \n          token._1 == participationTokenId\n        }\n        if (matchingTokens.size > 0) matchingTokens(0)._2 else 0L\n      }\n      val remainingValue = valueOf(SELF) - portionToClaim\n\n      val boxIsRecreatedCorrectly = {\n        valueOf(recreatedCancellationBox) >= remainingValue &&\n        recreatedCancellationBox.tokens(0)._1 == gameNftId &&\n        recreatedCancellationBox.R4[Int].get == gameState &&\n        recreatedCancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&\n        recreatedCancellationBox.R6[Coll[Byte]].get == revealedSecret &&\n        recreatedCancellationBox.R7[Long].get == portionToClaim &&\n        recreatedCancellationBox.R8[Long].get == originalDeadline &&\n        recreatedCancellationBox.R9[Coll[Coll[Byte]]].get == gameProvenance\n      }\n      \n      cooldownIsOver && boxIsRecreatedCorrectly\n\n    } else { false }\n  }\n\n  sigmaProp(gameIsCancelled && action1_drainStake)\n}";
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/participation.es
+var participation_default2 = '{\n  // =================================================================\n  // === CONSTANTES Y HASHES DE SCRIPTS\n  // =================================================================\n\n  // Prefijo P2PK para la validaci\xF3n de direcciones.\n  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")\n  \n  // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.\n  val GRACE_PERIOD = `+GRACE_PERIOD+`L\n\n  // =================================================================\n  // === DEFINICIONES DE REGISTROS (PARTICIPACI\xD3N ENVIADA)\n  // =================================================================\n\n  // R4: Coll[Byte] - playerPK: Script de gasto del jugador\n  // R5: Coll[Byte] - commitmentC: Commitment criptogr\xE1fico con la puntuaci\xF3n verdadera.\n  // R6: Coll[Byte] - gameNftId: ID del NFT del juego al que pertenece esta participaci\xF3n.\n  // R7: Coll[Byte] - solverId: ID del solver del jugador.\n  // R8: Coll[Byte] - hashLogs: Hash de los logs del juego del jugador.\n  // R9: Coll[Long] - scoreList: Lista de puntuaciones, una de las cuales es la verdadera. (max 10 seg\xFAn est\xE9 definido en el contrato principal)\n  \n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val playerPK = SELF.R4[Coll[Byte]].get\n  val gameNftIdInSelf = SELF.R6[Coll[Byte]].get\n\n\n\n  // =================================================================\n  // === ACCIONES DE GASTO\n  // =================================================================\n\n  // ### Acci\xF3n 1: Reembolso por Cancelaci\xF3n de Juego\n  val spentInValidGameCancellation = {\n    if (CONTEXT.dataInputs.size > 0) {\n      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n\n      if (gameBoxInDataArr.size != 1) { sigmaProp(false) } \n      else {\n        val gameBoxInData = gameBoxInDataArr(0)\n        val isCancelled = gameBoxInData.R4[Int].get == 2\n        val correctGame = gameBoxInData.tokens.size > 0 &&\n                          gameBoxInData.tokens(0)._1 == gameNftIdInSelf && \n                          isCancelled\n        \n        val signedByOwner = {\n          val prefix = playerPK.slice(0, 3)\n          val pubKey = playerPK.slice(3, playerPK.size)\n\n          (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == playerPK }))\n        }\n\n        sigmaProp(correctGame) && signedByOwner\n      }\n    }\n    else { sigmaProp(false) }\n  }\n\n  // ### Acci\xF3n 2: Reclamo por Per\xEDodo de Gracia\n  val playerReclaimsAfterGracePeriod = {\n    if (CONTEXT.dataInputs.size > 0) {\n      val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n\n      if (gameBoxInDataArr.size == 1) {\n        val gameBoxInData = gameBoxInDataArr(0)\n        val isActive = gameBoxInData.R4[Int].get == 0\n        \n        if (isActive) {\n          val gameDeadline = gameBoxInData.R8[Coll[Long]].get(2)\n          val gracePeriodIsOver = HEIGHT >= gameDeadline + GRACE_PERIOD\n\n          val signedByOwner = {\n            val prefix = playerPK.slice(0, 3)\n            val pubKey = playerPK.slice(3, playerPK.size)\n\n            (sigmaProp(prefix == P2PK_ERGOTREE_PREFIX) && proveDlog(decodePoint(pubKey))) || sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == playerPK }))\n          }\n\n          sigmaProp(gracePeriodIsOver) && signedByOwner\n        } else {\n          sigmaProp(false)\n        }\n      } else {\n        sigmaProp(false)\n      }\n    } else {\n      sigmaProp(false)\n    }\n  }\n\n  // --- ACCI\xD3N 3: Gasto en la finalizaci\xF3n normal del juego (EndGame) ---\n  val isValidEndGame = {\n    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n\n    if (mainGameBoxes.size == 1) {\n      val mainGameBox = mainGameBoxes(0)\n      val isResolved = mainGameBox.R4[Int].get == 1\n      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)\n\n      val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline\n      resolutionPeriodIsOver && isResolved\n    } \n    else { false }\n  }\n\n  // --- ACCI\xD3N 4: Gasto cuando esta participaci\xF3n es invalidada por los jueces ---\n  val isInvalidatedByJudges = {\n    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n\n    if (mainGameBoxes.size == 1) {\n      val mainGameBox = mainGameBoxes(0)\n      val isResolved = mainGameBox.R4[Int].get == 1\n      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)\n\n      val isBeforeDeadline = HEIGHT < resolutionDeadline\n      val winnerCandidateCommitment = mainGameBox.R6[(Coll[Byte], Coll[Byte])].get._2\n      val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment\n      val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})\n      \n      isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1 && isResolved\n    }\n    else { false }\n  }\n\n  // --- ACCI\xD3N 5: Unir en Lote (Batching) ---\n  val spentInBatch = {\n    val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n    \n    if (gameBoxInDataArr.size == 1) {\n        val gameBox = gameBoxInDataArr(0)\n        val isResolved = gameBox.R4[Int].get == 1\n        \n        if (isResolved) {\n            val r6 = gameBox.R6[(Coll[Byte], Coll[Byte])].get\n            val winnerCandidateCommitment = r6._2\n            val gameProvenance = gameBox.R9[Coll[Coll[Byte]]].get\n            val resolverPK = gameProvenance(3)\n            val participationTokenId = gameProvenance(1)\n            \n            val targetBoxes = OUTPUTS.filter({(b:Box) => \n                // Identificamos el lote por su R6 y porque NO es el script de participaci\xF3n individual\n                b.propositionBytes != SELF.propositionBytes && \n                b.R6[Coll[Byte]].isDefined && b.R6[Coll[Byte]].get == gameNftIdInSelf\n            })\n\n            if (targetBoxes.size == 1) {\n                val totalInputValue = INPUTS.filter({ (box: Box) =>\n                    val isP = box.propositionBytes == SELF.propositionBytes\n                    val isB = box.propositionBytes != SELF.propositionBytes && \n                             box.R6[Coll[Byte]].isDefined && box.R6[Coll[Byte]].get == gameNftIdInSelf\n                    \n                    if (isP || isB) {\n                        val r6Opt = box.R6[Coll[Byte]]\n                        if (r6Opt.isDefined) r6Opt.get == gameNftIdInSelf else false\n                    } else { false }\n                }).fold(0L, { (acc: Long, box: Box) =>\n                    val boxValue = {\n                        val t = box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }\n                        if (t.size > 0) t(0)._2 else 0L\n                    }\n                    acc + boxValue\n                })\n                \n                val targetBox = targetBoxes(0)\n                val outputValue = {\n                    val t = targetBox.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }\n                    if (t.size > 0) t(0)._2 else 0L\n                }\n                \n                val fundsTransferred = outputValue >= totalInputValue\n                \n                val resolverAuth = {\n                    val prefix = resolverPK.slice(0, 3)\n                    val pubKey = resolverPK.slice(3, resolverPK.size)\n                    if (prefix == P2PK_ERGOTREE_PREFIX) proveDlog(decodePoint(pubKey))\n                    else sigmaProp(INPUTS.exists({(b:Box) => b.propositionBytes == resolverPK}))\n                }\n                \n                val winnerAuth = {\n                    if (winnerCandidateCommitment.size > 0) {\n                        val winnerPK = if (SELF.R5[Coll[Byte]].get == winnerCandidateCommitment) {\n                            playerPK\n                        } else {\n                            val winnerBoxes = CONTEXT.dataInputs.filter({(b:Box) => \n                                val r5Opt = b.R5[Coll[Byte]]\n                                if (r5Opt.isDefined) r5Opt.get == winnerCandidateCommitment else false\n                            })\n                            if (winnerBoxes.size > 0) {\n                                 val winnerBox = winnerBoxes(0)\n                                 val seed = gameBox.R5[Coll[Byte]].get\n                                 val revealedS = r6._1\n                                 val scoreList = winnerBox.R9[Coll[Long]].get\n                                 val solverId = winnerBox.R7[Coll[Byte]].get\n                                 val logsHash = winnerBox.R8[Coll[Byte]].get\n                                 val ergotree = winnerBox.R4[Coll[Byte]].get\n                                 val commitment = winnerBox.R5[Coll[Byte]].get\n                                 \n                                 val isValidWinner = scoreList.fold(false, { (acc: Boolean, score: Long) =>\n                                   if (acc) { acc } else {\n                                     val testCommitment = blake2b256(solverId ++ seed ++ longToByteArray(score) ++ logsHash ++ ergotree ++ revealedS)\n                                     testCommitment == commitment\n                                   }\n                                 })\n                                 \n                                 if (isValidWinner) winnerBox.R4[Coll[Byte]].get else Coll[Byte]()\n                             } else Coll[Byte]()\n                        }\n                        \n                        if (winnerPK.size > 0) {\n                            val prefix = winnerPK.slice(0, 3)\n                            val pubKey = winnerPK.slice(3, winnerPK.size)\n                            if (prefix == P2PK_ERGOTREE_PREFIX) proveDlog(decodePoint(pubKey))\n                            else sigmaProp(INPUTS.exists({(b:Box) => b.propositionBytes == winnerPK}))\n                        } else sigmaProp(false)\n                    } else sigmaProp(false)\n                }\n                \n                sigmaProp(fundsTransferred) && (resolverAuth || winnerAuth)\n            } else sigmaProp(false)\n        } else sigmaProp(false)\n    } else sigmaProp(false)\n  }\n\n  spentInValidGameCancellation || \n  playerReclaimsAfterGracePeriod || \n  sigmaProp(isValidEndGame) || \n  sigmaProp(isInvalidatedByJudges) ||\n  spentInBatch\n}\n';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/participation_batch.es
+var participation_batch_default2 = '{\n  // =================================================================\n  // === CONSTANTES Y HASHES DE SCRIPTS\n  // =================================================================\n\n  // Prefijo P2PK para la validaci\xF3n de direcciones.\n  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")\n  \n  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")\n\n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val gameNftIdInSelf = SELF.R6[Coll[Byte]].get\n\n\n\n  // =================================================================\n  // === ACCIONES DE GASTO\n  // =================================================================\n\n  // --- ACCI\xD3N 1: Unir en Lote (Batching) ---\n  val spentInBatch = {\n    val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n    \n    if (gameBoxInDataArr.size == 1) {\n        val gameBox = gameBoxInDataArr(0)\n        val isResolved = gameBox.R4[Int].get == 1\n        \n        if (isResolved) {\n            val r6 = gameBox.R6[(Coll[Byte], Coll[Byte])].get\n            val winnerCandidateCommitment = r6._2\n            val gameProvenance = gameBox.R9[Coll[Coll[Byte]]].get\n            val resolverPK = gameProvenance(3)\n            val participationTokenId = gameProvenance(1)\n            \n            val targetBoxes = OUTPUTS.filter({(b:Box) => \n                b.propositionBytes == SELF.propositionBytes && \n                b.R6[Coll[Byte]].isDefined && b.R6[Coll[Byte]].get == gameNftIdInSelf\n            })\n\n            if (targetBoxes.size == 1) {\n                val totalInputValue = INPUTS.filter({ (box: Box) =>\n                    val sHash = blake2b256(box.propositionBytes)\n                    val isP = sHash == PARTICIPATION_SCRIPT_HASH\n                    val isB = box.propositionBytes == SELF.propositionBytes\n                    if (isP || isB) {\n                        val r6Opt = box.R6[Coll[Byte]]\n                        if (r6Opt.isDefined) r6Opt.get == gameNftIdInSelf else false\n                    } else { false }\n                }).fold(0L, { (acc: Long, box: Box) =>\n                    val boxValue = {\n                        val t = box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }\n                        if (t.size > 0) t(0)._2 else 0L\n                    }\n                    acc + boxValue\n                })\n                \n                val targetBox = targetBoxes(0)\n                val outputValue = {\n                    val t = targetBox.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }\n                    if (t.size > 0) t(0)._2 else 0L\n                }\n                \n                val fundsTransferred = outputValue >= totalInputValue\n                \n                val resolverAuth = {\n                    val prefix = resolverPK.slice(0, 3)\n                    val pubKey = resolverPK.slice(3, resolverPK.size)\n                    if (prefix == P2PK_ERGOTREE_PREFIX) proveDlog(decodePoint(pubKey))\n                    else sigmaProp(INPUTS.exists({(b:Box) => b.propositionBytes == resolverPK}))\n                }\n                \n                val winnerAuth = {\n                    if (winnerCandidateCommitment.size > 0) {\n                        val winnerBoxes = CONTEXT.dataInputs.filter({(b:Box) => \n                            val r5Opt = b.R5[Coll[Byte]]\n                            if (r5Opt.isDefined) r5Opt.get == winnerCandidateCommitment else false\n                        })\n                        \n                        if (winnerBoxes.size > 0) {\n                            val winnerBox = winnerBoxes(0)\n                            val seed = gameBox.R5[Coll[Byte]].get\n                            val revealedS = r6._1\n                            val scoreList = winnerBox.R9[Coll[Long]].get\n                            val solverId = winnerBox.R7[Coll[Byte]].get\n                            val logsHash = winnerBox.R8[Coll[Byte]].get\n                            val ergotree = winnerBox.R4[Coll[Byte]].get\n                            val commitment = winnerBox.R5[Coll[Byte]].get\n                            \n                            val isValidWinner = scoreList.fold(false, { (acc: Boolean, score: Long) =>\n                              if (acc) { acc } else {\n                                val testCommitment = blake2b256(solverId ++ seed ++ longToByteArray(score) ++ logsHash ++ ergotree ++ revealedS)\n                                testCommitment == commitment\n                              }\n                            })\n                            \n                            if (isValidWinner) {\n                                val winnerPK = winnerBox.R4[Coll[Byte]].get\n                                val prefix = winnerPK.slice(0, 3)\n                                val pubKey = winnerPK.slice(3, winnerPK.size)\n                                if (prefix == P2PK_ERGOTREE_PREFIX) proveDlog(decodePoint(pubKey))\n                                else sigmaProp(INPUTS.exists({(b:Box) => b.propositionBytes == winnerPK}))\n                            } else sigmaProp(false)\n                        } else sigmaProp(false)\n                    } else sigmaProp(false)\n                }\n                \n                sigmaProp(fundsTransferred) && (resolverAuth || winnerAuth)\n            } else sigmaProp(false)\n        } else sigmaProp(false)\n    } else sigmaProp(false)\n  }\n\n  val isValidEndGame = {\n    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})\n\n    if (mainGameBoxes.size == 1) {\n      val mainGameBox = mainGameBoxes(0)\n      val isResolved = mainGameBox.R4[Int].get == 1\n      val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)\n\n      val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline\n      resolutionPeriodIsOver && isResolved\n    } \n    else { false }\n  }\n\n  spentInBatch || sigmaProp(isValidEndGame)\n}\n';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/end_game.es
+var end_game_default2 = '{\n  // =================================================================\n  // === CONSTANTES Y HASHES DE SCRIPTS\n  // =================================================================\n\n  val END_GAME_AUTH_GRACE_PERIOD = `+END_GAME_AUTH_GRACE_PERIOD+`L\n  val COMMISSION_DENOMINATOR = `+COMMISSION_DENOMINATOR+`L\n\n  val JUDGES_PAID_ERGOTREE = fromBase16("`+JUDGES_PAID_ERGOTREE+`")\n\n  val MAX_SCORE_LIST = `+MAX_SCORE_LIST+`L\n\n  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`") \n  val PARTICIPATION_BATCH_SCRIPT_HASH = fromBase16("`+PARTICIPATION_BATCH_SCRIPT_HASH+`")\n  \n  val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")\n\n\n  // =================================================================\n  // === DEFINICIONES DE REGISTROS\n  // =================================================================\n\n  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).\n  // R5: Coll[Byte]                 - Seed\n  // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.\n  // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputaci\xF3n de los jueces.\n  // R8: Coll[Long]                 - numericalParameters: [createdAt, timeWeight, deadline, resolverStake, participationFee, perJudgeCommission, resolverCommission, devCommissionPercentage, creatorSlashRatio, resolutionDeadline]\n  // R9: Coll[Coll[Byte]]           - gameProvenance: [gameDetailsJsonHex, ParticipationTokenID, devScript, resolverErgoTree]\n\n  // =================================================================\n  // === EXTRACCI\xD3N DE VALORES\n  // =================================================================\n\n  val gameState = SELF.R4[Int].get\n  val seed = SELF.R5[Coll[Byte]].get\n\n  val r6Tuple = SELF.R6[(Coll[Byte], Coll[Byte])].get\n  val revealedS = r6Tuple._1\n  val winnerCandidateCommitment = r6Tuple._2\n  \n  val participatingJudges = SELF.R7[Coll[Coll[Byte]]].get\n  val numericalParams = SELF.R8[Coll[Long]].get\n  val createdAt = numericalParams(0)\n  val timeWeight = numericalParams(1)\n  val deadline = numericalParams(2)\n  val resolverStake = numericalParams(3)\n  val participationFee = numericalParams(4)\n  val perJudgeCommissionPercentage = numericalParams(5)\n  val resolverCommissionPercentage = numericalParams(6)\n  val dev_commission_percentage = numericalParams(7)\n  val creatorSlashRatio = numericalParams(8)\n  val resolutionDeadline = numericalParams(9)\n\n  val gameProvenance = SELF.R9[Coll[Coll[Byte]]].get\n  // gameProvenance(0) = gameDetailsJsonHex\n  val participationTokenId = gameProvenance(1)\n  val dev_script = gameProvenance(2)\n  val resolverPK = gameProvenance(3)\n  \n  val gameNft = SELF.tokens(0)\n  val gameNftId = gameNft._1\n\n  val box_value = { (box: Box) =>\n    box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })\n  }\n\n  val getScoreFromBox = { (box: Box) =>\n    val scoreList = box.R9[Coll[Long]].get\n    val solverId = box.R7[Coll[Byte]].get\n    val logsHash = box.R8[Coll[Byte]].get\n    val ergotree = box.R4[Coll[Byte]].get\n    val commitment = box.R5[Coll[Byte]].get\n    \n    scoreList.fold((-1L, false), { (acc: (Long, Boolean), score: Long) =>\n      if (acc._2) { acc } else {\n        val testCommitment = blake2b256(solverId ++ seed ++ longToByteArray(score) ++ logsHash ++ ergotree ++ revealedS)\n        if (testCommitment == commitment) { (score, true) } else { acc }\n      }\n    })\n  }\n\n\n\n  // =================================================================\n  // === ACCIONES DE GASTO\n  // =================================================================\n\n  // ### Finalizaci\xF3n del Juego\n  val action = {\n\n    // Requerimos autorizaci\xF3n expl\xEDcita: si hay candidato a ganador, debe firmar el ganador (clave en participationBox.R4),\n    // si NO hay candidato, debe firmar el resolver.\n    val authorizedToEnd: SigmaProp = {\n\n    val resolverAuth: SigmaProp = {\n        val isP2PK = if (resolverPK.size >= 3) {\n            val prefix = resolverPK.slice(0, 3)\n            prefix == P2PK_ERGOTREE_PREFIX\n        } else {\n            false\n        }\n\n        if (isP2PK) {\n            val addr_content = resolverPK.slice(3, resolverPK.size)\n            proveDlog(decodePoint(addr_content))\n        }\n        else {\n            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == resolverPK }))\n        }\n    }\n    \n    val winnerAuth: SigmaProp = {\n        val winnerBoxes = INPUTS.filter({ (box: Box) => \n            blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH && \n            box.R5[Coll[Byte]].get == winnerCandidateCommitment \n        })\n        if (winnerBoxes.size > 0) {\n        val winnerPK = winnerBoxes(0).R4[Coll[Byte]].get\n        \n        val isP2PK = if (winnerPK.size >= 3) {\n            val prefix = winnerPK.slice(0, 3)\n            prefix == P2PK_ERGOTREE_PREFIX\n        } else {\n            false\n        }\n\n        if (isP2PK) {\n            val addr_content = winnerPK.slice(3, winnerPK.size)\n            proveDlog(decodePoint(addr_content))\n        }\n        else {\n            sigmaProp(INPUTS.exists({ (box: Box) => box.propositionBytes == winnerPK }))\n        }\n        } else {\n        // Si no se encuentra la caja del ganador, la autorizaci\xF3n falla\n        sigmaProp(false)\n        }\n    }\n\n    if (winnerCandidateCommitment != Coll[Byte]()) {\n        // winnerAuth || resolverAuth  // Raises "Malformed transaction: Scripts of all transaction inputs should pass verification. b32bbdd8dd9b5d92894439d0a60c1ba6201d727b9dbd5f419786f510046ad02d: #0 => Success((false,1712))"\n        val isAfterResolutionDeadlineWithGracePeriod = HEIGHT >= resolutionDeadline + END_GAME_AUTH_GRACE_PERIOD\n        if (isAfterResolutionDeadlineWithGracePeriod) {\n        resolverAuth\n        } else {\n        winnerAuth\n        }\n    } else {\n        resolverAuth\n    }\n    }\n\n    // --- Valores y c\xE1lculos comunes para AMBOS CASOS (con y sin ganador) ---\n    val participations = INPUTS.filter({ \n            (box: Box) => \n            (blake2b256(box.propositionBytes) == PARTICIPATION_SCRIPT_HASH || \n                blake2b256(box.propositionBytes) == PARTICIPATION_BATCH_SCRIPT_HASH) &&\n            box.R6[Coll[Byte]].get == gameNftId\n        })\n\n    val prizePool = {\n        val participationsAmount = participations.fold(0L, { (acc: Long, pBox: Box) => acc + box_value(pBox) })\n        val contractPrize = box_value(SELF) - resolverStake\n        participationsAmount + contractPrize\n    }\n    val judge_amount = participatingJudges.size\n\n    // --- L\xD3GICA DE PAGO A JUECES Y DEV ---\n    // Esta l\xF3gica ahora se aplica tanto si hay ganador como si no.\n    \n    // 1. Calcular payout para DEV\n    val devCommission = prizePool * dev_commission_percentage / COMMISSION_DENOMINATOR\n    \n    // 2. Calcular payout para los JUECES\n    val perJudgeComission = prizePool * perJudgeCommissionPercentage / COMMISSION_DENOMINATOR\n    val totalJudgeComission = perJudgeComission * judge_amount\n    \n    // 3. Verificaci\xF3n de que el DEV recibe su pago\n    val devGetsPaid = if (devCommission > 0L) {\n        val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == dev_script}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n        val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == dev_script}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n        val addedValue = outputVal - inputVal\n        addedValue >= devCommission\n    } else { true }\n    \n    // 4. Verificaci\xF3n de que los JUECES reciben su pago (enviando a judges_paid.es)\n    val judgesGetsPaid = if (totalJudgeComission > 0L) {\n        val judgesPaidBox = OUTPUTS.filter({(b:Box) => b.propositionBytes == JUDGES_PAID_ERGOTREE})\n        if (judgesPaidBox.size == 1) {\n            val box = judgesPaidBox(0)\n            val correctValue = box_value(box) >= totalJudgeComission\n            val correctR4 = box.R4[Coll[Coll[Byte]]].get == participatingJudges\n            val correctR5 = box.R5[Coll[Byte]].get == participationTokenId\n            correctValue && correctR4 && correctR5\n        } else {\n            false\n        }\n    } else { true }\n\n    // --- Manejar el caso CON y SIN ganador ---\n    if (winnerCandidateCommitment != Coll[Byte]()) {\n        // --- CASO 1: HAY UN GANADOR DECLARADO ---\n        val winnerBoxes = participations.filter({ (box: Box) => box.R5[Coll[Byte]].get == winnerCandidateCommitment })\n\n        if (winnerBoxes.size == 1) {\n            val winnerBox = winnerBoxes(0)\n            val pBoxScoreList = winnerBox.R9[Coll[Long]].get\n\n            val validWinner = {\n            val validScoreExists = getScoreFromBox(winnerBox)._2\n\n            val correctParticipationFee = box_value(winnerBox) >= participationFee\n            val createdBeforeDeadline = winnerBox.creationInfo._1 < deadline\n\n            validScoreExists && correctParticipationFee && createdBeforeDeadline && pBoxScoreList.size <= MAX_SCORE_LIST\n            }\n\n            if (validWinner) {\n            val winnerPK = winnerBox.R4[Coll[Byte]].get\n            val resolverCommission = prizePool * resolverCommissionPercentage / COMMISSION_DENOMINATOR\n            \n            // El premio se calcula restando los payouts finales (que ya consideran el polvo)\n            val tentativeWinnerPrize = prizePool - resolverCommission - totalJudgeComission - devCommission\n\n            // L\xF3gica para asegurar que el ganador no reciba menos que la tarifa de participaci\xF3n (evitar p\xE9rdida neta)\n            // Si el premio tentativo es menor, eliminamos todas las comisiones (dev, jueces, resolver) y el ganador recibe el prizePool completo\n            val adjustedWinnerPrize = if (tentativeWinnerPrize < participationFee) prizePool else tentativeWinnerPrize\n            val adjustedResolverCommission = if (tentativeWinnerPrize < participationFee) 0L else resolverCommission\n            val adjustedDevPayout = if (tentativeWinnerPrize < participationFee) 0L else devCommission\n            val adjustedJudgesPayout = if (tentativeWinnerPrize < participationFee) 0L else totalJudgeComission\n            val adjustedPerJudge = if (tentativeWinnerPrize < participationFee) 0L else perJudgeComission\n\n            /*\n            * If the tentative winner prize is less than the participation fee, all commissions (resolver, dev, judges) are set to zero,\n            * and the winner receives the entire prize pool. This ensures the winner never loses money (i.e., receives at least their participation fee back)\n            * but may result in the winner receiving more than their intended percentage in low-participation or high-commission scenarios.\n            */\n\n            // Ajustar las verificaciones de pago para usar los valores ajustados\n            val adjustedDevGetsPaid = if (adjustedDevPayout == 0L) true else devGetsPaid\n\n            val adjustedJudgesGetsPaid = if (adjustedJudgesPayout == 0L) {\n                true\n            } else {\n                judgesGetsPaid\n            }\n\n            // Verificaci\xF3n de la salida del ganador\n            val winnerGetsPaid = {\n                val txFee = 0L\n                val amount = adjustedWinnerPrize - txFee\n                val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n                val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == winnerPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n                val addedValue = outputVal - inputVal\n                val hasNFT = OUTPUTS.exists({ (b: Box) =>\n                    b.propositionBytes == winnerPK &&\n                    b.tokens.size > 0 &&\n                    b.tokens(0)._1 == gameNftId\n                })\n                addedValue >= amount && hasNFT\n            }\n\n            val finalResolverPayout = resolverStake + adjustedResolverCommission\n            val resolverGetsPaid = {\n                val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n                val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n                val addedValue = outputVal - inputVal\n                addedValue >= finalResolverPayout\n            }\n            \n            authorizedToEnd && sigmaProp(winnerGetsPaid && resolverGetsPaid && adjustedDevGetsPaid && adjustedJudgesGetsPaid)\n            } else {\n            sigmaProp(false)\n            }\n            \n        } else {\n            sigmaProp(false)\n        }\n    } else {\n        // --- CASO 2: NO HAY GANADOR DECLARADO ---\n\n        // El resolutor reclama el stake del creador y el pozo de premios.\n        val totalValue = prizePool + resolverStake\n        \n        // Las comisiones de dev y jueces ya se han calculado y validado fuera.\n        // El resolutor se lleva todo lo dem\xE1s.\n        val finalResolverPayout = totalValue - devCommission - totalJudgeComission\n\n        val resolverGetsPaid = {\n            val inputVal = INPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n            val outputVal = OUTPUTS.filter({(b:Box) => b.propositionBytes == resolverPK}).fold(0L, { (acc: Long, b: Box) => acc + box_value(b) })\n            val addedValue = outputVal - inputVal\n            val hasNFT = OUTPUTS.exists({ (b: Box) =>\n                b.propositionBytes == resolverPK &&\n                b.tokens.size > 0 &&\n                b.tokens(0)._1 == gameNftId\n            })\n            addedValue >= finalResolverPayout && hasNFT\n        }\n        \n        // La condici\xF3n final ya incluye las validaciones movidas fuera.\n        authorizedToEnd && sigmaProp(resolverGetsPaid && devGetsPaid && judgesGetsPaid)\n    }\n\n  }\n\n  val game_in_resolution = sigmaProp(gameState == 1)\n  game_in_resolution && action\n}\n';
+
+// es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/v1/mint_idt.es
+var mint_idt_default2 = "{\n/*\n    The function of the following contract is to ensure that the minted token can be spent exclusively \n    in the contract corresponding to the constant 'contract_bytes_hash'.\n*/\n\n    val contractBox = OUTPUTS(0)\n\n    val correctSpend = {\n        val isIDT = SELF.tokens(0)._1 == contractBox.tokens(0)._1\n        val spendAll = SELF.tokens(0)._2 == contractBox.tokens(0)._2\n\n        isIDT && spendAll\n    }\n\n    val correctContract = {\n        fromBase16(\"`+contract_bytes_hash+`\") == blake2b256(contractBox.propositionBytes)\n    }\n\n    sigmaProp(allOf(Coll(\n        correctSpend,\n        correctContract\n    )))\n}\n";
+
 // es-text:/Users/nathanhubert/clawd/workspace/game-of-prompts-app/contracts/false.es
 var false_default = "{\n  sigmaProp(false)\n}\n";
 
@@ -1444,118 +1468,172 @@ var ProductionMode = {
   PARTICIPATION_UNAVAILABLE_TYPE_ID: PARTICIPATION_UNAVAILABLE,
   ACCEPT_GAME_INVITATION_TYPE_ID: GAME
 };
-var getGameConstants = () => {
+var getGameConstants = (version = CURRENT_CONTRACT_VERSION) => {
+  if (version === "v1")
+    return get_store_value(isDevMode) ? V1DevelopmentMode : V1ProductionMode;
   return get_store_value(isDevMode) ? DevelopmentMode : ProductionMode;
 };
 var DefaultGameConstants = ProductionMode;
 var GAME_NFT_AMOUNT = 2n;
 var ENDING_GAME_STATE = 3;
+var CURRENT_CONTRACT_VERSION = "v2";
+var CONTRACT_VERSIONS = ["v2", "v1"];
+var CONTRACT_RULES = {
+  v1: { gameNftAmount: 1n, endingGameState: 1 },
+  v2: { gameNftAmount: GAME_NFT_AMOUNT, endingGameState: ENDING_GAME_STATE }
+};
+var getContractRules = (version) => CONTRACT_RULES[version];
+var V1DevelopmentMode = {
+  JUDGE_PERIOD: 30,
+  RESOLVER_OMISSION_NO_PENALTY_PERIOD: 5,
+  MAX_SCORE_LIST: 10,
+  STAKE_DENOMINATOR: 5,
+  COOLDOWN_IN_BLOCKS: 30,
+  END_GAME_AUTH_GRACE_PERIOD: 5,
+  PARTICIPATION_GRACE_PERIOD: 90,
+  PARTICIPATION_TIME_WINDOW: 5,
+  SEED_MARGIN: 1,
+  MIN_TIME_WEIGHT_MARGIN: 1,
+  COMMISSION_DENOMINATOR: 1e6,
+  PARTICIPATION_TYPE_ID: PARTICIPATION,
+  PARTICIPATION_UNAVAILABLE_TYPE_ID: PARTICIPATION_UNAVAILABLE,
+  ACCEPT_GAME_INVITATION_TYPE_ID: GAME
+};
+var V1ProductionMode = {
+  JUDGE_PERIOD: 720,
+  RESOLVER_OMISSION_NO_PENALTY_PERIOD: 5,
+  MAX_SCORE_LIST: 10,
+  STAKE_DENOMINATOR: 5,
+  COOLDOWN_IN_BLOCKS: 30,
+  END_GAME_AUTH_GRACE_PERIOD: 64800,
+  PARTICIPATION_GRACE_PERIOD: 6480,
+  PARTICIPATION_TIME_WINDOW: 2160,
+  SEED_MARGIN: 20,
+  MIN_TIME_WEIGHT_MARGIN: 720,
+  COMMISSION_DENOMINATOR: 1e6,
+  PARTICIPATION_TYPE_ID: PARTICIPATION,
+  PARTICIPATION_UNAVAILABLE_TYPE_ID: PARTICIPATION_UNAVAILABLE,
+  ACCEPT_GAME_INVITATION_TYPE_ID: GAME
+};
 
 // ../src/lib/ergo/contract.ts
 var networkType = Network2.Mainnet;
 var ergoTreeVersion = 1;
-var _gameActive = {};
-var _gameResolution = {};
-var _judgesPaid = {};
-var _gameCancellation = {};
-var _participation = {};
-var _participationBatch = {};
-var _endGame = {};
-var _mintIdt = {};
+var SOURCES = {
+  v1: {
+    gameActive: game_active_default2,
+    gameResolution: game_resolution_default2,
+    endGame: end_game_default2,
+    gameCancellation: game_cancellation_default2,
+    participation: participation_default2,
+    participationBatch: participation_batch_default2,
+    judgesPaid: judges_paid_default2,
+    mintIdt: mint_idt_default2
+  },
+  v2: {
+    gameActive: game_active_default,
+    gameResolution: game_resolution_default,
+    endGame: end_game_default,
+    gameCancellation: game_cancellation_default,
+    participation: participation_default,
+    participationBatch: participation_batch_default,
+    judgesPaid: judges_paid_default,
+    mintIdt: mint_idt_default
+  }
+};
+var emptyCache = () => ({ v1: {}, v2: {} });
+var _compiled = emptyCache();
 var _false = {};
 isDevMode.subscribe(() => {
-  _gameActive = {};
-  _gameResolution = {};
-  _judgesPaid = {};
-  _gameCancellation = {};
-  _participation = {};
-  _participationBatch = {};
-  _endGame = {};
-  _mintIdt = {};
+  _compiled = emptyCache();
   _false = {};
 });
-function ensureParticipationBatchCompiled() {
-  if (_participationBatch.ergoTree)
-    return;
-  ensureParticipationCompiled();
-  const participationHash = getGopParticipationScriptHash();
-  const finalBatchSource = participation_batch_default.replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash);
-  _participationBatch.ergoTree = compile2(finalBatchSource, { version: ergoTreeVersion });
+function inject(source, values) {
+  let result = source;
+  for (const [key, value] of Object.entries(values)) {
+    result = result.replace(new RegExp("`\\+" + key + "\\+`", "g"), value.toString());
+  }
+  const missing = result.match(/`\+\w+\+`/);
+  if (missing)
+    throw new Error(`Unresolved placeholder ${missing[0]} in contract source.`);
+  return result;
 }
-function ensureEndGameCompiled() {
-  if (_endGame.ergoTree)
-    return;
-  ensureParticipationCompiled();
-  ensureParticipationBatchCompiled();
-  ensureJudgesPaidCompiled();
-  const participationHash = getGopParticipationScriptHash();
-  const participationBatchHash = getGopParticipationBatchScriptHash();
-  const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
-  const constants = getGameConstants();
-  let source = end_game_default.replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, constants.END_GAME_AUTH_GRACE_PERIOD.toString()).replace(/`\+COMMISSION_DENOMINATOR\+`/g, constants.COMMISSION_DENOMINATOR.toString()).replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree).replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString()).replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash).replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, participationBatchHash);
-  _endGame.ergoTree = compile2(source, { version: ergoTreeVersion });
+function compileContract(version, name) {
+  const constants = getGameConstants(version);
+  const source = SOURCES[version][name];
+  const scriptHash = (dependency) => getContractScriptHash(dependency, version);
+  switch (name) {
+    case "participation":
+      return compile2(inject(source, {
+        GRACE_PERIOD: constants.PARTICIPATION_GRACE_PERIOD
+      }), { version: ergoTreeVersion });
+    case "participationBatch":
+      return compile2(inject(source, {
+        PARTICIPATION_SCRIPT_HASH: scriptHash("participation")
+      }), { version: ergoTreeVersion });
+    case "judgesPaid":
+      return compile2(inject(source, {
+        REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash()
+      }), { version: ergoTreeVersion });
+    case "endGame":
+      return compile2(inject(source, {
+        END_GAME_AUTH_GRACE_PERIOD: constants.END_GAME_AUTH_GRACE_PERIOD,
+        COMMISSION_DENOMINATOR: constants.COMMISSION_DENOMINATOR,
+        JUDGES_PAID_ERGOTREE: getContractErgoTreeHex("judgesPaid", version),
+        MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
+        PARTICIPATION_SCRIPT_HASH: scriptHash("participation"),
+        PARTICIPATION_BATCH_SCRIPT_HASH: scriptHash("participationBatch")
+      }), { version: ergoTreeVersion });
+    case "gameCancellation":
+      return compile2(inject(source, {
+        COOLDOWN_IN_BLOCKS: constants.COOLDOWN_IN_BLOCKS
+      }), { version: ergoTreeVersion });
+    case "gameResolution":
+      return compile2(inject(source, {
+        PARTICIPATION_SCRIPT_HASH: scriptHash("participation"),
+        PARTICIPATION_BATCH_SCRIPT_HASH: scriptHash("participationBatch"),
+        END_GAME_SCRIPT_HASH: scriptHash("endGame"),
+        JUDGE_PERIOD: constants.JUDGE_PERIOD,
+        END_GAME_AUTH_GRACE_PERIOD: constants.END_GAME_AUTH_GRACE_PERIOD,
+        RESOLVER_OMISSION_NO_PENALTY_PERIOD: constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD,
+        REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash(),
+        PARTICIPATION_TYPE_ID: constants.PARTICIPATION_TYPE_ID,
+        PARTICIPATION_UNAVAILABLE_TYPE_ID: constants.PARTICIPATION_UNAVAILABLE_TYPE_ID,
+        MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
+        PARTICIPATION_TIME_WINDOW: constants.PARTICIPATION_TIME_WINDOW,
+        SEED_MARGIN: constants.SEED_MARGIN,
+        MIN_TIME_WEIGHT_MARGIN: constants.MIN_TIME_WEIGHT_MARGIN,
+        COMMISSION_DENOMINATOR: constants.COMMISSION_DENOMINATOR,
+        FALSE_SCRIPT_HASH: getGopFalseScriptHash(),
+        JUDGES_PAID_ERGOTREE: getContractErgoTreeHex("judgesPaid", version)
+      }), { version: ergoTreeVersion });
+    case "gameActive":
+      return compile2(inject(source, {
+        GAME_RESOLUTION_SCRIPT_HASH: scriptHash("gameResolution"),
+        GAME_CANCELLATION_SCRIPT_HASH: scriptHash("gameCancellation"),
+        REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash(),
+        PARTICIPATION_SCRIPT_HASH: scriptHash("participation"),
+        ACCEPT_GAME_INVITATION_TYPE_ID: constants.ACCEPT_GAME_INVITATION_TYPE_ID,
+        STAKE_DENOMINATOR: constants.STAKE_DENOMINATOR,
+        COOLDOWN_IN_BLOCKS: constants.COOLDOWN_IN_BLOCKS,
+        JUDGE_PERIOD: constants.JUDGE_PERIOD,
+        MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
+        PARTICIPATION_TIME_WINDOW: constants.PARTICIPATION_TIME_WINDOW,
+        FALSE_SCRIPT_HASH: getGopFalseScriptHash(),
+        SEED_MARGIN: constants.SEED_MARGIN,
+        GRACE_PERIOD: constants.PARTICIPATION_GRACE_PERIOD
+      }), { version: ergoTreeVersion });
+    case "mintIdt":
+      return compile2(inject(source, {
+        contract_bytes_hash: scriptHash("gameActive")
+      }), { version: ergoTreeVersion });
+  }
 }
-function ensureParticipationCompiled() {
-  if (_participation.ergoTree)
-    return;
-  const constants = getGameConstants();
-  const finalSource = participation_default.replace(/`\+GRACE_PERIOD\+`/g, constants.PARTICIPATION_GRACE_PERIOD.toString());
-  _participation.ergoTree = compile2(finalSource, { version: ergoTreeVersion });
-}
-function ensureGameCancellationCompiled() {
-  if (_gameCancellation.ergoTree)
-    return;
-  const constants = getGameConstants();
-  let source = game_cancellation_default.replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, constants.COOLDOWN_IN_BLOCKS.toString());
-  _gameCancellation.ergoTree = compile2(source, { version: ergoTreeVersion });
-}
-function ensureGameResolutionCompiled() {
-  if (_gameResolution.ergoTree)
-    return;
-  ensureParticipationCompiled();
-  ensureJudgesPaidCompiled();
-  const submittedHash = getGopParticipationScriptHash();
-  const reputationHash = getReputationProofScriptHash();
-  const judgesPaidErgoTree = getGopJudgesPaidErgoTreeHex();
-  const batchHash = getGopParticipationBatchScriptHash();
-  const endGameHash = getGopEndGameScriptHash();
-  const constants = getGameConstants();
-  let source = game_resolution_default.replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, submittedHash).replace(/`\+PARTICIPATION_BATCH_SCRIPT_HASH\+`/g, batchHash).replace(/`\+END_GAME_SCRIPT_HASH\+`/g, endGameHash).replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString()).replace(/`\+END_GAME_AUTH_GRACE_PERIOD\+`/g, constants.END_GAME_AUTH_GRACE_PERIOD.toString()).replace(/`\+RESOLVER_OMISSION_NO_PENALTY_PERIOD\+`/g, constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD.toString()).replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash).replace(/`\+PARTICIPATION_TYPE_ID\+`/g, constants.PARTICIPATION_TYPE_ID).replace(/`\+PARTICIPATION_UNAVAILABLE_TYPE_ID\+`/g, constants.PARTICIPATION_UNAVAILABLE_TYPE_ID).replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString()).replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString()).replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString()).replace(/`\+MIN_TIME_WEIGHT_MARGIN\+`/g, constants.MIN_TIME_WEIGHT_MARGIN.toString()).replace(/`\+COMMISSION_DENOMINATOR\+`/g, constants.COMMISSION_DENOMINATOR.toString()).replace(/`\+FALSE_SCRIPT_HASH\+`/g, getGopFalseScriptHash()).replace(/`\+JUDGES_PAID_ERGOTREE\+`/g, judgesPaidErgoTree);
-  _gameResolution.ergoTree = compile2(source, { version: ergoTreeVersion });
-}
-function ensureGameActiveCompiled() {
-  if (_gameActive.ergoTree)
-    return;
-  ensureGameResolutionCompiled();
-  ensureGameCancellationCompiled();
-  ensureParticipationCompiled();
-  const resolutionHash = getGopGameResolutionScriptHash();
-  const cancellationHash = getGopGameCancellationScriptHash();
-  const participationHash = getGopParticipationScriptHash();
-  const reputationHash = getReputationProofScriptHash();
-  const constants = getGameConstants();
-  let source = game_active_default.replace(/`\+GAME_RESOLUTION_SCRIPT_HASH\+`/g, resolutionHash).replace(/`\+GAME_CANCELLATION_SCRIPT_HASH\+`/g, cancellationHash).replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash).replace(/`\+PARTICIPATION_SCRIPT_HASH\+`/g, participationHash).replace(/`\+ACCEPT_GAME_INVITATION_TYPE_ID\+`/g, constants.ACCEPT_GAME_INVITATION_TYPE_ID).replace(/`\+STAKE_DENOMINATOR\+`/g, constants.STAKE_DENOMINATOR.toString()).replace(/`\+COOLDOWN_IN_BLOCKS\+`/g, constants.COOLDOWN_IN_BLOCKS.toString()).replace(/`\+JUDGE_PERIOD\+`/g, constants.JUDGE_PERIOD.toString()).replace(/`\+MAX_SCORE_LIST\+`/g, constants.MAX_SCORE_LIST.toString()).replace(/`\+PARTICIPATION_TIME_WINDOW\+`/g, constants.PARTICIPATION_TIME_WINDOW.toString()).replace(/`\+FALSE_SCRIPT_HASH\+`/g, getGopFalseScriptHash()).replace(/`\+SEED_MARGIN\+`/g, constants.SEED_MARGIN.toString()).replace(/`\+GRACE_PERIOD\+`/g, constants.PARTICIPATION_GRACE_PERIOD.toString());
-  _gameActive.ergoTree = compile2(source, { version: ergoTreeVersion });
-}
-function ensureJudgesPaidCompiled() {
-  if (_judgesPaid.ergoTree)
-    return;
-  const reputationHash = getReputationProofScriptHash();
-  let source = judges_paid_default.replace(/`\+REPUTATION_PROOF_SCRIPT_HASH\+`/g, reputationHash);
-  _judgesPaid.ergoTree = compile2(source, { version: ergoTreeVersion });
-}
-function ensureMintIdtCompiled() {
-  if (_mintIdt.ergoTree)
-    return;
-  ensureGameActiveCompiled();
-  const gameActiveHash = getGopGameActiveScriptHash();
-  let source = mint_idt_default.replace(/`\+contract_bytes_hash\+`/g, gameActiveHash);
-  _mintIdt.ergoTree = compile2(source, { version: ergoTreeVersion });
-}
-function ensureFalseCompiled() {
-  if (_false.ergoTree)
-    return;
-  _false.ergoTree = compile2(false_default, { version: ergoTreeVersion });
+function compiled(name, version) {
+  const cache = _compiled[version];
+  if (!cache[name]?.ergoTree)
+    cache[name] = { ergoTree: compileContract(version, name) };
+  return cache[name];
 }
 function getTemplateHash(stateObject, ensureCompiled) {
   if (!stateObject.templateHash) {
@@ -1573,85 +1651,88 @@ function getScriptHash(stateObject, ensureCompiled) {
   }
   return stateObject.scriptHash;
 }
-var getGopGameActiveTemplateHash = () => getTemplateHash(_gameActive, ensureGameActiveCompiled);
-var getGopGameActiveScriptHash = () => getScriptHash(_gameActive, ensureGameActiveCompiled);
-function getGopGameActiveAddress() {
-  ensureGameActiveCompiled();
-  return _gameActive.ergoTree.toAddress(networkType);
+function getContractErgoTree(name, version = CURRENT_CONTRACT_VERSION) {
+  return compiled(name, version).ergoTree;
 }
-function getGopGameActiveErgoTreeHex() {
-  ensureGameActiveCompiled();
-  return _gameActive.ergoTree.toHex();
+function getContractErgoTreeHex(name, version = CURRENT_CONTRACT_VERSION) {
+  return getContractErgoTree(name, version).toHex();
 }
-var getGopGameResolutionTemplateHash = () => getTemplateHash(_gameResolution, ensureGameResolutionCompiled);
-var getGopGameResolutionScriptHash = () => getScriptHash(_gameResolution, ensureGameResolutionCompiled);
-function getGopGameResolutionAddress() {
-  ensureGameResolutionCompiled();
-  return _gameResolution.ergoTree.toAddress(networkType);
+function getContractTemplateHash(name, version = CURRENT_CONTRACT_VERSION) {
+  return getTemplateHash(compiled(name, version), () => {
+  });
 }
-function getGopGameResolutionErgoTreeHex() {
-  ensureGameResolutionCompiled();
-  return _gameResolution.ergoTree.toHex();
+function getContractScriptHash(name, version = CURRENT_CONTRACT_VERSION) {
+  return getScriptHash(compiled(name, version), () => {
+  });
 }
-var getGopJudgesPaidTemplateHash = () => getTemplateHash(_judgesPaid, ensureJudgesPaidCompiled);
-var getGopJudgesPaidScriptHash = () => getScriptHash(_judgesPaid, ensureJudgesPaidCompiled);
-function getGopJudgesPaidAddress() {
-  ensureJudgesPaidCompiled();
-  return _judgesPaid.ergoTree.toAddress(networkType);
+function getContractAddress(name, version = CURRENT_CONTRACT_VERSION) {
+  return getContractErgoTree(name, version).toAddress(networkType);
 }
-function getGopJudgesPaidErgoTreeHex() {
-  ensureJudgesPaidCompiled();
-  return _judgesPaid.ergoTree.toHex();
+function getContractTemplateHashes(name) {
+  return [...new Set(CONTRACT_VERSIONS.map((version) => getContractTemplateHash(name, version)))];
 }
-var getGopGameCancellationTemplateHash = () => getTemplateHash(_gameCancellation, ensureGameCancellationCompiled);
-var getGopGameCancellationScriptHash = () => getScriptHash(_gameCancellation, ensureGameCancellationCompiled);
-function getGopGameCancellationAddress() {
-  ensureGameCancellationCompiled();
-  return _gameCancellation.ergoTree.toAddress(networkType);
+function findContractVersion(name, ergoTreeHex) {
+  return CONTRACT_VERSIONS.find((version) => getContractErgoTreeHex(name, version) === ergoTreeHex) ?? null;
 }
-function getGopGameCancellationErgoTreeHex() {
-  ensureGameCancellationCompiled();
-  return _gameCancellation.ergoTree.toHex();
-}
-var getGopParticipationTemplateHash = () => getTemplateHash(_participation, ensureParticipationCompiled);
-var getGopParticipationScriptHash = () => getScriptHash(_participation, ensureParticipationCompiled);
-function getGopParticipationAddress() {
-  ensureParticipationCompiled();
-  return _participation.ergoTree.toAddress(networkType);
-}
-function getGopParticipationErgoTreeHex() {
-  ensureParticipationCompiled();
-  return _participation.ergoTree.toHex();
-}
-var getGopParticipationBatchTemplateHash = () => getTemplateHash(_participationBatch, ensureParticipationBatchCompiled);
-var getGopParticipationBatchScriptHash = () => getScriptHash(_participationBatch, ensureParticipationBatchCompiled);
-function getGopParticipationBatchAddress() {
-  ensureParticipationBatchCompiled();
-  return _participationBatch.ergoTree.toAddress(networkType);
-}
-function getGopParticipationBatchErgoTreeHex() {
-  ensureParticipationBatchCompiled();
-  return _participationBatch.ergoTree.toHex();
-}
-var getGopEndGameTemplateHash = () => getTemplateHash(_endGame, ensureEndGameCompiled);
-var getGopEndGameScriptHash = () => getScriptHash(_endGame, ensureEndGameCompiled);
-function getGopEndGameAddress() {
-  ensureEndGameCompiled();
-  return _endGame.ergoTree.toAddress(networkType);
-}
-function getGopEndGameErgoTreeHex() {
-  ensureEndGameCompiled();
-  return _endGame.ergoTree.toHex();
-}
-var getGopMintIdtTemplateHash = () => getTemplateHash(_mintIdt, ensureMintIdtCompiled);
-var getGopMintIdtScriptHash = () => getScriptHash(_mintIdt, ensureMintIdtCompiled);
-function getGopMintIdtAddress() {
-  ensureMintIdtCompiled();
-  return _mintIdt.ergoTree.toAddress(networkType);
-}
-function getGopMintIdtErgoTreeHex() {
-  ensureMintIdtCompiled();
-  return _mintIdt.ergoTree.toHex();
+var current = (name) => ({
+  templateHash: () => getContractTemplateHash(name),
+  scriptHash: () => getContractScriptHash(name),
+  address: () => getContractAddress(name),
+  ergoTreeHex: () => getContractErgoTreeHex(name),
+  ergoTree: () => getContractErgoTree(name)
+});
+var gameActive = current("gameActive");
+var getGopGameActiveTemplateHash = gameActive.templateHash;
+var getGopGameActiveScriptHash = gameActive.scriptHash;
+var getGopGameActiveAddress = gameActive.address;
+var getGopGameActiveErgoTreeHex = gameActive.ergoTreeHex;
+var getGopGameActiveErgoTree = gameActive.ergoTree;
+var gameResolution = current("gameResolution");
+var getGopGameResolutionTemplateHash = gameResolution.templateHash;
+var getGopGameResolutionScriptHash = gameResolution.scriptHash;
+var getGopGameResolutionAddress = gameResolution.address;
+var getGopGameResolutionErgoTreeHex = gameResolution.ergoTreeHex;
+var getGopGameResolutionErgoTree = gameResolution.ergoTree;
+var judgesPaid = current("judgesPaid");
+var getGopJudgesPaidTemplateHash = judgesPaid.templateHash;
+var getGopJudgesPaidScriptHash = judgesPaid.scriptHash;
+var getGopJudgesPaidAddress = judgesPaid.address;
+var getGopJudgesPaidErgoTreeHex = judgesPaid.ergoTreeHex;
+var getGopJudgesPaidErgoTree = judgesPaid.ergoTree;
+var gameCancellation = current("gameCancellation");
+var getGopGameCancellationTemplateHash = gameCancellation.templateHash;
+var getGopGameCancellationScriptHash = gameCancellation.scriptHash;
+var getGopGameCancellationAddress = gameCancellation.address;
+var getGopGameCancellationErgoTreeHex = gameCancellation.ergoTreeHex;
+var getGopGameCancellationErgoTree = gameCancellation.ergoTree;
+var participation = current("participation");
+var getGopParticipationTemplateHash = participation.templateHash;
+var getGopParticipationScriptHash = participation.scriptHash;
+var getGopParticipationAddress = participation.address;
+var getGopParticipationErgoTreeHex = participation.ergoTreeHex;
+var getGopParticipationErgoTree = participation.ergoTree;
+var participationBatch = current("participationBatch");
+var getGopParticipationBatchTemplateHash = participationBatch.templateHash;
+var getGopParticipationBatchScriptHash = participationBatch.scriptHash;
+var getGopParticipationBatchAddress = participationBatch.address;
+var getGopParticipationBatchErgoTreeHex = participationBatch.ergoTreeHex;
+var getGopParticipationBatchErgoTree = participationBatch.ergoTree;
+var endGame = current("endGame");
+var getGopEndGameTemplateHash = endGame.templateHash;
+var getGopEndGameScriptHash = endGame.scriptHash;
+var getGopEndGameAddress = endGame.address;
+var getGopEndGameErgoTreeHex = endGame.ergoTreeHex;
+var getGopEndGameErgoTree = endGame.ergoTree;
+var mintIdt = current("mintIdt");
+var getGopMintIdtTemplateHash = mintIdt.templateHash;
+var getGopMintIdtScriptHash = mintIdt.scriptHash;
+var getGopMintIdtAddress = mintIdt.address;
+var getGopMintIdtErgoTreeHex = mintIdt.ergoTreeHex;
+var getGopMintIdtErgoTree = mintIdt.ergoTree;
+function ensureFalseCompiled() {
+  if (_false.ergoTree)
+    return;
+  _false.ergoTree = compile2(false_default, { version: ergoTreeVersion });
 }
 var getGopFalseTemplateHash = () => getTemplateHash(_false, ensureFalseCompiled);
 var getGopFalseScriptHash = () => getScriptHash(_false, ensureFalseCompiled);
@@ -2085,7 +2166,7 @@ async function tokenCreationHeight(tokenId) {
   }
   return null;
 }
-async function fetch_conditions(tokenId, createdAt, deadline) {
+async function fetch_conditions(tokenId, createdAt, deadline, version = CURRENT_CONTRACT_VERSION) {
   const url = `${get_store_value(explorer_uri)}/api/v1/tokens/${tokenId}`;
   try {
     const response = await fetch(url);
@@ -2107,7 +2188,7 @@ async function fetch_conditions(tokenId, createdAt, deadline) {
         }
       }
       if (deadline !== void 0) {
-        const constants = getGameConstants();
+        const constants = getGameConstants(version);
         const minDeadline = constants.PARTICIPATION_TIME_WINDOW + constants.SEED_MARGIN;
         if (deadline < minDeadline) {
           console.warn(`fetch_conditions: Token ${tokenId} has invalid deadline. Found: ${deadline}, Expected >= ${minDeadline}`);
@@ -2115,7 +2196,7 @@ async function fetch_conditions(tokenId, createdAt, deadline) {
         }
       }
       const ergoTree = boxData?.ergoTree;
-      const mintIdtErgoTree = getGopMintIdtErgoTreeHex();
+      const mintIdtErgoTree = getContractErgoTreeHex("mintIdt", version);
       if (ergoTree !== mintIdtErgoTree) {
         console.warn(`fetch_conditions: Token ${tokenId} was not created in mintIdt contract. Found: ${ergoTree}, Expected: ${mintIdtErgoTree}`);
         return false;
@@ -2166,15 +2247,17 @@ async function getTransactionInfo(transactionId) {
 }
 async function parseGameActiveBox(box) {
   try {
-    if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
+    const contractVersion = findContractVersion("gameActive", box.ergoTree);
+    if (!contractVersion) {
       console.warn("parseGameActiveBox: invalid constants");
       return null;
     }
+    const constants = getGameConstants(contractVersion);
     if (!box.assets || box.assets.length === 0) {
       console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
       return null;
     }
-    if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+    if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
       console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
       return null;
     }
@@ -2194,7 +2277,7 @@ async function parseGameActiveBox(box) {
     if (!numericalParams || numericalParams.length < 9)
       throw new Error("R8 does not contain the 9 expected numerical parameters.");
     const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommission, resolverCommission, devCommission, creatorSlashRatio] = numericalParams;
-    if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock))) {
+    if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock), contractVersion)) {
       console.warn(`parseGameActiveBox: Box ${box.boxId} failed validity conditions.`);
       return null;
     }
@@ -2209,7 +2292,7 @@ async function parseGameActiveBox(box) {
       throw new Error("Could not parse devScript from R9.");
     const gameDetailsJson = hexToUtf82(gameDetailsHex || "");
     const content = parseGameContent(gameDetailsJson, box.boxId, box.assets[0]);
-    const gameActive = {
+    const gameActive2 = {
       platform: new ErgoPlatform(),
       boxId: box.boxId,
       box,
@@ -2244,13 +2327,14 @@ async function parseGameActiveBox(box) {
       createdAt: Number(createdAt),
       // From R8
       reputation: 0,
-      constants: getGameConstants(),
+      constants,
+      contractVersion,
       seed,
-      ceremonyDeadline: Number(deadlineBlock) - getGameConstants().PARTICIPATION_TIME_WINDOW,
+      ceremonyDeadline: Number(deadlineBlock) - constants.PARTICIPATION_TIME_WINDOW,
       creatorSlashRatio: Number(creatorSlashRatio)
     };
-    gameActive.reputation = calculate_reputation2(gameActive);
-    return gameActive;
+    gameActive2.reputation = calculate_reputation2(gameActive2);
+    return gameActive2;
   } catch (e) {
     console.error(`Error parsing active game box ${box.boxId}:`, e);
     return null;
@@ -2258,40 +2342,43 @@ async function parseGameActiveBox(box) {
 }
 async function fetchActiveGames() {
   const games2 = /* @__PURE__ */ new Map();
-  const scriptHash = getGopGameActiveTemplateHash();
-  let offset = 0;
-  const limit = 100;
-  let moreAvailable = true;
-  while (moreAvailable) {
-    const url = `${get_store_value(explorer_uri)}/api/v1/boxes/unspent/search`;
-    try {
-      const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ergoTreeTemplateHash: scriptHash })
-      });
-      if (!response.ok)
-        throw new Error(`API response: ${response.status}`);
-      const data = await response.json();
-      const items = data.items || [];
-      for (const box of items) {
-        const game = await parseGameActiveBox(box);
-        if (game)
-          games2.set(game.gameId, game);
+  for (const scriptHash of getContractTemplateHashes("gameActive")) {
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+    while (moreAvailable) {
+      const url = `${get_store_value(explorer_uri)}/api/v1/boxes/unspent/search`;
+      try {
+        const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ergoTreeTemplateHash: scriptHash })
+        });
+        if (!response.ok)
+          throw new Error(`API response: ${response.status}`);
+        const data = await response.json();
+        const items = data.items || [];
+        for (const box of items) {
+          const game = await parseGameActiveBox(box);
+          if (game)
+            games2.set(game.gameId, game);
+        }
+        offset += items.length;
+        moreAvailable = items.length === limit;
+      } catch (error) {
+        console.error("Exception while fetching active games:", error);
+        moreAvailable = false;
       }
-      offset += items.length;
-      moreAvailable = items.length === limit;
-    } catch (error) {
-      console.error("Exception while fetching active games:", error);
-      moreAvailable = false;
     }
   }
   return games2;
 }
 async function parseGameResolutionBox(box) {
   try {
-    const isEndGame = box.ergoTree === getGopEndGameErgoTreeHex();
-    if (box.ergoTree !== getGopGameResolutionErgoTreeHex() && !isEndGame) {
+    const endGameVersion = findContractVersion("endGame", box.ergoTree);
+    const isEndGame = endGameVersion !== null;
+    const contractVersion = endGameVersion ?? findContractVersion("gameResolution", box.ergoTree);
+    if (!contractVersion) {
       console.warn("parseGameResolutionBox: invalid constants");
       return null;
     }
@@ -2299,13 +2386,13 @@ async function parseGameResolutionBox(box) {
       console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
       return null;
     }
-    if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+    if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
       console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
       return null;
     }
     const gameId = box.assets[0].tokenId;
     const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-    if (gameState !== (isEndGame ? ENDING_GAME_STATE : 1))
+    if (gameState !== (isEndGame ? getContractRules(contractVersion).endingGameState : 1))
       throw new Error("R4 indicates incorrect game state.");
     const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
     if (!seed)
@@ -2323,7 +2410,7 @@ async function parseGameResolutionBox(box) {
     if (!numericalParams || numericalParams.length < 10)
       throw new Error("R8 does not contain the 10 expected numerical parameters.");
     const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommission, resolverCommission, devCommission, creatorSlashRatio, resolutionDeadline] = numericalParams;
-    if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock))) {
+    if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock), contractVersion)) {
       console.warn(`parseGameResolutionBox: Box ${box.boxId} failed validity conditions.`);
       return null;
     }
@@ -2338,7 +2425,7 @@ async function parseGameResolutionBox(box) {
       throw new Error("Could not parse R9.");
     const content = parseGameContent(hexToUtf82(gameDetailsHex), box.boxId, box.assets[0]);
     const resolverPK_Hex = resolverScript_Hex.slice(0, 6) == "0008cd" ? resolverScript_Hex.slice(6, resolverScript_Hex.length) : null;
-    const gameResolution = {
+    const gameResolution2 = {
       platform: new ErgoPlatform(),
       boxId: box.boxId,
       box,
@@ -2367,15 +2454,16 @@ async function parseGameResolutionBox(box) {
       creatorSlashRatio: Number(creatorSlashRatio),
       // Added from R8
       devScript,
-      constants: getGameConstants(),
+      constants: getGameConstants(contractVersion),
+      contractVersion,
       seed,
       // Added from R5
       reputation: 0,
       isEndGame,
       createdAt: Number(createdAt)
     };
-    gameResolution.reputation = calculate_reputation2(gameResolution);
-    return gameResolution;
+    gameResolution2.reputation = calculate_reputation2(gameResolution2);
+    return gameResolution2;
   } catch (e) {
     console.error(`Error parsing resolution game box ${box.boxId}:`, e);
     return null;
@@ -2383,7 +2471,7 @@ async function parseGameResolutionBox(box) {
 }
 async function fetchResolutionGames() {
   const games2 = /* @__PURE__ */ new Map();
-  const scriptHashes = [getGopGameResolutionTemplateHash(), getGopEndGameTemplateHash()];
+  const scriptHashes = [...getContractTemplateHashes("gameResolution"), ...getContractTemplateHashes("endGame")];
   for (const scriptHash of scriptHashes) {
     let offset = 0;
     const limit = 100;
@@ -2418,7 +2506,8 @@ async function fetchResolutionGames() {
 }
 async function parseGameCancellationBox(box) {
   try {
-    if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
+    const contractVersion = findContractVersion("gameCancellation", box.ergoTree);
+    if (!contractVersion) {
       console.warn("parseGameCancellationBox: invalid constants (ErgoTree mismatch)");
       return null;
     }
@@ -2426,7 +2515,7 @@ async function parseGameCancellationBox(box) {
       console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
       return null;
     }
-    if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+    if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
       console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
       return null;
     }
@@ -2466,7 +2555,7 @@ async function parseGameCancellationBox(box) {
       throw new Error("Invalid or missing registers R5, R6, or R7.");
     }
     const participationFeeAmount = BigInt(0);
-    if (!await fetch_conditions(gameId, createdAt ? Number(createdAt) : void 0, Number(originalDeadline))) {
+    if (!await fetch_conditions(gameId, createdAt ? Number(createdAt) : void 0, Number(originalDeadline), contractVersion)) {
       console.warn(`parseGameCancellationBox: Box ${box.boxId} failed validity conditions.`);
       return null;
     }
@@ -2486,7 +2575,8 @@ async function parseGameCancellationBox(box) {
       reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
       judges: [],
       deadlineBlock: originalDeadline,
-      constants: getGameConstants(),
+      constants: getGameConstants(contractVersion),
+      contractVersion,
       reputation: 0,
       createdAt
     };
@@ -2497,47 +2587,59 @@ async function parseGameCancellationBox(box) {
     return null;
   }
 }
+var GAME_CONTRACTS = ["gameActive", "gameResolution", "endGame", "gameCancellation"];
+function gameTemplateHashes() {
+  return [...new Set(GAME_CONTRACTS.flatMap(getContractTemplateHashes))];
+}
+function isGameContractTree(ergoTree) {
+  return GAME_CONTRACTS.some((name) => findContractVersion(name, ergoTree) !== null);
+}
+async function parseGameBox(box) {
+  if (findContractVersion("gameActive", box.ergoTree))
+    return parseGameActiveBox(box);
+  if (findContractVersion("gameResolution", box.ergoTree) || findContractVersion("endGame", box.ergoTree))
+    return parseGameResolutionBox(box);
+  if (findContractVersion("gameCancellation", box.ergoTree))
+    return parseGameCancellationBox(box);
+  return null;
+}
 async function fetchCancellationGames() {
   const games2 = /* @__PURE__ */ new Map();
-  const scriptHash = getGopGameCancellationTemplateHash();
-  let offset = 0;
-  const limit = 100;
-  let moreAvailable = true;
-  while (moreAvailable) {
-    const url = `${get_store_value(explorer_uri)}/api/v1/boxes/unspent/search`;
-    try {
-      const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ergoTreeTemplateHash: scriptHash })
-      });
-      if (!response.ok) {
-        throw new Error(`API response was not OK: ${response.status}`);
+  for (const scriptHash of getContractTemplateHashes("gameCancellation")) {
+    let offset = 0;
+    const limit = 100;
+    let moreAvailable = true;
+    while (moreAvailable) {
+      const url = `${get_store_value(explorer_uri)}/api/v1/boxes/unspent/search`;
+      try {
+        const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ergoTreeTemplateHash: scriptHash })
+        });
+        if (!response.ok) {
+          throw new Error(`API response was not OK: ${response.status}`);
+        }
+        const data = await response.json();
+        const items = data.items || [];
+        for (const box of items) {
+          const game = await parseGameCancellationBox(box);
+          if (game)
+            games2.set(game.gameId, game);
+        }
+        offset += items.length;
+        moreAvailable = items.length === limit;
+      } catch (error) {
+        console.error("An exception occurred while fetching cancellation games:", error);
+        moreAvailable = false;
       }
-      const data = await response.json();
-      const items = data.items || [];
-      for (const box of items) {
-        const game = await parseGameCancellationBox(box);
-        if (game)
-          games2.set(game.gameId, game);
-      }
-      offset += items.length;
-      moreAvailable = items.length === limit;
-    } catch (error) {
-      console.error("An exception occurred while fetching cancellation games:", error);
-      moreAvailable = false;
     }
   }
   return games2;
 }
 async function fetchFinalizedGames() {
   const games2 = /* @__PURE__ */ new Map();
-  const templateHashes = [
-    getGopGameActiveTemplateHash(),
-    getGopGameResolutionTemplateHash(),
-    getGopEndGameTemplateHash(),
-    getGopGameCancellationTemplateHash()
-  ];
+  const templateHashes = gameTemplateHashes();
   const allGameIds = /* @__PURE__ */ new Set();
   const historicalContractBoxes = /* @__PURE__ */ new Map();
   for (const templateHash of templateHashes) {
@@ -2557,16 +2659,7 @@ async function fetchFinalizedGames() {
         const data = await response.json();
         const items = data.items || [];
         for (const box of items) {
-          let game = null;
-          if (templateHash === getGopGameActiveTemplateHash()) {
-            game = await parseGameActiveBox(box);
-          } else if (templateHash === getGopGameResolutionTemplateHash()) {
-            game = await parseGameResolutionBox(box);
-          } else if (templateHash === getGopEndGameTemplateHash()) {
-            game = await parseGameResolutionBox(box);
-          } else if (templateHash === getGopGameCancellationTemplateHash()) {
-            game = await parseGameCancellationBox(box);
-          }
+          const game = await parseGameBox(box);
           if (game) {
             allGameIds.add(game.gameId);
             if (!historicalContractBoxes.has(game.gameId)) {
@@ -2606,13 +2699,7 @@ async function fetchFinalizedGames() {
     }
     if (!currentBox)
       continue;
-    const contractTrees = [
-      getGopGameActiveErgoTreeHex(),
-      getGopGameResolutionErgoTreeHex(),
-      getGopEndGameErgoTreeHex(),
-      getGopGameCancellationErgoTreeHex()
-    ];
-    if (contractTrees.includes(currentBox.ergoTree))
+    if (isGameContractTree(currentBox.ergoTree))
       continue;
     const histBoxes = historicalContractBoxes.get(gameId) || [];
     let content = {
@@ -2636,7 +2723,7 @@ async function fetchFinalizedGames() {
     const resolutionBoxes = histBoxes.filter((b) => b.status === "Resolution").sort((a, b) => b.box.creationHeight - a.box.creationHeight);
     const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] : null;
     const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-    const winnerFinalizationGracePeriod = getGameConstants().END_GAME_AUTH_GRACE_PERIOD;
+    const winnerFinalizationGracePeriod = lastBox.constants.END_GAME_AUTH_GRACE_PERIOD;
     const finalPrizeValue = lastResolutionBox?.value ?? lastBox.value;
     const finalized = {
       boxId: lastResolutionBox?.boxId || currentBox.boxId,
@@ -2655,7 +2742,8 @@ async function fetchFinalizedGames() {
       judges: lastBox.judges || [],
       judgeFinalizationBlock,
       winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-      constants: getGameConstants(),
+      constants: lastBox.constants,
+      contractVersion: lastBox.contractVersion,
       reputation: 0,
       seed: lastResolutionBox?.seed || "",
       revealedS_Hex: lastResolutionBox?.revealedS_Hex || "",
@@ -2679,12 +2767,6 @@ async function fetchGameHistory(gameId) {
     return getDevCompetitionHistory(gameId);
   }
   const history = [];
-  const templateHashes = [
-    getGopGameActiveTemplateHash(),
-    getGopGameResolutionTemplateHash(),
-    getGopEndGameTemplateHash(),
-    getGopGameCancellationTemplateHash()
-  ];
   let offset = 0;
   const limit = 100;
   let more = true;
@@ -2697,16 +2779,7 @@ async function fetchGameHistory(gameId) {
       const data = await response.json();
       const items = data.items || [];
       for (const box of items) {
-        let game = null;
-        if (box.ergoTree === getGopGameActiveErgoTreeHex()) {
-          game = await parseGameActiveBox(box);
-        } else if (box.ergoTree === getGopGameResolutionErgoTreeHex()) {
-          game = await parseGameResolutionBox(box);
-        } else if (box.ergoTree === getGopEndGameErgoTreeHex()) {
-          game = await parseGameResolutionBox(box);
-        } else if (box.ergoTree === getGopGameCancellationErgoTreeHex()) {
-          game = await parseGameCancellationBox(box);
-        }
+        const game = await parseGameBox(box);
         if (game) {
           history.push(game);
         }
@@ -2725,7 +2798,7 @@ function getOldestBox(boxes) {
   if (boxes.length === 0)
     return null;
   return boxes.reduce(
-    (oldest, current) => (current.creationHeight ?? Number.MAX_SAFE_INTEGER) < (oldest.creationHeight ?? Number.MAX_SAFE_INTEGER) ? current : oldest
+    (oldest, current2) => (current2.creationHeight ?? Number.MAX_SAFE_INTEGER) < (oldest.creationHeight ?? Number.MAX_SAFE_INTEGER) ? current2 : oldest
   );
 }
 async function fetchSolverIdBox(solverId) {
@@ -2827,7 +2900,8 @@ async function fetchParticipations(game) {
   const gameNftId = game.gameId;
   const gameDeadline = game.deadlineBlock;
   const participations = [];
-  const scriptHash = getGopParticipationTemplateHash();
+  const scriptHash = getContractTemplateHash("participation", game.contractVersion);
+  const participationErgoTree = getContractErgoTreeHex("participation", game.contractVersion);
   let offset = 0;
   const limit = 100;
   let moreAvailable = true;
@@ -2850,7 +2924,7 @@ async function fetchParticipations(game) {
       const data = await response.json();
       const items = data.items || [];
       for (const box of items) {
-        if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
+        if (box.ergoTree !== participationErgoTree) {
           console.warn("parseParticipationBox: invalid constants");
           continue;
         }
@@ -2946,7 +3020,7 @@ async function fetchParticipationBatches(game) {
   }
   const gameNftId = game.gameId;
   const batches = [];
-  const scriptHash = getGopParticipationBatchTemplateHash();
+  const scriptHash = getContractTemplateHash("participationBatch", game.contractVersion);
   let offset = 0;
   const limit = 100;
   let moreAvailable = true;
@@ -2993,9 +3067,9 @@ async function fetchGoPGames(force = false, avoidFullLoad = false) {
     isLoadingGames.set(false);
     return devGames;
   }
-  const current = get_store_value(games);
-  if (!force && Date.now() - current.last_fetch < CACHE_DURATION_MS) {
-    return current.data;
+  const current2 = get_store_value(games);
+  if (!force && Date.now() - current2.last_fetch < CACHE_DURATION_MS) {
+    return current2.data;
   }
   if (avoidFullLoad) {
     return /* @__PURE__ */ new Map();
@@ -3009,14 +3083,14 @@ async function fetchGoPGames(force = false, avoidFullLoad = false) {
       if (force) {
         games.set({ data: /* @__PURE__ */ new Map(), last_fetch: Date.now() });
       } else {
-        games.update((current2) => ({ ...current2, last_fetch: Date.now() }));
+        games.update((current3) => ({ ...current3, last_fetch: Date.now() }));
       }
       const mergeIntoStore = (newGames) => {
         if (newGames.size > 0) {
-          games.update((current2) => {
-            const updatedData = new Map(current2.data);
+          games.update((current3) => {
+            const updatedData = new Map(current3.data);
             newGames.forEach((value, key) => updatedData.set(key, value));
-            return { last_fetch: current2.last_fetch, data: updatedData };
+            return { last_fetch: current3.last_fetch, data: updatedData };
           });
           console.log(`[fetchGoPGames] Store updated with ${newGames.size} games.`);
         }
@@ -3044,17 +3118,13 @@ async function fetchGame(id) {
     return getDevCompetition(id);
   }
   try {
-    const current = get_store_value(games);
-    if (current && current.data && current.data.has(id)) {
-      return current.data.get(id);
+    const current2 = get_store_value(games);
+    if (current2 && current2.data && current2.data.has(id)) {
+      return current2.data.get(id);
     }
   } catch (e) {
     console.warn("fetchGame: could not read store:", e);
   }
-  const activeTemplate = getGopGameActiveTemplateHash();
-  const resolutionTemplate = getGopGameResolutionTemplateHash();
-  const endGameTemplate = getGopEndGameTemplateHash();
-  const cancellationTemplate = getGopGameCancellationTemplateHash();
   let currentBox = null;
   try {
     const url = `${get_store_value(explorer_uri)}/api/v1/boxes/unspent/byTokenId/${id}`;
@@ -3072,24 +3142,14 @@ async function fetchGame(id) {
   }
   try {
     if (currentBox) {
-      if (currentBox.ergoTree === getGopGameActiveErgoTreeHex()) {
-        const parsed = await parseGameActiveBox(currentBox);
-        if (parsed)
-          return parsed;
-      } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex() || currentBox.ergoTree === getGopEndGameErgoTreeHex()) {
-        const parsed = await parseGameResolutionBox(currentBox);
-        if (parsed)
-          return parsed;
-      } else if (currentBox.ergoTree === getGopGameCancellationErgoTreeHex()) {
-        const parsed = await parseGameCancellationBox(currentBox);
-        if (parsed)
-          return parsed;
-      }
+      const parsed = await parseGameBox(currentBox);
+      if (parsed)
+        return parsed;
     }
   } catch (e) {
     console.error(`fetchGame: error parsing current box for ${id}:`, e);
   }
-  const templateHashes = [activeTemplate, resolutionTemplate, endGameTemplate, cancellationTemplate];
+  const templateHashes = gameTemplateHashes();
   const histBoxes = [];
   const limit = 100;
   for (const templateHash of templateHashes) {
@@ -3115,14 +3175,7 @@ async function fetchGame(id) {
               continue;
             if (box.assets[0].tokenId !== id)
               continue;
-            let parsed = null;
-            if (templateHash === activeTemplate) {
-              parsed = await parseGameActiveBox(box);
-            } else if (templateHash === resolutionTemplate || templateHash === endGameTemplate) {
-              parsed = await parseGameResolutionBox(box);
-            } else if (templateHash === cancellationTemplate) {
-              parsed = await parseGameCancellationBox(box);
-            }
+            const parsed = await parseGameBox(box);
             if (parsed)
               histBoxes.push(parsed);
           } catch (inner) {
@@ -3144,7 +3197,7 @@ async function fetchGame(id) {
     const resolutionBoxes = histBoxes.filter((b) => b.status === GameState.Resolution).sort((a, b) => b.box.creationHeight - a.box.creationHeight);
     const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] : null;
     const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-    const winnerFinalizationGracePeriod = 64800;
+    const winnerFinalizationGracePeriod = lastBox.constants.END_GAME_AUTH_GRACE_PERIOD;
     const maxHistValue = histBoxes.reduce(
       (max, b) => BigInt(b.value ?? 0n) > max ? BigInt(b.value ?? 0n) : max,
       0n
@@ -3166,7 +3219,8 @@ async function fetchGame(id) {
         judges: judges2,
         judgeFinalizationBlock,
         winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-        constants: getGameConstants(),
+        constants: lastBox.constants,
+        contractVersion: lastBox.contractVersion,
         reputation: 0,
         // New fields populated from lastResolutionBox
         seed: lastResolutionBox?.seed || "",
@@ -3222,6 +3276,7 @@ async function fetchGame(id) {
         judgeFinalizationBlock: 0,
         winnerFinalizationDeadline: 0,
         constants: getGameConstants(),
+        contractVersion: CURRENT_CONTRACT_VERSION,
         reputation: 0,
         // New fields with default values (no historical data)
         seed: "",

@@ -18,21 +18,14 @@ import {
 } from "../common/game";
 import { CACHE_DURATION_MS, explorer_uri, isDevMode } from "./envs";
 import {
-    getGopGameResolutionTemplateHash,
-    getGopParticipationTemplateHash,
-    getGopGameCancellationTemplateHash,
-    getGopGameActiveErgoTreeHex,
-    getGopGameResolutionErgoTreeHex,
-    getGopEndGameErgoTreeHex,
-    getGopGameCancellationErgoTreeHex,
-    getGopParticipationErgoTreeHex,
-    getGopGameActiveTemplateHash,
-    getGopEndGameTemplateHash,
-    getGopParticipationBatchTemplateHash,
-    getGopMintIdtErgoTreeHex,
+    findContractVersion,
+    getContractErgoTreeHex,
+    getContractTemplateHash,
+    getContractTemplateHashes,
     getReputationProofTemplateHash,
-    getGopFalseTemplateHash
-} from "./contract"; // Assumes this file exports functions to get script hashes
+    getGopFalseTemplateHash,
+    type ContractName
+} from "./contract";
 import {
     hexToUtf8,
     parseCollByteToHex,
@@ -46,7 +39,7 @@ import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
 import { games, judges as judgesStore, isLoadingGames } from "../common/store";
-import { ENDING_GAME_STATE, GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
+import { CURRENT_CONTRACT_VERSION, getContractRules, getGameConstants, type ContractVersion } from "$lib/common/constants";
 import {
     buildDevCompetitionsMap,
     getDevCompetition,
@@ -123,7 +116,7 @@ export async function tokenCreationHeight(tokenId: string): Promise<number | nul
     return null;
 }
 
-export async function fetch_conditions(tokenId: string, createdAt?: number, deadline?: number): Promise<boolean> {
+export async function fetch_conditions(tokenId: string, createdAt?: number, deadline?: number, version: ContractVersion = CURRENT_CONTRACT_VERSION): Promise<boolean> {
     const url = `${get(explorer_uri)}/api/v1/tokens/${tokenId}`;
     try {
         const response = await fetch(url);
@@ -148,7 +141,7 @@ export async function fetch_conditions(tokenId: string, createdAt?: number, dead
 
             // Validate Deadline (if provided)
             if (deadline !== undefined) {
-                const constants = getGameConstants();
+                const constants = getGameConstants(version);
                 const minDeadline = constants.PARTICIPATION_TIME_WINDOW + constants.SEED_MARGIN;
                 if (deadline < minDeadline) {
                     console.warn(`fetch_conditions: Token ${tokenId} has invalid deadline. Found: ${deadline}, Expected >= ${minDeadline}`);
@@ -158,7 +151,7 @@ export async function fetch_conditions(tokenId: string, createdAt?: number, dead
 
             // Validate Contract (Mint IDT Check)
             const ergoTree = boxData?.ergoTree;
-            const mintIdtErgoTree = getGopMintIdtErgoTreeHex();
+            const mintIdtErgoTree = getContractErgoTreeHex('mintIdt', version);
             if (ergoTree !== mintIdtErgoTree) {
                 console.warn(`fetch_conditions: Token ${tokenId} was not created in mintIdt contract. Found: ${ergoTree}, Expected: ${mintIdtErgoTree}`);
                 return false;
@@ -240,16 +233,18 @@ export async function getTransactionInfo(transactionId: string): Promise<any> {
  */
 async function parseGameActiveBox(box: any): Promise<GameActive | null> {
     try {
-        if (box.ergoTree !== getGopGameActiveErgoTreeHex()) {
+        const contractVersion = findContractVersion('gameActive', box.ergoTree);
+        if (!contractVersion) {
             console.warn('parseGameActiveBox: invalid constants');
             return null;
         }
+        const constants = getGameConstants(contractVersion);
 
         if (!box.assets || box.assets.length === 0) {
             console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
-        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+        if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
             console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
             return null;
         }
@@ -280,7 +275,7 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
         if (!numericalParams || numericalParams.length < 9) throw new Error("R8 does not contain the 9 expected numerical parameters.");
         const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommission, resolverCommission, devCommission, creatorSlashRatio] = numericalParams;
 
-        if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock))) {
+        if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock), contractVersion)) {
             console.warn(`parseGameActiveBox: Box ${box.boxId} failed validity conditions.`);
             return null;
         }
@@ -320,9 +315,10 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             timeWeight: timeWeight, // From R8
             createdAt: Number(createdAt), // From R8
             reputation: 0,
-            constants: getGameConstants(),
+            constants,
+            contractVersion,
             seed: seed,
-            ceremonyDeadline: Number(deadlineBlock) - getGameConstants().PARTICIPATION_TIME_WINDOW,
+            ceremonyDeadline: Number(deadlineBlock) - constants.PARTICIPATION_TIME_WINDOW,
             creatorSlashRatio: Number(creatorSlashRatio),
         };
 
@@ -343,35 +339,36 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
  */
 export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
     const games = new Map<string, GameActive>();
-    const scriptHash = getGopGameActiveTemplateHash();
 
-    let offset = 0;
-    const limit = 100;
-    let moreAvailable = true;
+    for (const scriptHash of getContractTemplateHashes('gameActive')) {
+        let offset = 0;
+        const limit = 100;
+        let moreAvailable = true;
 
-    while (moreAvailable) {
-        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
-        try {
-            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
-            });
-            if (!response.ok) throw new Error(`API response: ${response.status}`);
+        while (moreAvailable) {
+            const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
+            try {
+                const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
+                });
+                if (!response.ok) throw new Error(`API response: ${response.status}`);
 
-            const data = await response.json();
-            const items: Box[] = data.items || [];
+                const data = await response.json();
+                const items: Box[] = data.items || [];
 
-            for (const box of items) {
-                const game = await parseGameActiveBox(box);
-                if (game) games.set(game.gameId, game);
+                for (const box of items) {
+                    const game = await parseGameActiveBox(box);
+                    if (game) games.set(game.gameId, game);
+                }
+
+                offset += items.length;
+                moreAvailable = items.length === limit;
+            } catch (error) {
+                console.error("Exception while fetching active games:", error);
+                moreAvailable = false;
             }
-
-            offset += items.length;
-            moreAvailable = items.length === limit;
-        } catch (error) {
-            console.error("Exception while fetching active games:", error);
-            moreAvailable = false;
         }
     }
     return games;
@@ -390,8 +387,10 @@ export async function fetchActiveGames(): Promise<Map<string, GameActive>> {
  */
 export async function parseGameResolutionBox(box: any): Promise<GameResolution | null> {
     try {
-        const isEndGame = box.ergoTree === getGopEndGameErgoTreeHex();
-        if (box.ergoTree !== getGopGameResolutionErgoTreeHex() && !isEndGame) {
+        const endGameVersion = findContractVersion('endGame', box.ergoTree);
+        const isEndGame = endGameVersion !== null;
+        const contractVersion = endGameVersion ?? findContractVersion('gameResolution', box.ergoTree);
+        if (!contractVersion) {
             console.warn('parseGameResolutionBox: invalid constants');
             return null;
         }
@@ -400,15 +399,15 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
-        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+        if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
             console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
             return null;
         }
         const gameId = box.assets[0].tokenId;
 
-        // R4 is game state: 1 while in game_resolution, ENDING_GAME_STATE once moved to end_game.
+        // R4 is game state: 1 while in game_resolution; the end_game box uses the version's ending state.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-        if (gameState !== (isEndGame ? ENDING_GAME_STATE : 1)) throw new Error("R4 indicates incorrect game state.");
+        if (gameState !== (isEndGame ? getContractRules(contractVersion).endingGameState : 1)) throw new Error("R4 indicates incorrect game state.");
 
         // R5: Coll[Byte] -> Seed
         const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
@@ -432,7 +431,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
         if (!numericalParams || numericalParams.length < 10) throw new Error("R8 does not contain the 10 expected numerical parameters.");
         const [createdAt, timeWeight, deadlineBlock, resolverStakeAmount, participationFeeAmount, perJudgeCommission, resolverCommission, devCommission, creatorSlashRatio, resolutionDeadline] = numericalParams;
 
-        if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock))) {
+        if (!await fetch_conditions(gameId, Number(createdAt), Number(deadlineBlock), contractVersion)) {
             console.warn(`parseGameResolutionBox: Box ${box.boxId} failed validity conditions.`);
             return null;
         }
@@ -477,7 +476,8 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             devCommission: Number(devCommission), // Added from R8
             creatorSlashRatio: Number(creatorSlashRatio), // Added from R8
             devScript,
-            constants: getGameConstants(),
+            constants: getGameConstants(contractVersion),
+            contractVersion,
             seed: seed, // Added from R5
             reputation: 0,
             isEndGame,
@@ -501,7 +501,7 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
  */
 export async function fetchResolutionGames(): Promise<Map<string, GameResolution>> {
     const games = new Map<string, GameResolution>();
-    const scriptHashes = [getGopGameResolutionTemplateHash(), getGopEndGameTemplateHash()];
+    const scriptHashes = [...getContractTemplateHashes('gameResolution'), ...getContractTemplateHashes('endGame')];
 
     for (const scriptHash of scriptHashes) {
         let offset = 0;
@@ -555,7 +555,8 @@ export async function fetchResolutionGames(): Promise<Map<string, GameResolution
  */
 export async function parseGameCancellationBox(box: any): Promise<GameCancellation | null> {
     try {
-        if (box.ergoTree !== getGopGameCancellationErgoTreeHex()) {
+        const contractVersion = findContractVersion('gameCancellation', box.ergoTree);
+        if (!contractVersion) {
             console.warn('parseGameCancellationBox: invalid constants (ErgoTree mismatch)');
             return null;
         }
@@ -564,7 +565,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
-        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+        if (BigInt(box.assets[0].amount) !== getContractRules(contractVersion).gameNftAmount) {
             console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
             return null;
         }
@@ -621,7 +622,7 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
 
         const participationFeeAmount = BigInt(0); // Assuming 0 in cancellation
 
-        if (!await fetch_conditions(gameId, createdAt ? Number(createdAt) : undefined, Number(originalDeadline))) {
+        if (!await fetch_conditions(gameId, createdAt ? Number(createdAt) : undefined, Number(originalDeadline), contractVersion)) {
             console.warn(`parseGameCancellationBox: Box ${box.boxId} failed validity conditions.`);
             return null;
         }
@@ -642,7 +643,8 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
             reputationOpinions: await fetchReputationOpinionsForTarget("game", gameId),
             judges: [],
             deadlineBlock: originalDeadline,
-            constants: getGameConstants(),
+            constants: getGameConstants(contractVersion),
+            contractVersion,
             reputation: 0,
             createdAt: createdAt
         };
@@ -659,45 +661,66 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
 
 
 
+const GAME_CONTRACTS: ContractName[] = ['gameActive', 'gameResolution', 'endGame', 'gameCancellation'];
+
+// Template hashes of every game contract (any state) across all supported contract versions.
+function gameTemplateHashes(): string[] {
+    return [...new Set(GAME_CONTRACTS.flatMap(getContractTemplateHashes))];
+}
+
+// True if the ErgoTree is a game contract of any supported version.
+function isGameContractTree(ergoTree: string): boolean {
+    return GAME_CONTRACTS.some((name) => findContractVersion(name, ergoTree) !== null);
+}
+
+// Parses a game box of any state and contract version; null if it isn't one.
+async function parseGameBox(box: any): Promise<AnyGame | null> {
+    if (findContractVersion('gameActive', box.ergoTree)) return parseGameActiveBox(box);
+    if (findContractVersion('gameResolution', box.ergoTree) || findContractVersion('endGame', box.ergoTree)) return parseGameResolutionBox(box);
+    if (findContractVersion('gameCancellation', box.ergoTree)) return parseGameCancellationBox(box);
+    return null;
+}
+
 /**
  * Searches for and retrieves all games currently in the "Cancellation" state.
  * @returns A `Promise` that resolves to a `Map` of games in cancellation, using the game ID as the key.
  */
 export async function fetchCancellationGames(): Promise<Map<string, GameCancellation>> {
     const games = new Map<string, GameCancellation>();
-    const scriptHash = getGopGameCancellationTemplateHash();
 
-    let offset = 0;
-    const limit = 100;
-    let moreAvailable = true;
+    for (const scriptHash of getContractTemplateHashes('gameCancellation')) {
+        let offset = 0;
+        const limit = 100;
+        let moreAvailable = true;
 
-    while (moreAvailable) {
-        const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
-        try {
-            const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
-            });
+        while (moreAvailable) {
+            const url = `${get(explorer_uri)}/api/v1/boxes/unspent/search`;
+            try {
+                const response = await fetch(`${url}?offset=${offset}&limit=${limit}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ergoTreeTemplateHash: scriptHash }),
+                });
 
-            if (!response.ok) {
-                throw new Error(`API response was not OK: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`API response was not OK: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const items: Box[] = data.items || [];
+
+                for (const box of items) {
+                    const game = await parseGameCancellationBox(box);
+                    if (game) games.set(game.gameId, game);
+                }
+
+                offset += items.length;
+                moreAvailable = items.length === limit;
+
+            } catch (error) {
+                console.error("An exception occurred while fetching cancellation games:", error);
+                moreAvailable = false;
             }
-
-            const data = await response.json();
-            const items: Box[] = data.items || [];
-
-            for (const box of items) {
-                const game = await parseGameCancellationBox(box);
-                if (game) games.set(game.gameId, game);
-            }
-
-            offset += items.length;
-            moreAvailable = items.length === limit;
-
-        } catch (error) {
-            console.error("An exception occurred while fetching cancellation games:", error);
-            moreAvailable = false;
         }
     }
 
@@ -714,12 +737,7 @@ export async function fetchCancellationGames(): Promise<Map<string, GameCancella
 export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>> {
     const games = new Map<string, GameFinalized>();
 
-    const templateHashes = [
-        getGopGameActiveTemplateHash(),
-        getGopGameResolutionTemplateHash(),
-        getGopEndGameTemplateHash(),
-        getGopGameCancellationTemplateHash()
-    ];
+    const templateHashes = gameTemplateHashes();
 
     const allGameIds = new Set<string>();
     const historicalContractBoxes = new Map<string, AnyGame[]>();
@@ -743,16 +761,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
                 const items: Box[] = data.items || [];
 
                 for (const box of items) {
-                    let game: AnyGame | null = null;
-                    if (templateHash === getGopGameActiveTemplateHash()) {
-                        game = await parseGameActiveBox(box);
-                    } else if (templateHash === getGopGameResolutionTemplateHash()) {
-                        game = await parseGameResolutionBox(box);
-                    } else if (templateHash === getGopEndGameTemplateHash()) {
-                        game = await parseGameResolutionBox(box);
-                    } else if (templateHash === getGopGameCancellationTemplateHash()) {
-                        game = await parseGameCancellationBox(box);
-                    }
+                    const game = await parseGameBox(box);
                     if (game) {
                         allGameIds.add(game.gameId);
                         if (!historicalContractBoxes.has(game.gameId)) {
@@ -800,13 +809,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         if (!currentBox) continue; // Should not happen if historical boxes exist, but good to check
 
         // Check if the current unspent box is *still* a contract box (e.g., missed by first fetch)
-        const contractTrees = [
-            getGopGameActiveErgoTreeHex(),
-            getGopGameResolutionErgoTreeHex(),
-            getGopEndGameErgoTreeHex(),
-            getGopGameCancellationErgoTreeHex()
-        ];
-        if (contractTrees.includes(currentBox.ergoTree)) continue; // It's still in a contract state, skip.
+        if (isGameContractTree(currentBox.ergoTree)) continue; // It's still in a contract state, skip.
 
         // At this point, the game NFT is in a non-contract box (e.g., winner's wallet)
         // We use historical data to build the Finalized object.
@@ -837,7 +840,7 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
         const resolutionBoxes = histBoxes.filter((b) => b.status === "Resolution").sort((a, b) => b.box.creationHeight - a.box.creationHeight);
         const lastResolutionBox = resolutionBoxes.length > 0 ? resolutionBoxes[0] as GameResolution : null;
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-        const winnerFinalizationGracePeriod = getGameConstants().END_GAME_AUTH_GRACE_PERIOD;
+        const winnerFinalizationGracePeriod = lastBox.constants.END_GAME_AUTH_GRACE_PERIOD;
 
         // Prize pool is derived from the HISTORICAL record, not the live box: once a
         // game is finalized the NFT sits in a non-contract box (winner/resolver wallet)
@@ -861,7 +864,8 @@ export async function fetchFinalizedGames(): Promise<Map<string, GameFinalized>>
             judges: lastBox.judges || [],
             judgeFinalizationBlock: judgeFinalizationBlock,
             winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-            constants: getGameConstants(),
+            constants: lastBox.constants,
+            contractVersion: lastBox.contractVersion,
             reputation: 0,
             seed: lastResolutionBox?.seed || "",
             revealedS_Hex: lastResolutionBox?.revealedS_Hex || "",
@@ -899,12 +903,6 @@ export async function fetchGameHistory(gameId: string): Promise<AnyGame[]> {
     }
 
     const history: AnyGame[] = [];
-    const templateHashes = [
-        getGopGameActiveTemplateHash(),
-        getGopGameResolutionTemplateHash(),
-        getGopEndGameTemplateHash(),
-        getGopGameCancellationTemplateHash()
-    ];
 
     // We need to fetch all boxes that contain the game NFT and match one of the contract templates.
     // Since the explorer API for /boxes/search allows filtering by assets, we use that.
@@ -929,24 +927,7 @@ export async function fetchGameHistory(gameId: string): Promise<AnyGame[]> {
             const items: Box[] = data.items || [];
 
             for (const box of items) {
-                let game: AnyGame | null = null;
-                // Try to parse as Active
-                if (box.ergoTree === getGopGameActiveErgoTreeHex()) {
-                    game = await parseGameActiveBox(box);
-                }
-                // Try to parse as Resolution
-                else if (box.ergoTree === getGopGameResolutionErgoTreeHex()) {
-                    game = await parseGameResolutionBox(box);
-                }
-                // Try to parse as EndGame (Resolution but different script)
-                else if (box.ergoTree === getGopEndGameErgoTreeHex()) {
-                    game = await parseGameResolutionBox(box);
-                }
-                // Try to parse as Cancellation
-                else if (box.ergoTree === getGopGameCancellationErgoTreeHex()) {
-                    game = await parseGameCancellationBox(box);
-                }
-
+                const game = await parseGameBox(box);
                 if (game) {
                     history.push(game);
                 }
@@ -1107,7 +1088,8 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
     const gameDeadline = game.deadlineBlock;
 
     const participations: AnyParticipation[] = [];
-    const scriptHash = getGopParticipationTemplateHash();
+    const scriptHash = getContractTemplateHash('participation', game.contractVersion);
+    const participationErgoTree = getContractErgoTreeHex('participation', game.contractVersion);
 
     let offset = 0;
     const limit = 100;
@@ -1135,7 +1117,7 @@ export async function fetchParticipations(game: AnyGame): Promise<AnyParticipati
             const items: Box[] = data.items || [];
 
             for (const box of items) {
-                if (box.ergoTree !== getGopParticipationErgoTreeHex()) {
+                if (box.ergoTree !== participationErgoTree) {
                     console.warn('parseParticipationBox: invalid constants');
                     continue;
                 }
@@ -1257,7 +1239,7 @@ export async function fetchParticipationBatches(game: AnyGame): Promise<Box<Amou
 
     const gameNftId = game.gameId;
     const batches: Box<Amount>[] = [];
-    const scriptHash = getGopParticipationBatchTemplateHash();
+    const scriptHash = getContractTemplateHash('participationBatch', game.contractVersion);
 
     let offset = 0;
     const limit = 100;
@@ -1421,12 +1403,6 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
         console.warn("fetchGame: could not read store:", e);
     }
 
-    // helper constants
-    const activeTemplate = getGopGameActiveTemplateHash();
-    const resolutionTemplate = getGopGameResolutionTemplateHash();
-    const endGameTemplate = getGopEndGameTemplateHash();
-    const cancellationTemplate = getGopGameCancellationTemplateHash();
-
     // 2) try to fetch current unspent box for the token (if any)
     let currentBox: Box<Amount> | null = null;
     try {
@@ -1447,17 +1423,8 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     // 3) If there is a current box and it matches a contract ErgoTree -> parse and return
     try {
         if (currentBox) {
-            if (currentBox.ergoTree === getGopGameActiveErgoTreeHex()) {
-
-                const parsed = await parseGameActiveBox(currentBox);
-                if (parsed) return parsed;
-            } else if (currentBox.ergoTree === getGopGameResolutionErgoTreeHex() || currentBox.ergoTree === getGopEndGameErgoTreeHex()) {
-                const parsed = await parseGameResolutionBox(currentBox);
-                if (parsed) return parsed;
-            } else if (currentBox.ergoTree === getGopGameCancellationErgoTreeHex()) {
-                const parsed = await parseGameCancellationBox(currentBox);
-                if (parsed) return parsed;
-            }
+            const parsed = await parseGameBox(currentBox);
+            if (parsed) return parsed;
             // else: currentBox exists but not a contract tree -> likely a finalized token holder box
         }
     } catch (e) {
@@ -1467,7 +1434,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
     // 4) If we reached here we need to collect historical contract boxes for this token id.
     //    endGameTemplate must be included: the end-game box is the contract box spent by
     //    the finalize tx and the one that still carries the participation-token prize pool.
-    const templateHashes = [activeTemplate, resolutionTemplate, endGameTemplate, cancellationTemplate];
+    const templateHashes = gameTemplateHashes();
     const histBoxes: AnyGame[] = [];
 
     const limit = 100;
@@ -1494,14 +1461,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                         if (!box.assets || box.assets.length === 0) continue;
                         if (box.assets[0].tokenId !== id) continue;
 
-                        let parsed: AnyGame | null = null;
-                        if (templateHash === activeTemplate) {
-                            parsed = await parseGameActiveBox(box);
-                        } else if (templateHash === resolutionTemplate || templateHash === endGameTemplate) {
-                            parsed = await parseGameResolutionBox(box);
-                        } else if (templateHash === cancellationTemplate) {
-                            parsed = await parseGameCancellationBox(box);
-                        }
+                        const parsed = await parseGameBox(box);
                         if (parsed) histBoxes.push(parsed);
                     } catch (inner) {
                         console.error(`fetchGame: error parsing historical box ${box.boxId} for ${id}:`, inner);
@@ -1531,7 +1491,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
             .sort((a, b) => b.box.creationHeight - a.box.creationHeight);
         const lastResolutionBox = resolutionBoxes.length > 0 ? (resolutionBoxes[0] as GameResolution) : null;
         const judgeFinalizationBlock = lastResolutionBox?.resolutionDeadline || 0;
-        const winnerFinalizationGracePeriod = 64800; // 90 days (as in fetchFinalizedGames) - TODO: take from contract constants if available
+        const winnerFinalizationGracePeriod = lastBox.constants.END_GAME_AUTH_GRACE_PERIOD;
 
         // Prize pool is derived from the HISTORICAL record, not the live box. `currentBox`
         // (the box now holding the NFT) is a winner/resolver wallet box that no longer
@@ -1567,7 +1527,8 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judges,
                 judgeFinalizationBlock: judgeFinalizationBlock,
                 winnerFinalizationDeadline: judgeFinalizationBlock + winnerFinalizationGracePeriod,
-                constants: getGameConstants(),
+                constants: lastBox.constants,
+                contractVersion: lastBox.contractVersion,
                 reputation: 0,
                 // New fields populated from lastResolutionBox
                 seed: lastResolutionBox?.seed || "",
@@ -1631,6 +1592,7 @@ export async function fetchGame(id: string): Promise<AnyGame | null> {
                 judgeFinalizationBlock: 0,
                 winnerFinalizationDeadline: 0,
                 constants: getGameConstants(),
+                contractVersion: CURRENT_CONTRACT_VERSION,
                 reputation: 0,
                 // New fields with default values (no historical data)
                 seed: "",
