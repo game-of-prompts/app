@@ -122,12 +122,12 @@ describe.each(invalidationModes)("Judge invalidation can't tamper with the game 
     };
 
     // The invalidation tx as the honest off-chain code builds it, with optional tampered fields.
-    const buildInvalidationTx = (overrides: { secret?: Uint8Array } = {}) => {
+    const buildInvalidationTx = (overrides: { secret?: Uint8Array, resolutionDeadline?: bigint } = {}) => {
         const resolverPenalization = mode.penalizeResolver ? numericalParams[6] * CREATOR_SLASH_RATIO / BigInt(COMMISSION_DENOMINATOR) : 0n;
         const newNumericalParams = [...numericalParams];
         newNumericalParams[5] = numericalParams[5] + resolverPenalization;
         newNumericalParams[6] = numericalParams[6] - resolverPenalization;
-        newNumericalParams[9] = BigInt(mockChain.height) + JUDGE_PERIOD;
+        newNumericalParams[9] = overrides.resolutionDeadline ?? BigInt(mockChain.height) + JUDGE_PERIOD;
 
         return new TransactionBuilder(mockChain.height)
             .from([gameResolutionBox, candidateBox, ...resolver.utxos.toArray()])
@@ -171,5 +171,15 @@ describe.each(invalidationModes)("Judge invalidation can't tamper with the game 
         expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
         expect(gameResolutionContract.utxos.toArray()[0].boxId).to.equal(gameResolutionBox.boxId);
         expect(participationContract.utxos.length).to.equal(1);
+    });
+
+    it("rejects pushing the resolution deadline far into the future", () => {
+        setupScenario(3, 2);
+
+        // Ending the game needs HEIGHT >= resolutionDeadline: a huge value would lock the pool and every participation.
+        const tx = buildInvalidationTx({ resolutionDeadline: 9_223_372_036_854_775_807n });
+
+        expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
+        expect(gameResolutionContract.utxos.toArray()[0].boxId).to.equal(gameResolutionBox.boxId);
     });
 });
