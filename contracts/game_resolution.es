@@ -152,9 +152,9 @@
         }
       }
 
-      // Cálculo seguro del quórum
-      val requiredVotes = if (participatingJudges.size == 0) 0 else participatingJudges.size / 2 + 1
-      val hasRequiredVotes = judgeVotes.size >= requiredVotes
+      // Quórum: mayoría de los jueces. Sin jueces nadie puede invalidar (la tx no requiere firma).
+      val requiredVotes = participatingJudges.size / 2 + 1
+      val hasRequiredVotes = participatingJudges.size > 0 && judgeVotes.size >= requiredVotes
 
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
       
