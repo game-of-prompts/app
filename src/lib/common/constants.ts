@@ -65,3 +65,11 @@ export const getGameConstants = (): GameConstants => {
 
 // Export for tests
 export const DefaultGameConstants = ProductionMode;
+
+// The game NFT is minted with 2 units that travel together in the game box. end_game gives one unit
+// to the winner (or resolver) as the trophy and burns the other, so the trophy can never act as a game box.
+export const GAME_NFT_AMOUNT = 2n;
+export const GAME_TROPHY_AMOUNT = 1n;
+
+// R4 value written by game_resolution's action4 into the end_game box.
+export const ENDING_GAME_STATE = 3;

@@ -1,7 +1,7 @@
 import { base } from "$app/paths";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import type { Amount, Box } from "@fleet-sdk/core";
-import { getGameConstants } from "$lib/common/constants";
+import { GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
 import type {
     AnyGame,
     AnyParticipation,
@@ -317,7 +317,7 @@ function makeGameContent(definition: DevCompetitionDefinition) {
 }
 
 function makeGameNftAsset(gameId: string) {
-    return [{ tokenId: gameId, amount: 1n }];
+    return [{ tokenId: gameId, amount: GAME_NFT_AMOUNT }];
 }
 
 function buildCommitment(params: {

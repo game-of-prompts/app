@@ -20,7 +20,7 @@ import { blake2b256, randomBytes } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
 import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, ENDING_GAME_STATE, GAME_NFT_AMOUNT, GAME_TROPHY_AMOUNT, getGameConstants } from "$lib/common/constants";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
@@ -199,7 +199,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
 
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -259,7 +259,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(winner.address)
@@ -286,7 +286,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -300,6 +300,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([endGameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
@@ -425,7 +426,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
 
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
@@ -480,7 +481,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address)
@@ -507,7 +508,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -522,6 +523,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const transaction = new TransactionBuilder(mockChain.height)
       // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
       .from([endGameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         // El premio se envía a la dirección del contrato ganador
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : 2000000n, winnerContract.address).addTokens(winnerAssets),
@@ -615,7 +617,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
 
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
@@ -669,7 +671,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address)
@@ -700,7 +702,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -717,6 +719,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const transaction = new TransactionBuilder(mockChain.height)
       // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
       .from([endGameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         // El premio se envía a la dirección del contrato ganador
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize + winnerProofBox.value : 2000000n, winnerContract.address).addTokens(winnerAssets),
@@ -809,7 +812,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const gameDetailsJson = JSON.stringify({ title: "Test Game", description: "This is a test game." });
 
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
@@ -864,7 +867,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address)
@@ -891,7 +894,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -906,6 +909,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const transaction = new TransactionBuilder(mockChain.height)
       // Se incluye la caja 'winnerProofBox' como entrada para probar la autorización
       .from([endGameBox, ...finalParticipationBoxes, winnerProofBox, ...facilitator.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         // El premio se envía a la dirección del contrato ganador
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : 2000000n, winnerContract.address).addTokens(winnerAssets),
@@ -954,7 +958,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(winner.address)
@@ -981,7 +985,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -995,6 +999,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([endGameBox, ...participationBoxes.toArray(), ...batchBoxes.toArray(), ...facilitator.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
@@ -1064,7 +1069,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address)
@@ -1093,7 +1098,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -1107,6 +1112,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([endGameBox, ...participationBoxes.toArray(), ...batchBoxes.toArray(), ...winner.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
@@ -1191,7 +1197,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       creationHeight: mockChain.height,
       value: resolverStake,
       ergoTree: gameResolutionErgoTree.toHex(),
-      assets: [{ tokenId: gameNftId, amount: 1n }, ...assets],
+      assets: [{ tokenId: gameNftId, amount: GAME_NFT_AMOUNT }, ...assets],
       additionalRegisters: {
         // Estado del juego
         R4: SInt(1).toHex(),
@@ -1284,7 +1290,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const outputs = [
       new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address)
         .addTokens([
-          { tokenId: gameNftId, amount: 1n },
+          { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
           ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
         ]),
       new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : RECOMMENDED_MIN_FEE_VALUE, resolver.address)
@@ -1319,7 +1325,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree.toHex())
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(winner.address)
@@ -1331,6 +1337,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([endGameBox, ...participationBoxes.toArray(), ...winner.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .withDataFrom([judge1ReputationBox, judge2ReputationBox])
       .to(outputs)
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
@@ -1424,7 +1431,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 
@@ -1442,7 +1449,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
       .to(
         new OutputBuilder(gameBox.value, endGameErgoTree)
           .addTokens(gameBox.assets)
-          .setAdditionalRegisters(gameBox.additionalRegisters)
+          .setAdditionalRegisters({ ...gameBox.additionalRegisters, R4: SInt(ENDING_GAME_STATE).toHex() })
       )
       .payFee(RECOMMENDED_MIN_FEE_VALUE)
       .sendChangeTo(facilitator.address)
@@ -1454,6 +1461,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
 
     const transaction = new TransactionBuilder(mockChain.height)
       .from([endGameBox, ...allInputs, ...winner.utxos.toArray(), ...facilitator.utxos.toArray()])
+      .burnTokens({ tokenId: gameNftId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT })
       .to([
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalWinnerPrize : RECOMMENDED_MIN_FEE_VALUE, winner.address).addTokens(winnerAssets),
         new OutputBuilder(mode.token === ERG_BASE_TOKEN ? finalResolverPayout : 2000000n, resolver.address).addTokens(resolverAssets),
@@ -1516,7 +1524,7 @@ describe.each(baseModes)("Game Finalization (end_game) - (%s)", (mode) => {
     const finalDevPayout = devCommission;
 
     const winnerAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_TROPHY_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: finalWinnerPrize }] : [])
     ];
 

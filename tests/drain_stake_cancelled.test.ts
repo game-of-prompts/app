@@ -16,6 +16,7 @@ import {
 import { stringToBytes } from "@scure/base";
 import { getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 import { hexToBytes } from "$lib/ergo/utils";
+import { GAME_NFT_AMOUNT } from "$lib/common/constants";
 
 const ERG_BASE_TOKEN = "";
 const ERG_BASE_TOKEN_NAME = "ERG";
@@ -56,7 +57,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? initialCancelledStake : SAFE_BOX_VALUE;
 
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: initialCancelledStake }] : [])
         ];
 
@@ -95,7 +96,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
 
         const newCancellationBoxValue = mode.token === ERG_BASE_TOKEN ? remainingStake : SAFE_BOX_VALUE;
         const newCancellationAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: remainingStake }] : [])
         ];
 
@@ -160,7 +161,7 @@ describe.each(baseModes)("Game Stake Draining (drain_cancelled_game) - (%s)", (m
 
         const futureGameBoxValue = mode.token === ERG_BASE_TOKEN ? initialCancelledStake : SAFE_BOX_VALUE;
         const futureGameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: initialCancelledStake }] : [])
         ];
 

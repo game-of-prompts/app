@@ -16,7 +16,7 @@ import {
   getGopParticipationErgoTree,
   getGopFalseErgoTreeHex,
 } from "$lib/ergo/contract";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { DEV_SCRIPT, DEV_COMMISSION_PERCENTAGE } from "$lib/ergo/envs";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
@@ -102,7 +102,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -170,7 +170,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -268,7 +268,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
       gameResolutionContract.address
     )
       .addTokens([
-        { tokenId: gameNftId, amount: 1n },
+        { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
         ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
       ])
       .setAdditionalRegisters({
@@ -437,7 +437,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -505,7 +505,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -607,7 +607,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 

@@ -19,12 +19,21 @@
   val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")
   val COMMISSION_DENOMINATOR = `+COMMISSION_DENOMINATOR+`L
 
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
+  // State written by action4 into the end_game box. Participations only accept being spent next to a game box
+  // in this state, so they can't be taken in the action4 transaction itself (where the game box is still in state 1).
+  val ENDING_STATE = 3
+
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS
   // =================================================================
 
-  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled, 3: Ending).
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
@@ -158,6 +167,7 @@
 
           val gameBoxIsRecreatedCorrectly = {
             recreatedGameBox.tokens(0)._1 == gameNftId &&
+            recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
             recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
@@ -274,6 +284,7 @@
               val gameBoxIsRecreatedCorrectly = {
                 box_value(recreatedGameBox) >= box_value(SELF) &&
                 recreatedGameBox.tokens(0)._1 == gameNftId &&
+                recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
                 recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
                 recreatedGameBox.R5[Coll[Byte]].get == seed &&
                 recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
@@ -324,7 +335,8 @@
         
         val gameBoxIsRecreatedCorrectly = {
           recreatedGameBox.tokens(0)._1 == gameNftId &&
-          recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
+          recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
+          recreatedGameBox.R4[Int].get == ENDING_STATE && gameState == 1 &&
           recreatedGameBox.R5[Coll[Byte]].get == seed &&
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == winnerCandidateCommitment &&

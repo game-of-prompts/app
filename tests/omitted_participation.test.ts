@@ -20,7 +20,7 @@ import { bigintToLongByteArray, hexToBytes } from "$lib/ergo/utils";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getGopFalseErgoTreeHex } from "$lib/ergo/contract";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
 const CREATOR_SLASH_RATIO = BigInt(COMMISSION_DENOMINATOR);
@@ -122,7 +122,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
 
         const gameBoxValue = RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             { tokenId: mode.token, amount: 2_000_000_000n }
         ];
 
@@ -587,7 +587,7 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         gameResolutionContract.addUTxOs({
             ergoTree: gameResolutionErgoTree.toHex(),
             value: 2_000_000_000n,
-            assets: [{ tokenId: gameNftId, amount: 1n }],
+            assets: [{ tokenId: gameNftId, amount: GAME_NFT_AMOUNT }],
             creationHeight: mockChain.height - 10,
             additionalRegisters: {
                 R4: SInt(1).toHex(),

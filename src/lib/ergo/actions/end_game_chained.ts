@@ -6,11 +6,12 @@ import {
     type Box,
     type Amount
 } from '@fleet-sdk/core';
-import { SColl, SByte } from '@fleet-sdk/serializer';
+import { SColl, SByte, SInt } from '@fleet-sdk/serializer';
 import { hexToBytes, parseBox } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { getGopEndGameErgoTreeHex, getGopJudgesPaidErgoTreeHex } from '../contract';
 import { calculatePayouts } from '../utils/payout_calculator';
+import { ENDING_GAME_STATE, GAME_NFT_AMOUNT, GAME_TROPHY_AMOUNT } from '$lib/common/constants';
 import { ErgoPlatform } from '../platform';
 
 declare const ergo: any;
@@ -41,9 +42,9 @@ export async function end_game_chained(
     const endGameErgoTree = getGopEndGameErgoTreeHex();
     const parsedInputBox = parseBox(game.box);
 
-    // Copy registers exactly from input box to ensure contract validation passes
+    // Copy registers from the input box; R4 moves to the ending state required by game_resolution action4
     const outputRegisters = {
-        R4: parsedInputBox.additionalRegisters.R4,
+        R4: SInt(ENDING_GAME_STATE).toHex(),
         R5: parsedInputBox.additionalRegisters.R5,
         R6: parsedInputBox.additionalRegisters.R6,
         R7: parsedInputBox.additionalRegisters.R7,
@@ -70,7 +71,9 @@ export async function end_game_chained(
     } = calculatePayouts(game, participations);
 
     // Prepare helper for outputs
-    const gameNft = game.box.assets[0];
+    // One unit of the game NFT goes out as the trophy, the other is burned.
+    const gameNft = { tokenId: game.box.assets[0].tokenId, amount: GAME_TROPHY_AMOUNT };
+    const burnedNft = { tokenId: gameNft.tokenId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT };
     const buildOutput = (amount: bigint, script: string, other_tokens: any[] = []) => {
         return new OutputBuilder(SAFE_MIN_BOX_VALUE, script)
             .addTokens([...other_tokens, { tokenId: game.participationTokenId!, amount: amount }]);
@@ -140,6 +143,7 @@ export async function end_game_chained(
             return builder
                 .from(txBInputs, { ensureInclusion: true })
                 .to(outputs)
+                .burnTokens(burnedNft)
                 .build();
         })
         .toEIP12Object();

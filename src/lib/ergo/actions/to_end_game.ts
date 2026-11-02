@@ -3,7 +3,9 @@ import {
     TransactionBuilder,
     RECOMMENDED_MIN_FEE_VALUE
 } from '@fleet-sdk/core';
+import { SInt } from '@fleet-sdk/serializer';
 import { parseBox } from '$lib/ergo/utils';
+import { ENDING_GAME_STATE } from '$lib/common/constants';
 import { type GameResolution } from '$lib/common/game';
 import { getGopEndGameErgoTreeHex } from '../contract';
 import { ErgoPlatform } from '../platform';
@@ -29,7 +31,7 @@ export async function to_end_game(
     const parsedInputBox = parseBox(game.box);
 
     const outputRegisters = {
-        R4: parsedInputBox.additionalRegisters.R4,
+        R4: SInt(ENDING_GAME_STATE).toHex(),
         R5: parsedInputBox.additionalRegisters.R5,
         R6: parsedInputBox.additionalRegisters.R6,
         R7: parsedInputBox.additionalRegisters.R7,

@@ -46,7 +46,7 @@ import { type RPBox } from "reputation-system";
 import { calculate_reputation as calculate_reputation_proof } from "reputation-system";
 import { get } from "svelte/store";
 import { games, judges as judgesStore, isLoadingGames } from "../common/store";
-import { getGameConstants } from "$lib/common/constants";
+import { ENDING_GAME_STATE, GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
 import {
     buildDevCompetitionsMap,
     getDevCompetition,
@@ -249,6 +249,10 @@ async function parseGameActiveBox(box: any): Promise<GameActive | null> {
             console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
+        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+            console.warn(`parseGameActiveBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
+            return null;
+        }
         const gameId = box.assets[0].tokenId;
 
         // R4: Game state (0: Active)
@@ -396,11 +400,15 @@ export async function parseGameResolutionBox(box: any): Promise<GameResolution |
             console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
             return null;
         }
+        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+            console.warn(`parseGameResolutionBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
+            return null;
+        }
         const gameId = box.assets[0].tokenId;
 
-        // R4 is game state.
+        // R4 is game state: 1 while in game_resolution, ENDING_GAME_STATE once moved to end_game.
         const gameState = parseInt(box.additionalRegisters.R4?.renderedValue, 10);
-        if (gameState !== 1) throw new Error("R4 indicates incorrect game state.");
+        if (gameState !== (isEndGame ? ENDING_GAME_STATE : 1)) throw new Error("R4 indicates incorrect game state.");
 
         // R5: Coll[Byte] -> Seed
         const seed = parseCollByteToHex(box.additionalRegisters.R5?.renderedValue);
@@ -554,6 +562,10 @@ export async function parseGameCancellationBox(box: any): Promise<GameCancellati
 
         if (!box.assets || box.assets.length === 0) {
             console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it has no assets (NFT).`);
+            return null;
+        }
+        if (BigInt(box.assets[0].amount) !== GAME_NFT_AMOUNT) {
+            console.warn(`parseGameCancellationBox: Box ${box.boxId} skipped as it doesn't hold both units of the game NFT.`);
             return null;
         }
         const gameId = box.assets[0].tokenId;

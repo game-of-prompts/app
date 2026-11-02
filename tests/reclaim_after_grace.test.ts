@@ -10,7 +10,7 @@ import { SByte, SColl, SInt, SLong, SPair } from "@fleet-sdk/serializer";
 import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { getGopGameActiveErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
 import { hexToBytes } from "$lib/ergo/utils";
@@ -66,7 +66,7 @@ describe.each(baseModes)("Participant Reclaim After Grace Period - (%s)", (mode)
 
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 

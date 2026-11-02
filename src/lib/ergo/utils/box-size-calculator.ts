@@ -4,7 +4,7 @@
 
 import { SInt, SLong, SColl, SPair, SByte, serializeBox } from '@fleet-sdk/serializer';
 import { getGopGameActiveErgoTreeHex, getGopGameResolutionErgoTreeHex, getGopGameCancellationErgoTreeHex } from '../contract';
-import { getGameConstants } from '../../common/constants';
+import { GAME_NFT_AMOUNT, getGameConstants } from '../../common/constants';
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from '../envs';
 import { hexToBytes } from '../utils';
 
@@ -154,7 +154,7 @@ export function estimateTotalBoxSizeFromInputs(
     // Minted token (NFT)
     assets.push({
         tokenId: "00".repeat(32),
-        amount: 1n
+        amount: GAME_NFT_AMOUNT
     });
 
     // --- 1. Estimate Active Game Box ---

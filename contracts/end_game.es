@@ -15,12 +15,15 @@
   
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
 
+  // Written into R4 by game_resolution's action4 when the game box moves to this contract.
+  val ENDING_STATE = 3
+
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS
   // =================================================================
 
-  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled, 3: Ending).
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
@@ -165,6 +168,13 @@
     }
     val judge_amount = participatingJudges.size
 
+    // The box holds the 2 units of the game NFT: exactly one leaves as the trophy, the other is burned.
+    val nftUnits = { (box: Box) =>
+        box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == gameNftId }.fold(0L, { (acc: Long, token: (Coll[Byte], Long)) => acc + token._2 })
+    }
+    val nftUnitsInOutputs = OUTPUTS.fold(0L, { (acc: Long, b: Box) => acc + nftUnits(b) })
+    val singleTrophy = nftUnitsInOutputs == 1L
+
     // --- LÓGICA DE PAGO A JUECES Y DEV ---
     // Esta lógica ahora se aplica tanto si hay ganador como si no.
     
@@ -257,7 +267,7 @@
                     b.tokens.size > 0 &&
                     b.tokens(0)._1 == gameNftId
                 })
-                addedValue >= amount && hasNFT
+                addedValue >= amount && hasNFT && singleTrophy
             }
 
             val finalResolverPayout = resolverStake + adjustedResolverCommission
@@ -295,7 +305,7 @@
                 b.tokens.size > 0 &&
                 b.tokens(0)._1 == gameNftId
             })
-            addedValue >= finalResolverPayout && hasNFT
+            addedValue >= finalResolverPayout && hasNFT && singleTrophy
         }
         
         // La condición final ya incluye las validaciones movidas fuera.
@@ -304,6 +314,6 @@
 
   }
 
-  val game_in_resolution = sigmaProp(gameState == 1)
-  game_in_resolution && action
+  val game_ending = sigmaProp(gameState == ENDING_STATE)
+  game_ending && action
 }
