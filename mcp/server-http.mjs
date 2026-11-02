@@ -3,37 +3,50 @@
  * Game of Prompts Celaut service — network-facing twin of mcp/server.mjs.
  *
  * A Celaut service is a sealed microVM reached over TCP, so stdio is unusable.
- * This process binds 0.0.0.0:8080 and exposes THREE surfaces over plain HTTP:
+ * This process exposes THREE interfaces over plain HTTP, each on its own port so
+ * that each is its own api slot (one protocol stack per slot) in service.json:
  *
- *   GET  /health           – liveness probe (not part of MCP).
- *   *    /mcp               – the FULL MCP tool surface (same TOOLS/HANDLERS as
- *                            the stdio server) over the SDK's Streamable HTTP
- *                            transport, stateless (one Server per request).
- *   *    /api/*             – a clean JSON REST mirror of every method: reads via
- *                            GET, writes via POST using the env-configured signer
- *                            (GOP_SIGNER_MODE=seed|unsigned — see lib.mjs).
+ *   :8080  web   – the Game of Prompts web app (static SvelteKit build, SPA
+ *                  fallback to index.html). Chain access happens in the
+ *                  viewer's browser, not here.
+ *   :8081  rest  – /api/*: a clean JSON REST mirror of every method: reads via
+ *                  GET, writes via POST using the env-configured signer
+ *                  (GOP_SIGNER_MODE=seed|unsigned — see lib.mjs).
+ *   :8082  mcp   – /mcp: the FULL MCP tool surface (same TOOLS/HANDLERS as the
+ *                  stdio server) over the SDK's Streamable HTTP transport,
+ *                  stateless (one Server per request).
+ *
+ * Every port also answers GET /health (liveness, not part of MCP or REST).
  *
  * Reads + pure helpers come from core.mjs; writes from writes.mjs. Both the MCP
  * and REST layers call the SAME core/writes functions, so they never diverge.
  *
- * The shared registry lives ONCE in ../mcp (no duplicated copies in .service).
- * The Dockerfile preserves this sibling layout under /app (/app/service +
- * /app/mcp) so `../mcp` resolves identically in local dev and in the sealed
- * microVM, and the prebuilt mcp/_generated/lib.bundle.mjs (the reused src reads +
- * contract compilation) ships with it — no build toolchain needed in the VM.
+ * It lives next to server.mjs and shares mcp/package.json, so the stdio and
+ * HTTP servers run on the same registry and the same installed deps. The Celaut
+ * packaging (.service/) copies this directory to /app/mcp along with the prebuilt
+ * _generated/lib.bundle.mjs (the reused src reads + contract compilation) — no
+ * build toolchain needed in the VM. celaut.mjs wires the networks the node
+ * resolved in `__config__` (see .service/service.json).
  *
  * Data source: Ergo Explorer mainnet (override via GOP_EXPLORER_API).
  */
 import { createServer } from 'node:http';
+import { createReadStream, existsSync } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import { TOOLS, HANDLERS } from '../mcp/tools.mjs';
-import { wireContext } from '../mcp/context.mjs';
-import * as core from '../mcp/core.mjs';
-import * as writes from '../mcp/writes.mjs';
-import { signerMode, EXPLORER_API } from '../mcp/lib.mjs';
+import { TOOLS, HANDLERS } from './tools.mjs';
+import { wireContext } from './context.mjs';
+import * as core from './core.mjs';
+import * as writes from './writes.mjs';
+import { signerMode, EXPLORER_API } from './lib.mjs';
+import { installCelautNetwork } from './celaut.mjs';
+
+const celaut = installCelautNetwork();
 
 // ── MCP server factory (stateless: one per request) ─────────────────────────
 function makeServer() {
@@ -58,8 +71,15 @@ function makeServer() {
 }
 
 // ── HTTP plumbing ───────────────────────────────────────────────────────────
-const PORT = Number(process.env.PORT) || 8080;
+// Ports must match the api slots in .service/service.json.
+const WEB_PORT = Number(process.env.GOP_WEB_PORT) || 8080;
+const REST_PORT = Number(process.env.GOP_REST_PORT) || 8081;
+const MCP_PORT = Number(process.env.GOP_MCP_PORT) || 8082;
 const MCP_PATH = '/mcp';
+
+// The static SvelteKit build: /app/web in the image, ../build in a checkout.
+const WEB_DIR = [process.env.GOP_WEB_DIR, fileURLToPath(new URL('../build', import.meta.url))]
+  .find((dir) => dir && existsSync(join(dir, 'index.html')));
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -172,32 +192,59 @@ async function handleRest(req, res, url, query) {
   return sendJson(res, 405, { error: `Method not allowed: ${method}` });
 }
 
-// ── Bootstrap ───────────────────────────────────────────────────────────────
-const httpServer = createServer(async (req, res) => {
-  const [rawPath, rawQuery = ''] = (req.url || '').split('?');
-  const path = rawPath || '/';
-  const query = Object.fromEntries(new URLSearchParams(rawQuery));
+// ── Web app (the static SvelteKit build) ────────────────────────────────────
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8',
+  '.wasm': 'application/wasm'
+};
 
-  if (req.method === 'GET' && (path === '/health' || path === '/')) {
-    return sendJson(res, 200, {
-      status: 'ok',
-      service: 'game-of-prompts',
-      transport: 'streamable-http',
-      mcp: MCP_PATH,
-      rest: '/api',
-      signerMode: signerMode(),
-      explorerUri: EXPLORER_API
-    });
+async function handleWeb(req, res, path) {
+  if (!WEB_DIR) return sendJson(res, 503, { error: 'Web app not built (set GOP_WEB_DIR or run `BASE_PATH= npm run build`).' });
+  if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: `Method not allowed: ${req.method}` });
+  let rel;
+  try {
+    rel = normalize(decodeURIComponent(path)).replace(/^(\.\.(\/|$))+/, '');
+  } catch {
+    return sendJson(res, 400, { error: 'Bad path' });
   }
-
-  if (path === '/api' || path.startsWith('/api/')) {
-    try {
-      return await handleRest(req, res, path, query);
-    } catch (err) {
-      return sendJson(res, 500, { error: err?.message || String(err) });
-    }
+  let file = join(WEB_DIR, rel);
+  if (!file.startsWith(WEB_DIR)) return sendJson(res, 403, { error: 'Forbidden' });
+  let info = await stat(file).catch(() => null);
+  if (info?.isDirectory()) {
+    file = join(file, 'index.html');
+    info = await stat(file).catch(() => null);
   }
+  // SPA fallback (adapter-static `fallback: 'index.html'`): client-side routes.
+  if (!info?.isFile()) {
+    file = join(WEB_DIR, 'index.html');
+    info = await stat(file).catch(() => null);
+    if (!info) return sendJson(res, 404, { error: 'Not found' });
+  }
+  res.writeHead(200, {
+    'Content-Type': MIME[extname(file).toLowerCase()] || 'application/octet-stream',
+    'Content-Length': info.size,
+    'Cache-Control': file.includes('/_app/immutable/') ? 'public, max-age=31536000, immutable' : 'no-cache'
+  });
+  if (req.method === 'HEAD') return res.end();
+  createReadStream(file).pipe(res);
+}
 
+// ── MCP (Streamable HTTP, stateless) ────────────────────────────────────────
+async function handleMcp(req, res, path) {
   if (path !== MCP_PATH) {
     return sendJson(res, 404, { jsonrpc: '2.0', error: { code: -32601, message: 'Not found' }, id: null });
   }
@@ -217,8 +264,38 @@ const httpServer = createServer(async (req, res) => {
       sendJson(res, 500, { jsonrpc: '2.0', error: { code: -32603, message: `Internal error: ${err?.message || String(err)}` }, id: null });
     }
   }
-});
+}
 
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`game-of-prompts service on 0.0.0.0:${PORT} — MCP ${MCP_PATH}, REST /api, health /health`);
-});
+// ── Bootstrap: one port per interface (= one api slot in service.json) ─────
+function health(res, iface) {
+  return sendJson(res, 200, {
+    status: 'ok',
+    service: 'game-of-prompts',
+    interface: iface,
+    ports: { web: WEB_PORT, rest: REST_PORT, mcp: MCP_PORT },
+    mcp: MCP_PATH,
+    rest: '/api',
+    web: Boolean(WEB_DIR),
+    signerMode: signerMode(),
+    explorerUri: EXPLORER_API,
+    celaut
+  });
+}
+
+function listen(port, iface, handle) {
+  createServer(async (req, res) => {
+    const [rawPath, rawQuery = ''] = (req.url || '').split('?');
+    const path = rawPath || '/';
+    if (req.method === 'GET' && (path === '/health' || (path === '/' && iface !== 'web'))) return health(res, iface);
+    try {
+      return await handle(req, res, path, Object.fromEntries(new URLSearchParams(rawQuery)));
+    } catch (err) {
+      if (!res.headersSent) return sendJson(res, 500, { error: err?.message || String(err) });
+    }
+  }).listen(port, '0.0.0.0', () => console.log(`game-of-prompts ${iface} on 0.0.0.0:${port}`));
+}
+
+listen(WEB_PORT, 'web', handleWeb);
+listen(REST_PORT, 'rest', (req, res, path, query) =>
+  path === '/api' || path.startsWith('/api/') ? handleRest(req, res, path, query) : sendJson(res, 404, { error: `No route: ${path}` }));
+listen(MCP_PORT, 'mcp', handleMcp);

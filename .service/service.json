@@ -2,13 +2,41 @@
   "tag": ["game-of-prompts-mcp", "mcp+rest", "v0.1.0"],
   "architecture": "linux/amd64",
   "init": {
-    "entry_path": ["app", "start.sh"]
+    "entry_path": ["app", "mcp", "start.sh"]
   },
   "api": [
     {
       "port": 8080,
       "transport": ["tcp"],
-      "protocol": ["http"]
+      "protocol_stack": [
+        ["http"],
+        {
+          "tags": ["web"],
+          "prose": "The Game of Prompts web app (static SvelteKit build, client-side routes fall back to index.html). It talks to the chain from the viewer's browser through their wallet, not through this service."
+        }
+      ]
+    },
+    {
+      "port": 8081,
+      "transport": ["tcp"],
+      "protocol_stack": [
+        ["http"],
+        {
+          "tags": ["rest"],
+          "prose": "JSON REST API under /api: GET for every read (games, participations, opinions, tokens, contracts, height), POST for the reputation-opinion writes with the signer chosen by GOP_SIGNER_MODE. GET /health for liveness."
+        }
+      ]
+    },
+    {
+      "port": 8082,
+      "transport": ["tcp"],
+      "protocol_stack": [
+        ["http"],
+        {
+          "tags": ["mcp"],
+          "prose": "Model Context Protocol, Streamable HTTP transport at /mcp, stateless (no session id): the same tools, the gop://whitepaper resource and the role prompts as the stdio server."
+        }
+      ]
     }
   ],
   "resources": {
@@ -21,10 +49,39 @@
       "disk_space": 4294967296
     }
   },
+  "envs": [
+    "GOP_SIGNER_MODE",
+    "GOP_ADDRESS",
+    "GOP_MNEMONIC",
+    "GOP_MNEMONIC_PASSWORD",
+    "GOP_ADDRESS_INDEX",
+    "GOP_OVERVIEW_TTL_MS",
+    "ERGO_BLOCK_ID",
+    "ERGO_MIN_CUMULATIVE_DIFFICULTY"
+  ],
   "network": [
     {
-      "tags": ["api.ergoplatform.com", "ipv4", "public"],
-      "prose": "Outbound HTTPS to the Ergo Explorer API (api.ergoplatform.com) for on-chain Game of Prompts reads (games, participations, reputation, tokens) and for building reputation-opinion transactions. The node restricts the sealed VM to this host only. In seed mode an additional Ergo node host (GOP_NODE_URI) is contacted for tx submission; in the default unsigned mode no node is needed (unsigned txs are returned to the caller)."
+      "tags": ["api.ergoplatform.com"],
+      "prose": "Ergo Explorer API over HTTPS: every on-chain Game of Prompts read (games, participations, reputation, tokens) and the UTXOs/height used to build reputation-opinion transactions. The guest gets the addresses the node resolved, not DNS; mcp/celaut.mjs maps the name to them from __config__.",
+      "formal": { "port": "443" }
+    },
+    {
+      "tags": ["raw.githubusercontent.com"],
+      "prose": "The Game of Prompts whitepaper (game-of-prompts/.github profile README) served as the gop://whitepaper MCP resource, over HTTPS.",
+      "formal": { "port": "443" }
+    },
+    {
+      "tags": ["pow:ergo"],
+      "prose": "An Ergo node REST API to submit signed transactions to in GOP_SIGNER_MODE=seed (POST /transactions), on the mainnet chain the instantiator pins with ERGO_BLOCK_ID and ERGO_MIN_CUMULATIVE_DIFFICULTY. Unused in the default unsigned mode; without both variables the network is not resolved.",
+      "formal": {
+        "pow.chain": "ergo",
+        "pow.consensus": "autolykos-v2",
+        "pow.block_id": "${ERGO_BLOCK_ID}",
+        "pow.min_cumulative_difficulty": "${ERGO_MIN_CUMULATIVE_DIFFICULTY}"
+      },
+      "protocol_stack": [
+        { "tags": ["ergo-rest"] }
+      ]
     }
   ]
 }

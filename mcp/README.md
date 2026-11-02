@@ -3,9 +3,11 @@
 A full-surface [Model Context Protocol](https://modelcontextprotocol.io) server
 that lets an agent **read** the Game of Prompts on-chain competition registry and
 **publish reputation opinions** to it — from one codebase, with a swappable
-signer. It is the local/dev twin of the sealed Celaut microVM in
-[`../.service`](../.service) (both share `core.mjs` / `lib.mjs` / `writes.mjs` /
-`tools.mjs`, so the transports never drift).
+signer. `server.mjs` is the stdio transport; `server-http.mjs` is the
+Streamable HTTP + REST transport that the sealed Celaut microVM in
+[`../.service`](../.service) runs (see [Celaut service](#celaut-service)). Both
+share `core.mjs` / `lib.mjs` / `writes.mjs` / `tools.mjs`, so the transports never
+drift.
 
 Mirrors `source-application/mcp` + `forum-application/mcp`. **DRY** — the read +
 contract-compilation logic is **not** re-implemented here; it is the library's own
@@ -58,6 +60,54 @@ Reads need no signer. Writes pick one from the environment (default `unsigned`):
 `GOP_EXPLORER_API` overrides the Explorer (default `https://api.ergoplatform.com`).
 SeedSigner derives with `@scure` (standard BIP-39/32), so it signs from the same
 address Nautilus would — it is reused from `reputation-system/node`, never re-rolled.
+
+## Celaut service
+
+`../.service/` packs `server-http.mjs` into a Celaut service following nodo's
+[`docs/PACKING.md`](https://github.com/celaut-project/nodo/blob/dev/docs/PACKING.md).
+Each interface is its own port, so each is its own api slot with its own
+protocol stack (a slot has one stack, bottom layer first):
+
+| Port | `protocol_stack` | Serves |
+|---|---|---|
+| 8080 | `http` / `web` | The web app (static SvelteKit build, SPA fallback to `index.html`) |
+| 8081 | `http` / `rest` | `/api/*` |
+| 8082 | `http` / `mcp` | `/mcp` (Streamable HTTP, stateless) |
+
+Every port also answers `GET /health`. `pack_config.json` includes `mcp/` and
+the web sources; the Dockerfile copies them with `./...` paths (the packer
+rewrites only `./` sources) in a multi-stage `node:22-alpine` build: one stage
+builds the web app with `BASE_PATH=`, one installs the production deps of this
+directory's lockfile, and the final filesystem holds only node, those deps,
+`/app/web` and `/app/mcp`. `service.json` starts `app/mcp/start.sh`.
+
+**Networks — no open egress.** The guest is granted addresses, never DNS
+([`docs/NETWORKS.md`](https://github.com/celaut-project/nodo/blob/dev/docs/NETWORKS.md)):
+
+| Network | Used for |
+|---|---|
+| `api.ergoplatform.com` (443) | Every read, and the UTXOs/height of a write. |
+| `raw.githubusercontent.com` (443) | The `gop://whitepaper` resource. |
+| `pow:ergo` + `ergo-rest`, `pow.block_id=${ERGO_BLOCK_ID}`, `pow.min_cumulative_difficulty=${ERGO_MIN_CUMULATIVE_DIFFICULTY}` | An Ergo node to submit to in `seed` mode. The reads cannot use it: they need the Explorer API (`/api/v1/boxes/unspent/search`, …), which a node does not serve. |
+
+`celaut.mjs` reads `network_resolution` from `__config__`, answers `dns.lookup`
+for the two hostnames from the IPs the node granted (TLS still checks the real
+names), and sets `GOP_NODE_URI` to the first `ergo-rest` address when it is not
+given. Outside an instance (no `__config__`) it does nothing. Because only those
+hosts are reachable, `GOP_EXPLORER_API`, `GOP_OVERVIEW_URL` and `GOP_NODE_URI` are
+not declared as envs; the declared ones are `GOP_SIGNER_MODE`, `GOP_ADDRESS`,
+`GOP_MNEMONIC`, `GOP_MNEMONIC_PASSWORD`, `GOP_ADDRESS_INDEX`,
+`GOP_OVERVIEW_TTL_MS`, `ERGO_BLOCK_ID` and `ERGO_MIN_CUMULATIVE_DIFFICULTY`.
+Without both `ERGO_*` the node skips `pow:ergo` and the service runs reads and
+unsigned writes only.
+
+```sh
+npm run start:http             # local run, normal DNS; web from ../build if built (BASE_PATH= npm run build)
+nodo ggconf ..                 # writes ../__config__ for a run against the node
+nodo pack ..                   # only once the local run works
+nodo service_envs <service id> --json
+nodo execute --no-input -e GOP_ADDRESS <P2PK> <service id>
+```
 
 ## Tools (29)
 

@@ -1,7 +1,20 @@
 {
+  "include": [
+    "mcp",
+    "src",
+    "static",
+    "contracts",
+    "package.json",
+    "package-lock.json",
+    "svelte.config.js",
+    "vite.config.ts",
+    "tsconfig.json",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "components.json"
+  ],
   "ignore": [
     "node_modules/",
-    ".git/",
     "*.celaut",
     "*.md"
   ]
