@@ -84,10 +84,13 @@ isDevMode.subscribe(() => {
 // =============================================================================
 
 // Sustituye cada `+NOMBRE+` del fuente por su valor. Falla si queda alguno sin resolver.
-function inject(source: string, values: Record<string, string | number>): string {
+// Los valores se calculan solo si el fuente usa ese marcador: las dependencias entre contratos cambian
+// entre versiones (p. ej. participation -> participation_batch en v2, al revés en v1).
+function inject(source: string, values: Record<string, () => string | number>): string {
     let result = source;
     for (const [key, value] of Object.entries(values)) {
-        result = result.replace(new RegExp('`\\+' + key + '\\+`', 'g'), value.toString());
+        const placeholder = new RegExp('`\\+' + key + '\\+`', 'g');
+        if (placeholder.test(result)) result = result.replace(placeholder, value().toString());
     }
     const missing = result.match(/`\+\w+\+`/);
     if (missing) throw new Error(`Unresolved placeholder ${missing[0]} in contract source.`);
@@ -103,74 +106,75 @@ function compileContract(version: ContractVersion, name: ContractName): ErgoTree
     switch (name) {
         case 'participation':
             return compile(inject(source, {
-                GRACE_PERIOD: constants.PARTICIPATION_GRACE_PERIOD,
+                GRACE_PERIOD: () => constants.PARTICIPATION_GRACE_PERIOD,
+                PARTICIPATION_BATCH_SCRIPT_HASH: () => scriptHash('participationBatch'),   // v2+
             }), { version: ergoTreeVersion });
 
         case 'participationBatch':
             return compile(inject(source, {
-                PARTICIPATION_SCRIPT_HASH: scriptHash('participation'),
+                PARTICIPATION_SCRIPT_HASH: () => scriptHash('participation'),   // v1 only
             }), { version: ergoTreeVersion });
 
         case 'judgesPaid':
             return compile(inject(source, {
-                REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash(),
+                REPUTATION_PROOF_SCRIPT_HASH: () => getReputationProofScriptHash(),
             }), { version: ergoTreeVersion });
 
         case 'endGame':
             return compile(inject(source, {
-                END_GAME_AUTH_GRACE_PERIOD: constants.END_GAME_AUTH_GRACE_PERIOD,
-                COMMISSION_DENOMINATOR: constants.COMMISSION_DENOMINATOR,
-                JUDGES_PAID_ERGOTREE: getContractErgoTreeHex('judgesPaid', version),
-                MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
-                PARTICIPATION_SCRIPT_HASH: scriptHash('participation'),
-                PARTICIPATION_BATCH_SCRIPT_HASH: scriptHash('participationBatch'),
+                END_GAME_AUTH_GRACE_PERIOD: () => constants.END_GAME_AUTH_GRACE_PERIOD,
+                COMMISSION_DENOMINATOR: () => constants.COMMISSION_DENOMINATOR,
+                JUDGES_PAID_ERGOTREE: () => getContractErgoTreeHex('judgesPaid', version),
+                MAX_SCORE_LIST: () => constants.MAX_SCORE_LIST,
+                PARTICIPATION_SCRIPT_HASH: () => scriptHash('participation'),
+                PARTICIPATION_BATCH_SCRIPT_HASH: () => scriptHash('participationBatch'),
             }), { version: ergoTreeVersion });
 
         case 'gameCancellation':
             return compile(inject(source, {
-                COOLDOWN_IN_BLOCKS: constants.COOLDOWN_IN_BLOCKS,
+                COOLDOWN_IN_BLOCKS: () => constants.COOLDOWN_IN_BLOCKS,
             }), { version: ergoTreeVersion });
 
         case 'gameResolution':
             return compile(inject(source, {
-                PARTICIPATION_SCRIPT_HASH: scriptHash('participation'),
-                PARTICIPATION_BATCH_SCRIPT_HASH: scriptHash('participationBatch'),
-                END_GAME_SCRIPT_HASH: scriptHash('endGame'),
-                JUDGE_PERIOD: constants.JUDGE_PERIOD,
-                END_GAME_AUTH_GRACE_PERIOD: constants.END_GAME_AUTH_GRACE_PERIOD,
-                RESOLVER_OMISSION_NO_PENALTY_PERIOD: constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD,
-                REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash(),
-                PARTICIPATION_TYPE_ID: constants.PARTICIPATION_TYPE_ID,
-                PARTICIPATION_UNAVAILABLE_TYPE_ID: constants.PARTICIPATION_UNAVAILABLE_TYPE_ID,
-                MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
-                PARTICIPATION_TIME_WINDOW: constants.PARTICIPATION_TIME_WINDOW,
-                SEED_MARGIN: constants.SEED_MARGIN,
-                MIN_TIME_WEIGHT_MARGIN: constants.MIN_TIME_WEIGHT_MARGIN,
-                COMMISSION_DENOMINATOR: constants.COMMISSION_DENOMINATOR,
-                FALSE_SCRIPT_HASH: getGopFalseScriptHash(),
-                JUDGES_PAID_ERGOTREE: getContractErgoTreeHex('judgesPaid', version),
+                PARTICIPATION_SCRIPT_HASH: () => scriptHash('participation'),
+                PARTICIPATION_BATCH_SCRIPT_HASH: () => scriptHash('participationBatch'),
+                END_GAME_SCRIPT_HASH: () => scriptHash('endGame'),
+                JUDGE_PERIOD: () => constants.JUDGE_PERIOD,
+                END_GAME_AUTH_GRACE_PERIOD: () => constants.END_GAME_AUTH_GRACE_PERIOD,
+                RESOLVER_OMISSION_NO_PENALTY_PERIOD: () => constants.RESOLVER_OMISSION_NO_PENALTY_PERIOD,
+                REPUTATION_PROOF_SCRIPT_HASH: () => getReputationProofScriptHash(),
+                PARTICIPATION_TYPE_ID: () => constants.PARTICIPATION_TYPE_ID,
+                PARTICIPATION_UNAVAILABLE_TYPE_ID: () => constants.PARTICIPATION_UNAVAILABLE_TYPE_ID,
+                MAX_SCORE_LIST: () => constants.MAX_SCORE_LIST,
+                PARTICIPATION_TIME_WINDOW: () => constants.PARTICIPATION_TIME_WINDOW,
+                SEED_MARGIN: () => constants.SEED_MARGIN,
+                MIN_TIME_WEIGHT_MARGIN: () => constants.MIN_TIME_WEIGHT_MARGIN,
+                COMMISSION_DENOMINATOR: () => constants.COMMISSION_DENOMINATOR,
+                FALSE_SCRIPT_HASH: () => getGopFalseScriptHash(),
+                JUDGES_PAID_ERGOTREE: () => getContractErgoTreeHex('judgesPaid', version),
             }), { version: ergoTreeVersion });
 
         case 'gameActive':
             return compile(inject(source, {
-                GAME_RESOLUTION_SCRIPT_HASH: scriptHash('gameResolution'),
-                GAME_CANCELLATION_SCRIPT_HASH: scriptHash('gameCancellation'),
-                REPUTATION_PROOF_SCRIPT_HASH: getReputationProofScriptHash(),
-                PARTICIPATION_SCRIPT_HASH: scriptHash('participation'),
-                ACCEPT_GAME_INVITATION_TYPE_ID: constants.ACCEPT_GAME_INVITATION_TYPE_ID,
-                STAKE_DENOMINATOR: constants.STAKE_DENOMINATOR,
-                COOLDOWN_IN_BLOCKS: constants.COOLDOWN_IN_BLOCKS,
-                JUDGE_PERIOD: constants.JUDGE_PERIOD,
-                MAX_SCORE_LIST: constants.MAX_SCORE_LIST,
-                PARTICIPATION_TIME_WINDOW: constants.PARTICIPATION_TIME_WINDOW,
-                FALSE_SCRIPT_HASH: getGopFalseScriptHash(),
-                SEED_MARGIN: constants.SEED_MARGIN,
-                GRACE_PERIOD: constants.PARTICIPATION_GRACE_PERIOD,
+                GAME_RESOLUTION_SCRIPT_HASH: () => scriptHash('gameResolution'),
+                GAME_CANCELLATION_SCRIPT_HASH: () => scriptHash('gameCancellation'),
+                REPUTATION_PROOF_SCRIPT_HASH: () => getReputationProofScriptHash(),
+                PARTICIPATION_SCRIPT_HASH: () => scriptHash('participation'),
+                ACCEPT_GAME_INVITATION_TYPE_ID: () => constants.ACCEPT_GAME_INVITATION_TYPE_ID,
+                STAKE_DENOMINATOR: () => constants.STAKE_DENOMINATOR,
+                COOLDOWN_IN_BLOCKS: () => constants.COOLDOWN_IN_BLOCKS,
+                JUDGE_PERIOD: () => constants.JUDGE_PERIOD,
+                MAX_SCORE_LIST: () => constants.MAX_SCORE_LIST,
+                PARTICIPATION_TIME_WINDOW: () => constants.PARTICIPATION_TIME_WINDOW,
+                FALSE_SCRIPT_HASH: () => getGopFalseScriptHash(),
+                SEED_MARGIN: () => constants.SEED_MARGIN,
+                GRACE_PERIOD: () => constants.PARTICIPATION_GRACE_PERIOD,
             }), { version: ergoTreeVersion });
 
         case 'mintIdt':
             return compile(inject(source, {
-                contract_bytes_hash: scriptHash('gameActive'),
+                contract_bytes_hash: () => scriptHash('gameActive'),
             }), { version: ergoTreeVersion });
     }
 }
