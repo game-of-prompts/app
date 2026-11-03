@@ -122,7 +122,7 @@ describe.each(invalidationModes)("Judge invalidation can't tamper with the game 
     };
 
     // The invalidation tx as the honest off-chain code builds it, with optional tampered fields.
-    const buildInvalidationTx = (overrides: { secret?: Uint8Array, resolutionDeadline?: bigint } = {}) => {
+    const buildInvalidationTx = (overrides: { secret?: Uint8Array, resolutionDeadline?: bigint, dataInputs?: Box[] } = {}) => {
         const resolverPenalization = mode.penalizeResolver ? numericalParams[6] * CREATOR_SLASH_RATIO / BigInt(COMMISSION_DENOMINATOR) : 0n;
         const newNumericalParams = [...numericalParams];
         newNumericalParams[5] = numericalParams[5] + resolverPenalization;
@@ -144,7 +144,7 @@ describe.each(invalidationModes)("Judge invalidation can't tamper with the game 
                         R9: gameResolutionBox.additionalRegisters.R9
                     })
             ])
-            .withDataFrom(voteBoxes)
+            .withDataFrom(overrides.dataInputs ?? voteBoxes)
             .sendChangeTo(resolver.address)
             .payFee(RECOMMENDED_MIN_FEE_VALUE)
             .build();
@@ -181,5 +181,16 @@ describe.each(invalidationModes)("Judge invalidation can't tamper with the game 
 
         expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
         expect(gameResolutionContract.utxos.toArray()[0].boxId).to.equal(gameResolutionBox.boxId);
+    });
+
+    it("rejects invalidating the candidate of a game with no judges", () => {
+        setupScenario(0, 0);
+
+        // Nobody can vote, so nobody can invalidate. Any box works as the data input the action requires.
+        const tx = buildInvalidationTx({ dataInputs: [resolver.utxos.toArray()[0]] });
+
+        expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
+        expect(gameResolutionContract.utxos.toArray()[0].boxId).to.equal(gameResolutionBox.boxId);
+        expect(participationContract.utxos.length).to.equal(1);
     });
 });
