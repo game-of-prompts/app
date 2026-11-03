@@ -26,6 +26,11 @@
   // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.
   val GRACE_PERIOD = `+GRACE_PERIOD+`L
 
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO ACTIVO)
   // =================================================================
@@ -202,7 +207,8 @@
 
           val resolutionBoxIsValid = {
               box_value(resolutionBox) >= box_value(SELF) &&
-              resolutionBox.tokens.filter({ (token: (Coll[Byte], Long)) => token._1 == gameNftId }).size == 1 &&
+              resolutionBox.tokens(0)._1 == gameNftId &&
+              resolutionBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
               resolutionBox.R4[Int].get == 1 && // El estado del juego pasa a "Resuelto" (1)
               resolutionBox.R5[Coll[Byte]].get == gameSeed &&
               resolutionBox.R7[Coll[Coll[Byte]]].get == invitedJudges &&
@@ -259,6 +265,7 @@
       val cancellationBoxIsValid = {
           box_value(cancellationBox) >= remainingValue &&
           cancellationBox.tokens(0)._1 == gameNftId &&
+          cancellationBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
           cancellationBox.R4[Int].get == 2 && // Game state is "Cancelled" (2)
           cancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
           blake2b256(cancellationBox.R6[Coll[Byte]].get) == secretHash &&
@@ -310,7 +317,7 @@
       val out = outs(0)
       
       // El NFT debe preservarse
-      val sameNFT = out.tokens(0)._1 == gameNftId
+      val sameNFT = out.tokens(0)._1 == gameNftId && out.tokens(0)._2 == GAME_NFT_AMOUNT
 
       // El valor de la caja debe mantenerse o aumentarse - permitiendo donaciones siempre se continue agregando entropía al seed del juego.
       val sameOrAddedValue = box_value(out) >= box_value(SELF)

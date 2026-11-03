@@ -8,12 +8,24 @@
   
   val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")
 
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
+  // Game state of the end_game box (see game_resolution.es action4).
+  val ENDING_STATE = 3
+
   // =================================================================
   // === EXTRACCIÓN DE VALORES
   // =================================================================
 
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
+  // Only a box with both units of the game NFT can be the game box (see participation.es).
+  val isGameBox = { (b: Box) =>
+    b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.tokens(0)._2 == GAME_NFT_AMOUNT
+  }
 
 
   // =================================================================
@@ -22,7 +34,7 @@
 
   // --- ACCIÓN 1: Unir en Lote (Batching) ---
   val spentInBatch = {
-    val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val gameBoxInDataArr = CONTEXT.dataInputs.filter(isGameBox)
     
     if (gameBoxInDataArr.size == 1) {
         val gameBox = gameBoxInDataArr(0)
@@ -114,15 +126,15 @@
   }
 
   val isValidEndGame = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val mainGameBoxes = INPUTS.filter(isGameBox)
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
-      val isResolved = mainGameBox.R4[Int].get == 1
+      val isEnding = mainGameBox.R4[Int].get == ENDING_STATE
       val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)
 
       val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
-      resolutionPeriodIsOver && isResolved
+      resolutionPeriodIsOver && isEnding
     } 
     else { false }
   }

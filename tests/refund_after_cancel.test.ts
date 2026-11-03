@@ -11,6 +11,7 @@ import { stringToBytes } from "@scure/base";
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameCancellationErgoTree, getGopParticipationErgoTree } from "$lib/ergo/contract";
 import { hexToBytes } from "$lib/ergo/utils";
+import { GAME_NFT_AMOUNT } from "$lib/common/constants";
 
 
 const ERG_BASE_TOKEN = "";
@@ -73,7 +74,7 @@ describe.each(baseModes)("Participation Contract: Refund after Game Cancellation
     // Esta caja simula un juego que ha sido cancelado.
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? creatorInitialStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: creatorInitialStake }] : [])
     ];
 

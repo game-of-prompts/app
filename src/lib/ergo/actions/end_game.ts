@@ -9,6 +9,7 @@ import { getGopJudgesPaidErgoTreeHex } from '../contract';
 import { parseBox, pkHexToBase58Address, hexToBytes } from '$lib/ergo/utils';
 import { type GameResolution, type ValidParticipation } from '$lib/common/game';
 import { calculatePayouts } from '../utils/payout_calculator';
+import { GAME_NFT_AMOUNT, GAME_TROPHY_AMOUNT } from '$lib/common/constants';
 import { ErgoPlatform } from '../platform';
 declare const ergo: any;
 
@@ -51,8 +52,9 @@ export async function end_game(
     // --- 5. Output Construction ---
     const outputs: OutputBuilder[] = [];
 
-    // The game NFT is always at index 0 of the assets
-    const gameNft = game.box.assets[0];
+    // The game NFT is always at index 0 of the assets. One unit goes out as the trophy, the other is burned.
+    const gameNft = { tokenId: game.box.assets[0].tokenId, amount: GAME_TROPHY_AMOUNT };
+    const burnedNft = { tokenId: gameNft.tokenId, amount: GAME_NFT_AMOUNT - GAME_TROPHY_AMOUNT };
 
     // Helper to build boxes (Handles Token vs ERG)
     const buildOutput = (amount: bigint, script: string, other_tokens: any[] = []) => {
@@ -97,6 +99,7 @@ export async function end_game(
         .from([parseBox(game.box), ...participations.map(p => parseBox(p.box))], { ensureInclusion: true })
         .and.from(utxos)
         .to(outputs)
+        .burnTokens(burnedNft)
         .sendChangeTo(userAddress)
         .payFee(RECOMMENDED_MIN_FEE_VALUE)
         .build()

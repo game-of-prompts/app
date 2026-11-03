@@ -143,6 +143,7 @@
     import GameTimeline from "$lib/components/GameTimeline.svelte";
     import AI_ASSISTANT from "$lib/components/AI_ASSISTANT.svelte";
     import { hoverCorners } from "$lib/hoverCorners";
+    import { CURRENT_CONTRACT_VERSION } from "$lib/common/constants";
 
     const strictMode = true;
 
@@ -205,6 +206,8 @@
 
     // --- COMPONENT STATE ---
     let game: AnyGame | null = null;
+    // Games created with older contracts can be viewed, but transactions are only built for the current ones.
+    $: isLegacyGame = !!game && game.contractVersion !== CURRENT_CONTRACT_VERSION;
     let isLoaded = false;
     let hasHydrated = false;
     let primaryAction: string | null = null;
@@ -3389,6 +3392,13 @@
                         >
                             {game.content.title}
                         </h1>
+                        {#if isLegacyGame}
+                            <p
+                                class="-mt-6 mb-8 text-sm font-medium text-amber-300"
+                            >
+                                Created with {game.contractVersion} contracts · read-only
+                            </p>
+                        {/if}
 
                         <div
                             class="stat-blocks-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full"
@@ -5261,7 +5271,7 @@
                     </div>
                 </div>
 
-                {#if !isGameEnded(game)}
+                {#if !isGameEnded(game) && !isLegacyGame}
                     <div class="col-span-1 lg:col-span-2">
                         <div
                             class="actions-section mt-8 pt-8 border-t {$mode ===

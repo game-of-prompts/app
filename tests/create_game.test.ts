@@ -20,7 +20,7 @@ import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree } from "$lib/ergo/contract";
 import { DEV_SCRIPT, DEV_COMMISSION_PERCENTAGE } from "$lib/ergo/envs";
 import { hexToBytes } from "$lib/ergo/utils";
-import { getGameConstants } from "$lib/common/constants";
+import { GAME_NFT_AMOUNT, getGameConstants } from "$lib/common/constants";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
 const CREATOR_SLASH_RATIO = BigInt(COMMISSION_DENOMINATOR);
@@ -163,9 +163,9 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
       gameBoxValue,
       gameActiveErgoTree
     )
-      // Mint the Game NFT. It's a unique token that identifies the game.
+      // Mint the Game NFT: 2 units that identify the game (one becomes the trophy, the other is burned at the end).
       .mintToken({
-        amount: 1n, // Only one is created.
+        amount: GAME_NFT_AMOUNT,
         name: "Game NFT"
       });
 
@@ -225,7 +225,7 @@ describe.each(baseModes)("Game Creation (create_game) - (%s)", (mode) => {
     // The ID of the minted token (Game NFT) must match the input box ID (always at index 0).
     expect(createdGameBox.assets[0].tokenId).to.equal(gameNftId);
     // The amount of the NFT must be 1.
-    expect(createdGameBox.assets[0].amount).to.equal(1n);
+    expect(createdGameBox.assets[0].amount).to.equal(GAME_NFT_AMOUNT);
 
     // In token mode, verify the token stake is at index 1
     if (mode.token !== ERG_BASE_TOKEN) {

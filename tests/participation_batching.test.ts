@@ -22,7 +22,7 @@ import {
     getGopParticipationBatchErgoTree,
     getGopGameResolutionErgoTree
 } from "$lib/ergo/contract";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
 
 const ERG_BASE_TOKEN = "";
@@ -73,7 +73,7 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
 
         // Setup Game Box in Resolution state
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: 1000000n }] : [])
         ];
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? 1000000n : RECOMMENDED_MIN_FEE_VALUE;

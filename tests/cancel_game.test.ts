@@ -18,7 +18,7 @@ import { blake2b256 } from "@fleet-sdk/crypto";
 import { stringToBytes } from "@scure/base";
 import { getGopGameActiveErgoTree, getGopGameCancellationErgoTree } from "$lib/ergo/contract";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
-import { getGameConstants } from "$lib/common/constants";
+import { getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { hexToBytes } from "$lib/ergo/utils";
 
 const ERG_BASE_TOKEN = "";
@@ -68,7 +68,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
         // Configuración de la caja del juego (donde está el dinero o los tokens)
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
         ];
 
@@ -120,7 +120,7 @@ describe.each(baseModes)("Game Cancellation (cancel_game) - (%s)", (mode) => {
             : RECOMMENDED_MIN_FEE_VALUE;
 
         const cancellationAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: stakePortionForGame }] : [])
         ];
 
@@ -223,7 +223,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
 
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
         ];
 
@@ -289,7 +289,7 @@ describe("Game Cancellation (Low Stake) - (%s)", () => {
         const penaltyValue = mode.token === ERG_BASE_TOKEN ? stakePortionToClaim : RECOMMENDED_MIN_FEE_VALUE;
 
         const cancellationAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: newResolverStake }] : [])
         ];
 
