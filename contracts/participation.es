@@ -9,6 +9,9 @@
   // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.
   val GRACE_PERIOD = `+GRACE_PERIOD+`L
 
+  // Batching (action 5) may only move funds into the batch contract.
+  val PARTICIPATION_BATCH_SCRIPT_HASH = fromBase16("`+PARTICIPATION_BATCH_SCRIPT_HASH+`")
+
   // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
   // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
   // is therefore never enough to impersonate a game box.
@@ -157,8 +160,8 @@
             val participationTokenId = gameProvenance(1)
             
             val targetBoxes = OUTPUTS.filter({(b:Box) => 
-                // Identificamos el lote por su R6 y porque NO es el script de participación individual
-                b.propositionBytes != SELF.propositionBytes && 
+                // El lote debe ser el contrato de lotes de este juego
+                blake2b256(b.propositionBytes) == PARTICIPATION_BATCH_SCRIPT_HASH && 
                 b.R6[Coll[Byte]].isDefined && b.R6[Coll[Byte]].get == gameNftIdInSelf
             })
 

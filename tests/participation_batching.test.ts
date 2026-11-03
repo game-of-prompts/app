@@ -213,6 +213,38 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
         expect(participationContract.utxos.length).toBe(0);
     });
 
+    it("Should fail if the resolver batches participations into a box outside the batch contract", () => {
+        createParticipationBox(player1, participationFee);
+        createParticipationBox(player2, participationFee);
+
+        const gameBox = gameResolutionContract.utxos.toArray()[0];
+        const pBoxes = participationContract.utxos.toArray();
+
+        const totalAmount = participationFee * 2n;
+        const outputAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: totalAmount }];
+        const outputValue = mode.token === ERG_BASE_TOKEN ? totalAmount : RECOMMENDED_MIN_FEE_VALUE;
+
+        // Same registers as a batch, but locked by the resolver's own key.
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([...pBoxes, ...resolver.utxos.toArray()], { ensureInclusion: true })
+            .withDataFrom([gameBox])
+            .to([
+                new OutputBuilder(outputValue, resolver.address)
+                    .addTokens(outputAssets)
+                    .setAdditionalRegisters({
+                        R4: SColl(SByte, []).toHex(),
+                        R5: SColl(SByte, []).toHex(),
+                        R6: SColl(SByte, gameNftId).toHex()
+                    })
+            ])
+            .sendChangeTo(resolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
+        expect(participationContract.utxos.length).toBe(2);
+    });
+
     it("Should fail if there are two output batches", () => {
         createParticipationBox(player1, participationFee);
         createParticipationBox(player2, participationFee);
