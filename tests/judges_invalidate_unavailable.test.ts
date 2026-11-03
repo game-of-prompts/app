@@ -225,7 +225,7 @@ describe.each(baseModes)("Game Resolution Invalidation Unavailable by Judges - (
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             numericalParams[0],         // createdAt
             numericalParams[1],         // timeWeight

@@ -28,6 +28,11 @@
   // in this state, so they can't be taken in the action4 transaction itself (where the game box is still in state 1).
   val ENDING_STATE = 3
 
+  // The judge invalidation extends resolutionDeadline to [HEIGHT + JUDGE_PERIOD, HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN].
+  // Without an upper bound it could be set so far ahead that the game never ends and every fund stays locked.
+  // Same margin as game_active.
+  val RESOLUTION_DEADLINE_MARGIN = 20L
+
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS
@@ -186,7 +191,9 @@
           }
           
           val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(9) >= HEIGHT + JUDGE_PERIOD
+          val newResolutionDeadline = recreatedGameBox.R8[Coll[Long]].get(9)
+          val deadlineIsExtended = newResolutionDeadline >= HEIGHT + JUDGE_PERIOD &&
+                                   newResolutionDeadline <= HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN
           
           fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
         } else { false }

@@ -225,7 +225,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -431,7 +431,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -647,7 +647,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -837,7 +837,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1031,7 +1031,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         const currentHeight = mockChain.height;
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1203,7 +1203,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1372,7 +1372,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1542,7 +1542,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1710,7 +1710,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1878,7 +1878,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -2045,7 +2045,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
