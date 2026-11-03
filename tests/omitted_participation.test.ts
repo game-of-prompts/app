@@ -337,6 +337,54 @@ describe.each(baseModes)("Omitted Participation Inclusion - (%s)", (mode) => {
         expect(newGameBox.additionalRegisters.R9).to.contain(Buffer.from(originalResolver.address.getPublicKeys()[0]).toString("hex"));
     });
 
+    // Builds the "include omitted participation" tx where the omitted participant becomes the new candidate.
+    const buildOmissionTx = (gameBoxScript: any, extraInputs: any[] = []) => {
+        const newNumericalParams: bigint[] = [1n, 20n, game_deadline, 2_000_000_000n, 1_000_000n, 10000n, 200000n, BigInt(Math.round(DEV_COMMISSION_PERCENTAGE / 100 * COMMISSION_DENOMINATOR)), CREATOR_SLASH_RATIO, BigInt(resolutionDeadline)];
+        return new TransactionBuilder(mockChain.height)
+            .from([gameResolutionBox, ...extraInputs, ...newResolver.utxos.toArray()], { ensureInclusion: true })
+            .to([
+                new OutputBuilder(gameResolutionBox.value, gameBoxScript)
+                    .addTokens(gameResolutionBox.assets)
+                    .setAdditionalRegisters({
+                        R4: gameResolutionBox.additionalRegisters.R4,
+                        R5: SColl(SByte, hexToBytes(seed) ?? "").toHex(),
+                        R6: SPair(SColl(SByte, secret), SColl(SByte, omittedCommitment)).toHex(),
+                        R7: SColl(SColl(SByte), []).toHex(),
+                        R8: SColl(SLong, newNumericalParams).toHex(),
+                        R9: SColl(SColl(SByte), [
+                            stringToBytes("utf8", "{}"),
+                            hexToBytes(mode.token) ?? new Uint8Array(0),
+                            hexToBytes(DEV_SCRIPT)!,
+                            prependHexPrefix(originalResolver.address.getPublicKeys()[0], "0008cd")
+                        ]).toHex()
+                    })
+            ])
+            .withDataFrom([currentWinnerBox, omittedParticipantBox, ...originalResolver.utxos.toArray()])
+            .sendChangeTo(newResolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+    };
+
+    it("should fail if the game box is recreated under another script", () => {
+        setupScenario(1000n, 1200n);
+
+        // Same registers, NFT and value, but locked by the submitter's own key.
+        const tx = buildOmissionTx(newResolver.address);
+
+        expect(mockChain.execute(tx, { signers: [newResolver as any], throw: false })).to.be.false;
+        expect(gameResolutionContract.utxos.length).to.equal(1);
+    });
+
+    it("should fail if the replaced candidate's participation is spent in the same transaction", () => {
+        setupScenario(1000n, 1200n);
+
+        // The replaced candidate is not invalidated by judges: its fee must stay in its participation box.
+        const tx = buildOmissionTx(gameResolutionErgoTree, [currentWinnerBox]);
+
+        expect(mockChain.execute(tx, { signers: [newResolver as any], throw: false })).to.be.false;
+        expect(participationContract.utxos.length).to.equal(2);
+    });
+
     it("should fail with an omitted participant who is not the new winner", () => {
         setupScenario(1000n, 800n);
 

@@ -138,8 +138,14 @@
       val winnerCandidateCommitment = mainGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
       val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
-      
-      isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1 && isResolved
+
+      // Only the judges' invalidation recreates the game box with the candidate cleared. Including an omitted
+      // participation also recreates it (with a new candidate) and must not release the replaced candidate's funds.
+      val candidateCleared = if (recreatedGameBoxes.size == 1) {
+        recreatedGameBoxes(0).R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]()
+      } else { false }
+
+      isBeforeDeadline && isTheInvalidatedCandidate && candidateCleared && isResolved
     }
     else { false }
   }
