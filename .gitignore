@@ -50,3 +50,9 @@ yarn-error.log
 .metals/
 .scala-build/
 .test.scala
+# nodo ggconf / pack artifacts
+__config__
+.dependencies
+.service/service/
+*.celaut
+*.celaut.bee

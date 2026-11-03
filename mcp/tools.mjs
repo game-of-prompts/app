@@ -3,7 +3,7 @@
  *
  * A single TOOLS array + HANDLERS map, consumed by BOTH transports:
  *   - mcp/server.mjs            (stdio, local agents/IDEs)
- *   - .service/server-http.mjs  (Streamable HTTP + REST, the Celaut microVM)
+ *   - mcp/server-http.mjs       (Streamable HTTP + REST, the Celaut microVM)
  *
  * so the two never drift. Reads + pure helpers come from core.mjs; writes from
  * writes.mjs (env-configured signer, see lib.mjs). Write tools are no-ops on
