@@ -19,12 +19,26 @@
   val FALSE_SCRIPT_HASH = fromBase16("`+FALSE_SCRIPT_HASH+`")
   val COMMISSION_DENOMINATOR = `+COMMISSION_DENOMINATOR+`L
 
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
+  // State written by action4 into the end_game box. Participations only accept being spent next to a game box
+  // in this state, so they can't be taken in the action4 transaction itself (where the game box is still in state 1).
+  val ENDING_STATE = 3
+
+  // The judge invalidation extends resolutionDeadline to [HEIGHT + JUDGE_PERIOD, HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN].
+  // Without an upper bound it could be set so far ahead that the game never ends and every fund stays locked.
+  // Same margin as game_active.
+  val RESOLUTION_DEADLINE_MARGIN = 20L
+
 
   // =================================================================
   // === DEFINICIONES DE REGISTROS
   // =================================================================
 
-  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled).
+  // R4: Integer                    - Game state (0: Active, 1: Resolved, 2: Cancelled, 3: Ending).
   // R5: Coll[Byte]                 - Seed
   // R6: (Coll[Byte], Coll[Byte])   - (revealedSecretS, winnerCandidateCommitment): El secreto y el candidato a ganador.
   // R7: Coll[Coll[Byte]]           - participatingJudges: Lista de IDs de tokens de reputación de los jueces.
@@ -138,9 +152,9 @@
         }
       }
 
-      // Cálculo seguro del quórum
-      val requiredVotes = if (participatingJudges.size == 0) 0 else participatingJudges.size / 2 + 1
-      val hasRequiredVotes = judgeVotes.size >= requiredVotes
+      // Quórum: mayoría de los jueces. Sin jueces nadie puede invalidar (la tx no requiere firma).
+      val requiredVotes = participatingJudges.size / 2 + 1
+      val hasRequiredVotes = participatingJudges.size > 0 && judgeVotes.size >= requiredVotes
 
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == SELF.propositionBytes})
       
@@ -148,8 +162,10 @@
         val recreatedGameBox = recreatedGameBoxes(0)
         val invalidatedCandidateBoxes = INPUTS.filter({(b:Box) => blake2b256(b.propositionBytes) == PARTICIPATION_SCRIPT_HASH && b.R5[Coll[Byte]].get == winnerCandidateCommitment})
         
-        // Verificamos que se haya reseteado el candidato (Coll[Byte]())
-        if (recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {
+        // Verificamos que se haya reseteado el candidato (Coll[Byte]()) y que se mantenga el secreto revelado:
+        // con otro S ninguna participación podría validarse y el juego terminaría sin ganador.
+        val recreatedR6 = recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get
+        if (recreatedR6._1 == revealedS && recreatedR6._2 == Coll[Byte]() && invalidatedCandidateBoxes.size == 1) {
           val invalidatedCandidateBox = invalidatedCandidateBoxes(0)
           
           val resolverPenalization = if (penalizeResolver) resolverCommissionPercentage * creatorSlashRatio / COMMISSION_DENOMINATOR else 0L
@@ -158,6 +174,7 @@
 
           val gameBoxIsRecreatedCorrectly = {
             recreatedGameBox.tokens(0)._1 == gameNftId &&
+            recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
             recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
             recreatedGameBox.R5[Coll[Byte]].get == seed &&
             recreatedGameBox.R7[Coll[Coll[Byte]]].get == participatingJudges &&
@@ -174,7 +191,9 @@
           }
           
           val fundsReturnedToPool = box_value(recreatedGameBox) >= box_value(SELF) + box_value(invalidatedCandidateBox)
-          val deadlineIsExtended = recreatedGameBox.R8[Coll[Long]].get(9) >= HEIGHT + JUDGE_PERIOD
+          val newResolutionDeadline = recreatedGameBox.R8[Coll[Long]].get(9)
+          val deadlineIsExtended = newResolutionDeadline >= HEIGHT + JUDGE_PERIOD &&
+                                   newResolutionDeadline <= HEIGHT + JUDGE_PERIOD + RESOLUTION_DEADLINE_MARGIN
           
           fundsReturnedToPool && deadlineIsExtended && gameBoxIsRecreatedCorrectly
         } else { false }
@@ -272,8 +291,10 @@
               // Verificación de la recreación de la caja del juego
               val recreatedGameBox = OUTPUTS(0)
               val gameBoxIsRecreatedCorrectly = {
+                recreatedGameBox.propositionBytes == SELF.propositionBytes &&
                 box_value(recreatedGameBox) >= box_value(SELF) &&
                 recreatedGameBox.tokens(0)._1 == gameNftId &&
+                recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
                 recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
                 recreatedGameBox.R5[Coll[Byte]].get == seed &&
                 recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
@@ -324,7 +345,8 @@
         
         val gameBoxIsRecreatedCorrectly = {
           recreatedGameBox.tokens(0)._1 == gameNftId &&
-          recreatedGameBox.R4[Int].get == gameState && gameState == 1 &&
+          recreatedGameBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
+          recreatedGameBox.R4[Int].get == ENDING_STATE && gameState == 1 &&
           recreatedGameBox.R5[Coll[Byte]].get == seed &&
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._1 == revealedS &&
           recreatedGameBox.R6[(Coll[Byte], Coll[Byte])].get._2 == winnerCandidateCommitment &&

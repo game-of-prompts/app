@@ -16,7 +16,7 @@ import {
   getGopParticipationErgoTree,
   getGopFalseErgoTreeHex,
 } from "$lib/ergo/contract";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { DEV_SCRIPT, DEV_COMMISSION_PERCENTAGE } from "$lib/ergo/envs";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
@@ -102,7 +102,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -170,7 +170,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -268,7 +268,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
       gameResolutionContract.address
     )
       .addTokens([
-        { tokenId: gameNftId, amount: 1n },
+        { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
         ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
       ])
       .setAdditionalRegisters({
@@ -309,6 +309,55 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
     const executionResult = mockChain.execute(tx, { signers: [creator], throw: false });
 
     expect(executionResult).to.be.false;
+  });
+
+  it("should FAIL if the resolution deadline is set far in the future", () => {
+    // Ending the game needs HEIGHT >= resolutionDeadline: a huge value would lock the stake and every participation.
+    const farResolutionOutput = new OutputBuilder(
+      mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE,
+      gameResolutionContract.address
+    )
+      .addTokens([
+        { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
+        ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
+      ])
+      .setAdditionalRegisters({
+        R4: SInt(1).toHex(),
+        R5: SColl(SByte, hexToBytes(seed)!).toHex(),
+        R6: SPair(SColl(SByte, secret), SColl(SByte, hexToBytes(winnerCandidateCommitment)!)).toHex(),
+        R7: SColl(SColl(SByte), []).toHex(),
+        R8: SColl(SLong, [
+          1n,
+          20n,
+          BigInt(deadlineBlock),
+          resolverStake,
+          participationFee,
+          perJudgeCommission,
+          resolver_commission_percentage,
+          BigInt(Math.round(DEV_COMMISSION_PERCENTAGE / 100 * COMMISSION_DENOMINATOR)),
+          CREATOR_SLASH_RATIO,
+          9_223_372_036_854_775_807n  // Long.MaxValue
+        ]).toHex(),
+        R9: SColl(SColl(SByte), [
+          stringToBytes("utf8", "{}"),
+          hexToBytes(mode.token) ?? "",
+          hexToBytes(DEV_SCRIPT)!,
+          creator.address.getPublicKeys()[0]
+        ]).toHex()
+      });
+
+    const tx = new TransactionBuilder(mockChain.height)
+      .from([
+        gameActiveContract.utxos.toArray()[0],
+        ...creator.utxos.toArray()])
+      .to([farResolutionOutput])
+      .withDataFrom([participationContract.utxos.toArray()[0], creator.utxos.toArray()[creator.utxos.toArray().length - 1]])
+      .sendChangeTo(creator.address)
+      .payFee(RECOMMENDED_MIN_FEE_VALUE)
+      .build();
+
+    expect(mockChain.execute(tx, { signers: [creator], throw: false })).to.be.false;
+    expect(gameActiveContract.utxos.length).to.equal(1);
   });
 
   it("should FAIL transition the game to the resolution phase if participation game nft id is wrong", () => {
@@ -437,7 +486,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -505,7 +554,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 
@@ -607,7 +656,7 @@ describe.each(baseModes)("Game Resolution (resolve_game) - (%s)", (mode) => {
 
     const gameResolutionBoxValue = mode.token === ERG_BASE_TOKEN ? resolverStake : RECOMMENDED_MIN_FEE_VALUE;
     const gameResolutionAssets = [
-      { tokenId: gameNftId, amount: 1n },
+      { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
       ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: resolverStake }] : [])
     ];
 

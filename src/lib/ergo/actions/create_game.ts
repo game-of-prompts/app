@@ -13,7 +13,7 @@ declare const ergo: any;
 import { hexToBytes } from '$lib/ergo/utils';
 import { getGopGameActiveErgoTreeHex, getGopMintIdtAddress } from '../contract';
 import { stringToBytes } from '@scure/base';
-import { getGameConstants } from '$lib/common/constants';
+import { getGameConstants, GAME_NFT_AMOUNT } from '$lib/common/constants';
 import { DEV_SCRIPT, DEV_COMMISSION_PERCENTAGE } from '../envs';
 import { estimateTotalBoxSizeFromInputs, MAX_BOX_SIZE, type GameBoxInputs } from '../utils/box-size-calculator';
 import { ErgoPlatform } from '../platform';
@@ -221,7 +221,7 @@ export async function create_game(
         mintIdtAddress
     )
         .mintToken({
-            amount: 1n,
+            amount: GAME_NFT_AMOUNT,
             name: gameTitle,
             decimals: 0,
             description: gameDescription
@@ -247,7 +247,7 @@ export async function create_game(
         activeGameErgoTree
     )
         .addTokens([
-            { tokenId: gameTokenId, amount: 1n }, // The minted NFT
+            { tokenId: gameTokenId, amount: GAME_NFT_AMOUNT }, // The minted NFT (both units)
             ...gameTokens // Participation tokens
         ])
         .setAdditionalRegisters(registers);

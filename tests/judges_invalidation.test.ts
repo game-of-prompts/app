@@ -21,7 +21,7 @@ import { bigintToLongByteArray, generate_pk_proposition, hexToBytes } from "$lib
 import { prependHexPrefix } from "$lib/utils";
 import { getGopGameResolutionErgoTree, getGopParticipationErgoTree, getReputationProofErgoTree } from "$lib/ergo/contract";
 
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { DEV_SCRIPT, DEV_COMMISSION_PERCENTAGE } from "$lib/ergo/envs";
 
 const COMMISSION_DENOMINATOR = getGameConstants().COMMISSION_DENOMINATOR;
@@ -122,7 +122,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -225,7 +225,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -331,7 +331,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -431,7 +431,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -542,7 +542,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -647,7 +647,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -746,7 +746,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -837,7 +837,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -941,7 +941,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n }
             ],
             creationHeight: mockChain.height - 30,
@@ -1031,7 +1031,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         const currentHeight = mockChain.height;
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1109,7 +1109,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -1203,7 +1203,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1280,7 +1280,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -1372,7 +1372,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1450,7 +1450,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -1542,7 +1542,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1618,7 +1618,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -1710,7 +1710,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1786,7 +1786,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -1878,7 +1878,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight
@@ -1953,7 +1953,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
             ergoTree: gameResolutionErgoTree.toHex(),
             value: RECOMMENDED_MIN_FEE_VALUE,
             assets: [
-                { tokenId: gameNftId, amount: 1n },
+                { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
                 { tokenId: USD_BASE_TOKEN, amount: 2_000_000_000n } // resolverStake
             ],
             creationHeight: mockChain.height - 30,
@@ -2045,7 +2045,7 @@ describe.each(baseModes)("Game Resolution Invalidation by Judges - (%s)", (mode)
 
         // --- Estado Esperado de la Nueva Caja de Juego ---
         const newFunds = BigInt(gameResolutionBox.value) + BigInt(invalidatedWinnerBox.value);
-        const extendedDeadline = BigInt(resolutionDeadline) + JUDGE_PERIOD;
+        const extendedDeadline = BigInt(mockChain.height) + JUDGE_PERIOD;
         const newNumericalParams = [
             1n,                         // createdAt
             20n,                        // timeWeight

@@ -9,6 +9,17 @@
   // Periodo de gracia en bloques para que el jugador reclame si el juego se atasca.
   val GRACE_PERIOD = `+GRACE_PERIOD+`L
 
+  // Batching (action 5) may only move funds into the batch contract.
+  val PARTICIPATION_BATCH_SCRIPT_HASH = fromBase16("`+PARTICIPATION_BATCH_SCRIPT_HASH+`")
+
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
+  // Game state of the end_game box (see game_resolution.es action4).
+  val ENDING_STATE = 3
+
   // =================================================================
   // === DEFINICIONES DE REGISTROS (PARTICIPACIÓN ENVIADA)
   // =================================================================
@@ -27,6 +38,12 @@
   val playerPK = SELF.R4[Coll[Byte]].get
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
+  // Only a box with both units of the game NFT can be the game box: after end_game a single unit
+  // (the trophy) circulates freely and must not be able to unlock participations.
+  // The refund paths (actions 1 and 2) only pay the participation owner, so they keep the looser lookup.
+  val isGameBox = { (b: Box) =>
+    b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.tokens(0)._2 == GAME_NFT_AMOUNT
+  }
 
 
   // =================================================================
@@ -92,23 +109,25 @@
   }
 
   // --- ACCIÓN 3: Gasto en la finalización normal del juego (EndGame) ---
+  // Requires the game box in ENDING_STATE: only the end_game box is in that state, and spending it
+  // distributes the prize pool. The game_resolution -> end_game transition still has the game box in state 1.
   val isValidEndGame = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val mainGameBoxes = INPUTS.filter(isGameBox)
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
-      val isResolved = mainGameBox.R4[Int].get == 1
+      val isEnding = mainGameBox.R4[Int].get == ENDING_STATE
       val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)
 
       val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
-      resolutionPeriodIsOver && isResolved
+      resolutionPeriodIsOver && isEnding
     } 
     else { false }
   }
 
   // --- ACCIÓN 4: Gasto cuando esta participación es invalidada por los jueces ---
   val isInvalidatedByJudges = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val mainGameBoxes = INPUTS.filter(isGameBox)
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
@@ -119,15 +138,21 @@
       val winnerCandidateCommitment = mainGameBox.R6[(Coll[Byte], Coll[Byte])].get._2
       val isTheInvalidatedCandidate = SELF.R5[Coll[Byte]].get == winnerCandidateCommitment
       val recreatedGameBoxes = OUTPUTS.filter({(b:Box) => b.propositionBytes == mainGameBox.propositionBytes})
-      
-      isBeforeDeadline && isTheInvalidatedCandidate && recreatedGameBoxes.size == 1 && isResolved
+
+      // Only the judges' invalidation recreates the game box with the candidate cleared. Including an omitted
+      // participation also recreates it (with a new candidate) and must not release the replaced candidate's funds.
+      val candidateCleared = if (recreatedGameBoxes.size == 1) {
+        recreatedGameBoxes(0).R6[(Coll[Byte], Coll[Byte])].get._2 == Coll[Byte]()
+      } else { false }
+
+      isBeforeDeadline && isTheInvalidatedCandidate && candidateCleared && isResolved
     }
     else { false }
   }
 
   // --- ACCIÓN 5: Unir en Lote (Batching) ---
   val spentInBatch = {
-    val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val gameBoxInDataArr = CONTEXT.dataInputs.filter(isGameBox)
     
     if (gameBoxInDataArr.size == 1) {
         val gameBox = gameBoxInDataArr(0)
@@ -141,8 +166,8 @@
             val participationTokenId = gameProvenance(1)
             
             val targetBoxes = OUTPUTS.filter({(b:Box) => 
-                // Identificamos el lote por su R6 y porque NO es el script de participación individual
-                b.propositionBytes != SELF.propositionBytes && 
+                // El lote debe ser el contrato de lotes de este juego
+                blake2b256(b.propositionBytes) == PARTICIPATION_BATCH_SCRIPT_HASH && 
                 b.R6[Coll[Byte]].isDefined && b.R6[Coll[Byte]].get == gameNftIdInSelf
             })
 

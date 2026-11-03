@@ -1,6 +1,6 @@
 import { ErgoPlatform } from "$lib/ergo/platform";
 import { SAFE_MIN_BOX_VALUE, type Amount, type Box } from "@fleet-sdk/core";
-import { type GameConstants } from "./constants";
+import { type ContractVersion, type GameConstants } from "./constants";
 import { blake2b256 as fleetBlake2b256 } from "@fleet-sdk/crypto";
 import { bigintToLongByteArray, hexToBytes, parseCollByteToHex, parseLongColl, uint8ArrayToHex } from "$lib/ergo/utils";
 import { findMatchingScoreForCommitment } from "$lib/common/commitment";
@@ -85,6 +85,7 @@ export interface GameActive {
     reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
+    contractVersion: ContractVersion;   // Contracts the game box was created with (older versions are read-only)
 
     createdAt: number;
     devScript: string;
@@ -124,6 +125,7 @@ export interface GameResolution {
     reputationOpinions: RPBox[];
     reputation: number;
     constants: GameConstants;
+    contractVersion: ContractVersion;   // Contracts the game box was created with (older versions are read-only)
     isEndGame: boolean;
     createdAt: number;
 }
@@ -152,6 +154,7 @@ export interface GameCancellation {
     judges: string[];
     reputation: number;
     constants: GameConstants;
+    contractVersion: ContractVersion;   // Contracts the game box was created with (older versions are read-only)
     createdAt?: number;
     timeWeight?: bigint;
 }
@@ -177,6 +180,7 @@ export interface GameFinalized {
     winnerFinalizationDeadline: number;
     reputation: number;
     constants: GameConstants;
+    contractVersion: ContractVersion;   // Contracts the game box was created with (older versions are read-only)
     createdAt: number;
     seed: string;
     revealedS_Hex: string;

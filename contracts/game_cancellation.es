@@ -6,6 +6,11 @@
   // Período de enfriamiento en bloques entre cada acción de drenaje.
   val COOLDOWN_IN_BLOCKS = `+COOLDOWN_IN_BLOCKS+`L
 
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
   // =================================================================
   // === DEFINICIONES DE REGISTROS (ESTADO DE CANCELACIÓN)
   // =================================================================
@@ -65,6 +70,7 @@
       val boxIsRecreatedCorrectly = {
         valueOf(recreatedCancellationBox) >= remainingValue &&
         recreatedCancellationBox.tokens(0)._1 == gameNftId &&
+        recreatedCancellationBox.tokens(0)._2 == GAME_NFT_AMOUNT &&
         recreatedCancellationBox.R4[Int].get == gameState &&
         recreatedCancellationBox.R5[Long].get >= HEIGHT + COOLDOWN_IN_BLOCKS &&
         recreatedCancellationBox.R6[Coll[Byte]].get == revealedSecret &&

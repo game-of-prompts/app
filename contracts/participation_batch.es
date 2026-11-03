@@ -5,8 +5,17 @@
 
   // Prefijo P2PK para la validación de direcciones.
   val P2PK_ERGOTREE_PREFIX = fromBase16("0008cd")
-  
-  val PARTICIPATION_SCRIPT_HASH = fromBase16("`+PARTICIPATION_SCRIPT_HASH+`")
+
+  // No participation script hash here: participation.es embeds this contract's hash, so this one can't embed
+  // participation's. Inputs are summed by the game NFT id in R6 instead (see action 1).
+
+  // The game NFT is minted with 2 units and both must stay together in the game box until end_game,
+  // where one unit is given as the trophy and the other is burned. Holding a single unit (the trophy)
+  // is therefore never enough to impersonate a game box.
+  val GAME_NFT_AMOUNT = 2L
+
+  // Game state of the end_game box (see game_resolution.es action4).
+  val ENDING_STATE = 3
 
   // =================================================================
   // === EXTRACCIÓN DE VALORES
@@ -14,6 +23,10 @@
 
   val gameNftIdInSelf = SELF.R6[Coll[Byte]].get
 
+  // Only a box with both units of the game NFT can be the game box (see participation.es).
+  val isGameBox = { (b: Box) =>
+    b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf && b.tokens(0)._2 == GAME_NFT_AMOUNT
+  }
 
 
   // =================================================================
@@ -22,7 +35,7 @@
 
   // --- ACCIÓN 1: Unir en Lote (Batching) ---
   val spentInBatch = {
-    val gameBoxInDataArr = CONTEXT.dataInputs.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val gameBoxInDataArr = CONTEXT.dataInputs.filter(isGameBox)
     
     if (gameBoxInDataArr.size == 1) {
         val gameBox = gameBoxInDataArr(0)
@@ -41,14 +54,11 @@
             })
 
             if (targetBoxes.size == 1) {
+                // Every input carrying this game's NFT id in R6 (participations and batches) is counted.
+                // Counting any such box can only raise the amount the new batch must hold.
                 val totalInputValue = INPUTS.filter({ (box: Box) =>
-                    val sHash = blake2b256(box.propositionBytes)
-                    val isP = sHash == PARTICIPATION_SCRIPT_HASH
-                    val isB = box.propositionBytes == SELF.propositionBytes
-                    if (isP || isB) {
-                        val r6Opt = box.R6[Coll[Byte]]
-                        if (r6Opt.isDefined) r6Opt.get == gameNftIdInSelf else false
-                    } else { false }
+                    val r6Opt = box.R6[Coll[Byte]]
+                    if (r6Opt.isDefined) r6Opt.get == gameNftIdInSelf else false
                 }).fold(0L, { (acc: Long, box: Box) =>
                     val boxValue = {
                         val t = box.tokens.filter { (token: (Coll[Byte], Long)) => token._1 == participationTokenId }
@@ -114,15 +124,15 @@
   }
 
   val isValidEndGame = {
-    val mainGameBoxes = INPUTS.filter({(b:Box) => b.tokens.size >= 1 && b.tokens(0)._1 == gameNftIdInSelf})
+    val mainGameBoxes = INPUTS.filter(isGameBox)
 
     if (mainGameBoxes.size == 1) {
       val mainGameBox = mainGameBoxes(0)
-      val isResolved = mainGameBox.R4[Int].get == 1
+      val isEnding = mainGameBox.R4[Int].get == ENDING_STATE
       val resolutionDeadline = mainGameBox.R8[Coll[Long]].get(9)
 
       val resolutionPeriodIsOver = HEIGHT >= resolutionDeadline
-      resolutionPeriodIsOver && isResolved
+      resolutionPeriodIsOver && isEnding
     } 
     else { false }
   }

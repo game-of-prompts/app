@@ -22,7 +22,7 @@ import {
     getGopParticipationBatchErgoTree,
     getGopGameResolutionErgoTree
 } from "$lib/ergo/contract";
-import { DefaultGameConstants, getGameConstants } from "$lib/common/constants";
+import { DefaultGameConstants, getGameConstants, GAME_NFT_AMOUNT } from "$lib/common/constants";
 import { DEV_COMMISSION_PERCENTAGE, DEV_SCRIPT } from "$lib/ergo/envs";
 
 const ERG_BASE_TOKEN = "";
@@ -73,7 +73,7 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
 
         // Setup Game Box in Resolution state
         const gameAssets = [
-            { tokenId: gameNftId, amount: 1n },
+            { tokenId: gameNftId, amount: GAME_NFT_AMOUNT },
             ...(mode.token !== ERG_BASE_TOKEN ? [{ tokenId: mode.token, amount: 1000000n }] : [])
         ];
         const gameBoxValue = mode.token === ERG_BASE_TOKEN ? 1000000n : RECOMMENDED_MIN_FEE_VALUE;
@@ -211,6 +211,38 @@ describe.each(baseModes)("Participation Batching - (%s)", (mode) => {
         expect(mockChain.execute(tx, { signers: [resolver as any] })).to.be.true;
         expect(batchContract.utxos.length).toBe(1);
         expect(participationContract.utxos.length).toBe(0);
+    });
+
+    it("Should fail if the resolver batches participations into a box outside the batch contract", () => {
+        createParticipationBox(player1, participationFee);
+        createParticipationBox(player2, participationFee);
+
+        const gameBox = gameResolutionContract.utxos.toArray()[0];
+        const pBoxes = participationContract.utxos.toArray();
+
+        const totalAmount = participationFee * 2n;
+        const outputAssets = mode.token === ERG_BASE_TOKEN ? [] : [{ tokenId: mode.token, amount: totalAmount }];
+        const outputValue = mode.token === ERG_BASE_TOKEN ? totalAmount : RECOMMENDED_MIN_FEE_VALUE;
+
+        // Same registers as a batch, but locked by the resolver's own key.
+        const tx = new TransactionBuilder(mockChain.height)
+            .from([...pBoxes, ...resolver.utxos.toArray()], { ensureInclusion: true })
+            .withDataFrom([gameBox])
+            .to([
+                new OutputBuilder(outputValue, resolver.address)
+                    .addTokens(outputAssets)
+                    .setAdditionalRegisters({
+                        R4: SColl(SByte, []).toHex(),
+                        R5: SColl(SByte, []).toHex(),
+                        R6: SColl(SByte, gameNftId).toHex()
+                    })
+            ])
+            .sendChangeTo(resolver.address)
+            .payFee(RECOMMENDED_MIN_FEE_VALUE)
+            .build();
+
+        expect(mockChain.execute(tx, { signers: [resolver as any], throw: false })).to.be.false;
+        expect(participationContract.utxos.length).toBe(2);
     });
 
     it("Should fail if there are two output batches", () => {
